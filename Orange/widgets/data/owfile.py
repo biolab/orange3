@@ -4,6 +4,7 @@ from itertools import chain
 from urllib.parse import urlparse
 from typing import List, Dict, Any
 
+import h5py # ALBA new import
 import numpy as np
 from AnyQt import QtWidgets # ALBA new import
 from AnyQt.QtWidgets import \
@@ -282,6 +283,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             autoDefault=False
         )
         gui.rubber(box)
+        
         self.apply_button = gui.button(
             box, self, "Apply", callback=self.apply_domain_edit)
         self.apply_button.setEnabled(False)
@@ -428,8 +430,9 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         try:
             if isinstance(self.reader, GenericHDF5Reader): # ALBA new lines 
                 self._hdf5_tree_model()
-            else:
-                self._update_sheet_combo()
+                #self.reader.sheets = []
+            #else:
+            #    self._update_sheet_combo()
         except Exception:
             return self.Error.sheet_error
 
@@ -482,14 +485,34 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             return UrlReader(url)
 
     def _hdf5_tree_model(self): # ALBA new function
+        self.h5_file = h5py.File(self.reader.filename) # ALBA try with "with"
+        
+        self.tree_model = QStandardItemModel()
+        parent = self.tree_model.invisibleRootItem()
+        if isinstance(self.h5_file, h5py.Group):
+            self._add_group(parent, self.h5_file)
+            
         box = gui.widgetBox(self.controlArea,
                             orientation=QGridLayout().setSpacing(4), 
                             box="Data sets")
-        self.tree_model = QStandardItemModel()
+        
         self.dataset_tree = QtWidgets.QTreeView(box)
         self.dataset_tree.setModel(self.tree_model)
         box.layout().addWidget(self.dataset_tree)
-        self.dataset_tree.clicked[QModelIndex].connect(self.open_dataset)
+        self.dataset_tree.clicked[QModelIndex].connect(self._open_dataset)
+        
+    def _open_dataset(self, model_index):
+        self.reader.data = model_index.data(role=Qt.UserRole)
+    
+    def _add_group(self, parent, group):
+        for name, obj in group.items():
+            item = QStandardItem(name)
+            if isinstance(obj, h5py.Group):
+                item.setSelectable(False)
+                self.add_group(item, group[name])
+            elif isinstance(obj, h5py.Dataset):
+                item.setData(obj, role=Qt.UserRole)
+            parent.appendRow(item)
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:

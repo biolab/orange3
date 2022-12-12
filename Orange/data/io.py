@@ -19,12 +19,15 @@ from urllib.request import urlopen, Request
 from pathlib import Path
 
 import numpy as np
+#### ALBA new imports
+import pandas as pd
+#### 
 
 import xlrd
 import xlsxwriter
 import openpyxl
 
-from Orange.data import _io, Table, Domain, ContinuousVariable
+from Orange.data import _io, Table, Domain, ContinuousVariable, DiscreteVariable # ALBA new import: DiscreteVariable
 from Orange.data import Compression, open_compressed, detect_encoding, \
     isnastr, guess_data_type, sanitize_variable
 from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PROTOCOL
@@ -165,7 +168,7 @@ class CSVReader(FileFormat, DataTableMixin):
                     )
                     data = self.data_table(reader)
 
-                    # TODO: Name can be set unconditionally when/if
+                    # ToDO: Name can be set unconditionally when/if
                     # self.filename will always be a string with the file name.
                     # Currently, some tests pass StringIO instead of
                     # the file name to a reader.
@@ -515,3 +518,88 @@ class UrlReader(FileFormat):
         matches = re.findall(r"filename\*?=(?:\"|.{0,10}?'[^']*')([^\"]+)",
                              content_disposition or '')
         return urlunquote(matches[-1]) if matches else default_name
+
+### ALBA hdf5 reader
+class GenericHDF5Reader(FileFormat):
+    """Reader for generic .hdf5 files"""
+    EXTENSIONS = ('.hdf5', '.h5', '.nxs',)
+    DESCRIPTION = 'Hierarchical Data Format files'
+    SUPPORT_COMPRESSED = False
+    SUPPORT_SPARSE_DATA = False
+    
+    def __init__(self, filename):
+        super().__init__(filename=filename)
+        self.data = None # store here the data
+        
+    def read(self):
+        """
+        ABLA new function: to read
+        """
+        
+        name = self.data.name.split('/')[-1]
+        columns = ['Dim'+str(i) for i in range(len(self.data.shape))]
+        
+        flatten_data = np.array(self.data)
+        _, rows, cols = flatten_data.shape
+        
+        flatten_data = flatten_data[:,int(rows*(1/5)):int(rows*(4/5)),int(cols*(1/5)):int(cols*(4/5))] #roi provisional
+        flatten_data = np.moveaxis(flatten_data,0,2)
+        
+        flatten_data[flatten_data<=0] = 1
+        flatten_data = -np.log(flatten_data)
+        
+        index = pd.MultiIndex.from_product([range(s) for s in flatten_data.shape], names=columns)
+        flatten_data = flatten_data.flatten()
+        df = pd.DataFrame({name : flatten_data}, index=index).reset_index()
+        
+        pixels = df.iloc[:,[0,1]].copy(deep=True)
+        pixels.rename({'Dim0': 'x', 'Dim1': 'y'}, axis=1, inplace=True)
+        pixels = pixels.groupby(['x', 'y']).size().reset_index()
+        pixels.drop(0, axis=1, inplace=True)
+        
+        new_arrange = dict()
+        for photo, energy in zip(df.iloc[:,-2], df.iloc[:,-1]):
+            if photo in new_arrange.keys():
+                new_arrange[photo].append(energy)
+            else:
+                new_arrange[photo] = [energy]
+
+        arrange_df = pd.DataFrame.from_dict(new_arrange)
+        
+        attrs = [ContinuousVariable(str(val)) for val in range(0, len(arrange_df.columns))]
+        domain = Domain(attributes=attrs, metas=[DiscreteVariable('x', values=sorted(pixels['x'].astype(str).unique().tolist())), 
+                                                 DiscreteVariable('y', values=sorted(pixels['y'].astype(str).unique().tolist()))])
+
+        return Table.from_numpy(domain=domain, X=arrange_df.values, metas=pixels.values)
+    
+
+    @classmethod
+    def write_file(cls, filename, data, with_annotations=False):
+        """vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
+                          data.domain.attributes,
+                          data.domain.class_vars,
+                          data.domain.metas))
+        formatters = [cls.formatter(v) for v in vars]
+        zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
+                               data.X,
+                               data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
+                               data.metas)
+        names = cls.header_names(data)
+        headers = (names,)
+        if with_annotations:
+            types = cls.header_types(data)
+            flags = cls.header_flags(data)
+            headers = (names, types, flags)
+
+        workbook = xlsxwriter.Workbook(filename)
+        sheet = workbook.add_worksheet()
+
+        for r, parts in enumerate(headers):
+            for c, part in enumerate(parts):
+                sheet.write(r, c, part)
+        for i, row in enumerate(zipped_list_data, len(headers)):
+            for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
+                sheet.write(i, j, fmt(v))
+        workbook.close()"""
+        pass
+###
