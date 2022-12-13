@@ -4,6 +4,13 @@ Change Log
 [next] - TBA
 ------------
 
+
+[3.34.1] - 2022-12-13
+--------------------
+#### Bugfixes
+* Pin scikit-learn requirement to <1.2.0 due to changes in PCA
+
+
 [3.34.0] - 2022-12-05
 --------------------
 ##### Enhancements
@@ -1728,7 +1735,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.34.0...HEAD
+[next]: https://github.com/biolab/orange3/compare/3.34.1..HEAD
+[3.34.1]: https://github.com/biolab/orange3/compare/3.34.0...3.34.1
 [3.34.0]: https://github.com/biolab/orange3/compare/3.33.0...3.34.0
 [3.33.0]: https://github.com/biolab/orange3/compare/3.32.0...3.33.0
 [3.32.0]: https://github.com/biolab/orange3/compare/3.31.1...3.32.0
