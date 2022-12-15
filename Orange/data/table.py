@@ -160,12 +160,11 @@ class RowInstance(Instance):
                 self._metas[-1 - key] = value
 
     def _str(self, limit):
-        def sp_values(matrix, variables):
-            if not sp.issparse(matrix):
-                if matrix.ndim == 1:
-                    matrix = matrix[:, np.newaxis]
-                return Instance.str_values(matrix[row], variables, limit)
+        def sp_values(row, variables, sparsity=None):
+            if sparsity is None:
+                return Instance.str_values(row, variables, limit)
 
+            # row is sparse
             row_entries, idx = [], 0
             while idx < len(variables):
                 # Make sure to stop printing variables if we limit the output
@@ -173,8 +172,8 @@ class RowInstance(Instance):
                     break
 
                 var = variables[idx]
-                if var.is_discrete or matrix[row, idx]:
-                    row_entries.append("%s=%s" % (var.name, var.str_val(matrix[row, idx])))
+                if var.is_discrete or row[idx]:
+                    row_entries.append("%s=%s" % (var.name, var.str_val(row[idx])))
 
                 idx += 1
 
@@ -185,15 +184,13 @@ class RowInstance(Instance):
 
             return s
 
-        table = self.table
-        domain = table.domain
-        row = self.row_index
-        s = "[" + sp_values(table.X, domain.attributes)
+        domain = self._domain
+        s = "[" + sp_values(self._x, domain.attributes, self.sparse_x)
         if domain.class_vars:
-            s += " | " + sp_values(table.Y, domain.class_vars)
+            s += " | " + sp_values(self._y, domain.class_vars, self.sparse_y)
         s += "]"
-        if self._domain.metas:
-            s += " {" + sp_values(table.metas, domain.metas) + "}"
+        if domain.metas:
+            s += " {" + sp_values(self._metas, domain.metas, self.sparse_metas) + "}"
         return s
 
     def __str__(self):
