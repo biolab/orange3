@@ -701,6 +701,21 @@ class TestOWColor(WidgetTest):
     def test_string_variables(self):
         self.send_signal(self.widget.Inputs.data, Table("zoo"))
 
+    def test_changed_compute_value(self):
+        # test a bug where the widget did not register changes in compute_value
+        # because it reused an old context
+        w = self.widget
+        domain1 = Domain([ContinuousVariable("x", compute_value=lambda _: 1)])
+        data1 = self.iris.transform(domain1)
+        self.send_signal(w.Inputs.data, data1)
+        outp = self.get_output(w.Outputs.data)
+        np.testing.assert_array_equal(outp, 1)
+        domain2 = Domain([ContinuousVariable("x", compute_value=lambda _: 2)])
+        data2 = self.iris.transform(domain2)
+        self.send_signal(w.Inputs.data, data2)
+        outp = self.get_output(w.Outputs.data)
+        np.testing.assert_array_equal(outp, 2)
+
     def test_reset(self):
         self.send_signal(self.widget.Inputs.data, self.iris)
         cont_model = self.widget.cont_model
