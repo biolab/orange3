@@ -339,6 +339,19 @@ class TestOWNomogram(WidgetTest):
         self.assertEqual(target_cb.currentIndex(), 2)
         self.assertEqual(target_cb.count(), 3)
 
+    def test_compute_value(self):
+        class ComputeValue:
+            def __call__(self, table):
+                return table.get_column(0)
+
+        iris = Table("iris")
+        attrs = list(iris.domain.attributes)
+        attrs[0] = ContinuousVariable(attrs[0].name, 1, ComputeValue())
+        domain = Domain(attrs, iris.domain.class_vars)
+        data = iris.transform(domain)
+        lr = LogisticRegressionLearner()(data)
+        self.send_signal(self.widget.Inputs.classifier, lr)
+
 
 if __name__ == "__main__":
     unittest.main()
