@@ -2,6 +2,7 @@ import os
 import tempfile
 import unittest
 from contextlib import contextmanager
+from datetime import datetime
 
 import numpy as np
 import numpy.testing
@@ -159,6 +160,17 @@ class TableTestCase(unittest.TestCase):
             self.assertEqual(c.max, 50)
             self.assertAlmostEqual(c.mean, 22.5328063)
             self.assertAlmostEqual(c.var, 84.4195562)
+
+    def test_remind_us_of_instance_warning(self):
+        now = datetime.now()
+        if (now.year, now.month) >= (2023, 3):
+            iris = temp_dasktable("iris")
+            with self.assertWarns(expected_warning=UserWarning):
+                iris[1]
+                self.fail("This warning is used as a development aid. This is a friendly "
+                          "reminder that we should think about changing the warning into "
+                          "an OrangeDeprecationWarning (and explicitly handle it, where "
+                          "needed).")
 
     def test_instance(self):
         iris = temp_dasktable("iris")
