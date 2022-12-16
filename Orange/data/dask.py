@@ -1,5 +1,7 @@
 import contextlib
 import pickle
+import warnings
+from numbers import Integral
 
 import h5py
 import dask
@@ -7,7 +9,21 @@ import dask.array as da
 import numpy as np
 import pandas
 
-from Orange.data import Table
+from Orange.data import Table, RowInstance
+
+
+class DaskRowInstance(RowInstance):
+
+    def __init__(self, table, row_index):
+        """
+        Construct a data instance representing the given row of the table.
+        """
+        warnings.warn("Creating Instances from DaskTables is inefficient", stacklevel=2)
+        super().__init__(table, row_index)
+        if isinstance(self._x, dask.array.Array):
+            self._x = self._x.compute()
+        if isinstance(self._y, dask.array.Array):
+            self._y = self._y.compute()
 
 
 class DaskTable(Table):
@@ -75,6 +91,12 @@ class DaskTable(Table):
 
     def set_weights(self, weight=1):
         raise NotImplementedError()
+
+    def __getitem__(self, key):
+        if isinstance(key, Integral):
+            return DaskRowInstance(self, key)
+        else:
+            return super().__getitem__(key)
 
     def save(self, filename):
         # the following code works with both Table and DaskTable
