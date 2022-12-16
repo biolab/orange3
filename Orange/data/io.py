@@ -575,31 +575,5 @@ class GenericHDF5Reader(FileFormat):
 
     @classmethod
     def write_file(cls, filename, data, with_annotations=False):
-        """vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
-                          data.domain.attributes,
-                          data.domain.class_vars,
-                          data.domain.metas))
-        formatters = [cls.formatter(v) for v in vars]
-        zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
-                               data.X,
-                               data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
-                               data.metas)
-        names = cls.header_names(data)
-        headers = (names,)
-        if with_annotations:
-            types = cls.header_types(data)
-            flags = cls.header_flags(data)
-            headers = (names, types, flags)
-
-        workbook = xlsxwriter.Workbook(filename)
-        sheet = workbook.add_worksheet()
-
-        for r, parts in enumerate(headers):
-            for c, part in enumerate(parts):
-                sheet.write(r, c, part)
-        for i, row in enumerate(zipped_list_data, len(headers)):
-            for j, (fmt, v) in enumerate(zip(formatters, flatten(row))):
-                sheet.write(i, j, fmt(v))
-        workbook.close()"""
         pass
 ###

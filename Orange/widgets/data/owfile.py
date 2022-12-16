@@ -10,7 +10,7 @@ from AnyQt import QtWidgets # ALBA new import
 from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QLineEdit, QSizePolicy as Policy, QCompleter
-from AnyQt.QtCore import Qt, QTimer, QSize, QUrl, QModelIndex # ALBA new import: QModelIndex
+from AnyQt.QtCore import Qt, QTimer, QSize, QUrl, QModelIndex, QCoreApplication # ALBA new import: QModelIndex, QCoreApplication
 from AnyQt.QtGui import QBrush, QStandardItemModel, QStandardItem # ALBA new import: QStandardItemModel, QStandardItem
 
 from orangewidget.utils.filedialogs import format_filter
@@ -269,6 +269,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         box.layout().addWidget(self.reader_combo)
         layout.addWidget(box, 0, 1)
 
+        # ALBA new lines: options_box
+        self.options_box = gui.widgetBox(self.controlArea,
+                            orientation=QGridLayout().setSpacing(4), 
+                            box="Options")
+        self.options_box.hide()
+
         box = gui.vBox(self.controlArea, "Info")
         self.infolabel = gui.widgetLabel(box, 'No data loaded.')
 
@@ -428,16 +434,14 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             return lambda x=ex: self.Error.unknown(str(x))
 
         try:
-            if isinstance(self.reader, GenericHDF5Reader): # ALBA new lines 
-                self._hdf5_tree_model()
-                #self.reader.sheets = []
-            #else:
-            #    self._update_sheet_combo()
+            self._update_sheet_combo()
         except Exception:
             return self.Error.sheet_error
 
         with log_warnings() as warnings:
             try:
+                if isinstance(self.reader, GenericHDF5Reader): # ALBA new lines 
+                    self._hdf5_tree_model()
                 data = self.reader.read()
             except Exception as ex:
                 mark_problematic_reader()
@@ -485,21 +489,21 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             return UrlReader(url)
 
     def _hdf5_tree_model(self): # ALBA new function
-        self.h5_file = h5py.File(self.reader.filename) # ALBA try with "with"
+        self.h5_file = h5py.File(self.reader.filename) 
         
         self.tree_model = QStandardItemModel()
         parent = self.tree_model.invisibleRootItem()
         if isinstance(self.h5_file, h5py.Group):
             self._add_group(parent, self.h5_file)
-            
-        box = gui.widgetBox(self.controlArea,
-                            orientation=QGridLayout().setSpacing(4), 
-                            box="Data sets")
-        
-        self.dataset_tree = QtWidgets.QTreeView(box)
+
+        self.options_box.show()
+        self.dataset_tree = QtWidgets.QTreeView(self.options_box)
         self.dataset_tree.setModel(self.tree_model)
-        box.layout().addWidget(self.dataset_tree)
+        self.options_box.layout().addWidget(self.dataset_tree)
         self.dataset_tree.clicked[QModelIndex].connect(self._open_dataset)
+        
+        while self.reader.data is None:
+            QCoreApplication.processEvents() 
         
     def _open_dataset(self, model_index):
         self.reader.data = model_index.data(role=Qt.UserRole)
@@ -509,7 +513,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             item = QStandardItem(name)
             if isinstance(obj, h5py.Group):
                 item.setSelectable(False)
-                self.add_group(item, group[name])
+                self._add_group(item, group[name])
             elif isinstance(obj, h5py.Dataset):
                 item.setData(obj, role=Qt.UserRole)
             parent.appendRow(item)
