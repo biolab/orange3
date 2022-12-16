@@ -284,6 +284,12 @@ class DistMatrix(np.ndarray):
                len(items.domain.metas) == 1 and \
                isinstance(items.domain.metas[0], StringVariable)
 
+    def is_symmetric(self):
+        return self.shape[0] == self.shape[1] and np.allclose(self, self.T) \
+               and (self.row_items is None
+                    or self.col_items is None
+                    or self.row_items is self.col_items)
+
     def has_row_labels(self):
         """
         Returns `True` if row labels can be automatically determined from data
@@ -322,7 +328,7 @@ class DistMatrix(np.ndarray):
         if self.has_row_labels():
             data += "\trow_labels"
             row_labels = self.row_items
-        symmetric = np.allclose(self, self.T)
+        symmetric = self.is_symmetric()
         if not symmetric:
             data += "\tasymmetric"
         with open(filename, "wt") as fle:

@@ -66,6 +66,13 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, data_singletons)
         self.assertTrue(self.widget.Error.singleton_clusters_all.is_shown())
 
+    def test_not_symmetric(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, DistMatrix([[1, 2, 3], [4, 5, 6]]))
+        self.assertTrue(w.Error.input_validation_error.is_shown())
+        self.send_signal(w.Inputs.data, None)
+        self.assertFalse(w.Error.input_validation_error.is_shown())
+
     def test_unknowns_in_labels(self):
         data = self.data[[0, 1, 2, 50, 51, 52, 100, 101, 102]]
         with data.unlocked(data.Y):

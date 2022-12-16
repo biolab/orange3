@@ -275,6 +275,10 @@ class OWDistanceMap(widget.OWWidget):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
         features = Output("Features", widget.AttributeList, dynamic=False)
 
+    class Error(widget.OWWidget.Error):
+        empty_matrix = widget.Msg("Empty distance matrix")
+        not_symmetric = widget.Msg("Distance matrix is not symmetric.")
+
     settingsHandler = settings.PerfectDomainContextHandler()
 
     #: type of ordering to apply to matrix rows/columns
@@ -416,11 +420,13 @@ class OWDistanceMap(widget.OWWidget):
     def set_distances(self, matrix):
         self.closeContext()
         self.clear()
-        self.error()
+        self.Error.clear()
         if matrix is not None:
-            N, _ = matrix.shape
-            if N < 2:
-                self.error("Empty distance matrix.")
+            if matrix.shape[1] < 2:
+                self.Error.empty_matrix()
+                matrix = None
+            elif not matrix.is_symmetric():
+                self.Error.not_symmetric()
                 matrix = None
 
         self.matrix = matrix

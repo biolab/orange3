@@ -182,6 +182,9 @@ class OWDistanceMatrix(widget.OWWidget):
         distances = Output("Distances", DistMatrix, dynamic=False)
         table = Output("Selected Data", Table, replaces=["Table"])
 
+    class Error(widget.OWWidget.Error):
+        not_symmetric = widget.Msg("Distance matrix is not symmetric.")
+
     settingsHandler = DistanceMatrixContextHandler()
     auto_commit = Setting(True)
     annotation_idx = ContextSetting(1)
@@ -234,6 +237,13 @@ class OWDistanceMatrix(widget.OWWidget):
     @Inputs.distances
     def set_distances(self, distances):
         self.closeContext()
+
+        self.Error.not_symmetric.clear()
+        if distances is not None:
+            if not distances.is_symmetric():
+                self.Error.not_symmetric()
+                distances = None
+
         self.distances = distances
         self.tablemodel.set_data(self.distances)
         self.selection = []

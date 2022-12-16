@@ -199,6 +199,16 @@ class TestDistMatrix(TestCase):
         with self.assertRaises(AssertionError):
             np.testing.assert_array_equal(dm1, dm2)
 
+    def test_symmetric(self):
+        self.assertFalse(
+            DistMatrix([[1, 2, 3], [4, 5, 6]]).is_symmetric()
+        )
+        self.assertFalse(
+            DistMatrix([[1, 2], [4, 5]]).is_symmetric()
+        )
+        self.assertTrue(
+            DistMatrix([[1, 2, 3], [2, 0, 4], [3, 4, 5]]).is_symmetric()
+        )
 
 # noinspection PyTypeChecker
 class TestEuclidean(TestCase):
