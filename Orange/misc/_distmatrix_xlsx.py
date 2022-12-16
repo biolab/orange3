@@ -100,3 +100,29 @@ def _matrix_from_cells(cells, row_offset, col_offset):
                     f"{openpyxl.utils.get_column_letter(x + col_offset + 1)}"
                     f"{y + row_offset + 1}") from None
     return matrix
+
+
+def write_matrix(matrix: "DistMatrix", filename):
+    wb = openpyxl.Workbook()
+    sheet = wb.active
+    row_labels = matrix.get_labels(matrix.row_items)
+    col_labels = (matrix.col_items is not matrix.row_items) \
+                 and matrix.get_labels(matrix.col_items)
+    has_row_labels = row_labels is not None
+    has_col_labels = col_labels is not None and col_labels is not False
+    row_off = 1 + int(has_col_labels)
+    col_off = 1 + int(has_row_labels)
+
+    if has_row_labels:
+        for row, label in enumerate(row_labels, start=row_off):
+            sheet.cell(row, 1).value = label
+    if has_col_labels:
+        for col, label in enumerate(col_labels, start=col_off):
+            sheet.cell(1, col).value = label
+    symmetric = matrix.is_symmetric()
+    has_diagonal = int(np.any(np.diag(matrix) != 0))
+    for y in range(matrix.shape[0]):
+        for x in range(y + has_diagonal if symmetric else matrix.shape[1]):
+            sheet.cell(y + row_off, x + col_off).value = matrix[y, x]
+
+    wb.save(filename)

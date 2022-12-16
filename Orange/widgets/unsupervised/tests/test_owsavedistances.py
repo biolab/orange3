@@ -18,11 +18,11 @@ class OWSaveTestBase(WidgetTest, SaveWidgetsTestBaseMixin):
         self.widget = self.create_widget(OWSaveDistances)
         self.distances = Euclidean(Table("iris"))
 
-    def _save_and_load(self):
+    def _save_and_load(self, suffix=".dst"):
         widget = self.widget
         widget.auto_save = False
 
-        with named_file("", suffix=".dst") as filename:
+        with named_file("", suffix=suffix) as filename:
             widget.get_save_filename = Mock(
                 return_value=(filename, widget.filters[0]))
 
@@ -101,6 +101,11 @@ class OWSaveTestBase(WidgetTest, SaveWidgetsTestBaseMixin):
                                     self.distances.col_items)
             self.assertFalse(widget.Warning.table_not_saved.is_shown())
             self.assertFalse(widget.Warning.part_not_saved.is_shown())
+
+    def test_nonsquare(self):
+        self.distances = DistMatrix([[1, 2, 3], [4, 5, 6]])
+        distances = self._save_and_load(".xlsx")
+        np.testing.assert_equal(distances, self.distances)
 
     def test_send_report(self):
         widget = self.widget

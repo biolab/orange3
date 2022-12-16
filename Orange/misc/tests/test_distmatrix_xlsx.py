@@ -5,11 +5,12 @@ from unittest.mock import patch, Mock
 import numpy as np
 import openpyxl
 
+from Orange.misc import DistMatrix
 from Orange.misc._distmatrix_xlsx import read_matrix, _get_sheet, \
-    _non_empty_cells, _get_labels, _matrix_from_cells
+    _non_empty_cells, _get_labels, _matrix_from_cells, write_matrix
 
 import Orange.tests
-
+from Orange.tests import named_file
 
 files_dir = os.path.join(os.path.split(Orange.tests.__file__)[0], "xlsx_files")
 
@@ -182,6 +183,65 @@ class FunctionsTest(unittest.TestCase):
             ValueError, ".*D3.*", _matrix_from_cells,
             np.array([[1, 2, None], ["3.15", object(), ""]]),
             1, 2)
+
+    def test_write(self):
+        with named_file("", suffix=".xlsx") as fname:
+            matrix = DistMatrix([[1, 2, 3], [4, 5, 6]])
+            write_matrix(matrix, fname)
+            matrix2, *_ = read_matrix(fname)
+            np.testing.assert_equal(matrix, matrix2)
+
+            matrix.row_items = mrow_items = ["aa", "bb"]
+            matrix.col_items = mcol_items = ["cc", "dd", "ee"]
+
+            matrix.row_items = mrow_items
+            matrix.col_items = mcol_items
+            write_matrix(matrix, fname)
+            matrix2, row_labels, col_labels, _ = read_matrix(fname)
+            np.testing.assert_equal(matrix, matrix2)
+            self.assertEqual(row_labels, mrow_items)
+            self.assertEqual(col_labels, mcol_items)
+
+            matrix.row_items = None
+            matrix.col_items = mcol_items
+            write_matrix(matrix, fname)
+            matrix2, row_labels, col_labels, _ = read_matrix(fname)
+            np.testing.assert_equal(matrix, matrix2)
+            self.assertIsNone(row_labels)
+            self.assertEqual(col_labels, mcol_items)
+
+            matrix.row_items = mrow_items
+            matrix.col_items = None
+            write_matrix(matrix, fname)
+            matrix2, row_labels, col_labels, _ = read_matrix(fname)
+            np.testing.assert_equal(matrix, matrix2)
+            self.assertEqual(row_labels, mrow_items)
+            self.assertEqual(col_labels, None)
+
+            matrix.row_items = matrix._labels_to_tables(mrow_items)
+            matrix.col_items = matrix._labels_to_tables(mcol_items)
+            write_matrix(matrix, fname)
+            matrix2, row_labels, col_labels, _ = read_matrix(fname)
+            np.testing.assert_equal(matrix, matrix2)
+            self.assertEqual(row_labels, mrow_items)
+            self.assertEqual(col_labels, mcol_items)
+
+            matrix = DistMatrix([[1, 2, 3], [2, 0, 4], [3, 4, 0]])
+            write_matrix(matrix, fname)
+            matrix2, *_ = read_matrix(fname)
+            np.testing.assert_equal(matrix2, [[1, np.nan, np.nan],
+                                              [2, 0, np.nan],
+                                              [3, 4, 0]])
+
+            matrix = DistMatrix([[0, 2, 3], [2, 0, 4], [3, 4, 0]])
+            matrix.col_items = mcol_items
+            write_matrix(matrix, fname)
+            matrix2, row_items, col_items, *_ = read_matrix(fname)
+            np.testing.assert_equal(matrix2, [[np.nan, np.nan, np.nan],
+                                              [2, np.nan, np.nan],
+                                              [3, 4, np.nan]])
+            self.assertIsNone(row_items)
+            self.assertEqual(col_items, mcol_items)
 
 
 if __name__ == "__main__":

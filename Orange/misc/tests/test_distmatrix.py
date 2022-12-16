@@ -36,6 +36,8 @@ class DistMatrixTest(unittest.TestCase):
             matrix = DistMatrix(data[1:], ri, li)
             sym = matrix.auto_symmetricized()
             np.testing.assert_almost_equal(sym, exp_sym)
+            self.assertEqual(sym.row_items, sym.col_items)
+            self.assertIs((ri or li), sym.row_items)
 
         matrix = DistMatrix(data[1:].T)
         sym = matrix.auto_symmetricized()

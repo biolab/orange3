@@ -311,7 +311,22 @@ class DistMatrix(np.ndarray):
         """
         return self._trivial_labels(self.col_items)
 
+    def get_labels(self, items):
+        if self._trivial_labels(items):
+            return items.get_column(items.domain.metas[0])
+        elif isinstance(items, (list, tuple)) \
+                and all(isinstance(x, str) for x in items):
+            return items
+        else:
+            return None
+
     def save(self, filename):
+        if os.path.splitext(filename)[1] == ".xlsx":
+            _distmatrix_xlsx.write_matrix(self, filename)
+        else:
+            self._save_dst(filename)
+
+    def _save_dst(self, filename):
         """
         Save the distance matrix to a file in the file format described at
         :obj:`~Orange.misc.distmatrix.DistMatrix.from_file`.
