@@ -274,15 +274,19 @@ class DistMatrix(np.ndarray):
                           self.row_items or self.col_items,
                           self.col_items or self.row_items)
 
-    @staticmethod
-    def _trivial_labels(items):
+    def _trivial_labels(self, items):
         # prevent circular imports, pylint: disable=import-outside-toplevel
         from Orange.data import Table, StringVariable
 
-        return items and \
-               isinstance(items, Table) and \
-               len(items.domain.metas) == 1 and \
-               isinstance(items.domain.metas[0], StringVariable)
+        return (isinstance(items, (list, tuple))
+                and all(isinstance(item, str) for item in items)
+                or
+                isinstance(items, Table)
+                and (self.axis == 0 or
+                     sum(isinstance(meta, StringVariable)
+                         for meta in items.domain.metas) == 1
+                     )
+                )
 
     def is_symmetric(self):
         # prevent circular imports, pylint: disable=import-outside-toplevel
@@ -324,13 +328,20 @@ class DistMatrix(np.ndarray):
         return self._trivial_labels(self.col_items)
 
     def get_labels(self, items):
-        if self._trivial_labels(items):
-            return items.get_column(items.domain.metas[0])
-        elif isinstance(items, (list, tuple)) \
+        # prevent circular imports, pylint: disable=import-outside-toplevel
+        from Orange.data import StringVariable
+
+        if not self._trivial_labels(items):
+            return None
+        if isinstance(items, (list, tuple)) \
                 and all(isinstance(x, str) for x in items):
             return items
+        if self.axis == 0:
+            return [attr.name for attr in items.domain.attributes]
         else:
-            return None
+            string_var = next(var for var in items.domain.metas
+                              if isinstance(var, StringVariable))
+            return items.get_column(string_var)
 
     def save(self, filename):
         if os.path.splitext(filename)[1] == ".xlsx":
