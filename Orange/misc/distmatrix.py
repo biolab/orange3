@@ -95,13 +95,17 @@ class DistMatrix(np.ndarray):
         if not col_items:
             col_items = row_items
         obj = self[np.ix_(row_items, col_items)]
-        if self.row_items is not None:
+        if isinstance(self.row_items, list):
+            obj.row_items = list(np.array(self.row_items)[row_items])
+        elif self.row_items is not None:
             obj.row_items = self.row_items[row_items]
-        if self.col_items is not None:
-            if self.col_items is self.row_items and row_items is col_items:
-                obj.col_items = obj.row_items
-            else:
-                obj.col_items = self.col_items[col_items]
+
+        if self.col_items is self.row_items and col_items is row_items:
+            obj.col_items = obj.row_items
+        elif isinstance(self.col_items, list):
+            obj.col_items = list(np.array(self.col_items)[col_items])
+        elif self.col_items is not None:
+            obj.col_items = self.col_items[col_items]
         return obj
 
     @classmethod
