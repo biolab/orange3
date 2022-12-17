@@ -6,6 +6,8 @@ from AnyQt.QtCore import Qt
 from orangewidget.utils.signals import summarize, PartialSummary
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.tableview import TableView
+from Orange.widgets.utils.distmatrixmodel import \
+    DistMatrixModel, DistMatrixView
 
 from Orange.data import (
     StringVariable, DiscreteVariable, ContinuousVariable, TimeVariable,
@@ -181,9 +183,36 @@ def summarize_(data: Table):
 
 
 @summarize.register
-def summarize_(matrix: DistMatrix):  # pylint: disable=function-redefined
-    n, m = matrix.shape
-    return PartialSummary(f"{n}×{m}", _nobr(f"{n}×{m} distance matrix"))
+def summarize_(matrix: DistMatrix):
+    def previewer():
+        view = DistMatrixView(selectionMode=TableView.NoSelection)
+        model = DistMatrixModel()
+        model.set_data(matrix)
+        col_labels = matrix.get_labels(matrix.col_items)
+        row_labels = matrix.get_labels(matrix.row_items)
+        if matrix.is_symmetric() and (
+                (col_labels is None) is not (row_labels is None)):
+            if col_labels is None:
+                col_labels = row_labels
+            else:
+                row_labels = col_labels
+        if col_labels is None:
+            col_labels = [str(x) for x in range(w)]
+        if row_labels is None:
+            row_labels = [str(x) for x in range(h)]
+        model.set_labels(Qt.Horizontal, col_labels)
+        model.set_labels(Qt.Vertical, row_labels)
+        view.setModel(model)
+
+        return view
+
+    # pylint: disable=function-redefined
+    h, w = matrix.shape
+    return PartialSummary(
+        f"{w}×{h}",
+        _nobr(f"{w}×{h} distance matrix"),
+        previewer
+    )
 
 
 @summarize.register
