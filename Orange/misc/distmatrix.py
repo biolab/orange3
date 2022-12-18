@@ -43,6 +43,7 @@ class DistMatrix(np.ndarray):
         return obj
 
     def __array_finalize__(self, obj):
+        # defined in __new___, pylint: disable=attribute-defined-outside-init
         """See http://docs.scipy.org/doc/numpy/user/basics.subclassing.html"""
         if obj is None:
             return
@@ -63,6 +64,7 @@ class DistMatrix(np.ndarray):
 
     # noinspection PyMethodOverriding,PyArgumentList
     def __setstate__(self, state):
+        # defined in __new___, pylint: disable=attribute-defined-outside-init
         self.row_items = state[-3]
         self.col_items = state[-2]
         self.axis = state[-1]
@@ -362,7 +364,7 @@ class DistMatrix(np.ndarray):
             filename: file name
         """
         n = len(self)
-        data = "{}\taxis={}".format(n, self.axis)
+        data = f"{n}\taxis={self.axis}"
         row_labels = col_labels = None
         if self.has_col_labels():
             data += "\tcol_labels"
@@ -373,7 +375,7 @@ class DistMatrix(np.ndarray):
         symmetric = self.is_symmetric()
         if not symmetric:
             data += "\tasymmetric"
-        with open(filename, "wt") as fle:
+        with open(filename, "wt", encoding="utf-8") as fle:
             fle.write(data + "\n")
             if col_labels is not None:
                 fle.write("\t".join(str(e.metas[0]) for e in col_labels) + "\n")

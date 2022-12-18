@@ -25,6 +25,7 @@ class DistanceMatrixContextHandler(ContextHandler):
     def _var_names(annotations):
         return [a.name if isinstance(a, Variable) else a for a in annotations]
 
+    # pylint: disable=arguments-differ
     def new_context(self, matrix, annotations):
         context = super().new_context()
         context.shape = matrix.shape
@@ -34,7 +35,7 @@ class DistanceMatrixContextHandler(ContextHandler):
         context.selection = [] if context.symmetric else ([], [])
         return context
 
-    # noinspection PyMethodOverriding
+    # pylint: disable=arguments-differ
     def match(self, context, matrix, annotations):
         annotations = self._var_names(annotations)
         if context.shape != matrix.shape \
@@ -44,12 +45,14 @@ class DistanceMatrixContextHandler(ContextHandler):
         return 1 + (context.annotations == annotations)
 
     def settings_from_widget(self, widget, *args):
+        # pylint: disable=protected-access
         context = widget.current_context
         if context is not None:
             context.annotation = widget.annot_combo.currentText()
             context.selection, _ = widget._get_selection()
 
     def settings_to_widget(self, widget, *args):
+        # pylint: disable=protected-access
         context = widget.current_context
         widget.annotation_idx = context.annotations.index(context.annotation)
         widget._set_selection(context.selection)
@@ -248,12 +251,12 @@ class OWDistanceMatrix(widget.OWWidget):
         if isinstance(selmodel, SymmetricSelectionModel):
             if not isinstance(selection, list):
                 log.error("wrong data for symmetric selection")
-                return None
+                return
             selmodel.setSelectedItems(selection)
         else:
             if not isinstance(selection, tuple) and len(selection) == 2:
                 log.error("wrong data for asymmetric selection")
-                return None
+                return
             rows, cols = selection
             selection = QItemSelection()
             rowranges = list(ranges(rows))

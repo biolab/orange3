@@ -170,7 +170,7 @@ def _nobr(s):
 
 
 @summarize.register
-def summarize_(data: Table):
+def summarize_(data: Table):  # pylint: disable=function-redefined
     def previewer():
         view = TableView(selectionMode=TableView.NoSelection)
         view.setModel(TableModel(data))
@@ -183,7 +183,7 @@ def summarize_(data: Table):
 
 
 @summarize.register
-def summarize_(matrix: DistMatrix):
+def summarize_(matrix: DistMatrix):  # pylint: disable=function-redefined
     def previewer():
         view = DistMatrixView(selectionMode=TableView.NoSelection)
         model = DistMatrixModel()
@@ -206,7 +206,6 @@ def summarize_(matrix: DistMatrix):
 
         return view
 
-    # pylint: disable=function-redefined
     h, w = matrix.shape
     return PartialSummary(
         f"{w}×{h}",
@@ -238,7 +237,7 @@ def summarize_(attributes: AttributeList):  # pylint: disable=function-redefined
 
 
 @summarize.register
-def summarize_(preprocessor: Preprocess):
+def summarize_(preprocessor: Preprocess):  # pylint: disable=function-redefined
     if isinstance(preprocessor, PreprocessorList):
         if preprocessor.preprocessors:
             details = "<br/>".join(map(_name_of, preprocessor.preprocessors))

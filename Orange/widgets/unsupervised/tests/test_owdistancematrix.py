@@ -1,3 +1,5 @@
+# pylint: disable=protected-access
+
 import unittest
 from functools import partial
 from unittest.mock import patch
