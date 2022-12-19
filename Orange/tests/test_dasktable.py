@@ -91,7 +91,6 @@ class TableTestCase(unittest.TestCase):
 
     def test_domain_basic_stats(self):
         with open_as_dask("housing") as data:
-            print(len(data.domain))
             stats = DomainBasicStats(data, compute_variance=True)
             f = stats[0]
             self.assertEqual(f.min, 0.00632)
