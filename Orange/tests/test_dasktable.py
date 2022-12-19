@@ -1,10 +1,11 @@
 import unittest
 from contextlib import contextmanager
 
+import numpy as np
 import numpy.testing
 import dask.array as da
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.dask import DaskTable
 from Orange.tests import named_file
 
@@ -29,6 +30,27 @@ class TableTestCase(unittest.TestCase):
         numpy.testing.assert_equal(dasktable.X, table.X)
         numpy.testing.assert_equal(dasktable.Y, table.Y)
         numpy.testing.assert_equal(dasktable.metas, table.metas)
+
+    def test_zero_size_dask_arrays(self):
+        empty = Table.from_numpy(Domain([], [ContinuousVariable("y")]),
+                                X=np.ones((10**5, 0)),
+                                Y=np.ones((10**5, 1)))
+
+        with open_as_dask(empty) as data:
+            self.assertIsInstance(data, DaskTable)
+            self.assertIsInstance(data.X, da.Array)
+            self.assertEqual(data.X.shape, (10**5, 0))
+            self.assertEqual(data._Y.size, 10**5)
+
+        empty = Table.from_numpy(Domain([ContinuousVariable("x")], []),
+                                 X=np.ones((10**5, 1)),
+                                 Y=np.ones((10**5, 0)))
+
+        with open_as_dask(empty) as data:
+            self.assertIsInstance(data, DaskTable)
+            self.assertIsInstance(data.Y, da.Array)
+            self.assertEqual(data.X.shape, (10**5, 1))
+            self.assertEqual(data._Y.shape, (10**5, 0))
 
     def test_save_table(self):
         zoo = Table('zoo')
