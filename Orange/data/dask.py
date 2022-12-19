@@ -27,15 +27,14 @@ class DaskTable(Table):
 
         f = h5py.File(filename, "r")
 
-        if "X" in f:
-            self._X = da.from_array(f["X"])
-        else:
-            self._X = None
+        def read_format_da(name):
+            # dask's automatic chunking has problems with 0-dimension arrays
+            if name in f and 0 not in f[name].shape:
+                return da.from_array(f[name])
+            return None
 
-        if "Y" in f:
-            self._Y = da.from_array(f["Y"])
-        else:
-            self._Y = None
+        self._X = read_format_da("X")
+        self._Y = read_format_da("Y")
 
         # metas are in memory
         if "metas" in f:
@@ -52,10 +51,10 @@ class DaskTable(Table):
                 break
 
         if self._X is None:
-            self._X = da.zeros((size, 0))
+            self._X = da.zeros((size, 0), chunks=(size, 0))
 
         if self._Y is None:
-            self._Y = da.zeros((size, 0))
+            self._Y = da.zeros((size, 0), chunks=(size, 0))
 
         if self._metas is None:
             self._metas = np.zeros((size, 0))
