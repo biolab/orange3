@@ -147,6 +147,7 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         annotated = self.get_output(self.widget.Outputs.annotated_data)
         self.assertIsNotNone(annotated)
 
+        self.widget.grab()  # Force layout
         # selecting clusters with cutoff should select all data
         QTest.mousePress(
             self.widget.view.headerView().viewport(),
