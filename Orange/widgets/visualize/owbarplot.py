@@ -572,7 +572,10 @@ class OWBarPlot(OWWidget):
         elif not self.annot_var:
             return []
         elif self.annot_var == self.enumeration:
-            return np.arange(1, len(self.data) + 1)[self.grouped_indices]
+            return [
+                str(x)
+                for x in np.arange(1, len(self.data) + 1)[self.grouped_indices]
+            ]
         else:
             return [self.annot_var.str_val(row[self.annot_var])
                     for row in self.grouped_data]

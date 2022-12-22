@@ -137,6 +137,21 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(group_axis.isVisible())
         self.assertFalse(annot_axis.isVisible())
 
+    def test_annotate_by_enumeration(self):
+        widget = self.widget
+
+        self.send_signal(widget.Inputs.data, self.data)
+        combo = widget.controls.annot_var
+        for i in range(combo.count()):
+            try:
+                simulate.combobox_activate_index(combo, i)
+            except AssertionError:  # skip disabled items
+                pass
+            else:
+                labels = widget.get_labels()
+                self.assertTrue(not labels
+                                or all(isinstance(x, str) for x in labels))
+
     def test_datasets(self):
         controls = self.widget.controls
         for ds in datasets.datasets():
