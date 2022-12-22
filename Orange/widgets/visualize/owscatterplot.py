@@ -1,5 +1,6 @@
 from xml.sax.saxutils import escape
 
+import dask
 import numpy as np
 from scipy.stats import linregress
 from sklearn.neighbors import NearestNeighbors
@@ -15,6 +16,7 @@ from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.data import Table, Domain, DiscreteVariable, Variable
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
+from Orange.data.dask import DaskTable
 from Orange.preprocess.score import ReliefF, RReliefF
 
 from Orange.widgets import gui, report
@@ -354,7 +356,8 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.cb_attr_y: ComboBoxSearch = None
         self.vizrank: ScatterPlotVizRank = None
         self.vizrank_button: QPushButton = None
-        self.sampling: QGroupBox = None
+        self.sql_sampling_box: QGroupBox = None
+        self.sampling_box: QGroupBox = None
         self._xy_invalidated: bool = True
 
         self.sql_data = None  # Orange.data.sql.table.SqlTable
@@ -367,6 +370,8 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.graph_writers = self.graph_writers.copy()
         for w in [MatplotlibFormat, MatplotlibPDFFormat]:
             self.graph_writers.append(w)
+
+        self.cached_x_data, self.cached_y_data = None, None
 
     def _add_controls(self):
         self._add_controls_axis()
@@ -412,10 +417,27 @@ class OWScatterPlot(OWDataProjectionWidget):
             vizrank_box, self, "Find Informative Projections", self.set_attr)
 
     def _add_controls_sampling(self):
-        self.sampling = gui.auto_commit(
-            self.controlArea, self, "auto_sample", "Sample", box="Sampling",
-            callback=self.switch_sampling, commit=lambda: self.add_data(1))
-        self.sampling.setVisible(False)
+        # Make gui boxes as there is no info about input data at this stage.
+        # This is temporary and probably need refactoring.
+
+        self.sql_sampling_box = gui.auto_commit(self.sampling_box, self,
+                                                "auto_sample",
+                                                "Sample", box='Sampling',
+                                                callback=self.switch_sampling,
+                                                commit=lambda: self.add_data(1))
+        self.sql_sampling_box.setVisible(False)
+
+        self.sampling_box = gui.vBox(self.controlArea, 'Sampling',
+                                     spacing=2 if gui.is_macstyle() else 8)
+
+        gui.spin(self.sampling_box, self, 'graph.sample_size',
+                 minv=1000, maxv=10_000, step=500, label='Sample Size:',
+                 callback=self.graph.resample_current_view_range)
+
+        gui.button(self.sampling_box, self, label='Resample',
+                   callback=self.graph.resample_current_view_range)
+
+        self.sampling_box.setVisible(False)
 
     @property
     def effective_variables(self):
@@ -474,7 +496,8 @@ class OWScatterPlot(OWDataProjectionWidget):
     def check_data(self):
         super().check_data()
         self.__timer.stop()
-        self.sampling.setVisible(False)
+        self.sql_sampling_box.setVisible(False)
+        self.sampling_box.setVisible(False)
         self.sql_data = None
         if isinstance(self.data, SqlTable):
             if self.data.approx_len() < 4000:
@@ -485,9 +508,12 @@ class OWScatterPlot(OWDataProjectionWidget):
                 data_sample = self.data.sample_time(0.8, no_cache=True)
                 data_sample.download_data(2000, partial=True)
                 self.data = Table(data_sample)
-                self.sampling.setVisible(True)
+                self.sql_sampling_box.setVisible(True)
                 if self.auto_sample:
                     self.__timer.start()
+
+        elif isinstance(self.data, DaskTable):
+            self.sampling_box.setVisible(True)
 
         if self.data is not None and (len(self.data) == 0 or
                                       len(self.data.domain.variables) == 0):
@@ -498,18 +524,26 @@ class OWScatterPlot(OWDataProjectionWidget):
         if self.data is None:
             return None
 
-        x_data = self.get_column(self.attr_x, filter_valid=False)
-        y_data = self.get_column(self.attr_y, filter_valid=False)
-        if x_data is None or y_data is None:
+        if self.attr_x is None or self.attr_y is None:
             return None
+
+        if self.cached_x_data is None or self.cached_y_data is None:
+            self.cached_x_data = self.get_column(self.attr_x, filter_valid=False)
+            self.cached_y_data = self.get_column(self.attr_y, filter_valid=False)
+
+            if isinstance(self.data, DaskTable):
+                self.cached_x_data, self.cached_y_data = dask.compute(
+                    self.cached_x_data, self.cached_y_data
+                )
 
         self.Warning.missing_coords.clear()
         self.Information.missing_coords.clear()
-        self.valid_data = np.isfinite(x_data) & np.isfinite(y_data)
+        self.valid_data = np.isfinite(self.cached_x_data) & np.isfinite(
+            self.cached_y_data)
         if self.valid_data is not None and not np.all(self.valid_data):
             msg = self.Information if np.any(self.valid_data) else self.Warning
             msg.missing_coords(self.attr_x.name, self.attr_y.name)
-        return np.vstack((x_data, y_data)).T
+        return np.vstack((self.cached_x_data, self.cached_y_data)).T
 
     # Tooltip
     def _point_tooltip(self, point_id, skip_attrs=()):
@@ -582,6 +616,8 @@ class OWScatterPlot(OWDataProjectionWidget):
                 self.attr_x, self.attr_y = None, None
         self._invalidated = self._invalidated or self._xy_invalidated
         self._xy_invalidated = False
+        self.cached_x_data = None
+        self.cached_y_data = None
         super().handleNewSignals()
         if self._domain_invalidated:
             self.graph.update_axes()
@@ -608,6 +644,7 @@ class OWScatterPlot(OWDataProjectionWidget):
             self.attr_changed()
 
     def set_attr_from_combo(self):
+        self.cached_x_data, self.cached_y_data = None, None
         self.attr_changed()
         self.xy_changed_manually.emit(self.attr_x, self.attr_y)
 
