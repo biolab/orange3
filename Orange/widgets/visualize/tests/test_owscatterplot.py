@@ -16,6 +16,7 @@ from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, datasets, ProjectionWidgetTestMixin
 )
 from Orange.widgets.tests.utils import simulate, excepthook_catch
+from Orange.tests.test_dasktable import temp_dasktable
 from Orange.widgets.utils.colorpalettes import DefaultRGBColors
 from Orange.widgets.visualize.owscatterplot import (
     OWScatterPlot, ScatterPlotVizRank, OWScatterPlotGraph)
@@ -1227,6 +1228,29 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.set_visual_settings(key, value)
         for item in graph.reg_line_items:
             self.assertEqual(item.pen.width(), 10)
+
+
+class TestOWScatterPlotWithDask(TestOWScatterPlot):
+
+    def init(self):
+        self.data = temp_dasktable("iris")
+
+    def test_data_column_nans(self):
+        table = temp_dasktable(datasets.data_one_column_nans())
+        self.send_signal(self.widget.Inputs.data, table)
+        cb_attr_color = self.widget.controls.attr_color
+        simulate.combobox_activate_item(cb_attr_color, "b")
+        simulate.combobox_activate_item(self.widget.cb_attr_x, "a")
+        simulate.combobox_activate_item(self.widget.cb_attr_y, "a")
+
+        # self.widget.update_graph()
+        self.widget.graph.reset_graph()
+
+    def test_data_column_infs(self):
+        table = temp_dasktable(datasets.data_one_column_infs())
+        self.send_signal(self.widget.Inputs.data, table)
+        attr_x = self.widget.controls.attr_x
+        simulate.combobox_activate_item(attr_x, "b")
 
 
 if __name__ == "__main__":
