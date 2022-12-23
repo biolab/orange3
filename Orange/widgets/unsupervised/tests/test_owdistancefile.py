@@ -20,12 +20,17 @@ class TestOWDistanceFile(WidgetTest):
         self.widget.add_path(filename)
         self.widget.open_file()
 
+    def test_non_square(self):
+        self.open_file("xlsx_files/distances_nonsquare.xlsx")
+        self.assertIsNone(self.get_output(self.widget.Outputs.distances))
+        self.assertTrue(self.widget.Error.non_square_matrix.is_shown())
+        self.open_file("xlsx_files/distances_with_nans.xlsx")
+        self.assertFalse(self.widget.Error.non_square_matrix.is_shown())
+
     def test_nan_to_num(self):
         self.open_file("xlsx_files/distances_with_nans.xlsx")
         dist = self.get_output(self.widget.Outputs.distances)
-        np.testing.assert_equal(
-            dist,
-            [[1, 2, 3], [4, 5, 0], [7, 0, 9], [10, 11, 12]])
+        np.testing.assert_equal(dist, [[1, 2, 3], [4, 5, 0], [7, 0, 9]])
 
 
 class TestOWDistanceFileDropHandler(unittest.TestCase):

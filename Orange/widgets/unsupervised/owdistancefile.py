@@ -31,6 +31,9 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
 
     class Error(widget.OWWidget.Error):
         invalid_file = Msg("Data was not loaded:{}")
+        non_square_matrix = Msg(
+            "Matrix is not square. "
+            "Reformat the file and use the File widget to read it.")
 
     want_main_area = False
     resizing_enabled = False
@@ -116,14 +119,18 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
                 fn = os.path.join(".", basename)
         if fn and fn != "(none)":
             try:
-                self.distances = DistMatrix.from_file(fn)
+                distances = DistMatrix.from_file(fn)
             except Exception as exc:
                 err = str(exc)
                 self.Error.invalid_file(" \n"[len(err) > 40] + err)
             else:
-                np.nan_to_num(self.distances)
-                _, filename = os.path.split(fn)
-                self.distances.name, _ = os.path.splitext(filename)
+                if distances.shape[0] != distances.shape[1]:
+                    self.Error.non_square_matrix()
+                else:
+                    np.nan_to_num(distances)
+                    self.distances = distances
+                    _, filename = os.path.split(fn)
+                    self.distances.name, _ = os.path.splitext(filename)
         self.commit()
 
     def commit(self):
