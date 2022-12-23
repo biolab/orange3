@@ -62,9 +62,14 @@ class SimpleRandomForestModel(SRFM):
         self.estimators_ = []
         self.learn(learner, data)
 
-    def predict_storage(self, data):
-        p = np.zeros(data.X.shape[0])
+    def predict(self, X):
+        p = np.zeros(X.shape[0])
+        X = np.ascontiguousarray(X)  # so that it is a no-op for individual trees
         for tree in self.estimators_:
-            p += tree(data)
+            # SimpleTrees do not have preprocessors and domain conversion
+            # was already handled within this class so we can call tree.predict() directly
+            # instead of going through tree.__call__
+            pt = tree.predict(X)
+            p += pt
         p /= len(self.estimators_)
         return p
