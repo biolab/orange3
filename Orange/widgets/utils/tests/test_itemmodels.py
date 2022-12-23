@@ -1,22 +1,25 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-
 import unittest
 from unittest.mock import patch
 
 from AnyQt.QtCore import Qt, QModelIndex
 from AnyQt.QtTest import QSignalSpy
+from AnyQt.QtGui import QBrush, QColor
+
+from orangewidget.tests.base import GuiTest
 
 from Orange.data import \
-    Domain, \
+    Domain, Table, \
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
+from Orange.statistics.basic_stats import BasicStats
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.itemmodels import \
     PyTableModel, PyListModel, PyListModelTooltip,\
     VariableListModel, DomainModel, ContinuousPalettesModel, \
-    _as_contiguous_range
+    TableModel, _as_contiguous_range
 from Orange.widgets.gui import TableVariable
-from orangewidget.tests.base import GuiTest
+from Orange.tests import test_filename
 
 
 class TestUtils(unittest.TestCase):
@@ -526,6 +529,61 @@ class TestPyListModelTooltip(GuiTest):
 
         s += ["footip"]
         self.assertEqual(tip(1), "footip")
+
+
+class TestTableModel(unittest.TestCase):
+    def test_dense_data(self):
+        table = Table("iris.tab")
+        model = TableModel(table)
+        data, index = model.data, model.index
+
+        # check categorical Y
+        self.assertEqual(table[0, 4], data(index(0, 0), Qt.DisplayRole))
+        self.assertIsInstance(data(index(0, 0), Qt.DisplayRole), str)
+        self.assertEqual(table[0, 4], data(index(0, 0), Qt.EditRole))
+        self.assertIsInstance(data(index(0, 0), Qt.BackgroundRole), QBrush)
+        self.assertIsInstance(data(index(0, 0), Qt.ForegroundRole), QColor)
+        self.assertEqual(table[0, 4], data(index(0, 0), TableModel.ValueRole))
+        self.assertEqual(table[0, 4], data(index(0, 0), TableModel.ClassValueRole))
+        self.assertEqual(table.domain.class_vars[0], data(index(0, 0), TableModel.VariableRole))
+        self.assertIsInstance(data(index(0, 0), TableModel.VariableStatsRole), BasicStats)
+
+        # check numeric X
+        self.assertEqual(table[0, 3-1], data(index(0, 3), Qt.DisplayRole))
+        self.assertIsInstance(data(index(0, 3), Qt.DisplayRole), str)
+        self.assertEqual(table[0, 3-1], data(index(0, 3), Qt.EditRole))
+        self.assertIsNone(data(index(0, 3), Qt.BackgroundRole))
+        self.assertIsNone(data(index(0, 3), Qt.ForegroundRole))
+        self.assertEqual(table[0, 3-1], data(index(0, 3), TableModel.ValueRole))
+        self.assertEqual(table[0, 4], data(index(0, 3), TableModel.ClassValueRole))
+        self.assertEqual(table.domain.attributes[3-1], data(index(0, 3), TableModel.VariableRole))
+        self.assertIsInstance(data(index(0, 3), TableModel.VariableStatsRole), BasicStats)
+
+    def test_sparse_data(self):
+        table = Table(test_filename("datasets/iris_basket.basket"))
+        model = TableModel(table)
+        data, index = model.data, model.index
+
+        # check numeric Y
+        self.assertEqual("1", data(index(0, 0), Qt.DisplayRole))
+        self.assertEqual(table[0, 0+4], data(index(0, 0), Qt.EditRole))
+        self.assertIsInstance(data(index(0, 0), Qt.BackgroundRole), QBrush)
+        self.assertIsInstance(data(index(0, 0), Qt.ForegroundRole), QColor)
+        self.assertEqual(table[0, 0+4], data(index(0, 0), TableModel.ValueRole))
+        self.assertIsNone(data(index(0, 0), TableModel.ClassValueRole))
+        self.assertEqual(table.domain.class_vars[0], data(index(0, 0), TableModel.VariableRole))
+        self.assertIsInstance(data(index(0, 0), TableModel.VariableStatsRole), BasicStats)
+
+        # check basket X
+        self.assertEqual("sepal_length=1.5, sepal_width=5.3, petal_length=4.1, petal_width=2",
+                         data(index(0, 3), Qt.DisplayRole))
+        self.assertIsNone(data(index(0, 3), Qt.EditRole))
+        self.assertIsNone(data(index(0, 3), Qt.BackgroundRole))
+        self.assertIsNone(data(index(0, 3), Qt.ForegroundRole))
+        self.assertIsNone(data(index(0, 3), TableModel.ValueRole))
+        self.assertIsNone(data(index(0, 3), TableModel.ClassValueRole))
+        self.assertIsNone(data(index(0, 3), TableModel.VariableRole))
+        self.assertIsNone(data(index(0, 3), TableModel.VariableStatsRole))
 
 
 if __name__ == "__main__":
