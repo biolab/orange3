@@ -1,13 +1,17 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring,unsubscriptable-object
+# pylint: disable=missing-docstring,unsubscriptable-object,protected-access
 import unittest
+from unittest.mock import Mock, patch
 
 import numpy as np
+from AnyQt.QtCore import Qt, QModelIndex, QItemSelectionModel
+
+from orangewidget.tests.base import GuiTest
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
-from Orange.preprocess import transformation
-from Orange.widgets.data import owcontinuize
-from Orange.widgets.data.owcontinuize import OWContinuize, WeightedIndicator
+from Orange.widgets.data.owcontinuize import OWContinuize, DefaultKey, \
+    ContinuousOptions, Normalize, Continuize, DiscreteOptions, ContDomainModel, \
+    DefaultContModel
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -19,25 +23,18 @@ class TestOWContinuize(WidgetTest):
         """No crash on empty data"""
         data = Table("iris")
         widget = self.widget
-        widget.multinomial_treatment = 1
 
         self.send_signal(self.widget.Inputs.data, data)
         widget.commit.now()
-        imp_data = self.get_output(self.widget.Outputs.data)
-        np.testing.assert_equal(imp_data.X, data.X)
-        np.testing.assert_equal(imp_data.Y, data.Y)
 
-        widget.continuous_treatment = 1
         self.send_signal(self.widget.Inputs.data,
                          Table.from_domain(data.domain))
         widget.commit.now()
-        imp_data = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(len(imp_data), 0)
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
         self.send_signal(self.widget.Inputs.data, None)
         widget.commit.now()
-        imp_data = self.get_output(self.widget.Outputs.data)
-        self.assertIsNone(imp_data)
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
     def test_continuous(self):
         table = Table("housing")
@@ -100,193 +97,349 @@ class TestOWContinuize(WidgetTest):
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.commit.now()
 
-    def test_disable_normalize_sparse(self):
-        def assert_enabled(enabled):
-            for button, (method, supports_sparse) in \
-                    zip(buttons, w.continuous_treats):
-                self.assertEqual(button.isEnabled(), enabled or supports_sparse,
-                                 msg=f"Error in {method}")
-            buttons[w.Normalize.Leave].click()
-            buttons[w.Normalize.Standardize].click()
+    def test_commit_calls_prepare_output(self):
+        # This test ensures that commit returns the result of _prepare_output,
+        # so further tests can just check the latter. If this is changed, the
+        # test will fail, which is OK - test can be removed, but other tests
+        # then have to check the output and not just _prepare_output.
+        out = object()
+        self.widget._prepare_output = lambda: out
+        self.widget.Outputs.data.send = Mock()
+        self.widget.commit.now()
+        self.widget.Outputs.data.send.assert_called_with(out)
 
+    def test_check_unsuppoerted_sparse_continuous(self):
+        # This test checks response at two points:
+        # - when scaling sparse data with a method that does not support it,
+        #   the wiget must show an error and output nothing
+        # - the above is tested via method _unsupported_sparse, so we also
+        #   directly check this method
         w = self.widget
-        buttons = w.controls.continuous_treatment.buttons
+        hints = w.cont_var_hints
         iris = Table("iris")
         sparse_iris = iris.to_sparse()
 
         # input dense
-        self.send_signal(w.Inputs.data, iris)
-        assert_enabled(True)
-        self.assertEqual(w.continuous_treatment, w.Normalize.Standardize)
+        for key in (DefaultKey, "sepal length"):
+            hints[DefaultKey] = Normalize.Leave
+            for hints[key], desc in ContinuousOptions.items():
+                if desc.id_ == Normalize.Default:
+                    continue
+                msg = f"at {desc.label}, " + ("default" if key is DefaultKey else key)
 
-        # input sparse
-        self.send_signal(w.Inputs.data, sparse_iris)
-        self.assertEqual(w.continuous_treatment, w.Normalize.Scale)
-        assert_enabled(False)
-        self.assertEqual(w.continuous_treatment, w.Normalize.Leave)
+                self.send_signal(w.Inputs.data, iris)
+                self.assertFalse(w._unsupported_sparse(), msg)
+                self.assertFalse(w.Error.unsupported_sparse.is_shown(), msg)
+                self.assertIsNotNone(self.get_output(w.Outputs.data), msg)
 
-        # remove data
-        self.send_signal(w.Inputs.data, None)
-        assert_enabled(True)
+                self.send_signal(w.Inputs.data, sparse_iris)
+                self.assertIsNot(w._unsupported_sparse(), desc.supports_sparse, msg)
+                self.assertIsNot(w.Error.unsupported_sparse.is_shown(), desc.supports_sparse, msg)
+                if desc.supports_sparse:
+                    self.assertIsNotNone(self.get_output(w.Outputs.data), msg)
+                else:
+                    self.assertIsNone(self.get_output(w.Outputs.data), msg)
+                    self.send_signal(w.Inputs.data, None)
+                    self.assertFalse(w.Error.unsupported_sparse.is_shown(), msg)
 
-        # input sparse
-        buttons[w.Normalize.Normalize11].click()
-        self.send_signal(w.Inputs.data, sparse_iris)
-        self.assertEqual(w.continuous_treatment, w.Normalize.Leave)
-        assert_enabled(False)
+    def test_check_unsuppoerted_sparse_discrete(self):
+        # This test checks response at two points:
+        # - when scaling sparse data with a method that does not support it,
+        #   the wiget must show an error and output nothing
+        # - the above is tested via method _unsupported_sparse, so we also
+        #   directly check this method
+        w = self.widget
+        hints = w.disc_var_hints
+        zoo = Table("zoo")
+        sparse_zoo = zoo.to_sparse()
 
         # input dense
-        self.send_signal(w.Inputs.data, iris)
-        assert_enabled(True)
+        for key in (DefaultKey, "legs"):
+            hints[DefaultKey] = Continuize.Leave
+            for hints[key], desc in DiscreteOptions.items():
+                if desc.id_ == Continuize.Default:
+                    continue
+                msg = f"at {desc.label}, " + ("default" if key is DefaultKey else key)
 
-    def test_migrate_settings_to_v2(self):
-        Normalize = OWContinuize.Normalize
+                self.send_signal(w.Inputs.data, zoo)
+                self.assertFalse(w._unsupported_sparse(), msg)
+                self.assertFalse(w.Error.unsupported_sparse.is_shown(), msg)
+                self.assertIsNotNone(self.get_output(w.Outputs.data), msg)
 
-        widget = self.create_widget(
-            OWContinuize,
-            stored_settings=dict(continuous_treatment=0))
-        self.assertEqual(widget.continuous_treatment, Normalize.Leave)
+                self.send_signal(w.Inputs.data, sparse_zoo)
+                self.assertIsNot(w._unsupported_sparse(), desc.supports_sparse, msg)
+                self.assertIsNot(w.Error.unsupported_sparse.is_shown(), desc.supports_sparse, msg)
+                if desc.supports_sparse:
+                    self.assertIsNotNone(self.get_output(w.Outputs.data), msg)
+                else:
+                    self.assertIsNone(self.get_output(w.Outputs.data), msg)
+                    self.send_signal(w.Inputs.data, None)
+                    self.assertFalse(w.Error.unsupported_sparse.is_shown(), msg)
 
-        widget = self.create_widget(
-            OWContinuize,
-            stored_settings=dict(continuous_treatment=1, zero_based=True))
-        self.assertEqual(widget.continuous_treatment, Normalize.Normalize01)
+    def test_update_cont_radio_buttons(self):
+        w = self.widget
+        w.disc_var_hints[DefaultKey] = Continuize.AsOrdinal
+        w.disc_var_hints["chest pain"] = w.disc_var_hints["rest ECG"] = Continuize.Remove
+        w.disc_var_hints["exerc ind ang"] = Continuize.FirstAsBase
 
-        widget = self.create_widget(
-            OWContinuize,
-            stored_settings=dict(continuous_treatment=1, zero_based=False))
-        self.assertEqual(widget.continuous_treatment, Normalize.Normalize11)
+        w.cont_var_hints[DefaultKey] = Normalize.Center
+        w.cont_var_hints["cholesterol"] = Normalize.Scale
 
-        widget = self.create_widget(
-            OWContinuize,
-            stored_settings=dict(continuous_treatment=2))
-        self.assertEqual(widget.continuous_treatment, Normalize.Standardize)
+        self.send_signal(w.Inputs.data, Table("heart_disease"))
 
-    def test_normalizations(self):
-        buttons = self.widget.controls.continuous_treatment.buttons
-        Normalize = self.widget.Normalize
+        dview = w.disc_view
+        dmod = dview.model()
+        dselmod = dview.selectionModel()
+        dgroup = w.disc_group
 
-        domain = Domain([ContinuousVariable(name) for name in "xyz"])
-        col0 = np.arange(0, 10, 2).reshape(5, 1)
-        col1 = np.ones((5, 1))
-        col2 = np.arange(-2, 3).reshape(5, 1)
-        means = np.array([4, 1, 0])
-        sds = np.sqrt(np.array([16 + 4 + 0 + 4 + 16, 5, 4 + 1 + 0 + 1 + 4]) / 5)
+        with patch.object(w, "_update_radios") as upd:
+            w._on_var_selection_changed(dview)
+            upd.assert_not_called()
 
-        x = np.hstack((col0, col1, col2))
-        data = Table.from_numpy(domain, x)
-        self.send_signal(OWContinuize.Inputs.data, data)
+        dselmod.select(dmod.index(1, 0), QItemSelectionModel.ClearAndSelect)  # chest_pain
+        self.assertEqual(dgroup.checkedId(), Continuize.Remove)
+        self.assertTrue(dgroup.button(99).isEnabled())
 
-        buttons[Normalize.Leave].click()
-        out = self.get_output(self.widget.Outputs.data)
-        np.testing.assert_equal(out.X, x)
+        dselmod.select(dmod.index(2, 0), QItemSelectionModel.ClearAndSelect)  # blood sugar
+        self.assertEqual(dgroup.checkedId(), Continuize.Default)
 
-        buttons[Normalize.Standardize].click()
-        out = self.get_output(self.widget.Outputs.data)
-        np.testing.assert_almost_equal(out.X, (x - means) / sds)
+        dselmod.select(dmod.index(3, 0), QItemSelectionModel.ClearAndSelect)  # rest ECG
+        self.assertEqual(dgroup.checkedId(), Continuize.Remove)
 
-        buttons[Normalize.Center].click()
-        out = self.get_output(self.widget.Outputs.data)
-        np.testing.assert_almost_equal(out.X, x - means)
+        dselmod.select(dmod.index(4, 0), QItemSelectionModel.ClearAndSelect)  # exerc ind ang
+        self.assertEqual(dgroup.checkedId(), Continuize.FirstAsBase)
 
-        buttons[Normalize.Scale].click()
-        out = self.get_output(self.widget.Outputs.data)
-        np.testing.assert_almost_equal(out.X, x / sds)
+        dselmod.select(dmod.index(3, 0), QItemSelectionModel.Select)  # read ECG and exerc ind ang
+        self.assertEqual(dgroup.checkedId(), -1)
 
-        buttons[Normalize.Normalize01].click()
-        out = self.get_output(self.widget.Outputs.data)
-        col = (np.arange(5) / 4).reshape(5, 1)
+        dview.select_default()
+        self.assertEqual(dgroup.checkedId(), Continuize.AsOrdinal)
+        self.assertFalse(dgroup.button(99).isEnabled())
+
+        cview = w.cont_view
+        cmod = cview.model()
+        cselmod = cview.selectionModel()
+        cgroup = w.cont_group
+
+        cselmod.select(cmod.index(2, 0), QItemSelectionModel.ClearAndSelect)  # cholesterol
+        self.assertEqual(cgroup.checkedId(), Normalize.Scale)
+        self.assertEqual(dgroup.checkedId(), Continuize.AsOrdinal)
+        self.assertTrue(cgroup.button(99).isEnabled())
+
+        cview.select_default()
+        self.assertEqual(cgroup.checkedId(), Normalize.Center)
+        self.assertEqual(dgroup.checkedId(), Continuize.AsOrdinal)
+        self.assertFalse(cgroup.button(99).isEnabled())
+
+        w._uncheck_all_buttons(cgroup)
+        self.assertEqual(cgroup.checkedId(), -1)
+        self.assertEqual(dgroup.checkedId(), Continuize.AsOrdinal)
+
+        w._uncheck_all_buttons(dgroup)
+        self.assertEqual(dgroup.checkedId(), -1)
+
+    def test_set_hints_on_new_data(self):
+        w = self.widget
+        domain = Domain([ContinuousVariable(c) for c in "abc"] +
+                        [DiscreteVariable("m", values=tuple("xy"))],
+                        ContinuousVariable("d"),
+                        [ContinuousVariable(c) for c in "ef"])
+        data = Table.from_list(domain, [[0] * 6])
+
+        w.cont_var_hints["b"] = Normalize.Leave
+        w.cont_var_hints["f"] = Normalize.Normalize11
+        w.cont_var_hints["x"] = Normalize.Normalize11
+
+        self.send_signal(w.Inputs.data, None)
+        self.send_signal(w.Inputs.data, data)
+
+        model = w.cont_view.model()
+        self.assertIsNone(model.index(0, 0).data(Qt.UserRole))
+        self.assertEqual(model.index(1, 0).data(Qt.UserRole),
+                         ContinuousOptions[Normalize.Leave].short_desc)
+        self.assertEqual(model.index(5, 0).data(Qt.UserRole),
+                         ContinuousOptions[Normalize.Normalize11].short_desc)
+        self.assertNotIn("x", w.cont_var_hints)
+
+    def test_change_hints_disc(self):
+        w = self.widget
+        w.disc_var_hints[DefaultKey] = Continuize.AsOrdinal
+        w.disc_var_hints["chest pain"] = w.disc_var_hints["rest ECG"] = Continuize.Remove
+        w.disc_var_hints["exerc ind ang"] = Continuize.FirstAsBase
+
+        dview = w.disc_view
+        dmod = dview.model()
+        dselmod = dview.selectionModel()
+        dgroup = w.disc_group
+
+        self.send_signal(w.Inputs.data, Table("heart_disease"))
+        self.assertEqual(
+            dmod.index(3, 0).data(Qt.UserRole),
+            DiscreteOptions[Continuize.Remove].short_desc)
+
+        dselmod.select(dmod.index(1, 0), QItemSelectionModel.ClearAndSelect)  # chest pain
+        dselmod.select(dmod.index(4, 0), QItemSelectionModel.Select)  # exerc ind ang
+        dgroup.button(Continuize.AsOrdinal).setChecked(True)
+        dgroup.idClicked.emit(Continuize.AsOrdinal)
+
+        self.assertFalse("gender" in w.disc_var_hints)
+        self.assertEqual(w.disc_var_hints["chest pain"], Continuize.AsOrdinal)
+        self.assertEqual(w.disc_var_hints["exerc ind ang"], Continuize.AsOrdinal)
+        self.assertEqual(w.disc_var_hints["rest ECG"], Continuize.Remove)
+
+        dselmod.select(dmod.index(1, 0), QItemSelectionModel.ClearAndSelect)  # chest pain
+        dselmod.select(dmod.index(0, 0), QItemSelectionModel.Select)  # gender
+        dgroup.button(99).setChecked(True)
+        dgroup.idClicked.emit(99)
+        self.assertFalse("chest pain" in w.disc_var_hints)
+        self.assertFalse("gender" in w.disc_var_hints)
+        self.assertEqual(w.disc_var_hints["rest ECG"], Continuize.Remove)
+
+        self.assertIsNone(dmod.index(0, 0).data(Qt.UserRole))
+        self.assertEqual(
+            dmod.index(3, 0).data(Qt.UserRole),
+            DiscreteOptions[Continuize.Remove].short_desc)
+
+        dview.select_default()
+        dgroup.button(Continuize.AsOrdinal).setChecked(True)
+        dgroup.idClicked.emit(Continuize.AsOrdinal)
+        self.assertEqual(w.disc_var_hints[DefaultKey], Continuize.AsOrdinal)
+
+    def test_change_hints_cont(self):
+        w = self.widget
+        w.cont_var_hints[DefaultKey] = Normalize.Center
+        w.cont_var_hints["cholesterol"] = Normalize.Scale
+
+        self.send_signal(w.Inputs.data, Table("heart_disease"))
+
+        cview = w.cont_view
+        cmod = cview.model()
+        cselmod = cview.selectionModel()
+        cgroup = w.cont_group
+
+        cselmod.select(cmod.index(2, 0), QItemSelectionModel.ClearAndSelect)  # cholesterol
+        cselmod.select(cmod.index(3, 0), QItemSelectionModel.Select)  # max HR
+        cgroup.button(Normalize.Normalize11).setChecked(True)
+        cgroup.idClicked.emit(Normalize.Normalize11)
+
+        self.assertFalse("age" in w.cont_var_hints)
+        self.assertEqual(w.cont_var_hints["cholesterol"], Normalize.Normalize11)
+        self.assertEqual(w.cont_var_hints["max HR"], Normalize.Normalize11)
+
+        cselmod.select(cmod.index(2, 0), QItemSelectionModel.ClearAndSelect)  # cholesterol
+        cselmod.select(cmod.index(0, 0), QItemSelectionModel.Select)  # age
+        cgroup.button(99).setChecked(True)
+        cgroup.idClicked.emit(99)
+        self.assertFalse("age" in w.cont_var_hints)
+        self.assertFalse("cholesterol" in w.cont_var_hints)
+        self.assertEqual(w.cont_var_hints["max HR"], Normalize.Normalize11)
+
+        self.assertIsNone(cmod.index(0, 0).data(Qt.UserRole))
+        self.assertEqual(
+            cmod.index(3, 0).data(Qt.UserRole),
+            ContinuousOptions[Normalize.Normalize11].short_desc)
+
+    def test_transformations(self):
+        domain = Domain([DiscreteVariable(c, values="abc")
+                         for c in ("default", "leave", "first", "frequent",
+                                   "one-hot", "remove-if", "remove", "ordinal",
+                                   "normordinal")],
+                         DiscreteVariable("y", values="abc"),
+                        [ContinuousVariable(c)
+                         for c in ("cdefault", "cleave",
+                                   "cstandardize", "ccenter", "cscale",
+                                   "cnormalize11", "cnormalize01")]
+                        )
+        data = Table.from_list(domain,
+                               [[x] * 17 for x in range(3)] + [[2] * 17])
+
+        w = self.widget
+        w.disc_var_hints = {
+            var.name: id_
+            for var, id_ in zip(domain.attributes, DiscreteOptions)
+            if id_ != 99
+        }
+        w.disc_var_hints[DefaultKey] = Continuize.FrequentAsBase
+
+        w.cont_var_hints = {
+            var.name: id_
+            for var, id_ in zip(domain.metas, ContinuousOptions)
+            if id_ != 99
+        }
+        w.cont_var_hints[DefaultKey] = Normalize.Center
+
+        w.continuize_class = True
+
+        self.send_signal(w.Inputs.data, data)
+        outp = self.get_output(w.Outputs.data)
+
         np.testing.assert_almost_equal(
-            out.X,
-            np.hstack((col, np.zeros((5, 1)), col))
+            outp.X,
+            [[1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+             [0, 1, 1, 1, 0, 0, 1, 0, 1, 0, 1, 0.5],
+             [0, 0, 2, 0, 1, 0, 0, 0, 0, 1, 2, 1],
+             [0, 0, 2, 0, 1, 0, 0, 0, 0, 1, 2, 1],
+             ]
         )
-
-        buttons[Normalize.Normalize11].click()
-        out = self.get_output(self.widget.Outputs.data)
-        col = (np.arange(5) / 2).reshape(5, 1) - 1
         np.testing.assert_almost_equal(
-            out.X,
-            np.hstack((col, np.zeros((5, 1)), col))
+            outp.Y,
+            [0, 1, 2, 2]
+        )
+        np.testing.assert_almost_equal(
+            outp.metas,
+            [[-1.25, 0, -1.50755672, -1.25, 0, -1, 0],
+             [-0.25, 1, -0.30151134, -0.25, 1.20604538, 0, 0.5],
+             [0.75, 2, 0.90453403, 0.75, 2.41209076, 1, 1],
+             [0.75, 2, 0.90453403, 0.75, 2.41209076, 1, 1],
+             ]
         )
 
     def test_send_report(self):
         self.widget.send_report()
 
+    def test_migrate_settings_to_v3(self):
+        Normalize = OWContinuize.Normalize
 
-class TestOWContinuizeUtils(unittest.TestCase):
-    def test_dummy_coding_zero_based(self):
-        var = DiscreteVariable("foo", values=tuple("abc"))
+        widget = self.create_widget(
+            OWContinuize,
+            stored_settings=dict(continuous_treatment=0))
+        self.assertEqual(widget.cont_var_hints[DefaultKey], Normalize.Leave)
 
-        varb, varc = owcontinuize.dummy_coding(var)
+        widget = self.create_widget(
+            OWContinuize,
+            stored_settings=dict(continuous_treatment=1, zero_based=True))
+        self.assertEqual(widget.cont_var_hints[DefaultKey], Normalize.Normalize01)
 
-        self.assertEqual(varb.name, "foo=b")
-        self.assertIsInstance(varb.compute_value, transformation.Indicator)
-        self.assertEqual(varb.compute_value.value, 1)
-        self.assertIs(varb.compute_value.variable, var)
+        widget = self.create_widget(
+            OWContinuize,
+            stored_settings=dict(continuous_treatment=1, zero_based=False))
+        self.assertEqual(widget.cont_var_hints[DefaultKey], Normalize.Normalize11)
 
-        self.assertEqual(varc.name, "foo=c")
-        self.assertIsInstance(varc.compute_value, transformation.Indicator)
-        self.assertEqual(varc.compute_value.value, 2)
-        self.assertIs(varc.compute_value.variable, var)
-
-    def test_dummy_coding_base_value(self):
-        var = DiscreteVariable("foo", values=tuple("abc"))
-
-        varb, varc = owcontinuize.dummy_coding(var, base_value=0)
-
-        self.assertEqual(varb.name, "foo=b")
-        self.assertIsInstance(varb.compute_value, transformation.Indicator)
-        self.assertEqual(varb.compute_value.value, 1)
-        self.assertEqual(varc.name, "foo=c")
-        self.assertIsInstance(varc.compute_value, transformation.Indicator)
-        self.assertEqual(varc.compute_value.value, 2)
-
-        varb, varc = owcontinuize.dummy_coding(var, base_value=1)
-
-        self.assertEqual(varb.name, "foo=a")
-        self.assertIsInstance(varb.compute_value, transformation.Indicator)
-        self.assertEqual(varb.compute_value.value, 0)
-        self.assertEqual(varc.name, "foo=c")
-        self.assertIsInstance(varc.compute_value, transformation.Indicator)
-        self.assertEqual(varc.compute_value.value, 2)
-
-    def test_one_hot_coding(self):
-        var = DiscreteVariable("foo", values=tuple("abc"))
-
-        new_vars = owcontinuize.one_hot_coding(var)
-        for i, (c, nvar) in enumerate(zip("abc", new_vars)):
-            self.assertEqual(nvar.name, f"foo={c}")
-            self.assertIsInstance(nvar.compute_value, transformation.Indicator)
-            self.assertEqual(nvar.compute_value.value, i)
-            self.assertIs(nvar.compute_value.variable, var)
+        widget = self.create_widget(
+            OWContinuize,
+            stored_settings=dict(continuous_treatment=2))
+        self.assertEqual(widget.cont_var_hints[DefaultKey], Normalize.Standardize)
 
 
-class TestWeightedIndicator(unittest.TestCase):
-    def test_equality(self):
-        disc1 = DiscreteVariable("d1", values=tuple("abc"))
-        disc1a = DiscreteVariable("d1", values=tuple("abc"))
-        disc2 = DiscreteVariable("d2", values=tuple("abc"))
-        assert disc1 == disc1a
+class TestModelsAndViews(GuiTest):
+    def test_contmodel(self):
+        domain = Domain([ContinuousVariable(c) for c in "abc"])
+        model = ContDomainModel(ContinuousVariable)
+        model.set_domain(domain)
+        ind = model.index(1, 0)
+        model.setData(ind, "mega encoding", Qt.UserRole)
+        self.assertEqual(model.index(0, 0).data(), "a")
+        self.assertEqual(ind.data(), "b: mega encoding")
 
-        t1 = WeightedIndicator(disc1, 0, 1)
-        t1a = WeightedIndicator(disc1a, 0, 1)
-        t2 = WeightedIndicator(disc2, 0, 1)
-        self.assertEqual(t1, t1)
-        self.assertEqual(t1, t1a)
-        self.assertNotEqual(t1, t2)
-
-        self.assertEqual(hash(t1), hash(t1a))
-        self.assertNotEqual(hash(t1), hash(t2))
-
-        t1 = WeightedIndicator(disc1, 0, 1)
-        t1a = WeightedIndicator(disc1a, 1, 1)
-        self.assertNotEqual(t1, t1a)
-        self.assertNotEqual(hash(t1), hash(t1a))
-
-        t1 = WeightedIndicator(disc1, 0, 1)
-        t1a = WeightedIndicator(disc1a, 0, 2)
-        self.assertNotEqual(t1, t1a)
-        self.assertNotEqual(hash(t1), hash(t1a))
+    def test_defaultcontmodel(self):
+        model = DefaultContModel()
+        self.assertEqual(1, model.rowCount(QModelIndex()))
+        self.assertEqual(1, model.columnCount(QModelIndex()))
+        ind = model.index(0, 0)
+        model.setMethod("mega encoding")
+        self.assertEqual(ind.data(), "Default: mega encoding")
+        self.assertIsNotNone(ind.data(Qt.DecorationRole))
+        self.assertIsNotNone(ind.data(Qt.ToolTipRole))
 
 
 if __name__ == "__main__":

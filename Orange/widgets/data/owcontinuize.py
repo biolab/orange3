@@ -1,6 +1,4 @@
-from functools import partial, reduce
-from itertools import chain
-from operator import add
+from functools import partial
 from types import SimpleNamespace
 from typing import NamedTuple, Dict, List
 
@@ -418,21 +416,25 @@ class OWContinuize(widget.OWWidget):
             domain is None or domain.has_continuous_attributes(include_metas=True))
         self.class_box.setVisible(
             domain is None or domain.has_discrete_class)
-        if data is not None:
-            # Clean up hints, but only when receiving new data, not on
-            # disconnection
-            for hints, type_ in ((self.cont_var_hints, ContinuousVariable),
-                                 (self.disc_var_hints, DiscreteVariable)):
-                # time is not continuous, pylint: disable=unidiomatic-typecheck
-                filtered = {
-                    var.name: hints[var]
-                    for var in chain(domain.attributes, domain.metas)
-                    if type(var) is type_ and var.name in hints
-                }
-                filtered[DefaultKey] = hints[DefaultKey]
-                hints.clear()
-                hints.update(filtered)
+        if data:
+            # Clean up hints only when receiving new data, not on disconnection
+            self._set_hints()
         self.commit.now()
+
+    def _set_hints(self):
+        assert self.data
+        for hints, model, options in (
+                (self.cont_var_hints, self.cont_view.model(), ContinuousOptions),
+                (self.disc_var_hints, self.disc_view.model(), DiscreteOptions)):
+            filtered = {DefaultKey: hints[DefaultKey]}
+            for i, var in enumerate(model):
+                if var is model.Separator or var.name not in hints:
+                    continue
+                filtered[var.name] = hints[var.name]
+                model.setData(model.index(i, 0),
+                              options[hints[var.name]].short_desc, Qt.UserRole)
+            hints.clear()
+            hints.update(filtered)
 
     @gui.deferred
     def commit(self):
@@ -494,13 +496,12 @@ class OWContinuize(widget.OWWidget):
 
     def _create_vars(self, part):
         # time is not continuous, pylint: disable=unidiomatic-typecheck
-        return reduce(
-            add,
+        return sum(
             (self._continuized_vars(var) if var.is_discrete
              else self._scaled_vars(var) if type(var) is ContinuousVariable
              else [var]
              for var in part),
-             [])
+            start=[])
 
     def _get(self, var, stat):
         def most_frequent(col):
@@ -528,12 +529,13 @@ class OWContinuize(widget.OWWidget):
 
         get = partial(self._get, var)
         if hint == Normalize.Standardize:
-            off, scale = get("mean"), get("std")
+            off, scale = get("mean"), 1 / (get("std") or 1)
         elif hint == Normalize.Center:
             off, scale = get("mean"), 1
         elif hint == Normalize.Scale:
-            off, scale = 0, get("std")
+            off, scale = 0, 1 / (get("std") or 1)
         else:
+            assert hint in (Normalize.Normalize11, Normalize.Normalize01), f"hint={hint}?!"
             min_, max_ = get("min"), get("max")
             span = (max_ - min_) or 1
             if hint == Normalize.Normalize11:
@@ -577,7 +579,7 @@ class OWContinuize(widget.OWWidget):
         elif hint == Continuize.Indicators:
             base = None
         else:
-            assert False
+            assert False, f"hint={hint}?!"
         return [
             ContinuousVariable(f"{var.name}={value}",
                                compute_value=Indicator(var, value=i))
@@ -601,7 +603,17 @@ class OWContinuize(widget.OWWidget):
                     settings["continuous_treatment"] = Normalize.Normalize11
             elif cont_treat == 2:
                 settings["continuous_treatment"] = Normalize.Standardize
-        # TODO: Migrate to hints
+        if version < 3:
+            settings["cont_var_hints"] = \
+                {DefaultKey:
+                 settings.pop("continuous_treatment", Normalize.Leave)}
+            settings["disc_var_hints"] = \
+                {DefaultKey:
+                 settings.pop("multinomial_treatment", Continuize.FirstAsBase)}
+
+
+# Backward compatibility for unpickling settings
+OWContinuize.Normalize = Normalize
 
 
 if __name__ == "__main__":  # pragma: no cover
