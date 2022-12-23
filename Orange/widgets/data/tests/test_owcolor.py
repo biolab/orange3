@@ -31,6 +31,11 @@ class AttrDescTest(unittest.TestCase):
         desc.name = None
         self.assertEqual(desc.name, "x")
 
+    def test_no_compute_value(self):
+        x = ContinuousVariable("x", compute_value=lambda x: 42)
+        desc = owcolor.AttrDesc(x)
+        self.assertIsNone(desc.var.compute_value)
+
     def test_reset(self):
         x = ContinuousVariable("x")
         desc = owcolor.AttrDesc(x)
@@ -89,20 +94,20 @@ class DiscAttrTest(unittest.TestCase):
         desc.set_color(2, [7, 8, 9])
         desc.name = "z"
         desc.set_value(1, "d")
-        var = desc.create_variable()
+        var = desc.create_variable(self.var)
         self.assertIsInstance(var, DiscreteVariable)
         self.assertEqual(var.name, "z")
         self.assertEqual(var.values, ("a", "d", "c"))
         np.testing.assert_equal(var.colors, [[1, 2, 3], [4, 5, 6], [7, 8, 9]])
         self.assertIsInstance(var.compute_value, Identity)
-        self.assertIs(var.compute_value.variable, desc.var)
+        self.assertIs(var.compute_value.variable, self.var)
 
         palette = desc.var.attributes["palette"] = object()
-        var = desc.create_variable()
+        var = desc.create_variable(self.var)
         self.assertIs(desc.var.attributes["palette"], palette)
         self.assertFalse(hasattr(var.attributes, "palette"))
         self.assertIsInstance(var.compute_value, Identity)
-        self.assertIs(var.compute_value.variable, desc.var)
+        self.assertIs(var.compute_value.variable, self.var)
 
     def test_reset(self):
         desc = self.desc
@@ -228,8 +233,8 @@ class DiscAttrTest(unittest.TestCase):
 
 class ContAttrDescTest(unittest.TestCase):
     def setUp(self):
-        x = ContinuousVariable("x")
-        self.desc = owcolor.ContAttrDesc(x)
+        self.var = ContinuousVariable("x")
+        self.desc = owcolor.ContAttrDesc(self.var)
 
     def test_palette(self):
         desc = self.desc
@@ -246,19 +251,19 @@ class ContAttrDescTest(unittest.TestCase):
         palette_name = _find_other_palette(
             colorpalettes.ContinuousPalettes[desc.palette_name]).name
         desc.palette_name = palette_name
-        var = desc.create_variable()
+        var = desc.create_variable(self.var)
         self.assertIsInstance(var, ContinuousVariable)
         self.assertEqual(var.name, "z")
         self.assertEqual(var.palette.name, palette_name)
         self.assertIsInstance(var.compute_value, Identity)
-        self.assertIs(var.compute_value.variable, desc.var)
+        self.assertIs(var.compute_value.variable, self.var)
 
         colors = desc.var.attributes["colors"] = object()
-        var = desc.create_variable()
+        var = desc.create_variable(self.var)
         self.assertIs(desc.var.attributes["colors"], colors)
         self.assertFalse(hasattr(var.attributes, "colors"))
         self.assertIsInstance(var.compute_value, Identity)
-        self.assertIs(var.compute_value.variable, desc.var)
+        self.assertIs(var.compute_value.variable, self.var)
 
     def test_reset(self):
         desc = self.desc
@@ -700,6 +705,21 @@ class TestOWColor(WidgetTest):
 
     def test_string_variables(self):
         self.send_signal(self.widget.Inputs.data, Table("zoo"))
+
+    def test_changed_compute_value(self):
+        # test a bug where the widget did not register changes in compute_value
+        # because it reused an old context
+        w = self.widget
+        domain1 = Domain([ContinuousVariable("x", compute_value=lambda _: 1)])
+        data1 = self.iris.transform(domain1)
+        self.send_signal(w.Inputs.data, data1)
+        outp = self.get_output(w.Outputs.data)
+        np.testing.assert_array_equal(outp, 1)
+        domain2 = Domain([ContinuousVariable("x", compute_value=lambda _: 2)])
+        data2 = self.iris.transform(domain2)
+        self.send_signal(w.Inputs.data, data2)
+        outp = self.get_output(w.Outputs.data)
+        np.testing.assert_array_equal(outp, 2)
 
     def test_reset(self):
         self.send_signal(self.widget.Inputs.data, self.iris)
