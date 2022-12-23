@@ -395,6 +395,32 @@ class TestOWContinuize(WidgetTest):
         )
 
     def test_send_report(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, Table("heart_disease"))
+        self.widget.send_report()
+
+        w.disc_var_hints[DefaultKey] = Continuize.AsOrdinal
+        w.disc_var_hints["chest pain"] = w.disc_var_hints["rest ECG"] = Continuize.Remove
+        w.disc_var_hints["exerc ind ang"] = Continuize.FirstAsBase
+
+        self.send_signal(w.Inputs.data, Table("heart_disease"))
+        self.widget.send_report()
+
+        w.cont_var_hints[DefaultKey] = Normalize.Center
+        w.cont_var_hints["cholesterol"] = Normalize.Scale
+
+        self.send_signal(w.Inputs.data, Table("heart_disease"))
+        self.widget.send_report()
+
+        w.continuize_class = True
+        w.disc_var_hints[DefaultKey] = Continuize.AsOrdinal
+        w.disc_var_hints["chest pain"] = w.disc_var_hints["rest ECG"] = Continuize.Remove
+        w.disc_var_hints["exerc ind ang"] = Continuize.FirstAsBase
+
+        w.cont_var_hints[DefaultKey] = Normalize.Center
+        w.cont_var_hints["cholesterol"] = Normalize.Scale
+
+        self.send_signal(w.Inputs.data, Table("heart_disease"))
         self.widget.send_report()
 
     def test_migrate_settings_to_v3(self):

@@ -588,8 +588,42 @@ class OWContinuize(widget.OWWidget):
         ]
 
     def send_report(self):
-        # TOTO: Implement
-        pass
+        if not self.data:
+            return
+        single_disc = len(self.disc_view.model()) > 0 \
+                      and len(self.disc_var_hints) == 1 \
+                      and DiscreteOptions[self.disc_var_hints[DefaultKey]].label.lower()
+        single_cont = len(self.cont_view.model()) > 0 \
+                      and len(self.cont_var_hints) == 1 \
+                      and ContinuousOptions[self.cont_var_hints[DefaultKey]].label.lower()
+        class_treatment = \
+            self.data.domain.class_var.is_discrete and \
+            "As ordinal" if self.continuize_class else "Leave categorical"
+        if single_disc and single_cont:
+            self.report_items(
+                (("Categorical variables", single_disc),
+                 ("Numeric variables", single_cont),
+                 ("Class variable", class_treatment))
+            )
+        else:
+            if single_disc:
+                self.report_paragraph("Categorical variables", single_disc)
+            elif len(self.disc_view.model()) > 0:
+                self.report_items(
+                    "Categorical variables",
+                    [("Default" if name == DefaultKey else name,
+                      DiscreteOptions[id_].label.lower())
+                     for name, id_ in self.disc_var_hints.items()])
+            if single_cont:
+                self.report_paragraph("Numeric varialbes", single_cont)
+            elif len(self.cont_view.model()) > 0:
+                self.report_items(
+                    "Numeric variables",
+                    [("Default" if name == DefaultKey else name,
+                      ContinuousOptions[id_].label.lower())
+                     for name, id_ in self.cont_var_hints.items()])
+            if class_treatment:
+                self.report_paragraph("Class variable", class_treatment)
 
     @classmethod
     def migrate_settings(cls, settings, version):
