@@ -526,7 +526,6 @@ class DaskReader(FileFormat):
     DESCRIPTION = 'Orange on-disk data'
     SUPPORT_COMPRESSED = False
     SUPPORT_SPARSE_DATA = False
-    PRIORITY = 1  # TODO this might conflict with Spectroscopy hdf5 readers
 
     def read(self):
         return DaskTable.from_file(self.filename)
