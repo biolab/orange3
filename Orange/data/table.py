@@ -737,13 +737,7 @@ class Table(Sequence, Storage):
             # avoid boolean indices; also convert to slices if possible
             row_indices = _optimize_indices(row_indices, len(source))
 
-            if row_indices is ...:
-                n_rows = len(source)
-            elif isinstance(row_indices, slice):
-                row_indices_range = range(*row_indices.indices(source.X.shape[0]))
-                n_rows = len(row_indices_range)
-            else:
-                n_rows = len(row_indices)
+            n_rows = _selection_length(row_indices, len(source))
 
             self = cls()
             self.domain = domain
@@ -786,13 +780,8 @@ class Table(Sequence, Storage):
 
                     while i_done < n_rows:
                         target_indices = slice(i_done, min(n_rows, i_done + PART))
-                        if row_indices is ...:
-                            source_indices = target_indices
-                        elif isinstance(row_indices, slice):
-                            r = row_indices_range[target_indices]
-                            source_indices = slice(r.start, r.stop, r.step)
-                        else:
-                            source_indices = row_indices[target_indices]
+                        source_indices = _select_from_selection(row_indices, target_indices,
+                                                                len(source))
                         part_rows = min(n_rows, i_done+PART) - i_done
 
                         for array_conv in table_conversion.columnwise:
@@ -2470,6 +2459,38 @@ def _optimize_indices(indices, size):
             return slice(begin, end + step, step)
 
     return indices
+
+
+def _selection_length(indices, maxlen):
+    """ Return the selection length.
+    Args:
+        indices: 1D sequence, slice or Ellipsis
+        maxlen: maximum length of the sequence
+    """
+    if indices is ...:
+        return maxlen
+    elif isinstance(indices, slice):
+        return len(range(*indices.indices(maxlen)))
+    else:
+        return len(indices)
+
+
+def _select_from_selection(source_indices, selection_indices, maxlen):
+    """
+    Create efficient selection indices from a previous selection.
+    Try to keep slices as slices.
+    Args:
+        source_indices: 1D sequence, slice or Ellipsis
+        selection_indices: 1D sequence or slice
+        maxlen: maximum length of the sequence
+    """
+    if source_indices is ...:
+        return selection_indices
+    elif isinstance(source_indices, slice):
+        r = range(*source_indices.indices(maxlen))[selection_indices]
+        return slice(r.start, r.stop, r.step)
+    else:
+        return source_indices[selection_indices]
 
 
 def assure_domain_conversion_sparsity(target, source):
