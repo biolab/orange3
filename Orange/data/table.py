@@ -734,6 +734,9 @@ class Table(Sequence, Storage):
                     table = assure_domain_conversion_sparsity(table, source)
                 return table
 
+            # avoid boolean indices; also convert to slices if possible
+            row_indices = _optimize_indices(row_indices, len(source))
+
             if row_indices is ...:
                 n_rows = len(source)
             elif isinstance(row_indices, slice):
@@ -2421,12 +2424,16 @@ def _subarray(arr, rows, cols):
         # so they need to be reshaped to produce an open mesh
         return arr[np.ix_(rows, cols)]
 
-def _optimize_indices(indices, maxlen):
+
+def _optimize_indices(indices, size):
     """
-    Convert integer indices to slice if possible. It only converts increasing
-    integer ranges with positive steps and valid starts and ends.
-    Only convert valid ends so that invalid ranges will still raise
-    an exception.
+    Convert boolean indices to integer indices and convert these to a slice
+    if possible.
+
+    A slice is created from only from indices with positive steps and
+    valid starts and ends (so that invalid ranges will still raise an
+    exception. An IndexError is raised if boolean indices do not conform
+    to input size.
 
     Allows numpy to reuse the data array, because it defaults to copying
     if given indices.
@@ -2434,6 +2441,7 @@ def _optimize_indices(indices, maxlen):
     Parameters
     ----------
     indices : 1D sequence, slice or Ellipsis
+    size : int
     """
     if isinstance(indices, slice):
         return indices
@@ -2450,15 +2458,22 @@ def _optimize_indices(indices, maxlen):
 
     if len(indices) >= 1:
         indices = np.asarray(indices)
-        if indices.dtype != bool:
-            begin = indices[0]
-            end = indices[-1]
-            steps = np.diff(indices) if len(indices) > 1 else np.array([1])
-            step = steps[0]
+        if indices.dtype == bool:
+            if len(indices) == size:
+                indices = np.nonzero(indices)[0]
+            else:
+                # raise an exception that numpy would if boolean indices were used
+                raise IndexError("boolean indices did not match dimension")
 
-            # continuous ranges with constant step and valid start and stop index can be slices
-            if np.all(steps == step) and step > 0 and begin >= 0 and end < maxlen:
-                return slice(begin, end + step, step)
+    if len(indices) >= 1:  # conversion from boolean indices could result in an empty array
+        begin = indices[0]
+        end = indices[-1]
+        steps = np.diff(indices) if len(indices) > 1 else np.array([1])
+        step = steps[0]
+
+        # continuous ranges with constant step and valid start and stop index can be slices
+        if np.all(steps == step) and step > 0 and begin >= 0 and end < size:
+            return slice(begin, end + step, step)
 
     return indices
 

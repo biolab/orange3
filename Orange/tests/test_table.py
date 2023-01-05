@@ -2083,7 +2083,6 @@ class TableIndexingTests(TableTests):
                 np.testing.assert_almost_equal(table.metas,
                                                self.table.metas[r, metas])
 
-
     def test_optimize_indices(self):
         # ordinary conversion
         self.assertEqual(_optimize_indices([1, 2, 3], 4), slice(1, 4, 1))
@@ -2094,8 +2093,14 @@ class TableIndexingTests(TableTests):
         np.testing.assert_equal(_optimize_indices([1, 2, 4], 5), [1, 2, 4])
         np.testing.assert_equal(_optimize_indices((1, 2, 4), 5), [1, 2, 4])
 
-        # leave boolean arrays
-        np.testing.assert_equal(_optimize_indices([True, False, True], 3), [True, False, True])
+        # internally convert boolean arrays into indices
+        np.testing.assert_equal(_optimize_indices([False, False, False, False], 4), [])
+        np.testing.assert_equal(_optimize_indices([True, False, True, True], 4), [0, 2, 3])
+        np.testing.assert_equal(_optimize_indices([True, False, True], 3), slice(0, 4, 2))
+        with self.assertRaises(IndexError):
+            _optimize_indices([True, False, True], 2)
+        with self.assertRaises(IndexError):
+            _optimize_indices([True, False, True], 4)
 
         # do not convert if step is negative
         np.testing.assert_equal(_optimize_indices([4, 2, 0], 5), [4, 2, 0])
