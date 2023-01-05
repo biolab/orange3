@@ -4,21 +4,21 @@ from itertools import chain
 from urllib.parse import urlparse
 from typing import List, Dict, Any
 
-import h5py # ALBA new import
+import h5py 
 import numpy as np
-from AnyQt import QtWidgets # ALBA new import
+from AnyQt import QtWidgets 
 from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QLineEdit, QSizePolicy as Policy, QCompleter
-from AnyQt.QtCore import Qt, QTimer, QSize, QUrl, QModelIndex, QCoreApplication # ALBA new import: QModelIndex, QCoreApplication
-from AnyQt.QtGui import QBrush, QStandardItemModel, QStandardItem # ALBA new import: QStandardItemModel, QStandardItem
+from AnyQt.QtCore import Qt, QTimer, QSize, QUrl, QModelIndex, QCoreApplication 
+from AnyQt.QtGui import QBrush, QStandardItemModel, QStandardItem
 
 from orangewidget.utils.filedialogs import format_filter
 from orangewidget.workflow.drophandler import SingleUrlDropHandler
 
 from Orange.data.table import Table, get_sample_datasets_dir
 from Orange.data.io import FileFormat, UrlReader, \
-    class_from_qualified_name, GenericHDF5Reader # ALBA new import: GenericHDF5Reader
+    class_from_qualified_name, GenericHDF5Reader
 from Orange.data.io_base import MissingReaderException
 from Orange.util import log_warnings
 from Orange.widgets import widget, gui
@@ -269,10 +269,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         box.layout().addWidget(self.reader_combo)
         layout.addWidget(box, 0, 1)
 
-        # ALBA new lines: options_box
+        # Set an options box for special types of files that require more
+        # specifications before loading the Orange.table
         self.options_box = gui.widgetBox(self.controlArea,
                             orientation=QGridLayout().setSpacing(4), 
                             box="Options")
+        # Hide the box until needed
         self.options_box.hide()
 
         box = gui.vBox(self.controlArea, "Info")
@@ -440,8 +442,11 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         with log_warnings() as warnings:
             try:
-                if isinstance(self.reader, GenericHDF5Reader): # ALBA new lines 
+                # If we want to read an .hdf5 file we need to see the tree
+                # view of the file first to select the wished dataset
+                if isinstance(self.reader, GenericHDF5Reader): 
                     self._hdf5_tree_model()
+                
                 data = self.reader.read()
             except Exception as ex:
                 mark_problematic_reader()
@@ -489,26 +494,38 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             return UrlReader(url)
 
     def _hdf5_tree_model(self): # ALBA new function
-        self.h5_file = h5py.File(self.reader.filename) 
+        """Creates a visual representation of all the data stored in the .hdf5
+        file so that the user can choose which dataset from it wants to load
+        """
+        self.h5_file = h5py.File(self.reader.filename)
         
         self.tree_model = QStandardItemModel()
         parent = self.tree_model.invisibleRootItem()
         if isinstance(self.h5_file, h5py.Group):
             self._add_group(parent, self.h5_file)
 
-        self.options_box.show()
         self.dataset_tree = QtWidgets.QTreeView(self.options_box)
         self.dataset_tree.setModel(self.tree_model)
         self.options_box.layout().addWidget(self.dataset_tree)
         self.dataset_tree.clicked[QModelIndex].connect(self._open_dataset)
+        self.options_box.show()
         
+        # Loop that prevents the program to keep running other commands while
+        # the user has not chosen which data to load
         while self.reader.data is None:
             QCoreApplication.processEvents() 
         
     def _open_dataset(self, model_index):
+        """Procedure that saves the chosen dataset in the reader's attribute
+        """
         self.reader.data = model_index.data(role=Qt.UserRole)
     
-    def _add_group(self, parent, group):
+    def _add_group(self, parent, group): # ALBA new function
+        """Recursive procedure that constructs the tree model to visualize
+        the datasets stored in the .hdf5 file. Given a root, iterates over all 
+        its children to decide whether they are a dataset or another group of 
+        data
+        """
         for name, obj in group.items():
             item = QStandardItem(name)
             if isinstance(obj, h5py.Group):

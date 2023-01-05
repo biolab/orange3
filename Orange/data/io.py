@@ -14,20 +14,19 @@ from itertools import chain
 from os import path, remove
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlparse, urlsplit, urlunsplit, \
-    unquote as urlunquote, quote
+    unquote as urlunquote
 from urllib.request import urlopen, Request
 from pathlib import Path
 
 import numpy as np
-#### ALBA new imports
 import pandas as pd
-#### 
+
 
 import xlrd
 import xlsxwriter
 import openpyxl
 
-from Orange.data import _io, Table, Domain, ContinuousVariable, DiscreteVariable # ALBA new import: DiscreteVariable
+from Orange.data import _io, Table, Domain, ContinuousVariable
 from Orange.data import Compression, open_compressed, detect_encoding, \
     isnastr, guess_data_type, sanitize_variable
 from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PROTOCOL
@@ -519,9 +518,18 @@ class UrlReader(FileFormat):
                              content_disposition or '')
         return urlunquote(matches[-1]) if matches else default_name
 
-### ALBA hdf5 reader
+
 class GenericHDF5Reader(FileFormat):
-    """Reader for generic .hdf5 files"""
+    """
+    Class in charge to read and write generic .hdf5 files
+    
+    Attributes:
+        data (h5py._hl.dataset.Dataset): Chosen dataset to read by the class
+        
+    Methods:
+        read():
+            Returns transforms its data attribute into an Orange.Table object
+    """
     EXTENSIONS = ('.hdf5', '.h5', '.nxs',)
     DESCRIPTION = 'Hierarchical Data Format files'
     SUPPORT_COMPRESSED = False
@@ -529,51 +537,43 @@ class GenericHDF5Reader(FileFormat):
     
     def __init__(self, filename):
         super().__init__(filename=filename)
-        self.data = None # store here the data
+        self.data = None
         
     def read(self):
-        """
-        ABLA new function: to read
-        """
-        
-        name = self.data.name.split('/')[-1]
-        columns = ['Dim'+str(i) for i in range(len(self.data.shape))]
-        
-        flatten_data = np.array(self.data)
-        _, rows, cols = flatten_data.shape
-        
-        flatten_data = flatten_data[:,int(rows*(1/5)):int(rows*(4/5)),int(cols*(1/5)):int(cols*(4/5))] #roi provisional
-        flatten_data = np.moveaxis(flatten_data,0,2)
-        
-        flatten_data[flatten_data<=0] = 1
-        flatten_data = -np.log(flatten_data)
-        
-        index = pd.MultiIndex.from_product([range(s) for s in flatten_data.shape], names=columns)
-        flatten_data = flatten_data.flatten()
-        df = pd.DataFrame({name : flatten_data}, index=index).reset_index()
-        
-        pixels = df.iloc[:,[0,1]].copy(deep=True)
-        pixels.rename({'Dim0': 'x', 'Dim1': 'y'}, axis=1, inplace=True)
-        pixels = pixels.groupby(['x', 'y']).size().reset_index()
-        pixels.drop(0, axis=1, inplace=True)
-        
-        new_arrange = dict()
-        for photo, energy in zip(df.iloc[:,-2], df.iloc[:,-1]):
-            if photo in new_arrange.keys():
-                new_arrange[photo].append(energy)
-            else:
-                new_arrange[photo] = [energy]
+        """Processes the data stored in self.data and returns it as an Orange
+        Table object.
 
-        arrange_df = pd.DataFrame.from_dict(new_arrange)
-        
-        attrs = [ContinuousVariable(str(val)) for val in range(0, len(arrange_df.columns))]
-        domain = Domain(attributes=attrs, metas=[DiscreteVariable('x', values=sorted(pixels['x'].astype(str).unique().tolist())), 
-                                                 DiscreteVariable('y', values=sorted(pixels['y'].astype(str).unique().tolist()))])
+        Returns:
+            table (Orange.Table object): 
+                Contains the information of the chosen dataset in the hdf5 file.
 
-        return Table.from_numpy(domain=domain, X=arrange_df.values, metas=pixels.values)
+        Raises:
+            Exception: If the self.data variable has not been filled yet.
+        """
+        if self.data is None:
+            raise Exception("The data has not been loaded correctly")
+            
+        if self.data.name is not None:
+            name = self.data.name.split('/')[-1]
+        else:
+            name = "Data"
+
+        # Standard names for the columns of the dataset, can be changed manually
+        # in the widget itself
+        columns = [str(i) for i in range(len(self.data.shape))]
+        
+        dataset = np.array(self.data)
+        
+        # Indexs are created to keep track of the position of the values in the 
+        # original data file 
+        index = pd.MultiIndex.from_product([range(s) for s in dataset.shape], names=columns)
+        dataset = dataset.flatten()
+        
+        # Combines the values and the indexes in a readable 2d structure
+        df = pd.DataFrame({name : dataset}, index=index).reset_index()
+        
+        attrs = [ContinuousVariable(str(val)) for val in range(0, len(df.columns))]
+        table = Table.from_numpy(domain=Domain(attributes=attrs), X=df.values)
+        
+        return table
     
-
-    @classmethod
-    def write_file(cls, filename, data, with_annotations=False):
-        pass
-###
