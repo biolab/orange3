@@ -813,15 +813,9 @@ class Table(Sequence, Storage):
                         out = cparts if not array_conv.is_sparse else sp.vstack(cparts)
                         setattr(self, array_conv.target, out)
 
-                if source.has_weights():
-                    self.W = source.W[row_indices]
-                else:
-                    self.W = np.empty((n_rows, 0))
+                self.W = source.W[row_indices]
                 self.name = getattr(source, 'name', '')
-                if hasattr(source, 'ids'):
-                    self.ids = source.ids[row_indices]
-                else:
-                    cls._init_ids(self)
+                self.ids = source.ids[row_indices]
                 self.attributes = deepcopy(getattr(source, 'attributes', {}))
                 _idcache_save(_thread_local.conversion_cache, (domain, source), self)
             return self
@@ -879,7 +873,7 @@ class Table(Sequence, Storage):
                 self.metas = self.metas.reshape(-1, len(self.domain.metas))
             self.W = source.W[row_indices]
             self.name = getattr(source, 'name', '')
-            self.ids = np.array(source.ids[row_indices])
+            self.ids = source.ids[row_indices]
             self.attributes = deepcopy(getattr(source, 'attributes', {}))
         return self
 
