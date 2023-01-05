@@ -1819,6 +1819,36 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assert_table_with_filter_matches(
             new_table, self.table[:0], xcols=order[:a], ycols=order[a:a+c], mcols=order[a+c:])
 
+    def test_from_table_with_boolean_row_filter(self):
+        a, c, m = column_sizes(self.table)
+        domain = self.table.domain
+
+        sel = [False]*len(self.table)
+        sel[2] = True
+
+        with patch.object(Table, "from_table_rows", wraps=Table.from_table_rows) \
+                as from_table_rows:
+            new_table = Table.from_table(self.table.domain, self.table, row_indices=sel)
+            from_table_rows.assert_called()
+            self.assert_table_with_filter_matches(
+                new_table, self.table[2:3])
+
+        new_domain1 = Domain(domain.attributes[:1], domain.class_vars[:1], domain.metas[:1])
+        with patch.object(Table, "from_table_rows", wraps=Table.from_table_rows) \
+                as from_table_rows:
+            new_table = Table.from_table(new_domain1, self.table, row_indices=sel)
+            from_table_rows.assert_not_called()
+            self.assert_table_with_filter_matches(
+                new_table, self.table[2:3],
+                xcols=[0], ycols=[a], mcols=[a+c+m-1])
+
+        new_domain2 = Domain(domain.attributes[:1] + (ContinuousVariable("new"),),
+                            domain.class_vars[:1], domain.metas[:1])
+        new_table = Table.from_table(new_domain2, self.table, row_indices=sel)
+        self.assert_table_with_filter_matches(
+            new_table.transform(new_domain1), self.table[2:3],
+            xcols=[0], ycols=[a], mcols=[a+c+m-1])
+
     def test_from_table_sparse_move_some_to_empty_metas(self):
         iris = data.Table("iris").to_sparse()
         new_domain = data.domain.Domain(
