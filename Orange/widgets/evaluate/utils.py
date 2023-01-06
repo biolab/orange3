@@ -1,8 +1,6 @@
 import warnings
-from functools import partial
-from itertools import chain
 from operator import attrgetter
-from typing import Union
+from typing import Union, Dict, List
 
 import numpy as np
 
@@ -13,13 +11,13 @@ from AnyQt.QtCore import Qt, QSize, QObject, pyqtSignal as Signal, \
     QSortFilterProxyModel
 from sklearn.exceptions import UndefinedMetricWarning
 
-from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Variable
+from Orange.data import Domain, Variable
 from Orange.evaluation import scoring
+from Orange.evaluation.scoring import Score
 from Orange.widgets import gui
 from Orange.widgets.utils.tableview import table_selection_to_mime_data
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting
-from Orange.util import OrangeDeprecationWarning
 
 
 def check_results_adequacy(results, error_group, check_nan=True):
@@ -68,11 +66,6 @@ def results_for_preview(data_name=""):
     )
     results.learner_names = ["LR l2", "LR l1", "SVM", "Nu SVM"]
     return results
-
-
-BUILTIN_SCORERS_ORDER = {
-    DiscreteVariable: ("AUC", "CA", "F1", "Precision", "Recall"),
-    ContinuousVariable: ("MSE", "RMSE", "MAE", "R2")}
 
 
 def learner_name(learner):
@@ -135,9 +128,21 @@ class ScoreModel(QSortFilterProxyModel):
         return left < right
 
 
+DEFAULT_HINTS = {"Model_": True, "Train": False, "Test": False}
+
+
 class ScoreTable(OWComponent, QObject):
-    shown_scores = Setting(set(chain(*BUILTIN_SCORERS_ORDER.values())))
+    show_score_hints: Dict[str, bool] = Setting(DEFAULT_HINTS)
     shownScoresChanged = Signal()
+
+    # backwards compatibility
+    @property
+    def shown_scores(self):
+        column_names = {
+            self.model.horizontalHeaderItem(col).data(Qt.DisplayRole)
+            for col in range(1, self.model.columnCount())}
+        return column_names & {score.name for score in Score.registry.values()
+                               if self.show_score_hints[score.__name__]}
 
     class ItemDelegate(QStyledItemDelegate):
         def sizeHint(self, *args):
@@ -164,17 +169,8 @@ class ScoreTable(OWComponent, QObject):
         header.setContextMenuPolicy(Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.show_column_chooser)
 
-        # Currently, this component will never show scoring methods
-        # defined in add-ons by default. To support them properly, the
-        # "shown_scores" settings will need to be reworked.
-        # The following is a temporary solution to show the scoring method
-        # for survival data (it does not influence other problem types).
-        # It is added here so that the "C-Index" method
-        # will show up even if the users already have the setting defined.
-        # This temporary fix is here due to a paper deadline needing the feature.
-        # When removing, also remove TestScoreTable.test_column_settings_reminder
-        if isinstance(self.shown_scores, set):  # TestScoreTable does not initialize settings
-            self.shown_scores.add("C-Index")
+        for score in Score.registry.values():
+            self.show_score_hints.setdefault(score.__name__, score.default_visible)
 
         self.model = QStandardItemModel(master)
         self.model.setHorizontalHeaderLabels(["Method"])
@@ -183,46 +179,42 @@ class ScoreTable(OWComponent, QObject):
         self.view.setModel(self.sorted_model)
         self.view.setItemDelegate(self.ItemDelegate())
 
-    def _column_names(self):
-        return (self.model.horizontalHeaderItem(section).data(Qt.DisplayRole)
-                for section in range(1, self.model.columnCount()))
-
     def show_column_chooser(self, pos):
-        # pylint doesn't know that self.shown_scores is a set, not a Setting
-        # pylint: disable=unsupported-membership-test
-        def update(col_name, checked):
-            if checked:
-                self.shown_scores.add(col_name)
-            else:
-                self.shown_scores.remove(col_name)
-            self._update_shown_columns()
-
         menu = QMenu()
         header = self.view.horizontalHeader()
-        for col_name in self._column_names():
-            action = menu.addAction(col_name)
+        for col in range(1, self.model.columnCount()):
+            item = self.model.horizontalHeaderItem(col)
+            action = menu.addAction(item.data(Qt.DisplayRole))
             action.setCheckable(True)
-            action.setChecked(col_name in self.shown_scores)
-            action.triggered.connect(partial(update, col_name))
+            qualname = item.data(Qt.UserRole)
+            action.setChecked(self.show_score_hints[qualname])
+
+            @action.triggered.connect
+            def update(checked, q=qualname):
+                self.show_score_hints[q] = checked
+                self._update_shown_columns()
+
         menu.exec(header.mapToGlobal(pos))
 
     def _update_shown_columns(self):
-        # pylint doesn't know that self.shown_scores is a set, not a Setting
-        # pylint: disable=unsupported-membership-test
         self.view.resizeColumnsToContents()
         header = self.view.horizontalHeader()
-        for section, col_name in enumerate(self._column_names(), start=1):
-            header.setSectionHidden(section, col_name not in self.shown_scores)
+        for section in range(1, header.count()):
+            qualname = self.model.horizontalHeaderItem(section).data(Qt.UserRole)
+            header.setSectionHidden(section, not self.show_score_hints[qualname])
         self.shownScoresChanged.emit()
 
-    def update_header(self, scorers):
-        # Set the correct horizontal header labels on the results_model.
+    def update_header(self, scorers: List[Score]):
         self.model.setColumnCount(3 + len(scorers))
-        self.model.setHorizontalHeaderItem(0, QStandardItem("Model"))
-        self.model.setHorizontalHeaderItem(1, QStandardItem("Train time [s]"))
-        self.model.setHorizontalHeaderItem(2, QStandardItem("Test time [s]"))
+        for i, name, id_ in ((0, "Model", "Model_"),
+                             (1, "Train time [s]", "Train"),
+                             (2, "Test time [s]", "Test")):
+            item = QStandardItem(name)
+            item.setData(id_, Qt.UserRole)
+            self.model.setHorizontalHeaderItem(i, item)
         for col, score in enumerate(scorers, start=3):
             item = QStandardItem(score.name)
+            item.setData(score.__name__, Qt.UserRole)
             item.setToolTip(score.long_name)
             self.model.setHorizontalHeaderItem(col, item)
         self._update_shown_columns()
@@ -232,3 +224,11 @@ class ScoreTable(OWComponent, QObject):
         QApplication.clipboard().setMimeData(
             mime, QClipboard.Clipboard
         )
+
+    @staticmethod
+    def migrate_to_show_scores_hints(settings):
+        # Migration cannot disable anything because it can't know which score
+        # have been present when the setting was created.
+        settings["show_score_hints"] = DEFAULT_HINTS.copy()
+        settings["show_score_hints"].update(
+            dict.fromkeys(settings["shown_scores"], True))
