@@ -850,9 +850,9 @@ class OWViolinPlot(OWWidget):
                        sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
         gui.checkBox(box, self, "show_box_plot", "Box plot",
                      callback=self.__show_box_plot_changed)
-        gui.checkBox(box, self, "show_strip_plot", "Strip plot",
+        gui.checkBox(box, self, "show_strip_plot", "Density dots",
                      callback=self.__show_strip_plot_changed)
-        gui.checkBox(box, self, "show_rug_plot", "Rug plot",
+        gui.checkBox(box, self, "show_rug_plot", "Density lines",
                      callback=self.__show_rug_plot_changed)
         self._order_violins_cb = gui.checkBox(
             box, self, "order_violins", "Order subgroups",
