@@ -3,13 +3,15 @@ from operator import attrgetter
 from typing import Union, Dict, List
 
 import numpy as np
+from sklearn.exceptions import UndefinedMetricWarning
 
 from AnyQt.QtWidgets import QHeaderView, QStyledItemDelegate, QMenu, \
-    QApplication
-from AnyQt.QtGui import QStandardItemModel, QStandardItem, QClipboard
+    QApplication, QToolButton
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, QClipboard, QColor
 from AnyQt.QtCore import Qt, QSize, QObject, pyqtSignal as Signal, \
     QSortFilterProxyModel
-from sklearn.exceptions import UndefinedMetricWarning
+
+from orangewidget.gui import OrangeUserRole
 
 from Orange.data import Domain, Variable
 from Orange.evaluation import scoring
@@ -128,7 +130,84 @@ class ScoreModel(QSortFilterProxyModel):
         return left < right
 
 
-DEFAULT_HINTS = {"Model_": True, "Train": False, "Test": False}
+DEFAULT_HINTS = {"Model_": True, "Train_": False, "Test_": False}
+
+
+class PersistentMenu(QMenu):
+    def mouseReleaseEvent(self, e):
+        action = self.activeAction()
+        if action:
+            action.setEnabled(False)
+            super().mouseReleaseEvent(e)
+            action.setEnabled(True)
+            action.trigger()
+        else:
+            super().mouseReleaseEvent(e)
+
+
+class SelectableColumnsHeader(QHeaderView):
+    SelectMenuRole = next(OrangeUserRole)
+    ShownHintRole = next(OrangeUserRole)
+    sectionVisibleChanged = Signal(int, bool)
+
+    def __init__(self, shown_columns_hints, *args, **kwargs):
+        super().__init__(Qt.Horizontal, *args, **kwargs)
+        self.show_column_hints = shown_columns_hints
+        self.button = QToolButton(self)
+        self.button.setArrowType(Qt.DownArrow)
+        self.button.setFixedSize(24, 12)
+        col = self.button.palette().color(self.button.backgroundRole())
+        self.button.setStyleSheet(
+            f"border: none; background-color: {col.name(QColor.NameFormat.HexRgb)}")
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.show_column_chooser)
+        self.button.clicked.connect(self._on_button_clicked)
+
+    def showEvent(self, e):
+        self._set_pos()
+        self.button.show()
+        super().showEvent(e)
+
+    def resizeEvent(self, e):
+        self._set_pos()
+        super().resizeEvent(e)
+
+    def _set_pos(self):
+        w, h = self.button.width(), self.button.height()
+        vw, vh = self.viewport().width(), self.viewport().height()
+        self.button.setGeometry(vw - w, (vh - h) // 2, w, h)
+
+    def __data(self, section, role):
+        return self.model().headerData(section, Qt.Horizontal, role)
+
+    def show_column_chooser(self, pos):
+        # pylint: disable=unsubscriptable-object, unsupported-assignment-operation
+        menu = PersistentMenu()
+        for section in range(self.count()):
+            name, enabled = self.__data(section, self.SelectMenuRole)
+            hint_id = self.__data(section, self.ShownHintRole)
+            action = menu.addAction(name)
+            action.setDisabled(not enabled)
+            action.setCheckable(True)
+            action.setChecked(self.show_column_hints[hint_id])
+
+            @action.triggered.connect  # pylint: disable=cell-var-from-loop
+            def update(checked, q=hint_id, section=section):
+                self.show_column_hints[q] = checked
+                self.setSectionHidden(section, not checked)
+                self.sectionVisibleChanged.emit(section, checked)
+                self.resizeSections(self.ResizeToContents)
+
+        pos.setY(self.viewport().height())
+        menu.exec(self.mapToGlobal(pos))
+
+    def _on_button_clicked(self):
+        self.show_column_chooser(self.button.pos())
+
+    def update_shown_columns(self):
+        for section in range(self.count()):
+            hint_id = self.__data(section, self.ShownHintRole)
+            self.setSectionHidden(section, not self.show_column_hints[hint_id])
 
 
 class ScoreTable(OWComponent, QObject):
@@ -138,6 +217,7 @@ class ScoreTable(OWComponent, QObject):
     # backwards compatibility
     @property
     def shown_scores(self):
+        # pylint: disable=unsubscriptable-object
         column_names = {
             self.model.horizontalHeaderItem(col).data(Qt.DisplayRole)
             for col in range(1, self.model.columnCount())}
@@ -166,65 +246,45 @@ class ScoreTable(OWComponent, QObject):
         header.setSectionResizeMode(QHeaderView.ResizeToContents)
         header.setDefaultAlignment(Qt.AlignCenter)
         header.setStretchLastSection(False)
-        header.setContextMenuPolicy(Qt.CustomContextMenu)
-        header.customContextMenuRequested.connect(self.show_column_chooser)
 
         for score in Score.registry.values():
             self.show_score_hints.setdefault(score.__name__, score.default_visible)
 
         self.model = QStandardItemModel(master)
-        self.model.setHorizontalHeaderLabels(["Method"])
+        header = SelectableColumnsHeader(self.show_score_hints)
+        header.setSectionsClickable(True)
+        self.view.setHorizontalHeader(header)
         self.sorted_model = ScoreModel()
         self.sorted_model.setSourceModel(self.model)
         self.view.setModel(self.sorted_model)
         self.view.setItemDelegate(self.ItemDelegate())
-
-    def show_column_chooser(self, pos):
-        menu = QMenu()
-        header = self.view.horizontalHeader()
-        for col in range(1, self.model.columnCount()):
-            item = self.model.horizontalHeaderItem(col)
-            qualname = item.data(Qt.UserRole)
-            if col < 3:
-                option = item.data(Qt.DisplayRole)
-            else:
-                score = Score.registry[qualname]
-                option = score.long_name
-                if score.name != score.long_name:
-                    option += f" ({score.name})"
-            action = menu.addAction(option)
-            action.setCheckable(True)
-            action.setChecked(self.show_score_hints[qualname])
-
-            @action.triggered.connect
-            def update(checked, q=qualname):
-                self.show_score_hints[q] = checked
-                self._update_shown_columns()
-
-        menu.exec(header.mapToGlobal(pos))
-
-    def _update_shown_columns(self):
-        self.view.resizeColumnsToContents()
-        header = self.view.horizontalHeader()
-        for section in range(1, header.count()):
-            qualname = self.model.horizontalHeaderItem(section).data(Qt.UserRole)
-            header.setSectionHidden(section, not self.show_score_hints[qualname])
-        self.shownScoresChanged.emit()
+        header.sectionVisibleChanged.connect(self.shownScoresChanged.emit)
+        self.sorted_model.dataChanged.connect(self.view.resizeColumnsToContents)
 
     def update_header(self, scorers: List[Score]):
         self.model.setColumnCount(3 + len(scorers))
-        for i, name, id_ in ((0, "Model", "Model_"),
-                             (1, "Train time [s]", "Train"),
-                             (2, "Test time [s]", "Test")):
+        SelectMenuRole = SelectableColumnsHeader.SelectMenuRole
+        ShownHintRole = SelectableColumnsHeader.ShownHintRole
+        for i, name, long_name, id_, in ((0, "Model", "Model", "Model_"),
+                                         (1, "Train", "Train time [s]", "Train_"),
+                                         (2, "Test", "Test time [s]", "Test_")):
             item = QStandardItem(name)
-            item.setData(id_, Qt.UserRole)
+            item.setData((long_name, i != 0), SelectMenuRole)
+            item.setData(id_, ShownHintRole)
+            item.setToolTip(long_name)
             self.model.setHorizontalHeaderItem(i, item)
         for col, score in enumerate(scorers, start=3):
             item = QStandardItem(score.name)
-            item.setData(score.__name__, Qt.UserRole)
+            name = score.long_name
+            if name != score.name:
+                name += f" ({score.name})"
+            item.setData((name, True), SelectMenuRole)
+            item.setData(score.__name__, ShownHintRole)
             item.setToolTip(score.long_name)
             self.model.setHorizontalHeaderItem(col, item)
-        self._update_shown_columns()
+
+        self.view.horizontalHeader().update_shown_columns()
+        self.view.resizeColumnsToContents()
 
     def copy_selection_to_clipboard(self):
         mime = table_selection_to_mime_data(self.view)

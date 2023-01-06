@@ -1006,13 +1006,13 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(widget.Inputs.data, self.iris)
 
         self.assertEqual(table.model.rowCount(), 1)
-        self.assertEqual(table.model.columnCount(), 4)
+        self.assertEqual(table.model.columnCount(), 5)
         self.assertEqual(float(table.model.data(table.model.index(0, 3))), 42)
 
         for idx, value in enumerate(widget.class_var.values):
             simulate.combobox_activate_item(combo, value, Qt.DisplayRole)
             self.assertEqual(table.model.rowCount(), 1)
-            self.assertEqual(table.model.columnCount(), 4)
+            self.assertEqual(table.model.columnCount(), 5)
             self.assertEqual(float(table.model.data(table.model.index(0, 3))),
                              idx)
 
