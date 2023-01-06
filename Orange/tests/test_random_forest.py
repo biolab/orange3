@@ -111,3 +111,28 @@ class RandomForestTest(unittest.TestCase):
         self.assertEqual(len(model.trees), n)
         tree = model.trees[0]
         tree(self.housing[0])
+
+    def test_max_features_cls(self):
+        data = Table("heart_disease")
+        forest_1 = RandomForestLearner(random_state=0, max_features=1)
+        model_1 = forest_1(data[1:])
+
+        forest_2 = RandomForestLearner(random_state=0, max_features=1.)
+        model_2 = forest_2(data[1:])
+        diff = np.sum(np.abs(model_1(data[:1], ret=model_2.Probs) -
+                             model_2(data[:1], ret=model_2.Probs)))
+        self.assertGreaterEqual(diff, 0.2)
+
+    def test_max_features_reg(self):
+        data = self.housing
+        forest_1 = RandomForestRegressionLearner(random_state=0, max_features=1)
+        model_1 = forest_1(data[1:])
+
+        forest_2 = RandomForestRegressionLearner(random_state=0, max_features=1.)
+        model_2 = forest_2(data[1:])
+        diff = np.sum(np.abs(model_1(data[:1]) - model_2(data[:1])))
+        self.assertGreater(diff, 1.2)
+
+
+if __name__ == "__main__":
+    unittest.main()
