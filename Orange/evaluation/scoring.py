@@ -66,6 +66,9 @@ class Score(metaclass=ScoreMetaType):
     name = None
     long_name = None  #: A short user-readable name (e.g. a few words)
 
+    default_visible = True
+    priority = 100
+
     def __new__(cls, results=None, **kwargs):
         self = super().__new__(cls)
         if results is not None:
@@ -137,6 +140,7 @@ class RegressionScore(Score, abstract=True):
 class CA(ClassificationScore):
     __wraps__ = skl_metrics.accuracy_score
     long_name = "Classification accuracy"
+    priority = 20
 
 
 class PrecisionRecallFSupport(ClassificationScore):
@@ -185,14 +189,17 @@ class TargetScore(ClassificationScore):
 
 class Precision(TargetScore):
     __wraps__ = skl_metrics.precision_score
+    priority = 40
 
 
 class Recall(TargetScore):
     __wraps__ = skl_metrics.recall_score
+    priority = 50
 
 
 class F1(TargetScore):
     __wraps__ = skl_metrics.f1_score
+    priority = 30
 
 
 class AUC(ClassificationScore):
@@ -211,6 +218,7 @@ class AUC(ClassificationScore):
     separate_folds = True
     is_binary = True
     long_name = "Area under ROC curve"
+    priority = 10
 
     @staticmethod
     def calculate_weights(results):
@@ -282,6 +290,8 @@ class LogLoss(ClassificationScore):
 
     """
     __wraps__ = skl_metrics.log_loss
+    priority = 120
+    default_visible = False
 
     def compute_score(self, results, eps=1e-15, normalize=True,
                       sample_weight=None):
@@ -297,6 +307,8 @@ class LogLoss(ClassificationScore):
 
 class Specificity(ClassificationScore):
     is_binary = True
+    priority = 110
+    default_visible = False
 
     @staticmethod
     def calculate_weights(results):
@@ -350,6 +362,7 @@ class Specificity(ClassificationScore):
 class MSE(RegressionScore):
     __wraps__ = skl_metrics.mean_squared_error
     long_name = "Mean square error"
+    priority = 20
 
 
 class RMSE(RegressionScore):
@@ -357,21 +370,26 @@ class RMSE(RegressionScore):
 
     def compute_score(self, results):
         return np.sqrt(MSE(results))
+    priority = 30
 
 
 class MAE(RegressionScore):
     __wraps__ = skl_metrics.mean_absolute_error
     long_name = "Mean absolute error"
+    priority = 40
 
 
 # pylint: disable=invalid-name
 class R2(RegressionScore):
     __wraps__ = skl_metrics.r2_score
     long_name = "Coefficient of determination"
+    priority = 50
 
 
 class CVRMSE(RegressionScore):
     long_name = "Coefficient of variation of the RMSE"
+    priority = 110
+    default_visible = False
 
     def compute_score(self, results):
         mean = np.nanmean(results.actual)

@@ -21,23 +21,23 @@ class TestUsableScorers(unittest.TestCase):
     def setUp(self):
         self.iris = Table("iris")
         self.housing = Table("housing")
-        self.registered_scorers = {scorer.name for scorer in scoring.Score.registry.values()}
+        self.registered_scorers = set(scoring.Score.registry.values())
 
     def validate_scorer_candidates(self, scorers, class_type):
-        built_in_scorers = set(BUILTIN_SCORERS_ORDER[class_type])
-        # scorer candidates are not all registered scorers
-        self.assertNotEqual(scorers, self.registered_scorers)
-        # scorer candidates are subset of registered scorers
-        self.assertTrue(scorers.issubset(self.registered_scorers))
-        # builtins scorers are in fact a subset of valid candidates
-        self.assertTrue(built_in_scorers.issubset(scorers))
+        # scorer candidates are (a proper) subset of registered scorers
+        self.assertTrue(set(scorers) < self.registered_scorers)
+        # all scorers are adequate
+        self.assertTrue(all(class_type in scorer.class_types
+                            for scorer in scorers))
+        # scorers are sorted
+        self.assertTrue(all(s1.priority <= s2.priority
+                            for s1, s2 in zip(scorers, scorers[1:])))
 
     def test_usable_scores(self):
-        classification_scorers = {scorer.name for scorer in usable_scorers(self.iris.domain)}
-        regression_scorers = {scorer.name for scorer in usable_scorers(self.housing.domain)}
-
-        self.validate_scorer_candidates(classification_scorers, class_type=DiscreteVariable)
-        self.validate_scorer_candidates(regression_scorers, class_type=ContinuousVariable)
+        self.validate_scorer_candidates(
+            usable_scorers(self.iris.domain), class_type=DiscreteVariable)
+        self.validate_scorer_candidates(
+            usable_scorers(self.housing.domain), class_type=ContinuousVariable)
 
 
 class TestScoreTable(GuiTest):

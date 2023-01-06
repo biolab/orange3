@@ -1,6 +1,7 @@
 import warnings
 from functools import partial
 from itertools import chain
+from operator import attrgetter
 from typing import Union
 
 import numpy as np
@@ -84,17 +85,12 @@ def usable_scorers(domain_or_var: Union[Variable, Domain]):
     if domain_or_var is None:
         return []
 
-    order = {name: i
-             for i, name in enumerate(chain.from_iterable(BUILTIN_SCORERS_ORDER.values()))}
-
     # 'abstract' is retrieved from __dict__ to avoid inheriting
-    scorer_candidates = [cls for cls in scoring.Score.registry.values()
-                         if cls.is_scalar and not cls.__dict__.get("abstract")]
-
-    usable = [scorer for scorer in scorer_candidates if
-              scorer.is_compatible(domain_or_var) and scorer.class_types]
-
-    return sorted(usable, key=lambda cls: order.get(cls.name, 99))
+    candidates = [
+        scorer for scorer in scoring.Score.registry.values()
+        if scorer.is_scalar and not scorer.__dict__.get("abstract")
+        and scorer.is_compatible(domain_or_var) and scorer.class_types]
+    return sorted(candidates, key=attrgetter("priority"))
 
 
 def scorer_caller(scorer, ovr_results, target=None):
