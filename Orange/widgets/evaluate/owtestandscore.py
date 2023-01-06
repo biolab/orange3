@@ -150,7 +150,7 @@ class OWTestAndScore(OWWidget):
         predictions = Output("Predictions", Table)
         evaluations_results = Output("Evaluation Results", Results)
 
-    settings_version = 3
+    settings_version = 4
     buttons_area_orientation = None
     UserAdviceMessages = [
         widget.Message(
@@ -655,7 +655,7 @@ class OWTestAndScore(OWWidget):
                         item.setData(float(stat.value[0]), Qt.DisplayRole)
                     else:
                         item.setToolTip(str(stat.exception))
-                        if scorer.name in self.score_table.shown_scores:
+                        if self.score_table.show_score_hints[scorer.__name__]:
                             has_missing_scores = True
                     row.append(item)
 
@@ -899,6 +899,9 @@ class OWTestAndScore(OWWidget):
             settings_["context_settings"] = [
                 c for c in settings_.get("context_settings", ())
                 if not hasattr(c, 'classes')]
+        if version < 4:
+            if "score_table" in settings_:
+                ScoreTable.migrate_to_show_scores_hints(settings_["score_table"])
 
     @Slot(float)
     def setProgressValue(self, value):

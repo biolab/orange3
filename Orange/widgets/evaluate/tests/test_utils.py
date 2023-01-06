@@ -3,6 +3,7 @@
 import unittest
 import collections
 from distutils.version import LooseVersion
+from unittest.mock import patch
 
 import numpy as np
 
@@ -11,7 +12,8 @@ from AnyQt.QtGui import QStandardItem
 from AnyQt.QtCore import QPoint, Qt
 
 import Orange
-from Orange.widgets.evaluate.utils import ScoreTable, usable_scorers, BUILTIN_SCORERS_ORDER
+from Orange.evaluation.scoring import Score, RMSE, AUC, CA, F1, Specificity
+from Orange.widgets.evaluate.utils import ScoreTable, usable_scorers
 from Orange.widgets.tests.base import GuiTest
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import scoring
@@ -41,15 +43,26 @@ class TestUsableScorers(unittest.TestCase):
 
 
 class TestScoreTable(GuiTest):
-    def test_show_column_chooser(self):
-        score_table = ScoreTable(None)
-        view = score_table.view
-        all, shown = "MABDEFG", "ABDF"
-        header = view.horizontalHeader()
-        score_table.shown_scores = set(shown)
-        score_table.model.setHorizontalHeaderLabels(list(all))
-        score_table._update_shown_columns()
+    def setUp(self):
+        class NewScore(Score):
+            name = "new score"
 
+        self.orig_hints = ScoreTable.show_score_hints
+        hints = ScoreTable.show_score_hints = self.orig_hints.default.copy()
+        hints.update(dict(F1=True, CA=False, AUC=True, Recall=True,
+                          Specificity=False, NewScore=True))
+        self.name_to_qualname = {score.name: score.__name__
+                            for score in Score.registry.values()}
+        self.score_table = ScoreTable(None)
+        self.score_table.update_header([F1, CA, AUC, Specificity, NewScore])
+        self.score_table._update_shown_columns()
+
+    def tearDown(self):
+        ScoreTable.show_score_hints = self.orig_hints
+        del Score.registry["NewScore"]
+
+    def test_show_column_chooser(self):
+        hints = ScoreTable.show_score_hints
         actions = collections.OrderedDict()
         menu_add_action = QMenu.addAction
 
@@ -59,17 +72,27 @@ class TestScoreTable(GuiTest):
             return action
 
         def execmenu(*_):
-            self.assertEqual(list(actions), list(all)[1:])
-            for name, action in actions.items():
-                self.assertEqual(action.isChecked(), name in shown)
-            actions["E"].triggered.emit(True)
-            self.assertEqual(score_table.shown_scores, set("ABDEF"))
-            actions["B"].triggered.emit(False)
-            self.assertEqual(score_table.shown_scores, set("ADEF"))
-            for i, name in enumerate(all):
-                self.assertEqual(name == "M" or name in "ADEF",
-                                 not header.isSectionHidden(i),
-                                 msg="error in section {}({})".format(i, name))
+            scores = ["F1", "CA", "AUC", "Specificity", "new score"]
+            self.assertEqual(list(actions)[2:], scores)
+            header = self.score_table.view.horizontalHeader()
+            for i, (name, action) in enumerate(actions.items()):
+                if i >= 2:
+                    self.assertEqual(action.isChecked(),
+                                     hints[self.name_to_qualname[name]],
+                                     msg=f"error in section {name}")
+                    self.assertEqual(header.isSectionHidden(i),
+                                    hints[self.name_to_qualname[name]],
+                                    msg=f"error in section {name}")
+            actions["CA"].triggered.emit(True)
+            hints["CA"] = True
+            for k, v in hints.items():
+                self.assertEqual(self.score_table.show_score_hints[k], v,
+                                 msg=f"error at {k}")
+            actions["AUC"].triggered.emit(False)
+            hints["AUC"] = False
+            for k, v in hints.items():
+                self.assertEqual(self.score_table.show_score_hints[k], v,
+                                 msg=f"error at {k}")
 
         # We must patch `QMenu.exec` because the Qt would otherwise (invisibly)
         # show the popup and wait for the user.
@@ -78,27 +101,7 @@ class TestScoreTable(GuiTest):
         # `menuexec` finishes.
         with unittest.mock.patch("AnyQt.QtWidgets.QMenu.addAction", addAction), \
              unittest.mock.patch("AnyQt.QtWidgets.QMenu.exec", execmenu):
-            score_table.show_column_chooser(QPoint(0, 0))
-
-    def test_update_shown_columns(self):
-        score_table = ScoreTable(None)
-        view = score_table.view
-        all, shown = "MABDEFG", "ABDF"
-        header = view.horizontalHeader()
-        score_table.shown_scores = set(shown)
-        score_table.model.setHorizontalHeaderLabels(list(all))
-        score_table._update_shown_columns()
-        for i, name in enumerate(all):
-            self.assertEqual(name == "M" or name in shown,
-                             not header.isSectionHidden(i),
-                             msg="error in section {}({})".format(i, name))
-
-        score_table.shown_scores = set()
-        score_table._update_shown_columns()
-        for i, name in enumerate(all):
-            self.assertEqual(i == 0,
-                             not header.isSectionHidden(i),
-                             msg="error in section {}({})".format(i, name))
+            self.score_table.show_column_chooser(QPoint(0, 0))
 
     def test_sorting(self):
         def order(n=5):
@@ -141,6 +144,15 @@ class TestScoreTable(GuiTest):
 
         model.sort(2, Qt.DescendingOrder)
         self.assertEqual(order(3), "DEC")
+
+    def test_shown_scores_backward_compatibility(self):
+        self.assertEqual(self.score_table.shown_scores,
+                         {"F1", "AUC", "new score"})
+
+    def test_migration(self):
+        settings = dict(foo=False, shown_scores={"Sensitivity"})
+        ScoreTable.migrate_to_show_scores_hints(settings)
+        self.assertTrue(settings["show_score_hints"]["Sensitivity"])
 
     def test_column_settings_reminder(self):
         if LooseVersion(Orange.__version__) >= LooseVersion("3.37"):
