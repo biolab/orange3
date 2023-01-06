@@ -106,7 +106,7 @@ class TestUtils(unittest.TestCase):
         """Check if details part of the summary is formatted correctly"""
         data = Table('zoo')
         n_features = len(data.domain.variables) + len(data.domain.metas)
-        details = f'zoo: {len(data)} instance, ' \
+        details = f'zoo: {len(data)} instances, ' \
                   f'{n_features} variables\n' \
                   f'Features: {len(data.domain.attributes)} categorical ' \
                   f'(no missing values)\n' \
@@ -202,7 +202,7 @@ class TestUtils(unittest.TestCase):
         n_features_data = len(data.domain.variables) + len(data.domain.metas)
         n_features_extra_data = len(extra_data.domain.variables) + \
                                 len(extra_data.domain.metas)
-        details = f'Data:<br>zoo: {len(data)} instance, ' \
+        details = f'Data:<br>zoo: {len(data)} instances, ' \
                   f'{n_features_data} variables<br>' \
                   f'Features: {len(data.domain.attributes)} categorical ' \
                   f'(no missing values)<br>' \
@@ -217,7 +217,7 @@ class TestUtils(unittest.TestCase):
         inputs = [('Data', data), ('Extra Data', extra_data)]
         self.assertEqual(details, format_multiple_summaries(inputs))
 
-        details = f'zoo: {len(data)} instance, ' \
+        details = f'zoo: {len(data)} instances, ' \
                   f'{n_features_data} variables<br>' \
                   f'Features: {len(data.domain.attributes)} categorical ' \
                   f'(no missing values)<br>' \
