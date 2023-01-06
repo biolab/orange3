@@ -285,10 +285,22 @@ class DistMatrix(np.ndarray):
                isinstance(items.domain.metas[0], StringVariable)
 
     def is_symmetric(self):
-        return self.shape[0] == self.shape[1] and np.allclose(self, self.T) \
-               and (self.row_items is None
-                    or self.col_items is None
-                    or self.row_items is self.col_items)
+        # prevent circular imports, pylint: disable=import-outside-toplevel
+        from Orange.data import Table
+
+        if self.shape[0] != self.shape[1] or not np.allclose(self, self.T):
+            return False
+        if self.row_items is None or self.col_items is None:
+            return True
+        if isinstance(self.row_items, Table):
+            return (isinstance(self.col_items, Table)
+                and self.col_items.domain == self.row_items.domain
+                and np.array_equal(self.col_items.X, self.row_items.X)
+                and np.array_equal(self.col_items.Y, self.row_items.Y)
+                and np.array_equal(self.col_items.metas, self.row_items.metas))
+        else:
+            return (not isinstance(self.col_items, Table)
+                and np.array_equal(self.row_items, self.col_items))
 
     def has_row_labels(self):
         """
