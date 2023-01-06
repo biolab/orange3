@@ -3,6 +3,7 @@
 import unittest
 import collections
 from distutils.version import LooseVersion
+from itertools import count
 from unittest.mock import patch
 
 import numpy as np
@@ -12,7 +13,7 @@ from AnyQt.QtGui import QStandardItem
 from AnyQt.QtCore import QPoint, Qt
 
 import Orange
-from Orange.evaluation.scoring import Score, RMSE, AUC, CA, F1, Specificity
+from Orange.evaluation.scoring import Score, AUC, CA, F1, Specificity
 from Orange.widgets.evaluate.utils import ScoreTable, usable_scorers
 from Orange.widgets.tests.base import GuiTest
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
@@ -47,12 +48,12 @@ class TestScoreTable(GuiTest):
         class NewScore(Score):
             name = "new score"
 
+        self.NewScore = NewScore
+
         self.orig_hints = ScoreTable.show_score_hints
         hints = ScoreTable.show_score_hints = self.orig_hints.default.copy()
         hints.update(dict(F1=True, CA=False, AUC=True, Recall=True,
                           Specificity=False, NewScore=True))
-        self.name_to_qualname = {score.name: score.__name__
-                            for score in Score.registry.values()}
         self.score_table = ScoreTable(None)
         self.score_table.update_header([F1, CA, AUC, Specificity, NewScore])
         self.score_table._update_shown_columns()
@@ -72,23 +73,29 @@ class TestScoreTable(GuiTest):
             return action
 
         def execmenu(*_):
-            scores = ["F1", "CA", "AUC", "Specificity", "new score"]
-            self.assertEqual(list(actions)[2:], scores)
+            scorers = [F1, CA, AUC, Specificity, self.NewScore]
+            self.name_to_qualname = {score.name: score.__name__
+                                     for score in Score.registry.values()}
+            self.assertEqual(list(actions)[2:], ['F1',
+                                                 'Classification accuracy (CA)',
+                                                 'Area under ROC curve (AUC)',
+                                                 'Specificity (Spec)',
+                                                 'new score'])
             header = self.score_table.view.horizontalHeader()
-            for i, (name, action) in enumerate(actions.items()):
+            for i, (name, action), scorer in zip(count(), actions.items(), scorers):
                 if i >= 2:
                     self.assertEqual(action.isChecked(),
-                                     hints[self.name_to_qualname[name]],
-                                     msg=f"error in section {name}")
+                                     hints[scorer.__name__],
+                                     msg=f"error in section {scorer.name}")
                     self.assertEqual(header.isSectionHidden(i),
-                                    hints[self.name_to_qualname[name]],
-                                    msg=f"error in section {name}")
-            actions["CA"].triggered.emit(True)
+                                    hints[scorer.__name__],
+                                    msg=f"error in section {scorer.name}")
+            actions["Classification accuracy (CA)"].triggered.emit(True)
             hints["CA"] = True
             for k, v in hints.items():
                 self.assertEqual(self.score_table.show_score_hints[k], v,
                                  msg=f"error at {k}")
-            actions["AUC"].triggered.emit(False)
+            actions["Area under ROC curve (AUC)"].triggered.emit(False)
             hints["AUC"] = False
             for k, v in hints.items():
                 self.assertEqual(self.score_table.show_score_hints[k], v,
