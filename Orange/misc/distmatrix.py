@@ -1,5 +1,8 @@
+import os.path
+
 import numpy as np
 
+from Orange.misc import _distmatrix_xlsx
 from Orange.util import deprecated
 
 
@@ -52,9 +55,7 @@ class DistMatrix(np.ndarray):
             return out_arr[()]
         return np.ndarray.__array_wrap__(self, out_arr, context)
 
-    """
-    __reduce__() and __setstate__() ensure DistMatrix is picklable.
-    """
+    # __reduce__() and __setstate__() ensure DistMatrix is picklable.
     def __reduce__(self):
         state = super().__reduce__()
         newstate = state[2] + (self.row_items, self.col_items, self.axis)
@@ -104,7 +105,7 @@ class DistMatrix(np.ndarray):
         return obj
 
     @classmethod
-    def from_file(cls, filename):
+    def from_file(cls, filename, sheet=None):
         """
         Load distance matrix from a file
 
@@ -138,8 +139,32 @@ class DistMatrix(np.ndarray):
         Args:
             filename: file name
         """
-        # prevent circular imports
+        _, ext = os.path.splitext(filename)
+        if ext == ".xlsx":
+            matrix, row_labels, col_labels, axis \
+                = _distmatrix_xlsx.read_matrix(filename, sheet)
+        else:
+            assert sheet is None
+            matrix, row_labels, col_labels, axis = cls._from_dst(filename)
+        return cls(matrix,
+                   cls._labels_to_tables(row_labels),
+                   cls._labels_to_tables(col_labels),
+                   axis)
+
+    @staticmethod
+    def _labels_to_tables(labels):
+        # prevent circular imports, pylint: disable=import-outside-toplevel
         from Orange.data import Table, StringVariable, Domain
+
+        if labels is None or isinstance(labels, Table):
+            return labels
+        return Table.from_numpy(
+            Domain([], metas=[StringVariable("label")]),
+            np.empty((len(labels), 0)), None, np.array(labels)[:, None])
+
+    @classmethod
+    def _from_dst(cls, filename):
+        # prevent circular imports, pylint: disable=import-outside-toplevel
         from Orange.data.io import detect_encoding
 
         with open(filename, encoding=detect_encoding(filename)) as fle:
@@ -171,56 +196,111 @@ class DistMatrix(np.ndarray):
                     if name == "axis" and value.isdigit():
                         axis = int(value)
                     else:
-                        raise ValueError("invalid flag '{}'".format(
-                            flag, filename))
+                        raise ValueError(f"invalid flag '{flag}'")
             if col_labels is not None:
                 col_labels = [x.strip()
                               for x in fle.readline().strip().split("\t")]
                 if len(col_labels) != n:
-                    raise ValueError("mismatching number of column labels")
+                    raise ValueError("mismatching number of column labels, "
+                                     f"{len(col_labels)} != {n}")
+
+            def num_or_lab(n, labels):
+                return f"'{labels[n]}'" if labels else str(n + 1)
 
             matrix = np.zeros((n, n))
             for i, line in enumerate(fle):
                 if i >= n:
-                    raise ValueError("too many rows".format(filename))
+                    raise ValueError("too many rows")
                 line = line.strip().split("\t")
                 if row_labels is not None:
                     row_labels.append(line.pop(0).strip())
                 if len(line) > n:
-                    raise ValueError("too many columns in matrix row {}".
-                                     format("'{}'".format(row_labels[i])
-                                            if row_labels else i + 1))
+                    raise ValueError(
+                        f"too many columns in matrix row "
+                        f"{num_or_lab(i, row_labels)}")
                 for j, e in enumerate(line[:i + 1 if symmetric else n]):
                     try:
                         matrix[i, j] = float(e)
                     except ValueError as exc:
                         raise ValueError(
-                            "invalid element at row {}, column {}".format(
-                                "'{}'".format(row_labels[i])
-                                if row_labels else i + 1,
-                                "'{}'".format(col_labels[j])
-                                if col_labels else j + 1)) from exc
+                            "invalid element at "
+                            f"row {num_or_lab(i, row_labels)}, "
+                            f"column {num_or_lab(j, col_labels)}") from exc
                     if symmetric:
                         matrix[j, i] = matrix[i, j]
-        if col_labels:
-            col_labels = Table.from_list(
-                Domain([], metas=[StringVariable("label")]),
-                [[item] for item in col_labels])
-        if row_labels:
-            row_labels = Table.from_list(
-                Domain([], metas=[StringVariable("label")]),
-                [[item] for item in row_labels])
-        return cls(matrix, row_labels, col_labels, axis)
+            return matrix, row_labels, col_labels, axis
+
+    def auto_symmetricized(self, copy=False):
+        def self_or_copy():
+            return self.copy() if copy else self
+
+        def get_labels(labels):
+            return np.array(labels) if isinstance(labels, list) \
+                else labels.metas[:, 0] if self._trivial_labels(labels) \
+                else object()
+
+        h, w = self.shape
+        m = max(w, h)
+        if (abs(h - w) > 1
+                or self.row_items and self.col_items
+                   and np.any(get_labels(self.row_items)
+                              != get_labels(self.col_items))
+                or self.row_items and len(self.row_items) != m
+                or self.col_items and len(self.col_items) != m):
+            return self_or_copy()
+
+        nans = np.isnan(self)
+        low_indices = np.tril_indices(h, -1)
+        low_empty = np.all(nans[low_indices])
+        high_indices = np.triu_indices(w, 1)
+        high_empty = np.all(nans[high_indices])
+        if low_empty is high_empty:  # both non-empty, or both empty (only diagonal)
+            return self_or_copy()
+
+        indices = low_indices if low_empty else high_indices
+        if w == h:
+            matrix = np.array(self)
+        else:
+            if low_empty:
+                row = np.vstack((self[:, -1, None], [[0]])).T
+                matrix = np.vstack((self, row))
+            else:
+                col = np.hstack((self[-1, None], [[0]])).T
+                matrix = np.hstack((self, col))
+            diag_indices = np.diag_indices(len(matrix))
+            matrix[diag_indices] = np.nan_to_num(matrix[diag_indices])
+        matrix[indices] = self.T[indices]
+        return type(self)(matrix,
+                          self.row_items or self.col_items,
+                          self.col_items or self.row_items)
 
     @staticmethod
     def _trivial_labels(items):
-        # prevent circular imports
+        # prevent circular imports, pylint: disable=import-outside-toplevel
         from Orange.data import Table, StringVariable
 
         return items and \
                isinstance(items, Table) and \
                len(items.domain.metas) == 1 and \
                isinstance(items.domain.metas[0], StringVariable)
+
+    def is_symmetric(self):
+        # prevent circular imports, pylint: disable=import-outside-toplevel
+        from Orange.data import Table
+
+        if self.shape[0] != self.shape[1] or not np.allclose(self, self.T):
+            return False
+        if self.row_items is None or self.col_items is None:
+            return True
+        if isinstance(self.row_items, Table):
+            return (isinstance(self.col_items, Table)
+                and self.col_items.domain == self.row_items.domain
+                and np.array_equal(self.col_items.X, self.row_items.X)
+                and np.array_equal(self.col_items.Y, self.row_items.Y)
+                and np.array_equal(self.col_items.metas, self.row_items.metas))
+        else:
+            return (not isinstance(self.col_items, Table)
+                and np.array_equal(self.row_items, self.col_items))
 
     def has_row_labels(self):
         """
@@ -243,7 +323,22 @@ class DistMatrix(np.ndarray):
         """
         return self._trivial_labels(self.col_items)
 
+    def get_labels(self, items):
+        if self._trivial_labels(items):
+            return items.get_column(items.domain.metas[0])
+        elif isinstance(items, (list, tuple)) \
+                and all(isinstance(x, str) for x in items):
+            return items
+        else:
+            return None
+
     def save(self, filename):
+        if os.path.splitext(filename)[1] == ".xlsx":
+            _distmatrix_xlsx.write_matrix(self, filename)
+        else:
+            self._save_dst(filename)
+
+    def _save_dst(self, filename):
         """
         Save the distance matrix to a file in the file format described at
         :obj:`~Orange.misc.distmatrix.DistMatrix.from_file`.
@@ -260,7 +355,7 @@ class DistMatrix(np.ndarray):
         if self.has_row_labels():
             data += "\trow_labels"
             row_labels = self.row_items
-        symmetric = np.allclose(self, self.T)
+        symmetric = self.is_symmetric()
         if not symmetric:
             data += "\tasymmetric"
         with open(filename, "wt") as fle:

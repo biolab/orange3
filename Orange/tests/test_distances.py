@@ -128,9 +128,9 @@ class TestDistMatrix(TestCase):
         assertErrorMsg("axis=1\n1\t3\n4",
                        "distance file must begin with dimension")
         assertErrorMsg("3 col_labels\na\tb\n1\n\2\n3",
-                       "mismatching number of column labels")
+                       "mismatching number of column labels, 2 != 3")
         assertErrorMsg("3 col_labels\na\tb\tc\td\n1\n\2\n3",
-                       "mismatching number of column labels")
+                       "mismatching number of column labels, 4 != 3")
         assertErrorMsg("2\n  1\t2\t3\n  5",
                        "too many columns in matrix row 1")
         assertErrorMsg("2 row_labels\na\t1\t2\t3\nb\t5",
@@ -199,6 +199,16 @@ class TestDistMatrix(TestCase):
         with self.assertRaises(AssertionError):
             np.testing.assert_array_equal(dm1, dm2)
 
+    def test_symmetric(self):
+        self.assertFalse(
+            DistMatrix([[1, 2, 3], [4, 5, 6]]).is_symmetric()
+        )
+        self.assertFalse(
+            DistMatrix([[1, 2], [4, 5]]).is_symmetric()
+        )
+        self.assertTrue(
+            DistMatrix([[1, 2, 3], [2, 0, 4], [3, 4, 5]]).is_symmetric()
+        )
 
 # noinspection PyTypeChecker
 class TestEuclidean(TestCase):

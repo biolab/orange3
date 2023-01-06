@@ -9,6 +9,7 @@ from AnyQt.QtWidgets import QStyleOptionViewItem
 
 from orangewidget.tests.base import GuiTest
 
+from Orange.misc import DistMatrix
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.distance import Euclidean
 from Orange.widgets.tests.base import WidgetTest
@@ -33,6 +34,13 @@ class TestOWDistanceMatrix(WidgetTest):
         self.distances.row_items = None
         self.widget.set_distances(self.distances)
         self.assertNotIn(self.iris.domain[0], self.widget.annot_combo.model())
+
+    def test_not_symmetric(self):
+        w = self.widget
+        self.send_signal(w.Inputs.distances, DistMatrix([[1, 2, 3], [4, 5, 6]]))
+        self.assertTrue(w.Error.not_symmetric.is_shown())
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.Error.not_symmetric.is_shown())
 
     def test_context_attribute(self):
         distances = Euclidean(self.iris, axis=0)

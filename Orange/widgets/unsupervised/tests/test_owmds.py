@@ -114,6 +114,21 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
             hook.assert_not_called()
             self.assertTrue(self.widget.Error.optimization_error.is_shown())
 
+    def test_matrix_not_symmetric(self):
+        widget = self.widget
+        self.send_signal(self.widget.Inputs.distances,
+                         DistMatrix([[1, 2, 3], [4, 5, 6]]))
+        self.assertTrue(widget.Error.matrix_not_symmetric.is_shown())
+        self.send_signal(self.widget.Inputs.distances, None)
+        self.assertFalse(widget.Error.matrix_not_symmetric.is_shown())
+
+    def test_matrix_too_small(self):
+        widget = self.widget
+        self.send_signal(self.widget.Inputs.distances, DistMatrix([[1]]))
+        self.assertTrue(widget.Error.matrix_too_small.is_shown())
+        self.send_signal(self.widget.Inputs.distances, None)
+        self.assertFalse(widget.Error.matrix_too_small.is_shown())
+
     def test_distances_without_data_0(self):
         """
         Only distances and no data.

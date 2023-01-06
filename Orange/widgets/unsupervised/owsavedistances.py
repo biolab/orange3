@@ -10,7 +10,7 @@ class OWSaveDistances(OWSaveBase):
     icon = "icons/SaveDistances.svg"
     keywords = ["distance matrix", "save"]
 
-    filters = ["Distance File (*.dst)"]
+    filters = ["Excel File (*.xlsx)", "Distance File (*.dst)"]
 
     class Warning(OWSaveBase.Warning):
         table_not_saved = Msg("Associated data was not saved.")

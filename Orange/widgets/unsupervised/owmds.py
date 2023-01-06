@@ -188,6 +188,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
+        matrix_not_symmetric = Msg("Distance matrix is not symmetric")
         matrix_too_small = Msg("Input matrix must be at least 2x2")
         no_attributes = Msg("Data has no attributes")
         mismatching_dimensions = \
@@ -266,13 +267,17 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         matrix : Optional[Orange.misc.DistMatrix]
         """
 
-        if matrix is not None and len(matrix) < 2:
-            self.Error.matrix_too_small()
-            matrix = None
-        else:
-            self.Error.matrix_too_small.clear()
+        self.Error.matrix_too_small.clear()
+        self.Error.matrix_not_symmetric.clear()
+        self.matrix = None
+        if matrix is not None:
+            if not matrix.is_symmetric():
+                self.Error.matrix_not_symmetric()
+            elif len(matrix) < 2:
+                self.Error.matrix_too_small()
+            else:
+                self.matrix = matrix
 
-        self.matrix = matrix
         self.matrix_data = matrix.row_items if matrix is not None else None
 
     def clear(self):
@@ -288,7 +293,11 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.data = None
         self.effective_matrix = None
         self.closeContext()
-        self.clear_messages()
+
+        self.Error.no_attributes.clear()
+        self.Error.mismatching_dimensions.clear()
+        self.Error.out_of_memory.clear()
+        self.Error.optimization_error.clear()
 
         # if no data nor matrix is present reset plot
         if self.signal_data is None and self.matrix is None:

@@ -219,7 +219,9 @@ class OWHierarchicalClustering(widget.OWWidget):
     basic_annotations = [None, "Enumeration"]
 
     class Error(widget.OWWidget.Error):
+        empty_matrix = Msg("Distance matrix is empty.")
         not_finite_distances = Msg("Some distances are infinite")
+        not_symmetric = widget.Msg("Distance matrix is not symmetric.")
 
     class Warning(widget.OWWidget.Warning):
         subset_on_no_table = \
@@ -443,17 +445,18 @@ class OWHierarchicalClustering(widget.OWWidget):
     def set_distances(self, matrix):
         self.error()
         self.Error.clear()
-        if matrix is not None:
-            N, _ = matrix.shape
-            if N < 2:
-                self.error("Empty distance matrix")
-                matrix = None
-        if matrix is not None:
-            if not np.all(np.isfinite(matrix)):
-                self.Error.not_finite_distances()
-                matrix = None
 
-        self.matrix = matrix
+        self.matrix = None
+        self.Error.clear()
+        if matrix is not None:
+            if len(matrix) < 2:
+                self.Error.empty_matrix()
+            elif not matrix.is_symmetric():
+                self.Error.not_symmetric()
+            elif not np.all(np.isfinite(matrix)):
+                self.Error.not_finite_distances()
+            else:
+                self.matrix = matrix
 
     @Inputs.subset
     def set_subset(self, subset):

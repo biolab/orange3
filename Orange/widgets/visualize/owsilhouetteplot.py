@@ -108,6 +108,7 @@ class OWSilhouettePlot(widget.OWWidget):
         memory_error = Msg("Not enough memory")
         value_error = Msg("Distances could not be computed: '{}'")
         input_validation_error = Msg("{}")
+        not_symmetric = widget.Msg("Distance matrix is not symmetric.")
 
     class Warning(widget.OWWidget.Warning):
         missing_cluster_assignment = Msg(
@@ -225,6 +226,8 @@ class OWSilhouettePlot(widget.OWWidget):
         self.distances = None
 
     def _set_distances(self, distances: DistMatrix):
+        if not distances.is_symmetric():
+            raise ValidationError("Distance matrix is not symmetric.")
         if isinstance(distances.row_items, Orange.data.Table) and \
                 distances.axis == 1:
             data = distances.row_items
