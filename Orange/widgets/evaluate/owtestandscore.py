@@ -655,6 +655,7 @@ class OWTestAndScore(OWWidget):
                         item.setData(float(stat.value[0]), Qt.DisplayRole)
                     else:
                         item.setToolTip(str(stat.exception))
+                        # pylint: disable=unsubscriptable-object
                         if self.score_table.show_score_hints[scorer.__name__]:
                             has_missing_scores = True
                     row.append(item)

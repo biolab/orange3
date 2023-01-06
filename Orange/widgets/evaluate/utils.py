@@ -184,9 +184,16 @@ class ScoreTable(OWComponent, QObject):
         header = self.view.horizontalHeader()
         for col in range(1, self.model.columnCount()):
             item = self.model.horizontalHeaderItem(col)
-            action = menu.addAction(item.data(Qt.DisplayRole))
-            action.setCheckable(True)
             qualname = item.data(Qt.UserRole)
+            if col < 3:
+                option = item.data(Qt.DisplayRole)
+            else:
+                score = Score.registry[qualname]
+                option = score.long_name
+                if score.name != score.long_name:
+                    option += f" ({score.name})"
+            action = menu.addAction(option)
+            action.setCheckable(True)
             action.setChecked(self.show_score_hints[qualname])
 
             @action.triggered.connect
