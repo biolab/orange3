@@ -56,7 +56,6 @@ class TestScoreTable(GuiTest):
                           Specificity=False, NewScore=True))
         self.score_table = ScoreTable(None)
         self.score_table.update_header([F1, CA, AUC, Specificity, NewScore])
-        self.score_table._update_shown_columns()
 
     def tearDown(self):
         ScoreTable.show_score_hints = self.orig_hints
@@ -75,20 +74,19 @@ class TestScoreTable(GuiTest):
         def execmenu(*_):
             # pylint: disable=unsubscriptable-object,unsupported-assignment-operation
             scorers = [F1, CA, AUC, Specificity, self.NewScore]
-            self.assertEqual(list(actions)[2:], ['F1',
+            self.assertEqual(list(actions)[3:], ['F1',
                                                  'Classification accuracy (CA)',
                                                  'Area under ROC curve (AUC)',
                                                  'Specificity (Spec)',
                                                  'new score'])
             header = self.score_table.view.horizontalHeader()
-            for i, action, scorer in zip(count(), actions.values(), scorers):
-                if i >= 2:
-                    self.assertEqual(action.isChecked(),
-                                     hints[scorer.__name__],
-                                     msg=f"error in section {scorer.name}")
-                    self.assertEqual(header.isSectionHidden(i),
-                                    hints[scorer.__name__],
-                                    msg=f"error in section {scorer.name}")
+            for i, action, scorer in zip(count(), list(actions.values())[3:], scorers):
+                self.assertEqual(action.isChecked(),
+                                 hints[scorer.__name__],
+                                 msg=f"error in section {scorer.name}")
+                self.assertEqual(header.isSectionHidden(3 + i),
+                                 not hints[scorer.__name__],
+                                 msg=f"error in section {scorer.name}")
             actions["Classification accuracy (CA)"].triggered.emit(True)
             hints["CA"] = True
             for k, v in hints.items():
@@ -107,7 +105,7 @@ class TestScoreTable(GuiTest):
         # `menuexec` finishes.
         with patch("AnyQt.QtWidgets.QMenu.addAction", addAction), \
              patch("AnyQt.QtWidgets.QMenu.exec", execmenu):
-            self.score_table.show_column_chooser(QPoint(0, 0))
+            self.score_table.view.horizontalHeader().show_column_chooser(QPoint(0, 0))
 
     def test_sorting(self):
         def order(n=5):

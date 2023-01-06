@@ -325,7 +325,7 @@ class TestOWTestAndScore(WidgetTest):
         header = view.horizontalHeader()
         p = header.rect().center()
         # second visible header section (after 'Model')
-        _, idx, *_ = (i for i in range(header.count())
+        _, _, idx, *_ = (i for i in range(header.count())
                       if not header.isSectionHidden(i))
         p.setX(header.sectionPosition(idx) + 5)
         QTest.mouseClick(header.viewport(), Qt.LeftButton, pos=p)
@@ -723,11 +723,13 @@ class TestOWTestAndScore(WidgetTest):
         selection_model = view.selectionModel()
         selection_model.select(model.index(0, 0),
                                selection_model.Select | selection_model.Rows)
-
         self.widget.copy_to_clipboard()
         clipboard_text = QApplication.clipboard().text()
+        # Tests appear to register additional scorers, so we clip the list
+        # to what we know to be there and visible
+        clipboard_text = "\t".join(clipboard_text.split("\t")[:6]).strip()
         view_text = "\t".join([str(model.data(model.index(0, i)))
-                               for i in (0, 3, 4, 5, 6, 7)]) + "\r\n"
+                               for i in (0, 3, 4, 5, 6, 7)]).strip()
         self.assertEqual(clipboard_text, view_text)
 
     def test_multi_target_input(self):
