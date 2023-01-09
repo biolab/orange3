@@ -152,10 +152,6 @@ class OWTestAndScore(OWWidget):
 
     settings_version = 4
     buttons_area_orientation = None
-    UserAdviceMessages = [
-        widget.Message(
-            "Click on the table header to select shown columns",
-            "click_header")]
 
     settingsHandler = settings.PerfectDomainContextHandler()
     score_table = settings.SettingProvider(ScoreTable)
