@@ -158,13 +158,6 @@ class TestScoreTable(GuiTest):
         ScoreTable.migrate_to_show_scores_hints(settings)
         self.assertTrue(settings["show_score_hints"]["Sensitivity"])
 
-    def test_column_settings_reminder(self):
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.37"):
-            self.fail(
-                "Orange 3.32 added a workaround to show C-Index into ScoreTable.__init__. "
-                "This should have been properly fixed long ago."
-            )
-
 
 if __name__ == "__main__":
     unittest.main()
