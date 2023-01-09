@@ -1182,9 +1182,9 @@ __ALLOWED = [
     "bin", "bool", "bytearray", "bytes", "chr", "complex", "dict",
     "divmod", "enumerate", "filter", "float", "format", "frozenset",
     "getattr", "hasattr", "hash", "hex", "id", "int", "iter", "len",
-    "list", "map", "memoryview", "next", "object",
+    "list", "map", "max", "memoryview", "min", "next", "object",
     "oct", "ord", "pow", "range", "repr", "reversed", "round",
-    "set", "slice", "sorted", "str", "tuple", "type",
+    "set", "slice", "sorted", "str", "sum", "tuple", "type",
     "zip"
 ]
 
@@ -1218,9 +1218,6 @@ __GLOBALS.update({
     "nanargmin": lambda *args: np.nanargmin(args),
     "nanvar": lambda *args: np.nanvar(args),
     "mean": lambda *args: np.mean(args),
-    "min": lambda *args: np.min(args),
-    "max": lambda *args: np.max(args),
-    "sum": lambda *args: np.sum(args),
     "std": lambda *args: np.std(args),
     "median": lambda *args: np.median(args),
     "cumsum": lambda *args: np.cumsum(args),
