@@ -63,6 +63,8 @@ class OWPredictions(OWWidget):
     description = "Display predictions of models for an input dataset."
     keywords = []
 
+    settings_version = 2
+
     want_control_area = False
 
     class Inputs:
@@ -940,6 +942,12 @@ class OWPredictions(OWWidget):
     def showEvent(self, event):
         super().showEvent(event)
         QTimer.singleShot(0, self._update_splitter)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            if "score_table" in settings:
+                ScoreTable.migrate_to_show_scores_hints(settings["score_table"])
 
 
 class ItemDelegate(TableDataDelegate):
