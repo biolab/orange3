@@ -77,8 +77,6 @@ def var(s):
     """
     if is_datetime64_any_dtype(s):
         initial_ts = pd.Timestamp("1970-01-01", tz=None if s.dt.tz is None else "UTC")
-        if s.dt.tz is not None:
-            s = s.tz_convert("UTC")
         s = (s - initial_ts) / pd.Timedelta("1s")
     var_ = s.var()
     return var_.total_seconds() if isinstance(var_, pd.Timedelta) else var_

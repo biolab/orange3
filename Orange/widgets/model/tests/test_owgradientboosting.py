@@ -1,3 +1,4 @@
+import json
 import unittest
 import sys
 from typing import Type
@@ -157,18 +158,19 @@ class TestXGBLearnerEditor(BaseEditorTest):
         booster = XGBClassifier()
         model = booster(data)
         params = model.skl_model.get_params()
+        booster_params = json.loads(model.skl_model.get_booster().save_config())
+        updater = booster_params["learner"]["gradient_booster"]["updater"]
+        tp = updater["grow_colmaker"]["train_param"]
         self.assertEqual(params["n_estimators"], self.editor.n_estimators)
-        self.assertEqual(round(params["learning_rate"], 1),
-                         self.editor.learning_rate)
-        self.assertEqual(params["max_depth"], self.editor.max_depth)
-        self.assertEqual(params["reg_lambda"], self.editor.lambda_)
-        self.assertEqual(params["subsample"], self.editor.subsample)
-        self.assertEqual(params["colsample_bytree"],
-                         self.editor.colsample_bytree)
-        self.assertEqual(params["colsample_bylevel"],
-                         self.editor.colsample_bylevel)
-        self.assertEqual(params["colsample_bynode"],
-                         self.editor.colsample_bynode)
+        self.assertEqual(
+            round(float(tp["learning_rate"]), 1), self.editor.learning_rate
+        )
+        self.assertEqual(int(tp["max_depth"]), self.editor.max_depth)
+        self.assertEqual(float(tp["reg_lambda"]), self.editor.lambda_)
+        self.assertEqual(int(tp["subsample"]), self.editor.subsample)
+        self.assertEqual(int(tp["colsample_bytree"]), self.editor.colsample_bytree)
+        self.assertEqual(int(tp["colsample_bylevel"]), self.editor.colsample_bylevel)
+        self.assertEqual(int(tp["colsample_bynode"]), self.editor.colsample_bynode)
 
     @unittest.skipIf(XGBRegressor is None, "Missing 'xgboost' package")
     def test_default_parameters_reg(self):
@@ -176,18 +178,19 @@ class TestXGBLearnerEditor(BaseEditorTest):
         booster = XGBRegressor()
         model = booster(data)
         params = model.skl_model.get_params()
+        booster_params = json.loads(model.skl_model.get_booster().save_config())
+        updater = booster_params["learner"]["gradient_booster"]["updater"]
+        tp = updater["grow_colmaker"]["train_param"]
         self.assertEqual(params["n_estimators"], self.editor.n_estimators)
-        self.assertEqual(round(params["learning_rate"], 1),
-                         self.editor.learning_rate)
-        self.assertEqual(params["max_depth"], self.editor.max_depth)
-        self.assertEqual(params["reg_lambda"], self.editor.lambda_)
-        self.assertEqual(params["subsample"], self.editor.subsample)
-        self.assertEqual(params["colsample_bytree"],
-                         self.editor.colsample_bytree)
-        self.assertEqual(params["colsample_bylevel"],
-                         self.editor.colsample_bylevel)
-        self.assertEqual(params["colsample_bynode"],
-                         self.editor.colsample_bynode)
+        self.assertEqual(
+            round(float(tp["learning_rate"]), 1), self.editor.learning_rate
+        )
+        self.assertEqual(int(tp["max_depth"]), self.editor.max_depth)
+        self.assertEqual(float(tp["reg_lambda"]), self.editor.lambda_)
+        self.assertEqual(int(tp["subsample"]), self.editor.subsample)
+        self.assertEqual(int(tp["colsample_bytree"]), self.editor.colsample_bytree)
+        self.assertEqual(int(tp["colsample_bylevel"]), self.editor.colsample_bylevel)
+        self.assertEqual(int(tp["colsample_bynode"]), self.editor.colsample_bynode)
 
 
 class TestXGBRFLearnerEditor(BaseEditorTest):
@@ -220,18 +223,19 @@ class TestXGBRFLearnerEditor(BaseEditorTest):
         booster = XGBRFClassifier()
         model = booster(data)
         params = model.skl_model.get_params()
+        booster_params = json.loads(model.skl_model.get_booster().save_config())
+        updater = booster_params["learner"]["gradient_booster"]["updater"]
+        tp = updater["grow_colmaker"]["train_param"]
         self.assertEqual(params["n_estimators"], self.editor.n_estimators)
-        self.assertEqual(round(params["learning_rate"], 1),
-                         self.editor.learning_rate)
-        self.assertEqual(params["max_depth"], self.editor.max_depth)
-        self.assertEqual(params["reg_lambda"], self.editor.lambda_)
-        self.assertEqual(params["subsample"], self.editor.subsample)
-        self.assertEqual(params["colsample_bytree"],
-                         self.editor.colsample_bytree)
-        self.assertEqual(params["colsample_bylevel"],
-                         self.editor.colsample_bylevel)
-        self.assertEqual(params["colsample_bynode"],
-                         self.editor.colsample_bynode)
+        self.assertEqual(
+            round(float(tp["learning_rate"]), 1), self.editor.learning_rate
+        )
+        self.assertEqual(int(tp["max_depth"]), self.editor.max_depth)
+        self.assertEqual(float(tp["reg_lambda"]), self.editor.lambda_)
+        self.assertEqual(int(tp["subsample"]), self.editor.subsample)
+        self.assertEqual(int(tp["colsample_bytree"]), self.editor.colsample_bytree)
+        self.assertEqual(int(tp["colsample_bylevel"]), self.editor.colsample_bylevel)
+        self.assertEqual(int(tp["colsample_bynode"]), self.editor.colsample_bynode)
 
     @unittest.skipIf(XGBRFRegressor is None, "Missing 'xgboost' package")
     def test_default_parameters_reg(self):
@@ -239,18 +243,19 @@ class TestXGBRFLearnerEditor(BaseEditorTest):
         booster = XGBRFRegressor()
         model = booster(data)
         params = model.skl_model.get_params()
+        booster_params = json.loads(model.skl_model.get_booster().save_config())
+        updater = booster_params["learner"]["gradient_booster"]["updater"]
+        tp = updater["grow_colmaker"]["train_param"]
         self.assertEqual(params["n_estimators"], self.editor.n_estimators)
-        self.assertEqual(round(params["learning_rate"], 1),
-                         self.editor.learning_rate)
-        self.assertEqual(params["max_depth"], self.editor.max_depth)
-        self.assertEqual(params["reg_lambda"], self.editor.lambda_)
-        self.assertEqual(params["subsample"], self.editor.subsample)
-        self.assertEqual(params["colsample_bytree"],
-                         self.editor.colsample_bytree)
-        self.assertEqual(params["colsample_bylevel"],
-                         self.editor.colsample_bylevel)
-        self.assertEqual(params["colsample_bynode"],
-                         self.editor.colsample_bynode)
+        self.assertEqual(
+            round(float(tp["learning_rate"]), 1), self.editor.learning_rate
+        )
+        self.assertEqual(int(tp["max_depth"]), self.editor.max_depth)
+        self.assertEqual(float(tp["reg_lambda"]), self.editor.lambda_)
+        self.assertEqual(int(tp["subsample"]), self.editor.subsample)
+        self.assertEqual(int(tp["colsample_bytree"]), self.editor.colsample_bytree)
+        self.assertEqual(int(tp["colsample_bylevel"]), self.editor.colsample_bylevel)
+        self.assertEqual(int(tp["colsample_bynode"]), self.editor.colsample_bynode)
 
 
 class TestCatGBLearnerEditor(BaseEditorTest):
