@@ -46,7 +46,7 @@ class OWRandomForest(OWBaseLearner):
             alignment=Qt.AlignRight, label="Number of trees: ",
             callback=self.settings_changed)
         self.max_features_spin = gui.spin(
-            box, self, "max_features", 2, 50, controlWidth=80,
+            box, self, "max_features", 1, 50, controlWidth=80,
             label="Number of attributes considered at each split: ",
             callback=self.settings_changed, checked="use_max_features",
             checkCallback=self.settings_changed, alignment=Qt.AlignRight,)

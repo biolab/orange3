@@ -1,5 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import unittest
+
 from AnyQt.QtCore import Qt
 from Orange.data import Table
 from Orange.widgets.model.owrandomforest import OWRandomForest
@@ -41,7 +43,7 @@ class TestOWRandomForest(WidgetTest, WidgetLearnerTestMixin):
         self.widget.min_samples_split_spin[0].setCheckState(Qt.Unchecked)
         self.parameters = self.parameters[:1]
         self.parameters.extend([
-            DefaultParameterMapping("max_features", "auto"),
+            DefaultParameterMapping("max_features", "sqrt"),
             DefaultParameterMapping("random_state", None),
             DefaultParameterMapping("max_depth", None),
             DefaultParameterMapping("min_samples_split", 2)])
@@ -56,3 +58,7 @@ class TestOWRandomForest(WidgetTest, WidgetLearnerTestMixin):
         self.widget.apply_button.button.click()
         self.assertEqual(self.widget.model.skl_model.class_weight, "balanced")
         self.assertTrue(self.widget.Warning.class_weights_used.is_shown())
+
+
+if __name__ == "__main__":
+    unittest.main()
