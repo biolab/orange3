@@ -673,21 +673,28 @@ class TestOWSelectRowsDask(TestOWSelectRows):
         cls.lenses = temp_dasktable(cls.lenses)
         cls.cyber = temp_dasktable(cls.cyber)
 
+    @override_locale(QLocale.C)
     def test_dask_outputs(self):
         w = self.widget
         iris = self.iris
+
         self.widget.auto_commit = True
         self.widget.set_data(iris)
+
+        self.widget.remove_all()
         self.widget.add_row(iris.domain[0], 0, CFValues[FilterContinuous.Equal])
         self.widget.conditions_changed()
         self.widget.commit.now()
+
         m = self.get_output(w.Outputs.matching_data)
         self.assertIsInstance(m, DaskTable)
         self.assertEqual(6, len(m))
+
         n = self.get_output(w.Outputs.unmatched_data)
         self.assertIsInstance(n, DaskTable)
         self.assertEqual(len(iris), len(m) + len(n))
         self.assertEqual(144, len(n))
+
         a = self.get_output(w.Outputs.annotated_data)
         self.assertEqual(len(iris), len(a))
         self.assertIsInstance(a, DaskTable)
