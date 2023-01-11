@@ -2,6 +2,7 @@
 # pylint: disable=missing-docstring,unsubscriptable-object
 import unittest
 from unittest.mock import patch
+from unittest import skip
 import numpy as np
 
 from AnyQt.QtCore import QLocale, Qt, QDate, QDateTime, QTime
@@ -785,6 +786,10 @@ class TestOWSelectRowsDask(TestOWSelectRows):
         a = self.get_output(w.Outputs.annotated_data)
         self.assertEqual(len(iris), len(a))
         self.assertIsInstance(a, DaskTable)
+
+    @skip("Discretization for Dask is not yet implemented")
+    def test_purge_discretized(self):
+        pass
 
 
 if __name__ == "__main__":
