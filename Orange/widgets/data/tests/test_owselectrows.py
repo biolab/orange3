@@ -321,7 +321,8 @@ class TestOWSelectRows(WidgetTest):
         new_class_var = DiscreteVariable(class_var.name, class_var.values[1:])
         new_domain = Domain(domain.attributes, new_class_var)
         non0 = iris.Y != 0
-        iris2 = Table.from_numpy(new_domain, iris.X[non0], iris.Y[non0] - 1)
+        non0 = np.asarray(non0)  # make sure it is not lazy (Dask)
+        iris2 = type(iris)(new_domain, iris.X[non0], iris.Y[non0] - 1)
         self.send_signal(self.widget.Inputs.data, iris2)
         condition = self.widget.conditions[0]
         self.assertIs(condition[0], new_class_var)
