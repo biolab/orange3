@@ -20,7 +20,7 @@ from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.misc.wrapper_meta import WrapperMeta
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
-           "MSE", "RMSE", "MAE", "R2", "LogLoss"]
+           "MSE", "RMSE", "MAE", "R2", "LogLoss", "MatthewsCorrCoefficient"]
 
 
 class ScoreMetaType(WrapperMeta):
@@ -366,6 +366,13 @@ class Specificity(ClassificationScore):
                     "following values: ('weighted', 'binary')")
         elif target is not None:
             return self.single_class_specificity(results, target)
+
+
+class MatthewsCorrCoefficient(ClassificationScore):
+    __wraps__ = skl_metrics.matthews_corrcoef
+    name = "MCC"
+    long_name = "Matthews correlation coefficient"
+
 
 # Regression scores
 

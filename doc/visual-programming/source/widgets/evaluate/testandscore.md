@@ -37,6 +37,7 @@ The *Learner* signal has an uncommon property: it can be connected to more than 
         - [Recall](https://en.wikipedia.org/wiki/Precision_and_recall) is the proportion of true positives among all positive instances in the data, e.g. the number of sick among all diagnosed as sick.
         - [Specificity](https://en.wikipedia.org/wiki/Sensitivity_and_specificity) is the proportion of true negatives among all negative instances, e.g. the number of non-sick among all diagnosed as non-sick.
         - [LogLoss](https://en.wikipedia.org/wiki/Cross_entropy) or cross-entropy loss takes into account the uncertainty of your prediction based on how much it varies from the actual label. 
+        - [Matthews correlation coefficient](https://en.wikipedia.org/wiki/Phi_coefficient) takes into account true and false positives and negatives and is generally regarded as a balanced measure which can be used even if the classes are of very different sizes.
         - Train time - cumulative time in seconds used for training models.
         - Test time - cumulative time in seconds used for testing models.
    - Regression
