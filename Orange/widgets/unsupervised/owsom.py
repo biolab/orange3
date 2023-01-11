@@ -220,7 +220,7 @@ class OWSOM(OWWidget):
 
     class Error(OWWidget.Error):
         no_numeric_variables = Msg("Data contains no numeric columns.")
-        no_defined_rows = Msg("All rows contain at least one undefined value.")
+        not_enough_data = Msg("SOM needs at least two data rows without missing values.")
 
     def __init__(self):
         super().__init__()
@@ -318,8 +318,8 @@ class OWSOM(OWWidget):
                 self.cont_x = x.tocsr()
             else:
                 mask = np.all(np.isfinite(x), axis=1)
-                if not np.any(mask):
-                    self.Error.no_defined_rows()
+                if np.sum(mask) <= 1:
+                    self.Error.not_enough_data()
                 else:
                     if np.all(mask):
                         self.data = data
