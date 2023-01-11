@@ -1,7 +1,10 @@
+# pylint: disable=protected-access
+
 import unittest
 from unittest.mock import patch
 
 import numpy as np
+from Orange.data import ContinuousVariable, StringVariable, Table, Domain
 from Orange.misc import DistMatrix
 
 
@@ -96,6 +99,62 @@ class DistMatrixTest(unittest.TestCase):
                          [1062.89, 1372.59, 651.62]])
         matrix = DistMatrix(data, list("def"), list("abc"))
         self.assertIs(matrix.auto_symmetricized(), matrix)
+
+    def test_trivial_labels(self):
+        matrix = DistMatrix(np.array([[1, 2, 3], [4, 5, 6]]))
+
+        self.assertFalse(matrix._trivial_labels(matrix.row_items))
+        self.assertIsNone(matrix.get_labels(matrix.row_items))
+
+        matrix.row_items = list("abc")
+        self.assertTrue(matrix._trivial_labels(matrix.row_items))
+        self.assertEqual(matrix.get_labels(matrix.row_items), list("abc"))
+
+        matrix.row_items = ["a", 1, "c"]
+        self.assertFalse(matrix._trivial_labels(matrix.row_items))
+        self.assertIsNone(matrix.get_labels(matrix.row_items))
+
+        c1, c2 = (ContinuousVariable(c) for c in "xy")
+        s1, s2 = (StringVariable(c) for c in "st")
+        data = Table.from_list(Domain([c1], None, [c2, s1]),
+                               [[1, 0, "a"], [2, 2, "b"], [3, 1, "c"]])
+        matrix.row_items = data
+
+        matrix.axis = 1
+        self.assertTrue(matrix._trivial_labels(matrix.row_items))
+        self.assertEqual(list(matrix.get_labels(matrix.row_items)), list("abc"))
+
+        matrix.axis = 0
+        self.assertTrue(matrix._trivial_labels(matrix.row_items))
+        self.assertEqual(list(matrix.get_labels(matrix.row_items)), list("x"))
+
+
+        data = Table.from_list(Domain([c1], None, [c2, s1, s2]),
+                               [[1, 2, "a", "2"],
+                                [2, 4, "b", "5"],
+                                [3, 0, "c", "g"]])
+        matrix.row_items = data
+
+        matrix.axis = 1
+        self.assertFalse(matrix._trivial_labels(matrix.row_items))
+        self.assertIsNone(matrix.get_labels(matrix.row_items))
+
+        matrix.axis = 0
+        self.assertTrue(matrix._trivial_labels(matrix.row_items))
+        self.assertEqual(list(matrix.get_labels(matrix.row_items)), list("x"))
+
+        data = Table.from_list(Domain([c1], None, [c2]),
+                               [[1, 2],
+                                [2, 4],
+                                [3, 0]])
+        matrix.row_items = data
+        matrix.axis = 1
+        self.assertFalse(matrix._trivial_labels(matrix.row_items))
+        self.assertIsNone(matrix.get_labels(matrix.row_items))
+
+        matrix.axis = 0
+        self.assertTrue(matrix._trivial_labels(matrix.row_items))
+        self.assertEqual(matrix.get_labels(matrix.row_items), list("x"))
 
 
 if __name__ == "__main__":

@@ -43,6 +43,7 @@ class DistMatrix(np.ndarray):
         return obj
 
     def __array_finalize__(self, obj):
+        # defined in __new___, pylint: disable=attribute-defined-outside-init
         """See http://docs.scipy.org/doc/numpy/user/basics.subclassing.html"""
         if obj is None:
             return
@@ -63,6 +64,7 @@ class DistMatrix(np.ndarray):
 
     # noinspection PyMethodOverriding,PyArgumentList
     def __setstate__(self, state):
+        # defined in __new___, pylint: disable=attribute-defined-outside-init
         self.row_items = state[-3]
         self.col_items = state[-2]
         self.axis = state[-1]
@@ -95,13 +97,17 @@ class DistMatrix(np.ndarray):
         if not col_items:
             col_items = row_items
         obj = self[np.ix_(row_items, col_items)]
-        if self.row_items is not None:
+        if isinstance(self.row_items, list):
+            obj.row_items = list(np.array(self.row_items)[row_items])
+        elif self.row_items is not None:
             obj.row_items = self.row_items[row_items]
-        if self.col_items is not None:
-            if self.col_items is self.row_items and row_items is col_items:
-                obj.col_items = obj.row_items
-            else:
-                obj.col_items = self.col_items[col_items]
+
+        if self.col_items is self.row_items and col_items is row_items:
+            obj.col_items = obj.row_items
+        elif isinstance(self.col_items, list):
+            obj.col_items = list(np.array(self.col_items)[col_items])
+        elif self.col_items is not None:
+            obj.col_items = self.col_items[col_items]
         return obj
 
     @classmethod
@@ -274,15 +280,19 @@ class DistMatrix(np.ndarray):
                           self.row_items or self.col_items,
                           self.col_items or self.row_items)
 
-    @staticmethod
-    def _trivial_labels(items):
+    def _trivial_labels(self, items):
         # prevent circular imports, pylint: disable=import-outside-toplevel
         from Orange.data import Table, StringVariable
 
-        return items and \
-               isinstance(items, Table) and \
-               len(items.domain.metas) == 1 and \
-               isinstance(items.domain.metas[0], StringVariable)
+        return (isinstance(items, (list, tuple))
+                and all(isinstance(item, str) for item in items)
+                or
+                isinstance(items, Table)
+                and (self.axis == 0 or
+                     sum(isinstance(meta, StringVariable)
+                         for meta in items.domain.metas) == 1
+                     )
+                )
 
     def is_symmetric(self):
         # prevent circular imports, pylint: disable=import-outside-toplevel
@@ -324,13 +334,20 @@ class DistMatrix(np.ndarray):
         return self._trivial_labels(self.col_items)
 
     def get_labels(self, items):
-        if self._trivial_labels(items):
-            return items.get_column(items.domain.metas[0])
-        elif isinstance(items, (list, tuple)) \
+        # prevent circular imports, pylint: disable=import-outside-toplevel
+        from Orange.data import StringVariable
+
+        if not self._trivial_labels(items):
+            return None
+        if isinstance(items, (list, tuple)) \
                 and all(isinstance(x, str) for x in items):
             return items
+        if self.axis == 0:
+            return [attr.name for attr in items.domain.attributes]
         else:
-            return None
+            string_var = next(var for var in items.domain.metas
+                              if isinstance(var, StringVariable))
+            return items.get_column(string_var)
 
     def save(self, filename):
         if os.path.splitext(filename)[1] == ".xlsx":
@@ -347,7 +364,7 @@ class DistMatrix(np.ndarray):
             filename: file name
         """
         n = len(self)
-        data = "{}\taxis={}".format(n, self.axis)
+        data = f"{n}\taxis={self.axis}"
         row_labels = col_labels = None
         if self.has_col_labels():
             data += "\tcol_labels"
@@ -358,7 +375,7 @@ class DistMatrix(np.ndarray):
         symmetric = self.is_symmetric()
         if not symmetric:
             data += "\tasymmetric"
-        with open(filename, "wt") as fle:
+        with open(filename, "wt", encoding="utf-8") as fle:
             fle.write(data + "\n")
             if col_labels is not None:
                 fle.write("\t".join(str(e.metas[0]) for e in col_labels) + "\n")
