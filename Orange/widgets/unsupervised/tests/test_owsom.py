@@ -121,7 +121,7 @@ class TestOWSOM(WidgetTest):
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(widget.Warning.missing_values.is_shown())
 
-    def test_missing_all_but_one_row_data(self):
+    def test_single_row_data(self):
         widget = self.widget
         with self.iris.unlocked():
             self.iris.X[:-1] = np.nan
@@ -131,9 +131,11 @@ class TestOWSOM(WidgetTest):
 
         self.send_signal(widget.Inputs.data, Table("heart_disease"))
         self.assertFalse(widget.Error.not_enough_data.is_shown())
+        self.assertTrue(widget.Warning.ignoring_disc_variables.is_shown())
 
         self.send_signal(widget.Inputs.data, self.iris)
         self.assertTrue(widget.Error.not_enough_data.is_shown())
+        self.assertFalse(widget.Warning.ignoring_disc_variables.is_shown())
 
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(widget.Error.not_enough_data.is_shown())
