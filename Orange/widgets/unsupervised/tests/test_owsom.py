@@ -121,6 +121,7 @@ class TestOWSOM(WidgetTest):
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(widget.Warning.missing_values.is_shown())
 
+    @_patch_recompute_som
     def test_single_row_data(self):
         widget = self.widget
         with self.iris.unlocked():
