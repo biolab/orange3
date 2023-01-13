@@ -610,6 +610,9 @@ class OWDistributions(OWWidget):
             else:
                 self._cont_plot()
         self.plot.autoRange()
+        height = max(item.boundingRect().height() for item in self.bar_items)
+        height = height * (1.1 if not self.show_probs else 1)
+        self.plot.setYRange(0, height)
 
     def _add_bar(self, x, width, padding, freqs, colors, stacked, expanded,
                  tooltip, desc, hidden=False):
