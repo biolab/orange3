@@ -42,7 +42,7 @@ class VariablesListItemView(QListView):
     """
     #: Emitted with a Qt.DropAction when a drag/drop (originating from this
     #: view) completed successfully
-    dragDropActionDidComplete = Signal(int)
+    dragDropActionDidComplete = Signal(Qt.DropAction)
 
     def __init__(self, parent=None, acceptedType=Orange.data.Variable):
         super().__init__(parent)
