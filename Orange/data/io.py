@@ -322,14 +322,14 @@ class ExcelReader(_BaseExcelReader):
     @classmethod
     def write_file(cls, filename, data, with_annotations=False):
         vars = list(chain((ContinuousVariable('_w'),) if data.has_weights() else (),
-                          data.domain.attributes,
                           data.domain.class_vars,
-                          data.domain.metas))
+                          data.domain.metas,
+                          data.domain.attributes))
         formatters = [cls.formatter(v) for v in vars]
         zipped_list_data = zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
-                               data.X,
                                data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
-                               data.metas)
+                               data.metas,
+                               data.X)
         names = cls.header_names(data)
         headers = (names,)
         if with_annotations:
