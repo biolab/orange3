@@ -438,7 +438,7 @@ class ColorStripDelegate(HorizontalGridDelegate):
         strip = index.data(StripRole)
         rect = option.rect
         painter.drawPixmap(
-            rect.x() + 13, rect.y() + (rect.height() - strip.height()) / 2,
+            rect.x() + 13, int(rect.y() + (rect.height() - strip.height()) / 2),
             strip)
         super().paint(painter, option, index)
 
