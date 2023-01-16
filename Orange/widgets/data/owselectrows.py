@@ -3,6 +3,7 @@ from collections import OrderedDict
 from datetime import datetime, timezone, timedelta
 
 import numpy as np
+import dask.array as da
 
 from AnyQt.QtWidgets import (
     QWidget, QTableWidget, QHeaderView, QComboBox, QLineEdit, QToolButton,
@@ -888,10 +889,15 @@ class DateTimeWidget(QDateTimeEdit):
             return datetime(1970, 1, 1, tzinfo=timezone.utc) + \
                        timedelta(seconds=int(timestamp))
 
-        min_datetime = convert_timestamp(
-            np.nanmin(column)).strftime(convert_format)
-        max_datetime = convert_timestamp(
-            np.nanmax(column)).strftime(convert_format)
+        min_timestamp = np.nanmin(column)
+        max_timestamp = np.nanmax(column)
+
+        if isinstance(column, da.Array):
+            min_timestamp, max_timestamp = da.compute(min_timestamp, max_timestamp)
+
+        min_datetime = convert_timestamp(min_timestamp).strftime(convert_format)
+        max_datetime = convert_timestamp(max_timestamp).strftime(convert_format)
+
         return min_datetime, max_datetime
 
 
