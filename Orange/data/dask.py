@@ -33,6 +33,10 @@ class DaskTable(Table):
     def __new__(cls, *args, **kwargs):
         if not args and not kwargs:
             return super().__new__(cls)
+        elif isinstance(args[0], DaskTable):
+            if len(args) > 1:
+                raise TypeError("DaskTable(table: DaskTable) expects just one argument")
+            return cls.from_table(args[0].domain, args[0])
         return cls.from_arrays(*args, **kwargs)
 
     @classmethod
@@ -45,6 +49,8 @@ class DaskTable(Table):
             if array is not None:
                 size = len(array)
                 break
+
+        assert size is not None
 
         if X is None:
             X = da.zeros((size, 0), chunks=(size, 0))
