@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
-import time
 from unittest.mock import patch
+from unittest import skip
 import numpy as np
 
 from AnyQt.QtCore import QLocale, Qt, QDate
@@ -13,6 +13,7 @@ from orangewidget.settings import VERSION_KEY
 from Orange.data import (
     Table, Variable, ContinuousVariable, StringVariable, DiscreteVariable,
     Domain, TimeVariable)
+from Orange.data.dask import DaskTable
 from Orange.preprocess import discretize
 from Orange.widgets.data import owselectrows
 from Orange.widgets.data.owselectrows import (
@@ -23,6 +24,8 @@ from Orange.data.filter import FilterContinuous, FilterString
 from Orange.widgets.tests.utils import simulate, override_locale
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 from Orange.tests import test_filename
+from Orange.tests.test_dasktable import temp_dasktable
+
 
 CFValues = {
     FilterContinuous.Equal: ["5.4"],
@@ -73,11 +76,22 @@ TFValues = {
 
 
 class TestOWSelectRows(WidgetTest):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.iris = Table("iris")
+        cls.zoo = Table("zoo")
+        cls.housing = Table("housing")
+        cls.heart = Table("heart_disease")
+        cls.lenses = Table(test_filename("datasets/lenses.tab"))
+        cls.cyber = Table(test_filename("datasets/cyber-security-breaches.tab"))
+
     def setUp(self):
         self.widget = self.create_widget(OWSelectRows)  # type: OWSelectRows
 
     def test_filter_cont(self):
-        iris = Table("iris")[::5]
+        iris = self.iris[::5]
         self.widget.auto_commit = True
         self.widget.set_data(iris)
 
@@ -88,8 +102,8 @@ class TestOWSelectRows(WidgetTest):
             self.widget.commit.now()
 
         # continuous var in metas
-        iris = Table.from_table(
-            Domain([], metas=[iris.domain.attributes[0]]), iris
+        iris = iris.transform(
+            Domain([], metas=[iris.domain.attributes[0]])
         )
         self.widget.set_data(iris)
         for i, (op, *_) in enumerate(OWSelectRows.Operators[ContinuousVariable]):
@@ -99,7 +113,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.commit.now()
 
     def test_filter_str(self):
-        zoo = Table("zoo")[::5]
+        zoo = self.zoo[::5]
         self.widget.auto_commit = False
         self.widget.set_data(zoo)
         for i, (op, *_) in enumerate(OWSelectRows.Operators[StringVariable]):
@@ -109,7 +123,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.commit.now()
 
     def test_filter_disc(self):
-        lenses = Table(test_filename("datasets/lenses.tab"))
+        lenses = self.lenses
         self.widget.auto_commit = False
         self.widget.set_data(lenses)
 
@@ -120,8 +134,8 @@ class TestOWSelectRows(WidgetTest):
             self.widget.commit.now()
 
         # discrete var in metas
-        lenses = Table.from_table(
-            Domain([], metas=[lenses.domain.attributes[0]]), lenses
+        lenses = lenses.transform(
+            Domain([], metas=[lenses.domain.attributes[0]])
         )
         self.widget.set_data(lenses)
         for i, (op, _) in enumerate(OWSelectRows.Operators[DiscreteVariable]):
@@ -131,7 +145,7 @@ class TestOWSelectRows(WidgetTest):
             self.widget.commit.now()
 
     def test_filter_time(self):
-        data = Table(test_filename("datasets/cyber-security-breaches.tab"))
+        data = self.cyber
         self.widget.auto_commit = False
         self.widget.set_data(data)
 
@@ -142,8 +156,8 @@ class TestOWSelectRows(WidgetTest):
             self.widget.commit.now()
 
         # time var in metas
-        data = Table.from_table(
-            Domain([], metas=[data.domain["breach_start"]]), data
+        data = data.transform(
+            Domain([], metas=[data.domain["breach_start"]])
         )
         self.widget.set_data(data)
         for i, (op, *_) in enumerate(OWSelectRows.Operators[TimeVariable]):
@@ -154,7 +168,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_continuous_filter_with_c_locale(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         self.send_signal(self.widget.Inputs.data, iris)
 
         # Validating with C locale should accept decimal point
@@ -169,7 +183,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.Slovenian)  # Locale with decimal comma
     def test_continuous_filter_with_sl_SI_locale(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         self.send_signal(self.widget.Inputs.data, iris)
 
         # sl_SI locale should accept decimal comma
@@ -184,7 +198,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_all_numeric_filter_with_c_locale_from_context(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         widget = self.widget_with_context(
             iris.domain, [["All numeric variables", None, 0, (3.14, )]])
         self.send_signal(widget.Inputs.data, iris)
@@ -192,7 +206,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.Slovenian)  # Locale with decimal comma
     def test_all_numeric_filter_with_sl_SI_locale(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         widget = self.widget_with_context(
             iris.domain, [["All numeric variables", None, 0, (3.14, )]])
         self.send_signal(widget.Inputs.data, iris)
@@ -200,7 +214,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.Slovenian)
     def test_stores_settings_in_invariant_locale(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         self.send_signal(self.widget.Inputs.data, iris)
 
         # sl_SI locale should accept decimal comma
@@ -215,7 +229,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_store_all_numeric_filter_with_c_locale_to_context(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         self.send_signal(self.widget.Inputs.data, iris)
         self.widget.remove_all_button.click()
         self.enterFilter("All numeric variables", "equal", "3.14")
@@ -225,7 +239,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.Slovenian)  # Locale with decimal comma
     def test_store_all_numeric_filter_with_sl_SI_locale_to_context(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         self.send_signal(self.widget.Inputs.data, iris)
         self.widget.remove_all_button.click()
         self.enterFilter("All numeric variables", "equal", "3,14")
@@ -235,7 +249,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.C)
     def test_restores_continuous_filter_in_c_locale(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         # Settings with string value
         self.widget = self.widget_with_context(
             iris.domain, [["sepal length", 102, 2, ("5.2",)]])
@@ -254,7 +268,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.Slovenian)
     def test_restores_continuous_filter_in_sl_SI_locale(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         # Settings with string value
         self.widget = self.widget_with_context(
             iris.domain, [["sepal length", 102, 2, ("5.2",)]])
@@ -273,7 +287,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.C)
     def test_partial_matches(self):
-        iris = Table("iris")
+        iris = self.iris
         domain = iris.domain
         self.widget = self.widget_with_context(
             domain, [[domain[0].name, 2, 2, ("5.2",)]])
@@ -285,7 +299,7 @@ class TestOWSelectRows(WidgetTest):
         self.assertTrue(condition[2][0].startswith("5.2"))
 
     def test_partial_match_values(self):
-        iris = Table("iris")
+        iris = self.iris
         domain = iris.domain
         class_var = domain.class_var
         self.widget = self.widget_with_context(
@@ -303,7 +317,8 @@ class TestOWSelectRows(WidgetTest):
         new_class_var = DiscreteVariable(class_var.name, class_var.values[1:])
         new_domain = Domain(domain.attributes, new_class_var)
         non0 = iris.Y != 0
-        iris2 = Table.from_numpy(new_domain, iris.X[non0], iris.Y[non0] - 1)
+        non0 = np.asarray(non0)  # make sure it is not lazy (Dask)
+        iris2 = type(iris)(new_domain, iris.X[non0], iris.Y[non0] - 1)
         self.send_signal(self.widget.Inputs.data, iris2)
         condition = self.widget.conditions[0]
         self.assertIs(condition[0], new_class_var)
@@ -312,7 +327,7 @@ class TestOWSelectRows(WidgetTest):
 
     @override_locale(QLocale.C)
     def test_partial_matches_with_missing_vars(self):
-        iris = Table("iris")
+        iris = self.iris
         domain = iris.domain
         self.widget = self.widget_with_context(
             domain, [[domain[0].name, 2, 2, ("5.2",)],
@@ -325,7 +340,7 @@ class TestOWSelectRows(WidgetTest):
         self.assertTrue(condition[2][0].startswith("4.2"))
 
     def test_load_settings(self):
-        iris = Table("iris")[:5]
+        iris = self.iris[:5]
         self.send_signal(self.widget.Inputs.data, iris)
 
         sepal_length, sepal_width = iris.domain[:2]
@@ -368,7 +383,7 @@ class TestOWSelectRows(WidgetTest):
         None on output when there is no data.
         GH-2726
         """
-        data = Table("iris")[:10]
+        data = self.iris[:10]
         len_data = len(data)
         self.send_signal(self.widget.Inputs.data, data)
 
@@ -383,7 +398,7 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(len(self.get_output("Data")), len_data)
 
     def test_annotated_data(self):
-        iris = Table("iris")
+        iris = self.iris
         self.send_signal(self.widget.Inputs.data, iris)
 
         self.enterFilter(iris.domain["iris"], "is", "Iris-setosa")
@@ -395,7 +410,7 @@ class TestOWSelectRows(WidgetTest):
         np.testing.assert_equal(annotations[50:], False)
 
     def test_change_var_type(self):
-        iris = Table("iris")
+        iris = self.iris
         domain = iris.domain
 
         self.send_signal(self.widget.Inputs.data, iris)
@@ -411,7 +426,7 @@ class TestOWSelectRows(WidgetTest):
         self.send_signal(self.widget.Inputs.data, new_iris)
 
     def test_keep_operator(self):
-        data = Table("heart_disease")
+        data = self.heart
         domain = data.domain
 
         self.send_signal(self.widget.Inputs.data, data)
@@ -469,7 +484,7 @@ class TestOWSelectRows(WidgetTest):
     @patch.object(owselectrows.QMessageBox, "question",
                   return_value=owselectrows.QMessageBox.Ok)
     def test_add_all(self, msgbox):
-        iris = Table("iris")
+        iris = self.iris
         domain = iris.domain
         self.send_signal(self.widget.Inputs.data, iris)
         self.widget.add_all_button.click()
@@ -480,7 +495,7 @@ class TestOWSelectRows(WidgetTest):
     @patch.object(owselectrows.QMessageBox, "question",
                   return_value=owselectrows.QMessageBox.Cancel)
     def test_add_all_cancel(self, msgbox):
-        iris = Table("iris")
+        iris = self.iris
         domain = iris.domain
         self.send_signal(self.widget.Inputs.data, iris)
         self.assertEqual([cond[0] for cond in self.widget.conditions],
@@ -493,7 +508,7 @@ class TestOWSelectRows(WidgetTest):
     @patch.object(owselectrows.QMessageBox, "question",
                   return_value=owselectrows.QMessageBox.Ok)
     def test_report(self, _):
-        zoo = Table("zoo")
+        zoo = self.zoo
         self.send_signal(self.widget.Inputs.data, zoo)
         self.widget.add_all_button.click()
         self.enterFilter("All numeric variables", "equal", "42")
@@ -502,7 +517,7 @@ class TestOWSelectRows(WidgetTest):
         self.widget.send_report()  # don't crash
 
     def test_migration_to_version_1(self):
-        iris = Table("iris")
+        iris = self.iris
 
         ch = SelectRowsContextHandler()
         context = ch.new_context(iris.domain, *ch.encode_domain(iris.domain))
@@ -512,7 +527,7 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(widget.conditions, [])
 
     def test_purge_discretized(self):
-        housing = Table("housing")
+        housing = self.housing
         method = discretize.EqualFreq(n=3)
         discretizer = discretize.DomainDiscretizer(
             discretize_class=True, method=method)
@@ -533,13 +548,13 @@ class TestOWSelectRows(WidgetTest):
         Test if all conditions from all segments (attributes, class, meta)
         stores correctly
         """
-        data = Table("iris")
-        data = Table.from_table(
+        data = self.iris
+        data = data.transform(
             Domain(
                 data.domain.attributes[:3],
                 data.domain.class_var,
                 data.domain.attributes[3:]
-            ), data)
+            ))
         self.send_signal(self.widget.Inputs.data, data)
 
         vars_ = [
@@ -612,3 +627,46 @@ class TestOWSelectRows(WidgetTest):
             widget.setDate(value)
         else:
             raise ValueError("Unsupported widget {}".format(widget))
+
+
+class TestOWSelectRowsDask(TestOWSelectRows):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.iris = temp_dasktable("iris")
+        cls.zoo = temp_dasktable("zoo")
+        cls.housing = temp_dasktable("housing")
+        cls.heart = temp_dasktable("heart_disease")
+        cls.lenses = temp_dasktable(cls.lenses)
+        cls.cyber = temp_dasktable(cls.cyber)
+
+    @override_locale(QLocale.C)
+    def test_dask_outputs(self):
+        w = self.widget
+        iris = self.iris
+
+        self.widget.auto_commit = True
+        self.widget.set_data(iris)
+
+        self.widget.remove_all()
+        self.widget.add_row(iris.domain[0], 0, CFValues[FilterContinuous.Equal])
+        self.widget.conditions_changed()
+        self.widget.commit.now()
+
+        m = self.get_output(w.Outputs.matching_data)
+        self.assertIsInstance(m, DaskTable)
+        self.assertEqual(6, len(m))
+
+        n = self.get_output(w.Outputs.unmatched_data)
+        self.assertIsInstance(n, DaskTable)
+        self.assertEqual(len(iris), len(m) + len(n))
+        self.assertEqual(144, len(n))
+
+        a = self.get_output(w.Outputs.annotated_data)
+        self.assertEqual(len(iris), len(a))
+        self.assertIsInstance(a, DaskTable)
+
+    @skip("Discretization for Dask is not yet implemented")
+    def test_purge_discretized(self):
+        pass
