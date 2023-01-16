@@ -523,10 +523,12 @@ class GenericHDF5Reader(FileFormat):
     """
     Class in charge to read and write generic .hdf5 files
     
-    Attributes:
+    Parameters
+    ----------
         data (h5py._hl.dataset.Dataset): Chosen dataset to read by the class
         
-    Methods:
+    Methods
+    -------
         read():
             Returns transforms its data attribute into an Orange.Table object
     """
@@ -543,11 +545,13 @@ class GenericHDF5Reader(FileFormat):
         """Processes the data stored in self.data and returns it as an Orange
         Table object.
 
-        Returns:
+        Returns
+        -------
             table (Orange.Table object): 
                 Contains the information of the chosen dataset in the hdf5 file.
 
-        Raises:
+        Raises
+        ------
             Exception: If the self.data variable has not been filled yet.
         """
         if self.data is None:

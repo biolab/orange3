@@ -493,19 +493,30 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
             url = self.url_combo.currentText().strip()
             return UrlReader(url)
 
-    def _hdf5_tree_model(self): # ALBA new function
+    def _hdf5_tree_model(self):
         """Creates a visual representation of all the data stored in the .hdf5
         file so that the user can choose which dataset from it wants to load
         """
+        try:
+            self.h5_file.close()
+        except Exception:
+            pass
+        
         self.h5_file = h5py.File(self.reader.filename)
         
         self.tree_model = QStandardItemModel()
         parent = self.tree_model.invisibleRootItem()
+        
         if isinstance(self.h5_file, h5py.Group):
             self._add_group(parent, self.h5_file)
 
+        for child in self.options_box.children():
+            if isinstance(child, QtWidgets.QTreeView):
+                child.hide()
+
         self.dataset_tree = QtWidgets.QTreeView(self.options_box)
         self.dataset_tree.setModel(self.tree_model)
+        self.dataset_tree.setHeaderHidden(True)
         self.options_box.layout().addWidget(self.dataset_tree)
         self.dataset_tree.clicked[QModelIndex].connect(self._open_dataset)
         self.options_box.show()
@@ -520,7 +531,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         """
         self.reader.data = model_index.data(role=Qt.UserRole)
     
-    def _add_group(self, parent, group): # ALBA new function
+    def _add_group(self, parent, group): 
         """Recursive procedure that constructs the tree model to visualize
         the datasets stored in the .hdf5 file. Given a root, iterates over all 
         its children to decide whether they are a dataset or another group of 
