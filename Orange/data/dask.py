@@ -30,6 +30,50 @@ class DaskTable(Table):
 
     _array_interface = da
 
+    def __new__(cls, *args, **kwargs):
+        if not args and not kwargs:
+            return super().__new__(cls)
+        elif isinstance(args[0], DaskTable):
+            if len(args) > 1:
+                raise TypeError("DaskTable(table: DaskTable) expects just one argument")
+            return cls.from_table(args[0].domain, args[0])
+        return cls.from_arrays(*args, **kwargs)
+
+    @classmethod
+    def from_arrays(cls, domain, X=None, Y=None, metas=None):
+        self = cls()
+
+        size = None
+        # get size from X, Y, or metas
+        for array in [X, Y, metas]:
+            if array is not None:
+                size = len(array)
+                break
+
+        assert size is not None
+
+        if X is None:
+            X = da.zeros((size, 0), chunks=(size, 0))
+
+        if Y is None:
+            Y = da.zeros((size, 0), chunks=(size, 0))
+
+        if metas is None:
+            metas = np.zeros((size, 0))
+
+        assert isinstance(X, da.Array)
+        assert isinstance(Y, da.Array)
+        assert isinstance(metas, np.ndarray)
+
+        self.domain = domain
+        self._X = X
+        self._Y = Y
+        self._metas = metas
+        self._W = np.ones((len(X), 0))  # weights are unsupported
+        self._init_ids(self)
+
+        return self
+
     @classmethod
     def from_file(cls, filename, sheet=None):
         """
@@ -42,9 +86,7 @@ class DaskTable(Table):
         :return: a new data table
         :rtype: Orange.data.Table
         """
-        self = cls()
-
-        self.__h5file = f = h5py.File(filename, "r")
+        h5file = f = h5py.File(filename, "r")
 
         def read_format_da(name):
             # dask's automatic chunking has problems with 0-dimension arrays
@@ -52,37 +94,19 @@ class DaskTable(Table):
                 return da.from_array(f[name])
             return None
 
-        self._X = read_format_da("X")
-        self._Y = read_format_da("Y")
+        X = read_format_da("X")
+        Y = read_format_da("Y")
 
         # metas are in memory
         if "metas" in f:
-            self._metas = pickle.loads(np.array(f['metas']).tobytes())
+            metas = pickle.loads(np.array(f['metas']).tobytes())
         else:
-            self._metas = None
+            metas = None
 
-        size = None
-        # get size from X, Y, or metas
-        for el in ("_X", "_Y", "_metas"):
-            array = getattr(self, el)
-            if array is not None:
-                size = len(array)
-                break
+        domain = pickle.loads(np.array(f['domain']).tobytes())
 
-        if self._X is None:
-            self._X = da.zeros((size, 0), chunks=(size, 0))
-
-        if self._Y is None:
-            self._Y = da.zeros((size, 0), chunks=(size, 0))
-
-        if self._metas is None:
-            self._metas = np.zeros((size, 0))
-
-        self._W = np.ones((size, 0))  # weights are unsupported
-
-        self.domain = pickle.loads(np.array(f['domain']).tobytes())
-
-        cls._init_ids(self)
+        self = DaskTable(domain, X, Y, metas)
+        self.__h5file = h5file
 
         return self
 
