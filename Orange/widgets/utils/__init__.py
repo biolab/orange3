@@ -1,7 +1,7 @@
-import enum
 import inspect
 import sys
 from collections import deque
+from enum import Enum, IntEnum
 from typing import (
     TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union, Tuple
 )
@@ -91,7 +91,7 @@ def qname(type_: type) -> str:
 
 
 _T1 = TypeVar("_T1")  # pylint: disable=invalid-name
-_E = TypeVar("_E", bound=enum.Enum)  # pylint: disable=invalid-name
+_E = TypeVar("_E", bound=Enum)  # pylint: disable=invalid-name
 _A = TypeVar("_A")  # pylint: disable=invalid-name
 _B = TypeVar("_B")  # pylint: disable=invalid-name
 
@@ -176,3 +176,21 @@ def instance_tooltip(domain, row, skip_attrs=()):
              ("Meta", "Metas", 4, domain.metas),
              ("Feature", "Features", 10, domain.attributes))
     return "<br/>".join(show_part(row, *columns) for columns in parts)
+
+
+def enum2int(enum: Union[Enum, IntEnum]) -> int:
+    """
+    PyQt5 uses IntEnum like object for settings, for example SortOrder while
+    PyQt6 uses Enum. PyQt5's IntEnum also does not support value attribute.
+    This function transform both settings objects to int.
+
+    Parameters
+    ----------
+    enum
+        IntEnum like object or Enum object with Qt's settings
+
+    Returns
+    -------
+    Settings transformed to int
+    """
+    return int(enum) if isinstance(enum, int) else enum.value
