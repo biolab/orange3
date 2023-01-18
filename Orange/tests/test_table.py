@@ -21,7 +21,7 @@ from Orange.data import (filter, Unknown, Table, DiscreteVariable,
                          ContinuousVariable, Domain, StringVariable)
 from Orange.data.util import SharedComputeValue
 from Orange.tests import test_dirname
-from Orange.data.table import _optimize_indices
+from Orange.data.table import _optimize_indices, _FromTableConversion
 
 
 class TableTestCase(unittest.TestCase):
@@ -1912,6 +1912,63 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertFalse(sp.issparse(back_brown.metas))
         self.assertEqual(back_brown.X.shape, brown.X.shape)
         self.assertEqual(back_brown.metas.shape, brown.metas.shape)
+
+    def test_from_table_partwise(self):
+        def sum_x(d):
+            return d.X.sum(axis=1)
+        sum_x = Mock(wraps=sum_x)
+
+        def sum_y(d):
+            return d.Y.sum(axis=1)
+        sum_y = Mock(wraps=sum_y)
+
+        def sum_metas(d):
+            return d.metas.sum(axis=1)
+        sum_metas = Mock(wraps=sum_metas)
+
+        sum_x_var = ContinuousVariable("sum_x", compute_value=sum_x)
+        sum_y_var = ContinuousVariable("sum_y", compute_value=sum_y)
+        sum_metas_var = ContinuousVariable("sum_metas", compute_value=sum_metas)
+        target_domain = Domain([sum_x_var], [sum_y_var], [sum_metas_var])
+
+        def assure_sum():
+            np.testing.assert_equal(orig.X.sum(axis=1), transformed.X[:,0])
+            np.testing.assert_equal(orig.Y.sum(axis=1), transformed.Y)
+            np.testing.assert_equal(orig.metas.sum(axis=1), transformed.metas[:,0])
+
+        def long_table(rows):
+            avars = [ContinuousVariable(n) for n in "abcdef"]
+            vals = np.random.RandomState(0).random((rows, 6))
+            domain = Domain(avars[:2], avars[2:4], avars[4:])
+            return Table.from_numpy(domain, X=vals[:, :2], Y=vals[:, 2:4], metas=vals[:, 4:])
+
+        max_rows = _FromTableConversion.max_rows_at_once
+
+        # domain conversion fits into a single part
+        orig = long_table(max_rows)
+        transformed = Table.from_table(target_domain, orig)
+        assure_sum()
+        sum_x.assert_called_once()
+        sum_y.assert_called_once()
+        sum_metas.assert_called_once()
+
+        sum_x.reset_mock()
+        sum_y.reset_mock()
+        sum_metas.reset_mock()
+
+        # domain conversion does not fit a single part
+        orig = long_table(max_rows + 1)
+        transformed = Table.from_table(target_domain, orig)
+        assure_sum()
+        self.assertEqual(sum_x.call_count, 2)
+        self.assertEqual(sum_y.call_count, 2)
+        self.assertEqual(sum_metas.call_count, 2)
+        self.assertEqual(len(sum_x.call_args_list[0][0][0]), max_rows)
+        self.assertEqual(len(sum_x.call_args_list[1][0][0]), 1)
+        self.assertEqual(len(sum_y.call_args_list[0][0][0]), max_rows)
+        self.assertEqual(len(sum_y.call_args_list[1][0][0]), 1)
+        self.assertEqual(len(sum_metas.call_args_list[0][0][0]), max_rows)
+        self.assertEqual(len(sum_metas.call_args_list[1][0][0]), 1)
 
     def test_from_table_shared_compute_value(self):
         iris = data.Table("iris").to_sparse()
