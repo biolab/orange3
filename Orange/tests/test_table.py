@@ -2107,7 +2107,6 @@ class TableIndexingTests(TableTests):
             np.testing.assert_almost_equal(
                 np.array(list(row)), new_row)
 
-
     def test_can_select_a_subset_of_rows_and_columns(self):
         for r in self.rows:
             for c in self.multiple_columns:
