@@ -1730,24 +1730,38 @@ class CreateTableWithDomainAndTable(TableTests):
             self.assert_table_with_filter_matches(
                 new_table, self.table, rows=indices)
 
-    @patch.object(Table, "from_table_rows", wraps=Table.from_table_rows)
-    def test_can_filter_row_with_slice_from_table_rows(self, from_table_rows):
+    def test_can_filter_row_with_slice_from_table_rows(self):
         # calling from_table with the same domain will forward to from_table_rows
-        for slice_ in self.interesting_slices:
-            from_table_rows.reset_mock()
-            new_table = data.Table.from_table(
-                self.domain, self.table, row_indices=slice_)
-            self.assert_table_with_filter_matches(
-                new_table, self.table, rows=slice_)
-            from_table_rows.assert_called()
+        # and thus _FromTableConversion.convert should not be called
+        with patch.object(_FromTableConversion, "convert") as convert:
+            for slice_ in self.interesting_slices:
+                new_table = data.Table.from_table(
+                    self.domain, self.table, row_indices=slice_)
+                self.assert_table_with_filter_matches(
+                    new_table, self.table, rows=slice_)
+                convert.assert_not_called()
 
     def test_can_filter_row_with_slice_from_table(self):
-        # calling from_table with a domain copy will use indexing in from_table
-        for slice_ in self.interesting_slices:
-            new_table = data.Table.from_table(
-                self.domain.copy(), self.table, row_indices=slice_)
-            self.assert_table_with_filter_matches(
-                new_table, self.table, rows=slice_)
+
+        # a utility class needed for mocking of the convert method in this case
+        class MockedConversion(_FromTableConversion):
+            objects = []
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.convert = Mock(wraps=self.convert)
+                self.objects.append(self)
+
+        # calling from_table with a domain copy will use indexing in from_table and
+        # _FromTableConversion.convert
+        with patch("Orange.data.table._FromTableConversion", MockedConversion):
+            for slice_ in self.interesting_slices:
+                new_table = data.Table.from_table(
+                    self.domain.copy(), self.table, row_indices=slice_)
+                self.assert_table_with_filter_matches(
+                    new_table, self.table, rows=slice_)
+                self.assertEqual(len(MockedConversion.objects), 1)
+                MockedConversion.objects.clear()
 
     def test_can_use_attributes_as_new_columns(self):
         a, _, _ = column_sizes(self.table)
