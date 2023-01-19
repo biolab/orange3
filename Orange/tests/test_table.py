@@ -1237,6 +1237,15 @@ class TableTests(unittest.TestCase):
     nrows = 10
     row_indices = (1, 5, 7, 9)
 
+    @classmethod
+    def setUpClass(cls):
+        cls.saved_max_rows_at_once = _FromTableConversion.max_rows_at_once
+        _FromTableConversion.max_rows_at_once = cls.nrows - 1
+
+    @classmethod
+    def tearDownClass(cls):
+        _FromTableConversion.max_rows_at_once = cls.saved_max_rows_at_once
+
     def setUp(self):
         self.data = np.random.random((self.nrows, len(self.attributes)))
         self.class_data = np.random.random((self.nrows, len(self.class_vars)))
