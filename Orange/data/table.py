@@ -2508,14 +2508,23 @@ def _select_from_selection(source_indices, selection_indices, maxlen):
     Try to keep slices as slices.
     Args:
         source_indices: 1D sequence, slice or Ellipsis
-        selection_indices: 1D sequence or slice
+        selection_indices: slice
         maxlen: maximum length of the sequence
     """
     if source_indices is ...:
         return selection_indices
     elif isinstance(source_indices, slice):
+        assert isinstance(selection_indices, slice)
         r = range(*source_indices.indices(maxlen))[selection_indices]
-        return slice(r.start, r.stop, r.step)
+        assert min(list(r)) >= 0
+        # .indices always returns valid non-negative integers
+        # when the reversed order is used r.stop can be negative, for example,
+        # range(1, -1, -1)), which is [1, 0], but this negative indexing
+        # is problematic with slices
+        stop = r.stop
+        if stop < 0:
+            stop = None
+        return slice(r.start, stop, r.step)
     else:
         return source_indices[selection_indices]
 

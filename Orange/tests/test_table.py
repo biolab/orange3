@@ -21,7 +21,8 @@ from Orange.data import (filter, Unknown, Table, DiscreteVariable,
                          ContinuousVariable, Domain, StringVariable)
 from Orange.data.util import SharedComputeValue
 from Orange.tests import test_dirname
-from Orange.data.table import _optimize_indices, _FromTableConversion
+from Orange.data.table import _optimize_indices, _select_from_selection, \
+    _FromTableConversion
 
 
 class TableTestCase(unittest.TestCase):
@@ -2194,6 +2195,23 @@ class TableIndexingTests(TableTests):
         # single element
         self.assertEqual(_optimize_indices([1], 2), slice(1, 2, 1))
         self.assertEqual(_optimize_indices([-2], 5), slice(-2, -3, -1))
+
+    def test_select_from_selection(self):
+        fn = _select_from_selection
+        self.assertEqual(fn(slice(10), slice(11), 10),
+                         slice(0, 10, 1))
+        self.assertEqual(fn(slice(10), slice(None, 10, 2), 10),
+                         slice(0, 10, 2))
+        self.assertEqual(fn(slice(None, 10, 2), slice(None, 10, 2), 10),
+                         slice(0, 10, 4))
+        self.assertEqual(fn(slice(None, None, -1), slice(0, 9, None), 10),
+                         slice(9, 0, -1))  # [9, 8, 7, 6, 5, 4, 3, 2, 1]
+        self.assertEqual(fn(slice(None, None, -1), slice(9, 10, None), 10),
+                         slice(0, None, -1))  # [0]
+        self.assertEqual(fn(slice(None, 10, 2), slice(None, None, -1), 10),
+                         slice(8, None, -2))
+        self.assertEqual(fn(slice(None, 10, 2), slice(None, None, -2), 10),
+                         slice(8, None, -4))
 
 
 class TableElementAssignmentTest(TableTests):
