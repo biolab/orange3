@@ -174,7 +174,6 @@ class OWRuleViewer(widget.OWWidget):
     def send_report(self):
         if self.classifier is not None:
             self.report_domain("Data domain", self.classifier.original_domain)
-            self.report_items("Rule induction algorithm", self.classifier.params)
             self.report_table("Induced rules", self.view)
 
     def sizeHint(self):
