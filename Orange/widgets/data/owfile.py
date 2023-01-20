@@ -28,6 +28,8 @@ from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
     open_filename_dialog, stored_recent_paths_prepend
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
+from Orange.widgets.utils.combobox import TextEditCombo
+
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -232,13 +234,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         rb_button = gui.appendRadioButton(vbox, "URL:", addToLayout=False)
         layout.addWidget(rb_button, 3, 0, Qt.AlignVCenter)
 
-        self.url_combo = url_combo = QComboBox()
+        self.url_combo = url_combo = TextEditCombo()
         url_model = NamedURLModel(self.sheet_names)
         url_model.wrap(self.recent_urls)
         url_combo.setLineEdit(LineEditSelectOnFocus())
         url_combo.setModel(url_model)
         url_combo.setSizePolicy(Policy.Ignored, Policy.Fixed)
-        url_combo.setEditable(True)
         url_combo.setInsertPolicy(url_combo.InsertAtTop)
         url_edit = url_combo.lineEdit()
         margins = url_edit.textMargins()
@@ -343,14 +344,19 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 self.load_data()
 
     def _url_set(self):
+        index = self.url_combo.currentIndex()
         url = self.url_combo.currentText()
-        pos = self.recent_urls.index(url)
         url = url.strip()
 
         if not urlparse(url).scheme:
             url = 'http://' + url
-            self.url_combo.setItemText(pos, url)
-            self.recent_urls[pos] = url
+            self.url_combo.setItemText(index, url)
+
+        if index != 0:
+            model = self.url_combo.model()
+            root = self.url_combo.rootModelIndex()
+            model.moveRow(root, index, root, 0)
+            assert self.url_combo.currentIndex() == 0
 
         self.source = self.URL
         self.load_data()

@@ -14,6 +14,7 @@ import scipy.sparse as sp
 
 from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl, QPointF
 from AnyQt.QtGui import QDragEnterEvent, QDropEvent
+from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QComboBox
 
 import Orange
@@ -712,6 +713,24 @@ a
         self.widget._try_load()
         self.assertTrue(self.widget.Warning.load_warning.is_shown())
         self.assertIn(WARNING_MSG, str(self.widget.Warning.load_warning))
+
+    def test_recent_url_serialization(self):
+        with patch.object(self.widget, "load_data", lambda: None):
+            self.widget.url_combo.insertItem(0, "https://example.com/test.tab")
+            self.widget.url_combo.insertItem(1, "https://example.com/test1.tab")
+            self.widget.source = OWFile.URL
+            s = self.widget.settingsHandler.pack_data(self.widget)
+            self.assertEqual(s["recent_urls"],
+                             ["https://example.com/test.tab",
+                              "https://example.com/test1.tab"])
+            self.widget.url_combo.lineEdit().clear()
+            QTest.keyClicks(self.widget.url_combo, "https://example.com/test1.tab")
+            QTest.keyClick(self.widget.url_combo, Qt.Key_Enter)
+            # must move the entered url to first position
+            s = self.widget.settingsHandler.pack_data(self.widget)
+            self.assertEqual(s["recent_urls"],
+                             ["https://example.com/test1.tab",
+                              "https://example.com/test.tab"])
 
 
 class TestOWFileDropHandler(unittest.TestCase):
