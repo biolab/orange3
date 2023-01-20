@@ -9,6 +9,16 @@ from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable,\
 from Orange import distance
 
 
+class BaseTest(unittest.TestCase):
+    def test_unsupported_similarity(self):
+        self.assertRaises(ValueError, distance.Distance, similarity=True)
+
+        class SupportsSimilarity(distance.Distance):
+            supports_similarity = True
+
+        SupportsSimilarity(similarity=True)
+
+
 class CommonTests:
     """Tests applicable to all distance measures"""
 
@@ -39,6 +49,11 @@ class CommonTests:
             dist_dense = self.Distance(dense_data)
             dist_sparse = self.Distance(sparse_data)
             np.testing.assert_allclose(dist_sparse, dist_dense)
+
+            if self.Distance.supports_similarity:
+                dist_dense = self.Distance(dense_data, similarity=True)
+                dist_sparse = self.Distance(sparse_data, similarity=True)
+                np.testing.assert_allclose(dist_sparse, dist_dense)
 
 
 class CommonFittedTests(CommonTests):
@@ -805,6 +820,21 @@ class CosineDistanceTest(FittedDistanceTest, CommonFittedTests):
              [0.316869949, 0, 0.577422873],
              [0.191709623, 0.577422873, 0]])
 
+    def test_cosine_mixed_similarity(self):
+        assert_almost_equal = np.testing.assert_almost_equal
+        data = self.mixed_data
+        with data.unlocked():
+            data.X = np.array([[1, 3, 2, 1, 0, 0],
+                               [-1, 5, 0, 0, 1, 1],
+                               [1, 1, 1, 1, 3, 0]], dtype=float)
+
+        dist = distance.Cosine(data, similarity=True)
+        assert_almost_equal(
+            1 - dist,
+            [[0, 0.316869949, 0.191709623],
+             [0.316869949, 0, 0.577422873],
+             [0.191709623, 0.577422873, 0]])
+
     def test_two_tables(self):
         assert_almost_equal = np.testing.assert_almost_equal
         with self.cont_data.unlocked(), self.cont_data2.unlocked():
@@ -886,6 +916,15 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
                           [1/3, 2/3, 1, 1/2],
                           [0, 1/3, 1/2, 1]]))
 
+        model = distance.Jaccard(similarity=True).fit(self.data)
+        assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
+        assert_almost_equal(
+            model(self.data),
+            np.array([[1, 2/3, 1/3, 0],
+                      [2/3, 1, 2/3, 1/3],
+                      [1/3, 2/3, 1, 1/2],
+                      [0, 1/3, 1/2, 1]]))
+
         X = self.data.X
         with self.data.unlocked():
             X[1, 0] = X[2, 0] = X[3, 1] = np.nan
@@ -908,6 +947,15 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
             1 - np.array([[1, 1/4, 1/2],
                           [1/4, 1, 2/3],
                           [1/2, 2/3, 1]]))
+
+        assert_almost_equal = np.testing.assert_almost_equal
+        model = distance.Jaccard(axis=0, similarity=True).fit(self.data)
+        assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
+        assert_almost_equal(
+            model(self.data),
+            np.array([[1, 1/4, 1/2],
+                      [1/4, 1, 2/3],
+                      [1/2, 2/3, 1]]))
 
         with self.data.unlocked():
             self.data.X = np.array([[0, 1, 1],

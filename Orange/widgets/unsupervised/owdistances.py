@@ -1,7 +1,8 @@
+from typing import NamedTuple, Dict, Type, Optional
+
+from AnyQt.QtWidgets import QButtonGroup, QRadioButton
 from scipy.sparse import issparse
 import bottleneck as bn
-
-from AnyQt.QtCore import Qt
 
 import Orange.data
 import Orange.misc
@@ -14,19 +15,57 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
 
-METRICS = [
-    ("Euclidean", distance.Euclidean),
-    ("Manhattan", distance.Manhattan),
-    ("Cosine", distance.Cosine),
-    ("Jaccard", distance.Jaccard),
-    ("Spearman", distance.SpearmanR),
-    ("Absolute Spearman", distance.SpearmanRAbsolute),
-    ("Pearson", distance.PearsonR),
-    ("Absolute Pearson", distance.PearsonRAbsolute),
-    ("Hamming", distance.Hamming),
-    ("Mahalanobis", distance.Mahalanobis),
-    ('Bhattacharyya', distance.Bhattacharyya)
-]
+Euclidean, EuclideanNormalized, Manhattan, ManhattanNormalized, Cosine, \
+    Mahalanobis, Hamming, \
+    Pearson, PearsonAbsolute, Spearman, SpearmanAbsolute, Jaccard = range(12)
+
+
+class MetricDef(NamedTuple):
+    id: int  # pylint: disable=invalid-name
+    name: str
+    tooltip: str
+    metric: Type[distance.Distance]
+    normalize: bool = False
+
+
+MetricDefs: Dict[int, MetricDef] = {
+    metric.id: metric for metric in (
+        MetricDef(EuclideanNormalized, "Euclidean (normalized)",
+                  "Square root of summed difference between normalized values",
+                  distance.Euclidean, normalize=True),
+        MetricDef(Euclidean, "Euclidean",
+                  "Square root of summed difference between values",
+                  distance.Euclidean),
+        MetricDef(ManhattanNormalized, "Manhattan (normalized)",
+                  "Sum of absolute differences between normalized values",
+                  distance.Manhattan, normalize=True),
+        MetricDef(Manhattan, "Manhattan",
+                  "Sum of absolute differences between values",
+                  distance.Manhattan),
+        MetricDef(Mahalanobis, "Mahalanobis",
+                  "Mahalanobis distance",
+                  distance.Mahalanobis),
+        MetricDef(Hamming, "Hamming", "Hamming distance",
+                  distance.Hamming),
+        MetricDef(Cosine, "Cosine", "Cosine distance",
+                  distance.Cosine),
+        MetricDef(Pearson, "Pearson",
+                  "Pearson correlation; distance = 1 - ρ/2",
+                  distance.PearsonR),
+        MetricDef(PearsonAbsolute, "Pearson (absolute)",
+                  "Absolute value of Pearson correlation; distance = 1 - |ρ|",
+                  distance.PearsonRAbsolute),
+        MetricDef(Spearman, "Spearman",
+                  "Pearson correlation; distance = 1 - ρ/2",
+                  distance.PearsonR),
+        MetricDef(SpearmanAbsolute, "Spearman (absolute)",
+                  "Absolute value of Pearson correlation; distance = 1 - |ρ|",
+                  distance.SpearmanRAbsolute),
+        MetricDef(Jaccard, "Jaccard",
+                  "Jaccard distance; similarity = 1 - distance",
+                  distance.Jaccard)
+    )
+}
 
 
 class InterruptException(Exception):
@@ -36,7 +75,8 @@ class InterruptException(Exception):
 class DistanceRunner:
     @staticmethod
     def run(data: Orange.data.Table, metric: distance, normalized_dist: bool,
-            axis: int, state: TaskState) -> Orange.misc.DistMatrix:
+            similarity: bool,
+            axis: int, state: TaskState) -> Optional[Orange.misc.DistMatrix]:
         if data is None:
             return None
 
@@ -49,6 +89,8 @@ class DistanceRunner:
         kwargs = {"axis": 1 - axis, "impute": True, "callback": callback}
         if metric.supports_normalization and normalized_dist:
             kwargs["normalize"] = True
+        if metric.supports_similarity and similarity:
+            kwargs["similarity"] = True
         return metric(data, **kwargs)
 
 
@@ -66,14 +108,10 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
 
     settings_version = 3
 
-    axis = Setting(0)        # type: int
-    metric_idx = Setting(0)  # type: int
-
-    #: Use normalized distances if the metric supports it.
-    #: The default is `True`, expect when restoring from old pre v2 settings
-    #: (see `migrate_settings`).
-    normalized_dist = Setting(True)  # type: bool
-    autocommit = Setting(True)       # type: bool
+    axis: int = Setting(0)
+    metric_id: int = Setting(EuclideanNormalized)
+    compute_similarity: bool = Setting(False)
+    autocommit: bool = Setting(True)
 
     want_main_area = False
     resizing_enabled = False
@@ -90,6 +128,8 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring categorical features")
         ignoring_nonbinary = Msg("Ignoring non-binary features")
+        unsupported_sparse = Msg("Some metrics don't support sparse data\n"
+                                 "and were disabled: {}")
         imputing_data = Msg("Missing values were imputed")
 
     def __init__(self):
@@ -98,25 +138,27 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
 
         self.data = None
 
+        box = gui.hBox(self.controlArea)
         gui.radioButtons(
-            self.controlArea, self, "axis", ["Rows", "Columns"],
-            box="Distances between", callback=self._invalidate
+            box, self, "axis", ["Rows", "Columns"],
+            box="Compare", callback=self._invalidate
         )
-        box = gui.widgetBox(self.controlArea, "Distance Metric")
-        self.metrics_combo = gui.comboBox(
-            box, self, "metric_idx",
-            items=[m[0] for m in METRICS],
-            callback=self._metric_changed
+        gui.radioButtons(
+            box, self, "compute_similarity", ["Distances", "Similarities"],
+            box="Compute", callback=self._similarity_changed
         )
-        self.normalization_check = gui.checkBox(
-            box, self, "normalized_dist", "Normalized",
-            callback=self._invalidate,
-            tooltip=("All dimensions are (implicitly) scaled to a common"
-                     "scale to normalize the influence across the domain."),
-            stateWhenDisabled=False, attribute=Qt.WA_LayoutUsesWidgetRect
-        )
-        _, metric = METRICS[self.metric_idx]
-        self.normalization_check.setEnabled(metric.supports_normalization)
+        box = gui.hBox(self.controlArea, "Metric")
+        self.group = QButtonGroup()
+        for i, metric in enumerate(MetricDefs.values()):
+            if i % 6 == 0:
+                vb = gui.vBox(box)
+            b = QRadioButton(metric.name)
+            b.setChecked(self.metric_id == metric.id)
+            b.setToolTip(metric.tooltip)
+            vb.layout().addWidget(b)
+            self.group.addButton(b, metric.id)
+
+        self.group.idClicked.connect(self._metric_changed)
 
         gui.auto_apply(self.buttonsArea, self, "autocommit")
 
@@ -125,26 +167,52 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     def set_data(self, data):
         self.cancel()
         self.data = data
-        self.refresh_metrics()
+        self.refresh_radios()
         self.commit.now()
 
-    def refresh_metrics(self):
+    def _similarity_changed(self):
+        self.refresh_radios()
+        self._invalidate()
+
+    def _metric_changed(self, id_):
+        self.metric_id = id_
+        self._invalidate()
+
+    def refresh_radios(self):
         sparse = self.data is not None and issparse(self.data.X)
-        for i, metric in enumerate(METRICS):
-            item = self.metrics_combo.model().item(i)
-            item.setEnabled(not sparse or metric[1].supports_sparse)
+        unsupported_sparse = []
+        disabled_active = False
+        first_enabled = None
+        for metric in MetricDefs.values():
+            button = self.group.button(metric.id)
+            no_similarity = self.compute_similarity \
+                            and not metric.metric.supports_similarity
+            no_sparse = sparse and not metric.metric.supports_sparse
+            if no_sparse and not no_similarity:
+                unsupported_sparse.append(metric.name)
+            if no_similarity or no_sparse:
+                button.setEnabled(False)
+                if self.metric_id == metric.id:
+                    disabled_active = True
+            else:
+                button.setEnabled(True)
+                first_enabled = first_enabled or button
+
+        if disabled_active:
+            first_enabled.setChecked(True)
+
+        self.Warning.unsupported_sparse(", ".join(unsupported_sparse),
+                                        shown=bool(unsupported_sparse))
 
     @gui.deferred
     def commit(self):
-        # pylint: disable=invalid-sequence-index
-        metric = METRICS[self.metric_idx][1]
-        self.compute_distances(metric, self.data)
+        self.compute_distances(self.data)
 
-    def compute_distances(self, metric, data):
+    def compute_distances(self, data):
         def _check_sparse():
             # pylint: disable=invalid-sequence-index
             if issparse(data.X) and not metric.supports_sparse:
-                self.Error.dense_metric_sparse_data(METRICS[self.metric_idx][0])
+                self.Error.dense_metric_sparse_data(metric_def.name)
                 return False
             return True
 
@@ -196,6 +264,8 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
                         return False
             return True
 
+        metric_def = MetricDefs[self.metric_id]
+        metric = metric_def.metric
         self.clear_messages()
         if data is not None:
             for check in (_check_sparse, _check_tractability,
@@ -205,7 +275,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
                     break
 
         self.start(DistanceRunner.run, data, metric,
-                   self.normalized_dist, self.axis)
+                   metric_def.normalize, self.compute_similarity, self.axis)
 
     def on_partial_result(self, _):
         pass
@@ -231,16 +301,12 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     def _invalidate(self):
         self.commit.deferred()
 
-    def _metric_changed(self):
-        metric = METRICS[self.metric_idx][1]
-        self.normalization_check.setEnabled(metric.supports_normalization)
-        self._invalidate()
-
     def send_report(self):
         # pylint: disable=invalid-sequence-index
         self.report_items((
-            ("Distances Between", ["Rows", "Columns"][self.axis]),
-            ("Metric", METRICS[self.metric_idx][0])
+            (["Distances Between", "Similarities Between"
+              ][self.compute_similarity], ["Rows", "Columns"][self.axis]),
+            ("Metric", MetricDefs[self.metric_id].name)
         ))
 
     @classmethod
@@ -256,6 +322,16 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
                 settings["metric_idx"] = 9
             elif 2 < metric_idx <= 9:
                 settings["metric_idx"] -= 1
+        if version < 4:
+            metric_idx = settings.pop("metric_idx")
+            metric_id = [Euclidean, Manhattan, Cosine, Jaccard,
+                         Spearman, SpearmanAbsolute, Pearson, PearsonAbsolute,
+                         Mahalanobis, Euclidean][metric_idx]
+            if settings.pop("normalized_dist"):
+                metric_id = {Euclidean: EuclideanNormalized,
+                             Manhattan: ManhattanNormalized}.get(metric_id,
+                                                                 metric_id)
+            settings["metric_id"] = metric_id
 
 
 if __name__ == "__main__":  # pragma: no cover
