@@ -1,12 +1,16 @@
 # pylint: disable=too-many-ancestors
+import time
 from types import SimpleNamespace as namespace
 
 import numpy as np
 import scipy.spatial.distance
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtGui import QIcon
+from AnyQt.QtWidgets import QSizePolicy, QGridLayout, QLabel, QPushButton
 
 import pyqtgraph as pg
+
+from orangecanvas.gui.svgiconengine import SvgIconEngine
 
 from Orange.data import ContinuousVariable, Domain, Table, StringVariable
 from Orange.data.util import array_equal
@@ -14,22 +18,13 @@ from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
 from Orange.projection.manifold import torgerson, MDS
 
-from Orange.widgets import gui, settings
-from Orange.widgets.settings import SettingProvider
+from Orange.widgets import gui
+from Orange.widgets.settings import SettingProvider, Setting
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import Msg, Input
-
-
-def stress(X, distD):
-    assert X.shape[0] == distD.shape[0] == distD.shape[1]
-    D1_c = scipy.spatial.distance.pdist(X, metric="euclidean")
-    D1 = scipy.spatial.distance.squareform(D1_c, checks=False)
-    delta = D1 - distD
-    delta_sq = np.square(delta, out=delta)
-    return delta_sq.sum(axis=0) / 2
 
 
 class Result(namespace):
@@ -46,6 +41,7 @@ def run_mds(matrix: DistMatrix, max_iter: int, step_size: int, init_type: int,
     oldstress = np.finfo(float).max
 
     while True:
+        loop_start = time.time()
         step_iter = min(max_iter - iterations_done, step_size)
         mds = MDS(
             dissimilarity="precomputed", n_components=2,
@@ -71,6 +67,8 @@ def run_mds(matrix: DistMatrix, max_iter: int, step_size: int, init_type: int,
         oldstress = stress
         if state.is_interruption_requested():
             return res
+        if (wait := 0.1 - (time.time() - loop_start)) > 0:
+            time.sleep(wait)
 
 
 #: Maximum number of displayed closest pairs.
@@ -79,42 +77,35 @@ MAX_N_PAIRS = 10000
 
 class OWMDSGraph(OWScatterPlotBase):
     #: Percentage of all pairs displayed (ranges from 0 to 20)
-    connected_pairs = settings.Setting(5)
+    connected_pairs = Setting(5)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
         self.pairs_curve = None
-        self.draw_pairs = True
         self._similar_pairs = None
         self.effective_matrix = None
 
     def set_effective_matrix(self, effective_matrix):
         self.effective_matrix = effective_matrix
-
-    def pause_drawing_pairs(self):
-        self.draw_pairs = False
-
-    def resume_drawing_pairs(self):
-        self.draw_pairs = True
-        self.update_pairs(True)
+        self._similar_pairs = None
 
     def update_coordinates(self):
         super().update_coordinates()
-        self.update_pairs(reconnect=False)
+        self.update_pairs()
 
     def update_jittering(self):
         super().update_jittering()
-        self.update_pairs(reconnect=False)
+        self.update_pairs()
 
-    def update_pairs(self, reconnect):
+    def update_pairs(self):
         if self.pairs_curve:
             self.plot_widget.removeItem(self.pairs_curve)
-        if not self.draw_pairs or self.connected_pairs == 0 \
+        if self.connected_pairs == 0 \
                 or self.effective_matrix is None \
                 or self.scatterplot_item is None:
             return
         emb_x, emb_y = self.scatterplot_item.getData()
-        if self._similar_pairs is None or reconnect:
+        if self._similar_pairs is None:
             # This code requires storing lower triangle of X (n x n / 2
             # doubles), n x n / 2 * 2 indices to X, n x n / 2 indices for
             # argsort result. If this becomes an issue, it can be reduced to
@@ -131,10 +122,10 @@ class OWMDSGraph(OWScatterPlotBase):
             p = min(n * (n - 1) // 2 * self.connected_pairs // 100,
                     MAX_N_PAIRS * self.connected_pairs // 20)
             indcs = np.triu_indices(n, 1)
-            sorted = np.argsort(m[indcs])[:p]
+            sorted_ind = np.argsort(m[indcs])[:p]
             self._similar_pairs = fpairs = np.empty(2 * p, dtype=int)
-            fpairs[::2] = indcs[0][sorted]
-            fpairs[1::2] = indcs[1][sorted]
+            fpairs[::2] = indcs[0][sorted_ind]
+            fpairs[1::2] = indcs[1][sorted_ind]
         emb_x_pairs = emb_x[self._similar_pairs].reshape((-1, 2))
         emb_y_pairs = emb_y[self._similar_pairs].reshape((-1, 2))
 
@@ -147,8 +138,9 @@ class OWMDSGraph(OWScatterPlotBase):
         emb_y_pairs = emb_y_pairs[pairs_mask, :]
         self.pairs_curve = pg.PlotCurveItem(
             emb_x_pairs.ravel(), emb_y_pairs.ravel(),
-            pen=pg.mkPen(0.8, width=2, cosmetic=True),
+            pen=pg.mkPen(0.8, width=1, cosmetic=True),
             connect="pairs", antialias=True)
+        self.pairs_curve.setSegmentedLineMode("on")
         self.pairs_curve.setZValue(-1)
         self.plot_widget.addItem(self.pairs_curve)
 
@@ -178,9 +170,9 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         ("None", -1)
     ]
 
-    max_iter = settings.Setting(300)
-    initialization = settings.Setting(PCA)
-    refresh_rate = settings.Setting(3)
+    max_iter = Setting(300)
+    initialization = Setting(PCA)
+    refresh_rate: int = Setting(3)
 
     GRAPH_CLASS = OWMDSGraph
     graph = SettingProvider(OWMDSGraph)
@@ -209,8 +201,6 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.embedding = None  # type: Optional[np.ndarray]
         self.effective_matrix = None  # type: Optional[DistMatrix]
 
-        self.graph.pause_drawing_pairs()
-
         self.size_model = self.gui.points_models[2]
         self.size_model.order = \
             self.gui.points_models[2].order[:1] \
@@ -227,16 +217,30 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         )
 
     def _add_controls_optimization(self):
+        # This is a part of init
+        # pylint: disable=attribute-defined-outside-init
         box = gui.vBox(self.controlArea, box="Optimize", spacing=0)
         hbox = gui.hBox(box, margin=0)
         gui.button(hbox, self, "PCA", callback=self.do_PCA, autoDefault=False)
         gui.button(hbox, self, "Randomize", callback=self.do_random, autoDefault=False)
         gui.button(hbox, self, "Jitter", callback=self.do_jitter, autoDefault=False)
-        gui.comboBox(box, self, "refresh_rate", label="Refresh: ",
-                     orientation=Qt.Horizontal,
-                     items=[t for t, _ in OWMDS.RefreshRate],
-                     callback=self.__refresh_rate_combo_changed)
-        self.run_button = gui.button(box, self, "Start", self._toggle_run)
+        gui.separator(box, height=18)
+        grid = QGridLayout()
+        gui.widgetBox(box, orientation=grid)
+        self.run_button = gui.button(None, self, "Start", self._toggle_run)
+        self.step_button = QPushButton(QIcon(SvgIconEngine(_playpause_icon)), "")
+        self.step_button.pressed.connect(self._step)
+        self.step_button.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        grid.addWidget(self.run_button, 0, 0, 1, 2)
+        grid.addWidget(self.step_button, 0, 2)
+        grid.addWidget(QLabel("Refresh:"), 1, 0)
+        grid.addWidget(
+            gui.comboBox(
+                None, self, "refresh_rate",
+                items=[t for t, _ in OWMDS.RefreshRate],
+                sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed),
+                callback=self.__refresh_rate_combo_changed),
+            1, 1)
 
     def __refresh_rate_combo_changed(self):
         if self.task is not None:
@@ -352,21 +356,26 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.task is not None:
             self.cancel()
             self.run_button.setText("Resume")
+            self.step_button.setEnabled(True)
             self.commit.deferred()
         else:
             self._run()
 
-    def _run(self):
+    def _step(self):
+        self._run(1)
+
+    def _run(self, steps=None):
         if self.effective_matrix is None \
                 or np.allclose(self.effective_matrix, 0):
             return
-        self.graph.pause_drawing_pairs()
         self.run_button.setText("Stop")
+        self.step_button.setEnabled(False)
+        # false positive, pylint: disable=invalid-sequence-index
         _, step_size = OWMDS.RefreshRate[self.refresh_rate]
         if step_size == -1:
             step_size = self.max_iter
         init_type = "PCA" if self.initialization == OWMDS.PCA else "random"
-        self.start(run_mds, self.effective_matrix, self.max_iter,
+        self.start(run_mds, self.effective_matrix, steps or self.max_iter,
                    step_size, init_type, self.embedding)
 
     # ConcurrentWidgetMixin
@@ -388,8 +397,10 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         assert isinstance(result.embedding, np.ndarray)
         assert len(result.embedding) == len(self.effective_matrix)
         self.embedding = result.embedding
-        self.graph.resume_drawing_pairs()
+        self.graph.update_coordinates()
+        self.graph.update_density()
         self.run_button.setText("Start")
+        self.step_button.setEnabled(True)
         self.commit.deferred()
 
     def on_exception(self, ex: Exception):
@@ -397,8 +408,8 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self.Error.out_of_memory()
         else:
             self.Error.optimization_error(str(ex))
-        self.graph.resume_drawing_pairs()
         self.run_button.setText("Start")
+        self.step_button.setEnabled(True)
 
     def do_PCA(self):
         self.do_initialization(self.PCA)
@@ -411,8 +422,9 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def do_initialization(self, init_type: int):
         self.run_button.setText("Start")
+        self.step_button.setEnabled(True)
         self.__invalidate_embedding(init_type)
-        self.setup_plot()
+        self.graph.update_coordinates()
         self.commit.deferred()
 
     def __invalidate_embedding(self, initialization=PCA):
@@ -444,7 +456,6 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self._initialize()
         self.input_changed.emit(self.data)
         if self._invalidated:
-            self.graph.pause_drawing_pairs()
             self.__invalidate_embedding()
             self.enable_controls()
             if self.effective_matrix is not None:
@@ -453,18 +464,27 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def _on_connected_changed(self):
         self.graph.set_effective_matrix(self.effective_matrix)
-        self.graph.update_pairs(reconnect=True)
+        self.graph.update_pairs()
 
     def setup_plot(self):
         super().setup_plot()
         if self.embedding is not None:
-            self.graph.update_pairs(reconnect=True)
+            self.graph.update_pairs()
 
     def get_size_data(self):
         if self.attr_size == "Stress":
-            return stress(self.embedding, self.effective_matrix)
+            return self.stress(self.embedding, self.effective_matrix)
         else:
             return super().get_size_data()
+
+    @staticmethod
+    def stress(X, distD):
+        assert X.shape[0] == distD.shape[0] == distD.shape[1]
+        D1_c = scipy.spatial.distance.pdist(X, metric="euclidean")
+        D1 = scipy.spatial.distance.squareform(D1_c, checks=False)
+        delta = D1 - distD
+        delta_sq = np.square(delta, out=delta)
+        return delta_sq.sum(axis=0) / 2
 
     def get_embedding(self):
         self.valid_data = np.ones(len(self.embedding), dtype=bool) \
@@ -486,21 +506,21 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         super().onDeleteWidget()
 
     @classmethod
-    def migrate_settings(cls, settings_, version):
+    def migrate_settings(cls, settings, version):
         if version < 2:
             settings_graph = {}
             for old, new in (("label_only_selected", "label_only_selected"),
                              ("symbol_opacity", "alpha_value"),
                              ("symbol_size", "point_width"),
                              ("jitter", "jitter_size")):
-                settings_graph[new] = settings_[old]
-            settings_["graph"] = settings_graph
-            settings_["auto_commit"] = settings_["autocommit"]
+                settings_graph[new] = settings[old]
+            settings["graph"] = settings_graph
+            settings["auto_commit"] = settings["autocommit"]
 
         if version < 3:
-            if "connected_pairs" in settings_:
-                connected_pairs = settings_["connected_pairs"]
-                settings_["graph"]["connected_pairs"] = connected_pairs
+            if "connected_pairs" in settings:
+                connected_pairs = settings["connected_pairs"]
+                settings["graph"]["connected_pairs"] = connected_pairs
 
     @classmethod
     def migrate_context(cls, context, version):
@@ -529,6 +549,26 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             values["attr_shape"] = values["graph"]["attr_shape"]
             values["attr_label"] = values["graph"]["attr_label"]
 
+
+_playpause_icon = b"""<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1"
+	 id="svg3025" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd" xmlns:svg="http://www.w3.org/2000/svg"
+	 xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1347.7 1178.5"
+	 style="enable-background:new 0 0 1347.7 1178.5;" xml:space="preserve">
+<sodipodi:namedview  bordercolor="#666666" borderopacity="1" gridtolerance="10" guidetolerance="10" id="namedview3031" inkscape:current-layer="svg3025" inkscape:cx="896" inkscape:cy="896" inkscape:pageopacity="0" inkscape:pageshadow="2" inkscape:window-height="480" inkscape:window-maximized="0" inkscape:window-width="640" inkscape:window-x="0" inkscape:window-y="25" inkscape:zoom="0.13169643" objecttolerance="10" pagecolor="#ffffff" showgrid="false">
+	</sodipodi:namedview>
+<g id="g3027" transform="matrix(1,0,0,-1,37.966102,1320.6441)">
+	<path inkscape:connector-curvature="0" d="M1003,628.1c-1-4.2-4.5-7.6-7.6-11.1L581,202.5c-7.4-7.4-13.6-9.9-18.7-7.6
+		c-5.1,2.3-7.6,8.6-7.6,18.7v414.5c-1.9-3.9-4.5-7.6-7.6-11.1L132.6,202.5c-7.4-7.4-13.6-9.9-18.7-7.6c-5.1,2.3-7.6,8.6-7.6,18.7
+		v859.3c0,10.1,2.5,16.3,7.6,18.7c5.1,2.3,11.3-0.2,18.7-7.6l414.5-414.5c3.1-3.1,5.6-6.8,7.6-11.1v414.5c0,10.1,2.5,16.3,7.6,18.7
+		c5.1,2.3,11.3-0.2,18.7-7.6l414.5-414.5c3.1-3.1,6.4-6.5,7.6-11.1C1004.9,651.1,1004.8,635.4,1003,628.1z"/>
+	<path inkscape:connector-curvature="0" d="M1038,650v404.2c0,10.1,3.7,18.9,11.1,26.3c7.4,7.4,16.2,11.1,26.3,11.1h74.7
+		c10.1,0,18.9-3.7,26.3-11.1c7.4-7.4,11.1-16.2,11.1-26.3v-822c0-10.1-3.7-18.9-11.1-26.3c-7.4-7.4-16.2-11.1-26.3-11.1h-74.7
+		c-10.1,0-18.9,3.7-26.3,11.1c-7.4,7.4-11.1,16.2-11.1,26.3V650"/>
+	<path d="M918.9,404.1"/>
+</g>
+</svg>
+"""
 
 if __name__ == "__main__":  # pragma: no cover
     table = Table("iris")
