@@ -21,7 +21,8 @@ from Orange.data import (filter, Unknown, Table, DiscreteVariable,
                          ContinuousVariable, Domain, StringVariable)
 from Orange.data.util import SharedComputeValue
 from Orange.tests import test_dirname
-from Orange.data.table import _optimize_indices
+from Orange.data.table import _optimize_indices, _select_from_selection, \
+    _FromTableConversion
 
 
 class TableTestCase(unittest.TestCase):
@@ -1237,6 +1238,15 @@ class TableTests(unittest.TestCase):
     nrows = 10
     row_indices = (1, 5, 7, 9)
 
+    @classmethod
+    def setUpClass(cls):
+        cls.saved_max_rows_at_once = _FromTableConversion.max_rows_at_once
+        _FromTableConversion.max_rows_at_once = cls.nrows - 1
+
+    @classmethod
+    def tearDownClass(cls):
+        _FromTableConversion.max_rows_at_once = cls.saved_max_rows_at_once
+
     def setUp(self):
         self.data = np.random.random((self.nrows, len(self.attributes)))
         self.class_data = np.random.random((self.nrows, len(self.class_vars)))
@@ -1730,24 +1740,38 @@ class CreateTableWithDomainAndTable(TableTests):
             self.assert_table_with_filter_matches(
                 new_table, self.table, rows=indices)
 
-    @patch.object(Table, "from_table_rows", wraps=Table.from_table_rows)
-    def test_can_filter_row_with_slice_from_table_rows(self, from_table_rows):
+    def test_can_filter_row_with_slice_from_table_rows(self):
         # calling from_table with the same domain will forward to from_table_rows
-        for slice_ in self.interesting_slices:
-            from_table_rows.reset_mock()
-            new_table = data.Table.from_table(
-                self.domain, self.table, row_indices=slice_)
-            self.assert_table_with_filter_matches(
-                new_table, self.table, rows=slice_)
-            from_table_rows.assert_called()
+        # and thus _FromTableConversion.convert should not be called
+        with patch.object(_FromTableConversion, "convert") as convert:
+            for slice_ in self.interesting_slices:
+                new_table = data.Table.from_table(
+                    self.domain, self.table, row_indices=slice_)
+                self.assert_table_with_filter_matches(
+                    new_table, self.table, rows=slice_)
+                convert.assert_not_called()
 
     def test_can_filter_row_with_slice_from_table(self):
-        # calling from_table with a domain copy will use indexing in from_table
-        for slice_ in self.interesting_slices:
-            new_table = data.Table.from_table(
-                self.domain.copy(), self.table, row_indices=slice_)
-            self.assert_table_with_filter_matches(
-                new_table, self.table, rows=slice_)
+
+        # a utility class needed for mocking of the convert method in this case
+        class MockedConversion(_FromTableConversion):
+            objects = []
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.convert = Mock(wraps=self.convert)
+                self.objects.append(self)
+
+        # calling from_table with a domain copy will use indexing in from_table and
+        # _FromTableConversion.convert
+        with patch("Orange.data.table._FromTableConversion", MockedConversion):
+            for slice_ in self.interesting_slices:
+                new_table = data.Table.from_table(
+                    self.domain.copy(), self.table, row_indices=slice_)
+                self.assert_table_with_filter_matches(
+                    new_table, self.table, rows=slice_)
+                self.assertEqual(len(MockedConversion.objects), 1)
+                MockedConversion.objects.clear()
 
     def test_can_use_attributes_as_new_columns(self):
         a, _, _ = column_sizes(self.table)
@@ -1913,6 +1937,63 @@ class CreateTableWithDomainAndTable(TableTests):
         self.assertEqual(back_brown.X.shape, brown.X.shape)
         self.assertEqual(back_brown.metas.shape, brown.metas.shape)
 
+    def test_from_table_partwise(self):
+        def sum_x(d):
+            return d.X.sum(axis=1)
+        sum_x = Mock(wraps=sum_x)
+
+        def sum_y(d):
+            return d.Y.sum(axis=1)
+        sum_y = Mock(wraps=sum_y)
+
+        def sum_metas(d):
+            return d.metas.sum(axis=1)
+        sum_metas = Mock(wraps=sum_metas)
+
+        sum_x_var = ContinuousVariable("sum_x", compute_value=sum_x)
+        sum_y_var = ContinuousVariable("sum_y", compute_value=sum_y)
+        sum_metas_var = ContinuousVariable("sum_metas", compute_value=sum_metas)
+        target_domain = Domain([sum_x_var], [sum_y_var], [sum_metas_var])
+
+        def assure_sum():
+            np.testing.assert_equal(orig.X.sum(axis=1), transformed.X[:,0])
+            np.testing.assert_equal(orig.Y.sum(axis=1), transformed.Y)
+            np.testing.assert_equal(orig.metas.sum(axis=1), transformed.metas[:,0])
+
+        def long_table(rows):
+            avars = [ContinuousVariable(n) for n in "abcdef"]
+            vals = np.random.RandomState(0).random((rows, 6))
+            domain = Domain(avars[:2], avars[2:4], avars[4:])
+            return Table.from_numpy(domain, X=vals[:, :2], Y=vals[:, 2:4], metas=vals[:, 4:])
+
+        max_rows = _FromTableConversion.max_rows_at_once
+
+        # domain conversion fits into a single part
+        orig = long_table(max_rows)
+        transformed = Table.from_table(target_domain, orig)
+        assure_sum()
+        sum_x.assert_called_once()
+        sum_y.assert_called_once()
+        sum_metas.assert_called_once()
+
+        sum_x.reset_mock()
+        sum_y.reset_mock()
+        sum_metas.reset_mock()
+
+        # domain conversion does not fit a single part
+        orig = long_table(max_rows + 1)
+        transformed = Table.from_table(target_domain, orig)
+        assure_sum()
+        self.assertEqual(sum_x.call_count, 2)
+        self.assertEqual(sum_y.call_count, 2)
+        self.assertEqual(sum_metas.call_count, 2)
+        self.assertEqual(len(sum_x.call_args_list[0][0][0]), max_rows)
+        self.assertEqual(len(sum_x.call_args_list[1][0][0]), 1)
+        self.assertEqual(len(sum_y.call_args_list[0][0][0]), max_rows)
+        self.assertEqual(len(sum_y.call_args_list[1][0][0]), 1)
+        self.assertEqual(len(sum_metas.call_args_list[0][0][0]), max_rows)
+        self.assertEqual(len(sum_metas.call_args_list[1][0][0]), 1)
+
     def test_from_table_shared_compute_value(self):
         iris = data.Table("iris").to_sparse()
         d1 = Domain(
@@ -2050,7 +2131,6 @@ class TableIndexingTests(TableTests):
             np.testing.assert_almost_equal(
                 np.array(list(row)), new_row)
 
-
     def test_can_select_a_subset_of_rows_and_columns(self):
         for r in self.rows:
             for c in self.multiple_columns:
@@ -2115,6 +2195,23 @@ class TableIndexingTests(TableTests):
         # single element
         self.assertEqual(_optimize_indices([1], 2), slice(1, 2, 1))
         self.assertEqual(_optimize_indices([-2], 5), slice(-2, -3, -1))
+
+    def test_select_from_selection(self):
+        fn = _select_from_selection
+        self.assertEqual(fn(slice(10), slice(11), 10),
+                         slice(0, 10, 1))
+        self.assertEqual(fn(slice(10), slice(None, 10, 2), 10),
+                         slice(0, 10, 2))
+        self.assertEqual(fn(slice(None, 10, 2), slice(None, 10, 2), 10),
+                         slice(0, 10, 4))
+        self.assertEqual(fn(slice(None, None, -1), slice(0, 9, None), 10),
+                         slice(9, 0, -1))  # [9, 8, 7, 6, 5, 4, 3, 2, 1]
+        self.assertEqual(fn(slice(None, None, -1), slice(9, 10, None), 10),
+                         slice(0, None, -1))  # [0]
+        self.assertEqual(fn(slice(None, 10, 2), slice(None, None, -1), 10),
+                         slice(8, None, -2))
+        self.assertEqual(fn(slice(None, 10, 2), slice(None, None, -2), 10),
+                         slice(8, None, -4))
 
 
 class TableElementAssignmentTest(TableTests):
