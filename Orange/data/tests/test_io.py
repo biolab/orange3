@@ -1,8 +1,12 @@
+import os
 import unittest
+from tempfile import NamedTemporaryFile
+
 import numpy as np
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, \
-    TimeVariable
+    TimeVariable, Domain, Table
+from Orange.data.io import TabReader, ExcelReader
 from Orange.data.io_util import guess_data_type
 from Orange.misc.collections import natural_sorted
 
@@ -107,6 +111,48 @@ class TestTableFilters(unittest.TestCase):
         valuemap, _, coltype = guess_data_type(in_values)
         self.assertEqual(DiscreteVariable, coltype)
         self.assertListEqual(res, valuemap)
+
+class TestWriters(unittest.TestCase):
+    def setUp(self):
+        self.domain = Domain([DiscreteVariable("a", values=tuple("xyz")),
+                         ContinuousVariable("b", number_of_decimals=3)],
+                        ContinuousVariable("c", number_of_decimals=0),
+                        [StringVariable("d")])
+        self.data = Table.from_numpy(
+            self.domain,
+            np.array([[1, 0.5], [2, np.nan], [np.nan, 1.0625]]),
+            np.array([3, 1, 7]),
+            np.array(["foo bar baz".split()]).T
+        )
+
+    def test_write_tab(self):
+        with NamedTemporaryFile(suffix=".tab", delete=False) as f:
+            fname = f.name
+        try:
+            TabReader.write(fname, self.data)
+            with open(fname, encoding="utf-8") as f:
+                self.assertEqual(f.read().strip(), """
+c\td\ta\tb
+continuous\tstring\tx y z\tcontinuous
+class\tmeta\t\t
+3.0\tfoo\ty\t0.5
+1.0\tbar\tz\t
+7.0\tbaz\t\t1.0625""".strip())
+        finally:
+            os.remove(fname)
+
+    def test_roundtrip_xlsx(self):
+        with NamedTemporaryFile(suffix=".xlsx", delete=False) as f:
+            fname = f.name
+        try:
+            ExcelReader.write(fname, self.data)
+            data = ExcelReader(fname).read()
+            np.testing.assert_equal(data.X, self.data.X)
+            np.testing.assert_equal(data.Y, self.data.Y)
+            np.testing.assert_equal(data.metas, self.data.metas)
+            np.testing.assert_equal(data.domain, self.data.domain)
+        finally:
+            os.remove(fname)
 
 
 if __name__ == "__main__":
