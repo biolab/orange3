@@ -10,7 +10,8 @@ from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsScene, QGridLayout, QSizePolicy,
     QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent, QLabel
 )
-from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath, QColor
+from AnyQt.QtGui import (QPen, QFont, QKeySequence, QPainterPath, QColor,
+    QFontMetrics)
 from AnyQt.QtCore import (
     Qt, QObject, QSize, QPointF, QRectF, QLineF, QEvent, QModelIndex
 )
@@ -248,6 +249,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._displayed_root = None
         self.cutoff_height = 0.0
 
+        spin_width = QFontMetrics(self.font()).horizontalAdvance("M" * 7)
         gui.comboBox(
             self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
             callback=self._invalidate_clustering)
@@ -305,6 +307,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         )
         self.max_depth_spin = gui.spin(
             box, self, "max_depth", minv=1, maxv=100,
+            controlWidth=spin_width, alignment=Qt.AlignRight,
             callback=self._max_depth_changed,
             keyboardTracking=False, addToLayout=False
         )
@@ -335,10 +338,11 @@ class OWHierarchicalClustering(widget.OWWidget):
         )
         self.cut_ratio_spin = gui.spin(
             self.selection_box, self, "cut_ratio", 0, 100, step=1e-1,
+            controlWidth=spin_width, alignment = Qt.AlignRight,
             spinType=float, callback=self._cut_ratio_changed,
             addToLayout=False
         )
-        self.cut_ratio_spin.setSuffix("%")
+        self.cut_ratio_spin.setSuffix(" %")
         self.cut_ratio_spin.lineEdit().returnPressed.connect(
             self._cut_ratio_return)
 
@@ -349,9 +353,10 @@ class OWHierarchicalClustering(widget.OWWidget):
                 self.selection_box, "Top N:", addToLayout=False),
             2, 0
         )
-        self.top_n_spin = gui.spin(self.selection_box, self, "top_n", 1, 20,
-                                   callback=self._top_n_changed,
-                                   addToLayout=False)
+        self.top_n_spin = gui.spin(
+            self.selection_box, self, "top_n", 1, 20,
+            controlWidth=spin_width, alignment=Qt.AlignRight,
+            callback=self._top_n_changed, addToLayout=False)
         self.top_n_spin.lineEdit().returnPressed.connect(self._top_n_return)
         grid.addWidget(self.top_n_spin, 2, 1)
 
