@@ -18,7 +18,8 @@ from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush, QFontMetrics
 from AnyQt.QtCore import Qt, QRectF, QSize, QPropertyAnimation, QObject, \
     pyqtProperty
 
-from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable, \
+    Variable
 from Orange.statistics.util import nanmin, nanmax, nanmean, unique
 from Orange.classification import Model
 from Orange.classification.naive_bayes import NaiveBayesModel
@@ -1311,7 +1312,10 @@ class OWNomogram(OWWidget):
         attrs = OrderedDict()
         for attr in preprocessed.attributes:
             cv = attr._compute_value.variable._compute_value
-            var = cv.variable if cv else original[attr.name]
+            if cv and isinstance(getattr(cv, "variable", None), Variable):
+                var = cv.variable
+            else:
+                var = original[attr.name]
             var = original[var.name] if var.name in original else attr
             if var in attrs:    # the reason for OrderedDict
                 continue
