@@ -1,6 +1,7 @@
 from typing import NamedTuple, Dict, Type, Optional
 
 from AnyQt.QtWidgets import QButtonGroup, QRadioButton
+from AnyQt.QtCore import Qt
 from scipy.sparse import issparse
 import bottleneck as bn
 
@@ -61,8 +62,7 @@ MetricDefs: Dict[int, MetricDef] = {
         MetricDef(SpearmanAbsolute, "Spearman (absolute)",
                   "Absolute value of Pearson correlation; distance = 1 - |ρ|",
                   distance.SpearmanRAbsolute),
-        MetricDef(Jaccard, "Jaccard",
-                  "Jaccard distance; similarity = 1 - distance",
+        MetricDef(Jaccard, "Jaccard", "Jaccard distance",
                   distance.Jaccard)
     )
 }
@@ -75,7 +75,6 @@ class InterruptException(Exception):
 class DistanceRunner:
     @staticmethod
     def run(data: Orange.data.Table, metric: distance, normalized_dist: bool,
-            similarity: bool,
             axis: int, state: TaskState) -> Optional[Orange.misc.DistMatrix]:
         if data is None:
             return None
@@ -89,8 +88,6 @@ class DistanceRunner:
         kwargs = {"axis": 1 - axis, "impute": True, "callback": callback}
         if metric.supports_normalization and normalized_dist:
             kwargs["normalize"] = True
-        if metric.supports_similarity and similarity:
-            kwargs["similarity"] = True
         return metric(data, **kwargs)
 
 
@@ -106,11 +103,10 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     class Outputs:
         distances = Output("Distances", Orange.misc.DistMatrix, dynamic=False)
 
-    settings_version = 3
+    settings_version = 4
 
     axis: int = Setting(0)
     metric_id: int = Setting(EuclideanNormalized)
-    compute_similarity: bool = Setting(False)
     autocommit: bool = Setting(True)
 
     want_main_area = False
@@ -138,17 +134,13 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
 
         self.data = None
 
-        box = gui.hBox(self.controlArea)
         gui.radioButtons(
-            box, self, "axis", ["Rows", "Columns"],
-            box="Compare", callback=self._invalidate
+            self.controlArea, self, "axis", ["Rows", "Columns"],
+            box="Compare", orientation=Qt.Horizontal, callback=self._invalidate
         )
-        gui.radioButtons(
-            box, self, "compute_similarity", ["Distances", "Similarities"],
-            box="Compute", callback=self._similarity_changed
-        )
-        box = gui.hBox(self.controlArea, "Metric")
-        self.group = QButtonGroup()
+        box = gui.hBox(self.controlArea, "Distance Metric")
+        self.metric_buttons = QButtonGroup()
+        width = 0
         for i, metric in enumerate(MetricDefs.values()):
             if i % 6 == 0:
                 vb = gui.vBox(box)
@@ -156,11 +148,15 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
             b.setChecked(self.metric_id == metric.id)
             b.setToolTip(metric.tooltip)
             vb.layout().addWidget(b)
-            self.group.addButton(b, metric.id)
+            width = max(width, b.sizeHint().width())
+            self.metric_buttons.addButton(b, metric.id)
+        for b in self.metric_buttons.buttons():
+            b.setFixedWidth(width)
 
-        self.group.idClicked.connect(self._metric_changed)
+        self.metric_buttons.idClicked.connect(self._metric_changed)
 
         gui.auto_apply(self.buttonsArea, self, "autocommit")
+
 
     @Inputs.data
     @check_sql_input
@@ -170,10 +166,6 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
         self.refresh_radios()
         self.commit.now()
 
-    def _similarity_changed(self):
-        self.refresh_radios()
-        self._invalidate()
-
     def _metric_changed(self, id_):
         self.metric_id = id_
         self._invalidate()
@@ -181,26 +173,12 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     def refresh_radios(self):
         sparse = self.data is not None and issparse(self.data.X)
         unsupported_sparse = []
-        disabled_active = False
-        first_enabled = None
         for metric in MetricDefs.values():
-            button = self.group.button(metric.id)
-            no_similarity = self.compute_similarity \
-                            and not metric.metric.supports_similarity
+            button = self.metric_buttons.button(metric.id)
             no_sparse = sparse and not metric.metric.supports_sparse
-            if no_sparse and not no_similarity:
+            button.setEnabled(not no_sparse)
+            if no_sparse:
                 unsupported_sparse.append(metric.name)
-            if no_similarity or no_sparse:
-                button.setEnabled(False)
-                if self.metric_id == metric.id:
-                    disabled_active = True
-            else:
-                button.setEnabled(True)
-                first_enabled = first_enabled or button
-
-        if disabled_active:
-            first_enabled.setChecked(True)
-
         self.Warning.unsupported_sparse(", ".join(unsupported_sparse),
                                         shown=bool(unsupported_sparse))
 
@@ -275,7 +253,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
                     break
 
         self.start(DistanceRunner.run, data, metric,
-                   metric_def.normalize, self.compute_similarity, self.axis)
+                   metric_def.normalize, self.axis)
 
     def on_partial_result(self, _):
         pass
@@ -304,8 +282,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     def send_report(self):
         # pylint: disable=invalid-sequence-index
         self.report_items((
-            (["Distances Between", "Similarities Between"
-              ][self.compute_similarity], ["Rows", "Columns"][self.axis]),
+            ("Distances Between", ["Rows", "Columns"][self.axis]),
             ("Metric", MetricDefs[self.metric_id].name)
         ))
 
@@ -326,8 +303,8 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
             metric_idx = settings.pop("metric_idx")
             metric_id = [Euclidean, Manhattan, Cosine, Jaccard,
                          Spearman, SpearmanAbsolute, Pearson, PearsonAbsolute,
-                         Mahalanobis, Euclidean][metric_idx]
-            if settings.pop("normalized_dist"):
+                         Hamming, Mahalanobis, Euclidean][metric_idx]
+            if settings.pop("normalized_dist", False):
                 metric_id = {Euclidean: EuclideanNormalized,
                              Manhattan: ManhattanNormalized}.get(metric_id,
                                                                  metric_id)
