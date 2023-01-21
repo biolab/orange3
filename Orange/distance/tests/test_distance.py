@@ -14,6 +14,7 @@ class BaseTest(unittest.TestCase):
         self.assertRaises(ValueError, distance.Distance, similarity=True)
 
         class SupportsSimilarity(distance.Distance):
+            # pylint: disable=abstract-method
             supports_similarity = True
 
         SupportsSimilarity(similarity=True)
