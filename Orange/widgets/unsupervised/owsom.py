@@ -14,7 +14,7 @@ from AnyQt.QtWidgets import \
     QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy, \
     QGraphicsPathItem
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.util import array_equal
 from Orange.preprocess import decimal_binnings, time_binnings
 from Orange.projection.som import SOM
@@ -774,6 +774,7 @@ class OWSOM(OWWidget):
         for i, (x, y) in enumerate(assignments):
             members[(x, y)].append(i)
         members.pop(None, None)
+        self.coordinates = np.array([[x, y] for i, (x, y) in enumerate(assignments)], dtype=int)
         self.cells = np.empty((self.size_x, self.size_y, 2), dtype=int)
         self.member_data = np.empty(self.cont_x.shape[0], dtype=int)
         index = 0
@@ -824,17 +825,20 @@ class OWSOM(OWWidget):
                     rows = self.get_member_indices(x, y)
                     indices[rows] = self.selection[x, y]
 
+        new_data = self.data.add_column(ContinuousVariable(name='som-x'), self.coordinates[:, 0], True)
+        new_data = new_data.add_column(ContinuousVariable(name='som-y'), self.coordinates[:, 1], True)
+
         if np.any(indices):
-            sel_data = create_groups_table(self.data, indices, False, "Group")
+            sel_data = create_groups_table(new_data, indices, False, "Group")
             self.Outputs.selected_data.send(sel_data)
         else:
             self.Outputs.selected_data.send(None)
 
         if np.max(indices) > 1:
-            annotated = create_groups_table(self.data, indices)
+            annotated = create_groups_table(new_data, indices)
         else:
             annotated = create_annotated_table(
-                self.data, np.flatnonzero(indices))
+                new_data, np.flatnonzero(indices))
         self.Outputs.annotated_data.send(annotated)
 
     def set_color_bins(self):
