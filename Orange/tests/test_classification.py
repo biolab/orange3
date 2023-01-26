@@ -419,8 +419,6 @@ class LearnerAccessibility(unittest.TestCase):
             if isinstance(learner, _RuleLearner):
                 continue
             with self.subTest(learner.__name__):
-                if "RandomForest" not in learner.__name__:
-                    continue
                 learner = learner()
                 for ds in datasets:
                     model = learner(ds)
