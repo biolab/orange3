@@ -539,6 +539,7 @@ class TestDomainInit(unittest.TestCase):
             metas=[var1, var2]
         )
         # pylint: disable=protected-access
+        domain._ensure_indices()
         self.assertDictEqual(
             {-1: -1, -2: -2, var1: -1, var2: -2, var1.name: -1, var2.name: -2},
             domain._indices
