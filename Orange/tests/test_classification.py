@@ -5,7 +5,6 @@ import pickle
 import pkgutil
 import unittest
 
-import traceback
 import warnings
 
 import numpy as np
