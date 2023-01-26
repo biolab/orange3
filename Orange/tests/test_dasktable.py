@@ -38,6 +38,7 @@ class _TempDaskTableHandler:
         file.close()
         DaskTable.save(table, fn)
         self.dasktable = DaskTable.from_file(fn)
+        self.dasktable.name = table.name
         self.dasktable._keep_alive_until_dasktable_is_needed = self
 
     def __del__(self):
