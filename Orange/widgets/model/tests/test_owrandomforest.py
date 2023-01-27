@@ -55,7 +55,7 @@ class TestOWRandomForest(WidgetTest, WidgetLearnerTestMixin):
         self.assertFalse(self.widget.class_weight)
         self.widget.controls.class_weight.setChecked(True)
         self.assertTrue(self.widget.class_weight)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertEqual(self.widget.model.skl_model.class_weight, "balanced")
         self.assertTrue(self.widget.Warning.class_weights_used.is_shown())
 

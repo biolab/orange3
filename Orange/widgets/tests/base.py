@@ -248,6 +248,9 @@ class WidgetLearnerTestMixin:
 
         self.parameters = []
 
+    def click_apply(self):
+        self.widget.apply_button.button.clicked.emit()
+
     def test_has_unconditional_apply(self):
         self.assertTrue(hasattr(self.widget, "unconditional_apply"))
 
@@ -262,7 +265,7 @@ class WidgetLearnerTestMixin:
         """Check widget's data and model after disconnecting data from input"""
         self.send_signal("Data", self.data)
         self.assertEqual(self.widget.data, self.data)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         self.send_signal("Data", None)
         self.wait_until_stop_blocking()
@@ -273,7 +276,7 @@ class WidgetLearnerTestMixin:
         """Check if error message is shown with inadequate data on input"""
         for inadequate in self.inadequate_dataset:
             self.send_signal("Data", inadequate)
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self.wait_until_stop_blocking()
             self.assertTrue(self.widget.Error.data_error.is_shown())
         for valid in self.valid_datasets:
@@ -288,7 +291,7 @@ class WidgetLearnerTestMixin:
         self.assertEqual(
             randomize, self.widget.preprocessors,
             'Preprocessor not added to widget preprocessors')
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         self.assertEqual(
             (randomize,), self.widget.learner.preprocessors,
@@ -298,7 +301,7 @@ class WidgetLearnerTestMixin:
         """Check multiple preprocessors on input"""
         pp_list = PreprocessorList([Randomize(), RemoveNaNColumns()])
         self.send_signal("Preprocessor", pp_list)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         self.assertEqual(
             (pp_list,), self.widget.learner.preprocessors,
@@ -308,12 +311,12 @@ class WidgetLearnerTestMixin:
         """Check learner's preprocessors after disconnecting pp from input"""
         randomize = Randomize()
         self.send_signal("Preprocessor", randomize)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         self.assertEqual(randomize, self.widget.preprocessors)
 
         self.send_signal("Preprocessor", None)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.preprocessors,
                           'Preprocessors not removed on disconnect.')
@@ -322,7 +325,7 @@ class WidgetLearnerTestMixin:
         """Check if learner is on output after apply"""
         initial = self.get_output("Learner")
         self.assertIsNotNone(initial, "Does not initialize the learner output")
-        self.widget.apply_button.button.click()
+        self.click_apply()
         newlearner = self.get_output("Learner")
         self.assertIsNot(initial, newlearner,
                          "Does not send a new learner instance on `Apply`.")
@@ -332,10 +335,10 @@ class WidgetLearnerTestMixin:
     def test_output_model(self):
         """Check if model is on output after sending data and apply"""
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.send_signal('Data', self.data)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         model = self.get_output(self.widget.Outputs.model)
         self.assertIsNotNone(model)
@@ -345,12 +348,12 @@ class WidgetLearnerTestMixin:
     def test_output_learner_name(self):
         """Check if learner's name properly changes"""
         new_name = "Learner Name"
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertEqual(self.widget.learner.name,
                          self.widget.name_line_edit.text()
                          or self.widget.name_line_edit.placeholderText())
         self.widget.name_line_edit.setText(new_name)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         self.assertEqual(self.get_output("Learner").name, new_name)
 
@@ -359,14 +362,14 @@ class WidgetLearnerTestMixin:
         new_name = "Model Name"
         self.widget.name_line_edit.setText(new_name)
         self.send_signal("Data", self.data)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         self.assertEqual(self.get_output(self.widget.Outputs.model).name, new_name)
 
     def test_output_model_picklable(self):
         """Check if model can be pickled"""
         self.send_signal("Data", self.data)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         model = self.get_output(self.widget.Outputs.model)
         self.assertIsNotNone(model)
@@ -390,7 +393,7 @@ class WidgetLearnerTestMixin:
         """
         for dataset in self.valid_datasets:
             self.send_signal("Data", dataset)
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self.wait_until_stop_blocking()
             for parameter in self.parameters:
                 # Skip if the param isn't used for the given data type
@@ -416,7 +419,7 @@ class WidgetLearnerTestMixin:
 
                 for value in parameter.values:
                     parameter.set_value(value)
-                    self.widget.apply_button.button.click()
+                    self.click_apply()
                     self.wait_until_stop_blocking()
                     param = self._get_param_value(self.widget.learner, parameter)
                     self.assertEqual(
