@@ -270,7 +270,7 @@ class RemoveSparseEditor(BaseEditor):
         self.filter_buttons = QButtonGroup(exclusive=True)
         self.filter_buttons.buttonClicked.connect(self.filterByClicked)
         for idx, option, in enumerate(self.options):
-            btn = QRadioButton(self, text=option, checked=idx == 0)
+            btn = QRadioButton(self, text=option, checked=idx == 1)
             self.filter_buttons.addButton(btn, id=idx)
             self.layout().addWidget(btn)
 
@@ -311,6 +311,7 @@ class RemoveSparseEditor(BaseEditor):
     def setFilter0(self, id_):
         if self.filter0 != id_:
             self.filter0 = id_
+            self.filter_buttons.button(id_).setChecked(True)
             self.edited.emit()
 
     def setFixedThresh(self, thresh):
@@ -346,7 +347,7 @@ class RemoveSparseEditor(BaseEditor):
     def createinstance(params):
         params = dict(params)
         filter0 = params.pop('filter0', True)
-        useFixedThreshold = params.pop('useFixedThreshold', True)
+        useFixedThreshold = params.pop('useFixedThreshold', False)
         if useFixedThreshold:
             threshold = params.pop('fixedThresh', 50)
         else:
