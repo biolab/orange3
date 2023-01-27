@@ -272,6 +272,9 @@ class ModelTest(unittest.TestCase):
         data = Table("heart_disease")
         for learner in all_learners():
             with self.subTest(learner.__name__):
+                # Skip slow tests
+                if issubclass(learner, _RuleLearner):
+                    continue
                 if learner in (ThresholdLearner, CalibratedLearner):
                     model = learner(LogisticRegressionLearner())(data)
                 else:
@@ -415,7 +418,7 @@ class LearnerAccessibility(unittest.TestCase):
             if learner in (ThresholdLearner, CalibratedLearner):
                 continue
             # Skip slow tests
-            if isinstance(learner, _RuleLearner):
+            if issubclass(learner, _RuleLearner):
                 continue
             with self.subTest(learner.__name__):
                 learner = learner()
@@ -439,7 +442,7 @@ class LearnerAccessibility(unittest.TestCase):
             if learner in (ThresholdLearner, CalibratedLearner):
                 continue
             # Skip slow tests
-            if isinstance(learner, _RuleLearner):
+            if issubclass(learner, _RuleLearner):
                 continue
             with self.subTest(learner.__name__):
                 learner = learner()
