@@ -114,10 +114,10 @@ class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
             data.X = sparse.csr_matrix(data.X)
         self.assertTrue(sparse.issparse(data.X))
         self.send_signal("Data", data)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertTrue(self.widget.Error.sparse_not_supported.is_shown())
         self.send_signal("Data", None)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())
 
     def test_out_of_memory(self):
@@ -138,5 +138,5 @@ class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
     def test_default_rule(self):
         data = Table("zoo")
         self.send_signal("Data", data)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertEqual(sum(self.widget.model.rule_list[-1].curr_class_dist.tolist()), len(data))

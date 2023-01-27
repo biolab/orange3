@@ -22,6 +22,9 @@ class TestOWManifoldLearning(WidgetTest):
         self.widget = self.create_widget(
             OWManifoldLearning, stored_settings={"auto_apply": False})  # type: OWManifoldLearning
 
+    def click_apply(self):
+        self.widget.apply_button.button.clicked.emit()
+
     def test_input_data(self):
         """Check widget's data"""
         self.assertEqual(self.widget.data, None)
@@ -34,10 +37,10 @@ class TestOWManifoldLearning(WidgetTest):
         """Check if data is on output after apply"""
         self.assertIsNone(self.get_output(self.widget.Outputs.transformed_data))
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertIsInstance(self.get_output(self.widget.Outputs.transformed_data), Table)
         self.send_signal(self.widget.Inputs.data, None)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertIsNone(self.get_output(self.widget.Outputs.transformed_data))
 
     def test_n_components(self):
@@ -48,7 +51,7 @@ class TestOWManifoldLearning(WidgetTest):
             self.assertEqual(self.widget.data, self.iris)
             self.widget.n_components_spin.setValue(i)
             self.widget.n_components_spin.onEnter()
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self._compare_tables(self.get_output(self.widget.Outputs.transformed_data), i)
 
     def test_manifold_methods(self):
@@ -58,7 +61,7 @@ class TestOWManifoldLearning(WidgetTest):
         for i in range(len(self.widget.MANIFOLD_METHODS)):
             self.assertEqual(self.widget.data, self.iris)
             self.widget.manifold_methods_combo.activated.emit(i)
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self._compare_tables(self.get_output(self.widget.Outputs.transformed_data), n_comp)
 
     def _compare_tables(self, _output, n_components):
@@ -74,11 +77,11 @@ class TestOWManifoldLearning(WidgetTest):
         def __callback():
             # Send sparse data to input
             self.send_signal(self.widget.Inputs.data, data)
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self.assertTrue(self.widget.Error.sparse_not_supported.is_shown())
             # Clear input
             self.send_signal(self.widget.Inputs.data, None)
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())
 
         simulate.combobox_run_through_all(
@@ -92,12 +95,12 @@ class TestOWManifoldLearning(WidgetTest):
         def __callback():
             # Send data to input
             self.send_signal(self.widget.Inputs.data, self.iris)
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self.assertFalse(self.widget.Error.manifold_error.is_shown())
 
             # Clear input
             self.send_signal(self.widget.Inputs.data, None)
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self.assertFalse(self.widget.Error.manifold_error.is_shown())
 
         simulate.combobox_run_through_all(
@@ -108,7 +111,7 @@ class TestOWManifoldLearning(WidgetTest):
         simulate.combobox_activate_item(self.widget.manifold_methods_combo, "MDS")
         data = possible_duplicate_table('C0', class_var=True)
         self.send_signal(self.widget.Inputs.data, data)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         out = self.get_output(self.widget.Outputs.transformed_data)
         self.assertTrue(out.domain.attributes[0], 'C0 (1)')
 
@@ -136,7 +139,7 @@ class TestOWManifoldLearning(WidgetTest):
         self.widget.manifold_methods_combo.activated.emit(0)  # t-SNE
         self.widget.tsne_editor.metric_combo.activated.emit(4)  # Mahalanobis
         self.assertFalse(self.widget.Error.manifold_error.is_shown())
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertTrue(self.widget.Error.manifold_error.is_shown())
 
     def test_out_of_memory(self):
@@ -149,7 +152,7 @@ class TestOWManifoldLearning(WidgetTest):
             mock.side_effect = MemoryError
             self.send_signal("Data", table)
             self.widget.manifold_methods_combo.activated.emit(1)
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self.assertTrue(self.widget.Error.out_of_memory.is_shown())
 
     def test_unconditional_commit_on_new_signal(self):

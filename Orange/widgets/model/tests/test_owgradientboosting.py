@@ -354,7 +354,7 @@ class TestOWGradientBoosting(WidgetTest, WidgetLearnerTestMixin):
             if cls is None:
                 continue
             simulate.combobox_activate_index(method_cb, i)
-            self.widget.apply_button.button.click()
+            self.click_apply()
             self.assertIsInstance(self.widget.learner, cls)
 
     def test_missing_lib(self):
