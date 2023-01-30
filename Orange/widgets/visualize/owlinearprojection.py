@@ -24,6 +24,7 @@ from Orange.util import Enum
 from Orange.widgets import gui, report
 from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.plot import variables_selection
 from Orange.widgets.utils.plot.owplotgui import VariableSelectionModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -285,6 +286,9 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     class Error(OWAnchorProjectionWidget.Error):
         no_cont_features = Msg("Plotting requires numeric features")
 
+    class Information(OWAnchorProjectionWidget.Information):
+        no_lda = Msg("LDA placement is disabled due to unsuitable target.\n{}")
+
     def _add_controls(self):
         box = gui.vBox(self.controlArea, box="Features")
         self._add_controls_variables(box)
@@ -377,12 +381,27 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         for btn in buttons:
             btn.setEnabled(True)
 
+        problem = None
         if self.data is not None:
-            has_discrete_class = self.data.domain.has_discrete_class
-            if not has_discrete_class or len(np.unique(self.data.Y)) < 3:
-                buttons[Placement.LDA].setEnabled(False)
-                if self.placement == Placement.LDA:
-                    self.placement = Placement.Circular
+            if (class_var := self.data.domain.class_var) is None:
+                problem = "Current data has no target variable"
+            elif not class_var.is_discrete:
+                problem = f"{class_var.name} is not categorical"
+            elif (nclasses := len(distinct := np.unique(self.data.Y))) == 0:
+                problem = f"Data has no defined values for {class_var.name}"
+            elif nclasses < 3:
+                vals = " and ".join(f"'{class_var.values[int(i)]}'" for i in distinct)
+                problem = \
+                    f"Data contains just {['one', 'two'][nclasses - 1]} distinct " \
+                    f"{pl(nclasses, 'value')} ({vals}) for '{class_var.name}'; " \
+                    "at least three are required."
+        if problem is None:
+            self.Information.no_lda.clear()
+        else:
+            self.Information.no_lda(problem)
+            buttons[Placement.LDA].setEnabled(False)
+            if self.placement == Placement.LDA:
+                self.placement = Placement.Circular
 
         self.controls.graph.hide_radius.setEnabled(
             self.placement != Placement.Circular)
