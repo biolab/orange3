@@ -819,8 +819,6 @@ class TableModel(AbstractSortTableModel):
         self.X_density = sourcedata.X_density()
         self.Y_density = sourcedata.Y_density()
         self.M_density = sourcedata.metas_density()
-        self.Y_len = len(domain.class_vars)
-        self.M_len = len(domain.metas)
 
         brush_for_role = {
             role: QBrush(c) if c is not None else None
@@ -901,24 +899,17 @@ class TableModel(AbstractSortTableModel):
         if self.__rowCount > (2 ** 31 - 1):
             raise ValueError("len(sourcedata) > 2 ** 31 - 1")
 
-    def _get_source_item(self, row, col):
-        if col < self.Y_len:
-            if self.source.Y.ndim == 1:
-                return self.source.Y[row]
-            elif self.Y_density == Storage.DENSE:
-                return self.source.Y[row, col]
-            else:
-                return self.source.Y[row]
-        elif self.Y_len <= col < self.Y_len + self.M_len:
-            if self.M_density == Storage.DENSE:
-                return self.source.metas[row, col - self.Y_len]
-            else:
-                return self.source.metas[row]
-        else:
-            if self.X_density == Storage.DENSE:
-                return self.source.X[row, col - self.Y_len - self.M_len]
-            else:
-                return self.source.X[row]
+    def _get_source_item(self, row, coldesc):
+        if isinstance(coldesc, self.Basket):
+            # `self.source[row:row + 1]` returns Table
+            # `self.source[row]` returns RowInstance
+            if coldesc.role is self.ClassVar:
+                return self.source[row:row + 1].Y
+            if coldesc.role is self.Meta:
+                return self.source[row:row + 1].metas
+            if coldesc.role is self.Attribute:
+                return self.source[row:row + 1].X
+        return self.source[row, coldesc.var]
 
     def sortColumnData(self, column):
         return self._columnSortKeyData(column, TableModel.ValueRole)
@@ -982,7 +973,8 @@ class TableModel(AbstractSortTableModel):
         col = 0 if role is _ClassValueRole else index.column()
 
         try:
-            instance = self._get_source_item(row, col)
+            coldesc = self.columns[col]
+            instance = self._get_source_item(row, coldesc)
         except IndexError:
             self.layoutAboutToBeChanged.emit()
             self.beginRemoveRows(self.parent(), row, max(self.rowCount(), row))
@@ -990,7 +982,6 @@ class TableModel(AbstractSortTableModel):
             self.endRemoveRows()
             self.layoutChanged.emit()
             return None
-        coldesc = self.columns[col]
 
         if role == _Qt_DisplayRole:
             return coldesc.format(instance)
