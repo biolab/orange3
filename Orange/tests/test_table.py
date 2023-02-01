@@ -1764,7 +1764,7 @@ class CreateTableWithDomainAndTable(TableTests):
 
         # calling from_table with a domain copy will use indexing in from_table and
         # _FromTableConversion.convert
-        with patch("Orange.data.table._FromTableConversion", MockedConversion):
+        with patch.object(data.Table, "_from_table_conversion_class", MockedConversion):
             for slice_ in self.interesting_slices:
                 new_table = data.Table.from_table(
                     self.domain.copy(), self.table, row_indices=slice_)
