@@ -17,8 +17,6 @@ from typing import List, TYPE_CHECKING, Union
 import bottleneck as bn
 import numpy as np
 
-import dask.array
-
 from scipy import sparse as sp
 from scipy.sparse import issparse, csc_matrix
 
@@ -226,7 +224,6 @@ class _ArrayConversion:
         self.src_cols = src_cols
         self.is_sparse = is_sparse
         self.results_inplace = not is_sparse
-        self.is_dask = False
         self.subarray_from = self._can_copy_all(src_cols, source_domain)
         self.variables = variables
         dtype = np.float64
@@ -327,22 +324,20 @@ class _ArrayConversion:
                     Y[row_indices, col - n_src_attrs]
                 )
 
-            if self.is_dask:
-                col_array = col_array.reshape(-1, 1)
-
             if self.results_inplace:
                 out[target_indices, i] = col_array
             else:
-                data.append(col_array)
+                data.append(self.prepare_column(col_array))
 
         if self.results_inplace:
             return out
         else:
             return self.join_columns(data)
 
+    def prepare_column(self, col_array):
+        return col_array
+
     def join_columns(self, data):
-        if self.is_dask:
-            return dask.array.hstack(data)
         if self.is_sparse:
             # creating csr directly would need plenty of manual work which
             # would probably slow down the process - conversion coo to csr
@@ -363,8 +358,6 @@ class _ArrayConversion:
             return out.tocsr()
 
     def join_partial_results(self, parts):
-        if self.is_dask:
-            return dask.array.vstack(parts)
         if self.is_sparse:
             return sp.vstack(parts)
         else:
@@ -388,16 +381,19 @@ class _FromTableConversion:
 
     max_rows_at_once = 5000
 
+    _array_conversion_class = _ArrayConversion
+
     def __init__(self, source, destination):
         conversion = DomainConversion(source, destination)
 
-        self.X = _ArrayConversion("X", conversion.attributes,
+        array_conv_class = self._array_conversion_class
+        self.X = array_conv_class("X", conversion.attributes,
                                   destination.attributes, conversion.sparse_X,
                                   source)
-        self.Y = _ArrayConversion("Y", conversion.class_vars,
+        self.Y = array_conv_class("Y", conversion.class_vars,
                                   destination.class_vars, conversion.sparse_Y,
                                   source)
-        self.metas = _ArrayConversion("metas", conversion.metas,
+        self.metas = array_conv_class("metas", conversion.metas,
                                       destination.metas, conversion.sparse_metas,
                                       source)
 
@@ -483,6 +479,7 @@ class Table(Sequence, Storage):
     _unlocked = 0xff  # pylint: disable=invalid-name
 
     _array_interface = np
+    _from_table_conversion_class = _FromTableConversion
 
     @property
     def columns(self):
@@ -830,16 +827,7 @@ class Table(Sequence, Storage):
             table_conversion = \
                 _idcache_restore(_thread_local.domain_cache, (domain, source.domain))
             if table_conversion is None:
-                table_conversion = _FromTableConversion(source.domain, domain)
-
-                # TODO decide when should the output be a dask array
-                table_conversion.X.is_dask = isinstance(source.X, dask.array.Array)
-                table_conversion.Y.is_dask = isinstance(source.Y, dask.array.Array)
-                table_conversion.metas.is_dask = False
-                if table_conversion.X.is_dask:
-                    table_conversion.X.results_inplace = False
-                if table_conversion.Y.is_dask:
-                    table_conversion.Y.results_inplace = False
+                table_conversion = cls._from_table_conversion_class(source.domain, domain)
 
                 _idcache_save(_thread_local.domain_cache, (domain, source.domain),
                               table_conversion)
