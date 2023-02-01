@@ -10,6 +10,7 @@ import numpy as np
 import pandas
 
 from Orange.data import Table, RowInstance
+from Orange.data.table import _FromTableConversion, _ArrayConversion
 
 
 class DaskRowInstance(RowInstance):
@@ -26,9 +27,41 @@ class DaskRowInstance(RowInstance):
             self._y = self._y.compute()
 
 
+class _ArrayConversionDask(_ArrayConversion):
+
+    def join_partial_results(self, parts):
+        if self.is_dask:
+            return dask.array.vstack(parts)
+        return super().join_partial_results(self)
+
+    def prepare_column(self, col_array):
+        if self.is_dask:
+            return col_array.reshape(-1, 1)
+        return super().prepare_column(self, col_array)
+
+    def join_columns(self, data):
+        if self.is_dask:
+            return dask.array.hstack(data)
+        return super().join_columns(self, data)
+
+
+class _FromTableConversionDask(_FromTableConversion):
+
+    _array_conversion_class = _ArrayConversionDask
+
+    def __init__(self, source, destination):
+        super().__init__(source, destination)
+        self.X.is_dask = True
+        self.Y.is_dask = True
+        self.metas.is_dask = False
+        self.X.results_inplace = False
+        self.Y.results_inplace = False
+
+
 class DaskTable(Table):
 
     _array_interface = da
+    _from_table_conversion_class = _FromTableConversionDask
 
     def __new__(cls, *args, **kwargs):
         if not args and not kwargs:
