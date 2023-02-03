@@ -1547,7 +1547,7 @@ class TimeVariableEditor(VariableEditor):
 
     def set_data(self, var, transform=()):
         super().set_data(var, transform)
-        if self.parent() is not None and isinstance(self.parent().var, Time):
+        if self.parent() is not None and isinstance(self.parent().var, (Time, Real)):
             # when transforming from time to time disable format selection combo
             self.format_cb.setEnabled(False)
         else:
@@ -2730,11 +2730,13 @@ def apply_reinterpret_c(var, tr, data: MArray):
     elif isinstance(tr, AsContinuous):
         return var
     elif isinstance(tr, AsString):
-        # TimeVar will be interpreted by StrpTime later
         tstr = ToStringTransform(var)
         rvar = Orange.data.StringVariable(name=var.name, compute_value=tstr)
     elif isinstance(tr, AsTime):
-        rvar = Orange.data.TimeVariable(name=var.name, compute_value=Identity(var))
+        # continuous variable is always transformed to time as UNIX epoch
+        rvar = Orange.data.TimeVariable(
+            name=var.name, compute_value=Identity(var), have_time=1, have_date=1
+        )
     else:
         assert False
     return copy_attributes(rvar, var)
