@@ -1,4 +1,3 @@
-import sys
 import threading
 import itertools
 import concurrent.futures
@@ -10,15 +9,11 @@ from typing import Optional, Union
 import numpy
 from scipy.sparse import issparse
 
-from AnyQt.QtWidgets import (
-    QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
-    QStyle, QStylePainter
-)
+from AnyQt.QtWidgets import QTableView, QHeaderView, QApplication, QStyle
 from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
-    Qt, QSize, QEvent, QObject, QMetaObject,
-    QAbstractProxyModel, QItemSelectionModel, QItemSelection,
-    QItemSelectionRange,
+    Qt, QSize, QMetaObject, QAbstractProxyModel, QItemSelectionModel,
+    QItemSelection, QItemSelectionRange,
 )
 from AnyQt.QtCore import Slot
 
@@ -35,20 +30,20 @@ from Orange.widgets.utils.itemdelegates import TableDataDelegate
 from Orange.widgets.utils.itemselectionmodel import (
     BlockSelectionModel, ranges, selection_blocks
 )
-from Orange.widgets.utils.tableview import TableView, \
-    table_selection_to_mime_data
+from Orange.widgets.utils.tableview import table_selection_to_mime_data
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import OWWidget, Input, Output, Msg
+from Orange.widgets.widget import OWWidget, Input, Output
 from Orange.widgets.utils import datacaching
 from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.data.utils.tableview import DataTableView
 
 
-class DataTableView(gui.HScrollStepMixin, TableView):
-    dataset: Table
+class DataTableView(gui.HScrollStepMixin, DataTableView):
+    pass
 
 
 class TableBarItemDelegate(gui.TableBarItem, TableDataDelegate):
@@ -269,68 +264,6 @@ class OWDataTable(OWWidget):
         view.setSelectionModel(selmodel)
         view.selectionFinished.connect(self.update_selection)
 
-    #noinspection PyBroadException
-    def set_corner_text(self, table, text):
-        """Set table corner text."""
-        # As this is an ugly hack, do everything in
-        # try - except blocks, as it may stop working in newer Qt.
-        # pylint: disable=broad-except
-        if not hasattr(table, "btn") and not hasattr(table, "btnfailed"):
-            try:
-                btn = table.findChild(QAbstractButton)
-
-                class Efc(QObject):
-                    def eventFilter(self, o, e):
-                        if (isinstance(o, QAbstractButton) and
-                                e.type() == QEvent.Paint):
-                            # paint by hand (borrowed from QTableCornerButton)
-                            btn = o
-                            opt = QStyleOptionHeader()
-                            opt.initFrom(btn)
-                            state = QStyle.State_None
-                            if btn.isEnabled():
-                                state |= QStyle.State_Enabled
-                            if btn.isActiveWindow():
-                                state |= QStyle.State_Active
-                            if btn.isDown():
-                                state |= QStyle.State_Sunken
-                            opt.state = state
-                            opt.rect = btn.rect()
-                            opt.text = btn.text()
-                            opt.position = QStyleOptionHeader.OnlyOneSection
-                            painter = QStylePainter(btn)
-                            painter.drawControl(QStyle.CE_Header, opt)
-                            return True     # eat event
-                        return False
-                table.efc = Efc()
-                # disconnect default handler for clicks and connect a new one, which supports
-                # both selection and deselection of all data
-                btn.clicked.disconnect()
-                btn.installEventFilter(table.efc)
-                btn.clicked.connect(self._on_select_all)
-                table.btn = btn
-
-                if sys.platform == "darwin":
-                    btn.setAttribute(Qt.WA_MacSmallSize)
-
-            except Exception:
-                table.btnfailed = True
-
-        if hasattr(table, "btn"):
-            try:
-                btn = table.btn
-                btn.setText(text)
-                opt = QStyleOptionHeader()
-                opt.text = btn.text()
-                s = btn.style().sizeFromContents(
-                    QStyle.CT_HeaderSection,
-                    opt, QSize(),
-                    btn)
-                if s.isValid():
-                    table.verticalHeader().setMinimumWidth(s.width())
-            except Exception:
-                pass
-
     def _update_input_summary(self):
         def format_summary(summary):
             if isinstance(summary, ApproxSummary):
@@ -408,17 +341,8 @@ class OWDataTable(OWWidget):
             text.append("No meta attributes.")
         return text
 
-    def _on_select_all(self, _):
-        data_info = self.input.summary
-        if len(self.selected_rows) == data_info.len \
-                and len(self.selected_cols) == len(data_info.domain.variables):
-            self.view.clearSelection()
-        else:
-            self.view.selectAll()
-
     def _update_variable_labels(self):
         """Update the variable labels visibility for current view."""
-        view = self.view
         if self.input is None:
             return
         model = self.input.model
@@ -432,10 +356,10 @@ class OWDataTable(OWWidget):
                 labelnames.update(a.attributes.keys())
             labelnames = sorted(
                 [label for label in labelnames if not label.startswith("_")])
-            self.set_corner_text(view, "\n".join([""] + labelnames))
+            self.view.setCornerText("\n".join([""] + labelnames))
         else:
             model.setRichHeaderFlags(RichTableModel.Name)
-            self.set_corner_text(view, "")
+            self.view.setCornerText("")
 
     def _on_distribution_color_changed(self):
         if self.input is None:
