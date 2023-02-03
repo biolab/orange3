@@ -2,15 +2,13 @@ from typing import Any, Tuple
 
 from AnyQt.QtCore import Qt, QSize, QAbstractItemModel, Property
 from AnyQt.QtWidgets import (
-    QWidget, QSlider, QFormLayout, QComboBox, QStyle, QHBoxLayout, QLabel,
-    QSizePolicy
+    QWidget, QSlider, QFormLayout, QComboBox, QStyle, QSizePolicy
 )
 from AnyQt.QtCore import Signal
 
-from orangewidget.gui import Slider
-
 from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.spinbox import DoubleSpinBox, DBL_MIN, DBL_MAX
+from Orange.widgets.utils.intervalslider import IntervalSlider
 
 
 class ColorGradientSelection(QWidget):
@@ -48,59 +46,37 @@ class ColorGradientSelection(QWidget):
         self.gradient_cb.setModel(model)
         self.gradient_cb.activated[int].connect(self.activated)
         self.gradient_cb.currentIndexChanged.connect(self.currentIndexChanged)
+        self.gradient_cb.currentIndexChanged.connect(
+            self.__update_center_visibility)
+        form.setWidget(0, QFormLayout.SpanningRole, self.gradient_cb)
+
+        def on_center_spin_value_changed(value):
+            if self.__center != value:
+                self.__center = value
+                self.centerChanged.emit(self.__center)
 
         if center is not None:
-            def on_center_spin_value_changed(value):
-                if self.__center != value:
-                    self.__center = value
-                    self.centerChanged.emit(self.__center)
-
-            self.center_box = QWidget()
-            center_layout = QHBoxLayout()
-            self.center_box.setLayout(center_layout)
             self.center_edit = DoubleSpinBox(
                 value=self.__center,
                 minimum=DBL_MIN, maximum=DBL_MAX, minimumStep=0.01,
-                minimumContentsLenght=8,
+                minimumContentsLenght=8, alignment=Qt.AlignRight,
                 stepType=DoubleSpinBox.AdaptiveDecimalStepType,
                 keyboardTracking=False,
-                sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+                sizePolicy=QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed),
             )
             self.center_edit.valueChanged.connect(on_center_spin_value_changed)
-            center_layout.setContentsMargins(0, 0, 0, 0)
-            center_layout.addStretch(1)
-            center_layout.addWidget(QLabel("Centered at"))
-            center_layout.addWidget(self.center_edit)
-            self.gradient_cb.currentIndexChanged.connect(
-                self.__update_center_visibility)
         else:
-            self.center_box = None
+            self.center_edit = None
 
-        slider_low = Slider(
-            objectName="threshold-low-slider", minimum=0, maximum=100,
-            value=int(low * 100), orientation=Qt.Horizontal,
-            tickPosition=QSlider.TicksBelow, pageStep=10,
+        slider = self.slider = IntervalSlider(
+            int(low * 100), int(high * 100), minimum=0, maximum=100,
+            tickPosition=QSlider.NoTicks,
             toolTip=self.tr("Low gradient threshold"),
             whatsThis=self.tr("Applying a low threshold will squeeze the "
                               "gradient from the lower end")
         )
-        slider_high = Slider(
-            objectName="threshold-low-slider", minimum=0, maximum=100,
-            value=int(high * 100), orientation=Qt.Horizontal,
-            tickPosition=QSlider.TicksAbove, pageStep=10,
-            toolTip=self.tr("High gradient threshold"),
-            whatsThis=self.tr("Applying a high threshold will squeeze the "
-                              "gradient from the higher end")
-        )
-        form.setWidget(0, QFormLayout.SpanningRole, self.gradient_cb)
-        if self.center_box:
-            form.setWidget(1, QFormLayout.SpanningRole, self.center_box)
-        form.addRow(self.tr("Low:"), slider_low)
-        form.addRow(self.tr("High:"), slider_high)
-        self.slider_low = slider_low
-        self.slider_high = slider_high
-        self.slider_low.valueChanged.connect(self.__on_slider_low_moved)
-        self.slider_high.valueChanged.connect(self.__on_slider_high_moved)
+        form.addRow(self.tr("Range:"), slider)
+        self.slider.intervalChanged.connect(self.__on_slider_moved)
         self.setLayout(form)
 
     def setModel(self, model: QAbstractItemModel) -> None:
@@ -148,24 +124,10 @@ class ColorGradientSelection(QWidget):
     thresholdHigh_ = Property(
         float, thresholdLow, setThresholdLow, notify=thresholdsChanged)
 
-    def __on_slider_low_moved(self, value: int) -> None:
-        high = self.slider_high
+    def __on_slider_moved(self, low: int, high: int) -> None:
         old = self.__threshold_low, self.__threshold_high
-        self.__threshold_low = value / 100.
-        if value >= high.value():
-            self.__threshold_high = value / 100.
-            high.setSliderPosition(value)
-        new = self.__threshold_low, self.__threshold_high
-        if new != old:
-            self.thresholdsChanged.emit(*new)
-
-    def __on_slider_high_moved(self, value: int) -> None:
-        low = self.slider_low
-        old = self.__threshold_low, self.__threshold_high
-        self.__threshold_high = value / 100.
-        if low.value() >= value:
-            self.__threshold_low = value / 100
-            low.setSliderPosition(value)
+        self.__threshold_low = low / 100.
+        self.__threshold_high = high / 100.
         new = self.__threshold_low, self.__threshold_high
         if new != old:
             self.thresholdsChanged.emit(*new)
@@ -178,18 +140,22 @@ class ColorGradientSelection(QWidget):
         if self.__threshold_low != low or self.__threshold_high != high:
             self.__threshold_high = high
             self.__threshold_low = low
-            self.slider_low.setSliderPosition(int(low * 100))
-            self.slider_high.setSliderPosition(int(high * 100))
+            self.slider.setInterval(int(low * 100), int(high * 100))
             self.thresholdsChanged.emit(high, low)
 
     def __update_center_visibility(self):
-        if self.center_box is None:
-            return
-
         palette = self.currentData()
-        self.center_box.setVisible(
-            isinstance(palette, colorpalettes.Palette)
-            and palette.flags & palette.Flags.Diverging != 0)
+        if self.center_edit is None or \
+                (visible := self.center_edit.parent() is not None) \
+                == bool(isinstance(palette, colorpalettes.Palette)
+                        and palette.flags & palette.Flags.Diverging):
+            return
+        if visible:
+            self.layout().takeRow(1).labelItem.widget().setParent(None)
+            self.center_edit.setParent(None)
+        else:
+            self.layout().insertRow(1, "Center at:", self.center_edit)
+
 
     def center(self) -> float:
         return self.__center

@@ -1,5 +1,3 @@
-from unittest.mock import Mock
-
 import numpy as np
 
 from AnyQt.QtTest import QSignalSpy, QTest
@@ -56,22 +54,14 @@ class TestColorGradientSelection(GuiTest):
         w.adjustSize()
         w.setThresholds(0.5, 0.5)
         changed = QSignalSpy(w.thresholdsChanged)
-        sl, sh = w.slider_low, w.slider_high
-        sl.triggerAction(sl.SliderToMinimum)
+        w.slider.setLow(25)
         self.assertEqual(len(changed), 1)
-        low, high = changed[-1]
-        self.assertLessEqual(low, high)
-        self.assertEqual(low, 0.0)
-        sl.triggerAction(sl.SliderToMaximum)
+        self.assertEqual(changed[-1], [0.25, 0.5])
+        self.assertEqual(w.thresholds(), (0.25, 0.5))
+        w.slider.setHigh(75)
         self.assertEqual(len(changed), 2)
-        low, high = changed[-1]
-        self.assertLessEqual(low, high)
-        self.assertEqual(low, 1.0)
-        sh.triggerAction(sl.SliderToMinimum)
-        self.assertEqual(len(changed), 3)
-        low, high = changed[-1]
-        self.assertLessEqual(low, high)
-        self.assertEqual(high, 0.0)
+        self.assertEqual(changed[-1], [0.25, 0.75])
+        self.assertEqual(w.thresholds(), (0.25, 0.75))
 
     def test_center(self):
         w = ColorGradientSelection(center=42)
@@ -81,7 +71,6 @@ class TestColorGradientSelection(GuiTest):
 
     def test_center_visibility(self):
         w = ColorGradientSelection(center=0)
-        w.center_box.setVisible = Mock()
         model = itemmodels.ContinuousPalettesModel()
         w.setModel(model)
         for row in range(model.rowCount(QModelIndex())):
@@ -93,14 +82,14 @@ class TestColorGradientSelection(GuiTest):
                     nondiverging = row
 
         w.setCurrentIndex(diverging)
-        w.center_box.setVisible.assert_called_with(True)
+        self.assertIsNotNone(w.center_edit.parent())
         w.setCurrentIndex(nondiverging)
-        w.center_box.setVisible.assert_called_with(False)
+        self.assertIsNone(w.center_edit.parent())
         w.setCurrentIndex(diverging)
-        w.center_box.setVisible.assert_called_with(True)
+        self.assertIsNotNone(w.center_edit.parent())
 
         w = ColorGradientSelection()
-        self.assertIsNone(w.center_box)
+        self.assertIsNone(w.center_edit)
 
     def test_center_changed(self):
         w = ColorGradientSelection(center=42)
