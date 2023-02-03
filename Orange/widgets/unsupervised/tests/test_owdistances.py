@@ -1,15 +1,17 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, protected-access
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 
 from Orange import distance
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.misc import DistMatrix
-from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS, \
-    DistanceRunner
+from Orange.widgets.unsupervised.owdistances import OWDistances, \
+    DistanceRunner, MetricDefs, Cosine, Mahalanobis, Jaccard, MetricDef, \
+    ManhattanNormalized, EuclideanNormalized, Manhattan, Spearman, Pearson, \
+    Hamming, SpearmanAbsolute, PearsonAbsolute, Euclidean
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -32,11 +34,12 @@ class TestDistanceRunner(unittest.TestCase):
     def test_run(self):
         state = Mock()
         state.is_interruption_requested = Mock(return_value=False)
-        for name, metric in METRICS:
+        for metricdef in MetricDefs.values():
+            metric = metricdef.metric
             data = self.iris
-            if not metric.supports_missing or name == "Bhattacharyya":
+            if not metric.supports_missing:
                 data = distance.impute(data)
-            elif name == "Jaccard":
+            elif metric == distance.Jaccard:
                 data = self.zoo
 
             # between rows, normalized
@@ -75,27 +78,31 @@ class TestOWDistances(WidgetTest):
         self.titanic = Table("titanic")[::10].copy()
         self.widget = self.create_widget(OWDistances)
 
+    def _select(self, id_):
+        buttons = self.widget.metric_buttons
+        buttons.button(id_).setChecked(True)
+        buttons.idClicked.emit(id_)
+
     def test_distance_combo(self):
         """Check distances when the metric changes"""
-        self.assertEqual(self.widget.metrics_combo.count(), len(METRICS))
         self.send_signal(self.widget.Inputs.data, self.iris)
-        for i, (_, metric) in enumerate(METRICS):
-            self.widget.metrics_combo.activated.emit(i)
-            self.widget.metrics_combo.setCurrentIndex(i)
+        for metricdef in MetricDefs.values():
+            if metricdef.metric is distance.Jaccard:
+                continue
+            self._select(metricdef.id)
             self.wait_until_stop_blocking()
-            if metric.supports_normalization:
-                expected = metric(self.iris, normalize=self.widget.normalized_dist)
-            else:
-                expected = metric(self.iris)
 
-            if metric is not distance.Jaccard:
-                np.testing.assert_array_almost_equal(
-                    expected, self.get_output(self.widget.Outputs.distances))
+            kwargs = dict(normalize=True) if metricdef.normalize else {}
+            expected = metricdef.metric(self.iris, **kwargs)
+
+            np.testing.assert_array_almost_equal(
+                expected, self.get_output(self.widget.Outputs.distances),
+                err_msg=f"at {metricdef.name}")
 
     def test_error_message(self):
         """Check if error message appears and then disappears when
         data is removed from input"""
-        self.widget.metric_idx = 2
+        self._select(Cosine)
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.wait_until_stop_blocking()
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
@@ -106,9 +113,7 @@ class TestOWDistances(WidgetTest):
         self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
 
     def test_jaccard_messages(self):
-        for self.widget.metric_idx, (name, _) in enumerate(METRICS):
-            if name == "Jaccard":
-                break
+        self._select(Jaccard)
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.wait_until_stop_blocking()
         self.assertTrue(self.widget.Error.no_binary_features.is_shown())
@@ -150,35 +155,45 @@ class TestOWDistances(WidgetTest):
         """
         Users sees an error message when calculating too large arrays and Orange
         does not crash.
-        GH-2315
         """
         self.assertEqual(len(self.widget.Error.active), 0)
         self.send_signal(self.widget.Inputs.data, self.iris)
 
-        mock = Mock(side_effect=ValueError)
-        self.widget.compute_distances(mock, self.iris)
-        self.wait_until_finished()
-        self.assertTrue(self.widget.Error.distances_value_error.is_shown())
+        id_ = self.widget.metric_id
+        for exc, err in ((ValueError, self.widget.Error.distances_value_error),
+                         (MemoryError, self.widget.Error.distances_memory_error)
+                         ):
+            with patch.dict(
+                    MetricDefs,
+                    {id_: MetricDef(id_, "", "", Mock(side_effect=exc))}):
+                self.widget.compute_distances(self.iris)
+                self.wait_until_finished()
+                self.assertTrue(err.is_shown(), msg=f"at {exc}")
 
-        mock = Mock(side_effect=MemoryError)
-        self.widget.compute_distances(mock, self.iris)
-        self.wait_until_finished()
-        self.assertEqual(len(self.widget.Error.active), 1)
-        self.assertTrue(self.widget.Error.distances_memory_error.is_shown())
+    def test_migrate_3_to_4(self):
+        settings = {'__version__': 3}
+        w = self.create_widget(
+            OWDistances,
+            stored_settings=dict(metric_idx=0, normalized_dist=True, **settings))
+        self.assertEqual(w.metric_id, EuclideanNormalized)
+        w = self.create_widget(
+            OWDistances,
+            stored_settings=dict(metric_idx=1, normalized_dist=False, **settings))
+        self.assertEqual(w.metric_id, Manhattan)
+        w = self.create_widget(
+            OWDistances,
+            stored_settings=dict(metric_idx=1, normalized_dist=True, **settings))
+        self.assertEqual(w.metric_id, ManhattanNormalized)
 
-    def test_migrates_normalized_dist(self):
-        w = self.create_widget(OWDistances, stored_settings={"metric_idx": 0})
-        self.assertFalse(w.normalized_dist)
-
-    def test_negative_values_bhattacharyya(self):
-        with self.iris.unlocked():
-            self.iris.X[0, 0] *= -1
-        for self.widget.metric_idx, (_, metric) in enumerate(METRICS):
-            if metric == distance.Bhattacharyya:
-                break
-        self.send_signal(self.widget.Inputs.data, self.iris)
-        self.wait_until_finished()
-        self.assertTrue(self.widget.Error.distances_value_error.is_shown())
+        for old, new in ((2, Cosine), (3, Jaccard),
+                         (4, Spearman), (5, SpearmanAbsolute),
+                         (6, Pearson), (7, PearsonAbsolute),
+                         (8, Hamming), (9, Mahalanobis),
+                         (10, Euclidean)):
+            settings = dict(metric_idx=old, __version__=3)
+            w = self.create_widget(OWDistances, stored_settings=settings)
+            self.assertEqual(w.metric_id, new,
+                             msg=f"at {old} to {MetricDefs[new].name}")
 
     def test_limit_mahalanobis(self):
         def assert_error_shown():
@@ -192,13 +207,7 @@ class TestOWDistances(WidgetTest):
         widget = self.widget
         axis_buttons = widget.controls.axis.buttons
 
-        self.assertEqual(widget.metrics_combo.count(), len(METRICS))
-        for i, (_, metric) in enumerate(METRICS):
-            if metric == distance.Mahalanobis:
-                widget.metrics_combo.setCurrentIndex(i)
-                widget.metrics_combo.activated.emit(i)
-                break
-
+        self._select(Mahalanobis)
         X = np.random.random((1010, 4))
         bigrows = Table.from_numpy(Domain(self.iris.domain.attributes), X)
         bigcols = Table.from_numpy(
@@ -237,9 +246,7 @@ class TestOWDistances(WidgetTest):
                    [],
                    domain.attributes[-1:])
         )
-        for self.widget.metric_idx, (_, metric) in enumerate(METRICS):
-            if metric == distance.Cosine:
-                break
+        self._select(Cosine)
         self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_finished()
         out = self.get_output(self.widget.Outputs.distances)
@@ -249,9 +256,7 @@ class TestOWDistances(WidgetTest):
                          (domain.attributes[-1], domain.class_var))
 
     def test_non_binary_in_metas(self):
-        for self.widget.metric_idx, (_, metric) in enumerate(METRICS):
-            if metric == distance.Jaccard:
-                break
+        self._select(Jaccard)
         zoo = Table("zoo")[:20]
         self.send_signal(self.widget.Inputs.data, zoo)
         self.wait_until_finished()
