@@ -3,6 +3,7 @@ from html import escape
 
 from AnyQt.QtCore import Qt
 
+from Orange.widgets.utils.localization import pl
 from orangewidget.utils.signals import summarize, PartialSummary
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.tableview import TableView
@@ -60,10 +61,6 @@ def format_variables_string(variables):
     return var_string
 
 
-def _plural(number):
-    return 's' * (number % 100 != 1)
-
-
 # `format` is a good name for the argument, pylint: disable=redefined-builtin
 def format_summary_details(data, format=Qt.PlainText):
     """
@@ -84,10 +81,6 @@ def format_summary_details(data, format=Qt.PlainText):
         def b(s):
             return f"<b>{s}</b>"
 
-    features = format_variables_string(data.domain.attributes)
-    targets = format_variables_string(data.domain.class_vars)
-    metas = format_variables_string(data.domain.metas)
-
     features_missing = ""
     if data.X.size < COMPUTE_NANS_LIMIT:
         features_missing = missing_values(data.get_nan_frequency_attribute())
@@ -95,29 +88,39 @@ def format_summary_details(data, format=Qt.PlainText):
     name = getattr(data, "name", None)
     if name == "untitled":
         name = None
-    basic = f'{len(data):n} instance{_plural(len(data))}, ' \
-            f'{n_features} variable{_plural(n_features)}'
+
+    basic = f'{len(data):n} {pl(len(data), "instance")}, ' \
+            f'{n_features} {pl(n_features, "variable")}'
+
+    features = format_variables_string(data.domain.attributes)
+    features = f'Features: {features} {features_missing}'
+
+    targets = format_variables_string(data.domain.class_vars)
+    targets = f'Target: {targets}'
+
+    metas = format_variables_string(data.domain.metas)
+    metas = f'Metas: {metas}'
 
     if format == Qt.PlainText:
-        details = \
-            (f"{name}: " if name else "") + basic \
-            + f'\nFeatures: {features} {features_missing}' \
-            + f'\nTarget: {targets}'
+        details = ""
+        if name:
+            details += f"{name}: "
+        details += f"{basic}\n{features}\n{targets}"
         if data.domain.metas:
-            details += f'\nMetas: {metas}'
+            details += f"\n{metas}"
     else:
         descs = []
         if name:
             descs.append(_nobr(f"<b><u>{escape(name)}</u></b>: {basic}"))
         else:
-            descs.append(_nobr(f'{basic}'))
+            descs.append(_nobr(basic))
 
         if data.domain.variables:
-            descs.append(_nobr(f'Features: {features} {features_missing}'))
+            descs.append(_nobr(features))
         if data.domain.class_vars:
-            descs.append(_nobr(f"Target: {targets}"))
+            descs.append(_nobr(targets))
         if data.domain.metas:
-            descs.append(_nobr(f"Metas: {metas}"))
+            descs.append(_nobr(metas))
 
         details = '<br/>'.join(descs)
 
@@ -218,8 +221,8 @@ def summarize_(matrix: DistMatrix):  # pylint: disable=function-redefined
 def summarize_(results: Results):  # pylint: disable=function-redefined
     nmethods, ninstances = results.predicted.shape
     summary = f"{nmethods}×{ninstances}"
-    details = f"{nmethods} method{_plural(nmethods)} " \
-              f"on {ninstances} test instance{_plural(ninstances)}"
+    details = f"{nmethods} {pl(nmethods, 'method')} " \
+              f"on {ninstances} test {pl(ninstances, 'instance')}"
     return PartialSummary(summary, _nobr(details))
 
 
