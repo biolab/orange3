@@ -29,6 +29,7 @@ from Orange.widgets.settings import (
     ContextSetting, DomainContextHandler, Setting
 )
 from Orange.widgets.unsupervised.owdistances import InterruptException
+from Orange.widgets.utils import enum2int
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.itemmodels import VariableListModel
@@ -226,10 +227,10 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
     nSelected = ContextSetting(5)
     auto_apply = Setting(True)
 
-    sorting = Setting((0, Qt.DescendingOrder))
+    sorting = Setting((0, enum2int(Qt.DescendingOrder)))
     selected_methods = Setting(set())
 
-    settings_version = 3
+    settings_version = 4
     settingsHandler = DomainContextHandler()
     selected_attrs = ContextSetting([], schema_only=True)
     selectionMethod = ContextSetting(SelectNBest)
@@ -496,9 +497,11 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
             sort_column, sort_order = self.sorting
             if sort_column < len(labels):
                 # adds 2 to skip the first two columns
-                self.ranksModel.sort(sort_column + 2, sort_order)
+                # Qt.SortOrder is Enum in PyQt6 and int-like object in PyQt5
+                # in both cases Qt.SortOrder transforms int sort_order to required type
+                self.ranksModel.sort(sort_column + 2, Qt.SortOrder(sort_order))
                 self.ranksView.horizontalHeader().setSortIndicator(
-                    sort_column + 2, sort_order
+                    sort_column + 2, Qt.SortOrder(sort_order)
                 )
         except ValueError:
             pass
@@ -561,7 +564,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
             self.autoSelection()
 
         # Store the header states
-        sort_order = self.ranksModel.sortOrder()
+        sort_order = enum2int(self.ranksModel.sortOrder())
         sort_column = self.ranksModel.sortColumn() - 2  # -2 for name and '#' columns
         self.sorting = (sort_column, sort_order)
 
@@ -639,6 +642,12 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
                 hview.restoreState(headerState)
                 column, order = hview.sortIndicatorSection() - 1, hview.sortIndicatorOrder()
             settings["sorting"] = (column, order)
+
+        # before we saved sort order as Qt.SortOrder object, now it is integer
+        # help users with SortOrder as setting migrate to int setting
+        if "sorting" in settings:
+            column, order = settings["sorting"]
+            settings["sorting"] = (column, enum2int(order))
 
     @classmethod
     def migrate_context(cls, context, version):
