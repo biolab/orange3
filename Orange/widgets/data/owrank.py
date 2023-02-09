@@ -230,7 +230,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
     sorting = Setting((0, enum2int(Qt.DescendingOrder)))
     selected_methods = Setting(set())
 
-    settings_version = 3
+    settings_version = 4
     settingsHandler = DomainContextHandler()
     selected_attrs = ContextSetting([], schema_only=True)
     selectionMethod = ContextSetting(SelectNBest)
