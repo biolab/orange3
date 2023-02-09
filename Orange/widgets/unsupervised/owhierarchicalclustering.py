@@ -10,7 +10,8 @@ from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsScene, QGridLayout, QSizePolicy,
     QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent, QLabel
 )
-from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath, QColor
+from AnyQt.QtGui import (QPen, QFont, QKeySequence, QPainterPath, QColor,
+    QFontMetrics)
 from AnyQt.QtCore import (
     Qt, QObject, QSize, QPointF, QRectF, QLineF, QEvent, QModelIndex
 )
@@ -248,6 +249,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._displayed_root = None
         self.cutoff_height = 0.0
 
+        spin_width = QFontMetrics(self.font()).horizontalAdvance("M" * 7)
         gui.comboBox(
             self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
             callback=self._invalidate_clustering)
@@ -305,9 +307,12 @@ class OWHierarchicalClustering(widget.OWWidget):
         )
         self.max_depth_spin = gui.spin(
             box, self, "max_depth", minv=1, maxv=100,
-            callback=self._invalidate_pruning,
+            controlWidth=spin_width, alignment=Qt.AlignRight,
+            callback=self._max_depth_changed,
             keyboardTracking=False, addToLayout=False
         )
+        self.max_depth_spin.lineEdit().returnPressed.connect(
+            self._max_depth_return)
 
         grid.addWidget(
             gui.appendRadioButton(box, "Max depth:", addToLayout=False),
@@ -333,10 +338,13 @@ class OWHierarchicalClustering(widget.OWWidget):
         )
         self.cut_ratio_spin = gui.spin(
             self.selection_box, self, "cut_ratio", 0, 100, step=1e-1,
-            spinType=float, callback=self._selection_method_changed,
+            controlWidth=spin_width, alignment = Qt.AlignRight,
+            spinType=float, callback=self._cut_ratio_changed,
             addToLayout=False
         )
-        self.cut_ratio_spin.setSuffix("%")
+        self.cut_ratio_spin.setSuffix(" %")
+        self.cut_ratio_spin.lineEdit().returnPressed.connect(
+            self._cut_ratio_return)
 
         grid.addWidget(self.cut_ratio_spin, 1, 1)
 
@@ -345,9 +353,11 @@ class OWHierarchicalClustering(widget.OWWidget):
                 self.selection_box, "Top N:", addToLayout=False),
             2, 0
         )
-        self.top_n_spin = gui.spin(self.selection_box, self, "top_n", 1, 20,
-                                   callback=self._selection_method_changed,
-                                   addToLayout=False)
+        self.top_n_spin = gui.spin(
+            self.selection_box, self, "top_n", 1, 20,
+            controlWidth=spin_width, alignment=Qt.AlignRight,
+            callback=self._top_n_changed, addToLayout=False)
+        self.top_n_spin.lineEdit().returnPressed.connect(self._top_n_return)
         grid.addWidget(self.top_n_spin, 2, 1)
 
         self.zoom_slider = gui.hSlider(
@@ -713,6 +723,15 @@ class OWHierarchicalClustering(widget.OWWidget):
         finally:
             self.dendrogram.selectionChanged.connect(self._invalidate_output)
 
+    def _max_depth_return(self):
+        if self.pruning != 1:
+            self.pruning = 1
+            self._invalidate_pruning()
+
+    def _max_depth_changed(self):
+        self.pruning = 1
+        self._invalidate_pruning()
+
     def _invalidate_clustering(self):
         self._update()
         self._update_labels()
@@ -894,6 +913,24 @@ class OWHierarchicalClustering(widget.OWWidget):
         if root:
             clusters = clusters_at_height(root, height)
             self.dendrogram.set_selected_clusters(clusters)
+
+    def _cut_ratio_changed(self):
+        self.selection_method = 1
+        self._selection_method_changed()
+
+    def _cut_ratio_return(self):
+        if self.selection_method != 1:
+            self.selection_method = 1
+            self._selection_method_changed()
+
+    def _top_n_changed(self):
+        self.selection_method = 2
+        self._selection_method_changed()
+
+    def _top_n_return(self):
+        if self.selection_method != 2:
+            self.selection_method = 2
+            self._selection_method_changed()
 
     def _selection_method_changed(self):
         self._set_cut_line_visible(self.selection_method == 1)
