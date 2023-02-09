@@ -352,7 +352,8 @@ class OWBoxPlot(widget.OWWidget):
             sample_at = 1000
             if isinstance(self.dataset, DaskTable) and \
                     len(self.dataset) > sample_at:
-                rows = np.random.choice(len(self.dataset), size=sample_at, replace=False)
+                rng = np.random.default_rng(seed=42)
+                rows = rng.choice(len(self.dataset), size=sample_at, replace=False)
                 self.sample = self.dataset[rows]
                 self.sample = self.sample.compute()
             self.reset_attrs()
