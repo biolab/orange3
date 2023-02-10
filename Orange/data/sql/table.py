@@ -654,3 +654,19 @@ class SqlTable(Table):
 
     def checksum(self, include_metas=True):
         return np.nan
+
+    def __get_nan_frequency(self, columns):
+        nans = 0
+        for column in columns:
+            col_field = column.to_sql()
+            query = self._sql_query(["COUNT(*)"],
+                                    filters=[f"{col_field} IS NULL OR {col_field} = 'NaN'"])
+            with self.backend.execute_sql_query(query) as get_nans:
+                nans += get_nans.fetchall()[0][0]
+        return nans / (len(self) * len(columns))
+
+    def get_nan_frequency_attribute(self):
+        return self.__get_nan_frequency(self.domain.attributes)
+
+    def get_nan_frequency_class(self):
+        return self.__get_nan_frequency(self.domain.class_vars)

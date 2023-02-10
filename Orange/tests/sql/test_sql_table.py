@@ -764,6 +764,20 @@ class TestSqlTable(unittest.TestCase, dbt):
             with self.backend.execute_sql_query("DROP SCHEMA IF EXISTS orange_tests CASCADE"):
                 pass
 
+    @dbt.run_on(["postgres"])
+    def test_nan_frequency(self):
+        ar = np.random.random((4, 3))
+        ar[:2, 1:] = np.nan
+        conn, table_name = self.create_sql_table(ar)
+
+        table = SqlTable(conn, table_name, inspect_values=False)
+        table.domain = Domain(table.domain.attributes[:-1],
+                              table.domain.attributes[-1])
+        self.assertEqual(table.get_nan_frequency_class(), 0.5)
+        self.assertEqual(table.get_nan_frequency_attribute(), 0.25)
+
+        self.drop_sql_table(table_name)
+
     def assertFirstAttrIsInstance(self, table, variable_type):
         self.assertGreater(len(table.domain.variables), 0)
         attr = table.domain[0]
