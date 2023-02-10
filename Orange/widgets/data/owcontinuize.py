@@ -75,6 +75,9 @@ DiscreteOptions: Dict[int, MethodDesc] = {
             "Same as above, but scaled to [0, 1]")
     )}
 
+ContinuizationDefault = Continuize.FirstAsBase
+
+
 Normalize = SimpleNamespace(Default=DefaultId,
                             Leave=0, Standardize=1, Center=2, Scale=3,
                             Normalize11=4, Normalize01=5)
@@ -108,6 +111,8 @@ ContinuousOptions: Dict[int, MethodDesc] = {
             "Linear transformation into interval [0, 1]",
             False),
     )}
+
+NormalizationDefault = Normalize.Leave
 
 
 class ContDomainModel(DomainModel):
@@ -289,9 +294,9 @@ class OWContinuize(widget.OWWidget):
 
     settings_version = 3
     disc_var_hints: Dict[str, int] = Setting(
-        {DefaultKey: Continuize.FirstAsBase}, schema_only=True)
+        {DefaultKey: ContinuizationDefault}, schema_only=True)
     cont_var_hints: Dict[str, int] = Setting(
-        {DefaultKey: Normalize.Leave}, schema_only=True)
+        {DefaultKey: NormalizationDefault}, schema_only=True)
     autosend = Setting(True)
 
     def __init__(self):
@@ -343,6 +348,9 @@ class OWContinuize(widget.OWWidget):
         box = self.class_box = gui.hBox(self.mainArea)
 
         box = gui.hBox(self.mainArea)
+        gui.button(
+            box, self, "Reset All", callback=self._on_reset_hints,
+            autoDefault=False)
         gui.rubber(box)
         gui.auto_apply(box, self, "autosend")
 
@@ -482,6 +490,19 @@ class OWContinuize(widget.OWWidget):
                     Qt.UserRole)
             hints.clear()
             hints.update(filtered)
+
+    def _on_reset_hints(self):
+        if not self.data:
+            return
+        self.cont_var_hints.clear()
+        self.disc_var_hints.clear()
+        self.disc_var_hints[DefaultKey] = ContinuizationDefault
+        self.cont_var_hints[DefaultKey] = NormalizationDefault
+        self._set_hints()
+        self.cont_view.set_default_method(
+            ContinuousOptions[ContinuizationDefault].short_desc)
+        self.disc_view.set_default_method(
+            ContinuousOptions[NormalizationDefault].short_desc)
 
     @gui.deferred
     def commit(self):
