@@ -82,7 +82,7 @@ def format_summary_details(data, format=Qt.PlainText):
             return f"<b>{s}</b>"
 
     features_missing = ""
-    if data.X.size < COMPUTE_NANS_LIMIT:
+    if len(data) * len(data.domain.attributes) < COMPUTE_NANS_LIMIT:
         features_missing = missing_values(data.get_nan_frequency_attribute())
     n_features = len(data.domain.variables) + len(data.domain.metas)
     name = getattr(data, "name", None)
