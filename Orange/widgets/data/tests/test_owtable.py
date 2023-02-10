@@ -1,17 +1,14 @@
 # pylint: disable=protected-access
 import unittest
+from unittest.mock import patch
 
-
-from unittest.mock import Mock, patch
 from AnyQt.QtCore import Qt
 
 from orangewidget.tests.utils import excepthook_catch
-from orangewidget.widget import StateInfo
 
 from Orange.widgets.data.owtable import OWDataTable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.data import Table, Domain
-from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.data.sql.table import SqlTable
 from Orange.tests.sql.base import DataBaseTest as dbt
 
@@ -27,16 +24,16 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         cls.signal_data = cls.data  # pylint: disable=no-member
 
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWDataTable)
 
     def test_input_data(self):
-        """Check number of tabs with data on the input"""
-        self.send_signal(self.widget.Inputs.data, self.data, 1)
-        self.assertEqual(self.widget.tabs.count(), 1)
-        self.send_signal(self.widget.Inputs.data, self.data, 2)
-        self.assertEqual(self.widget.tabs.count(), 2)
-        self.send_signal(self.widget.Inputs.data, None, 1)
-        self.assertEqual(self.widget.tabs.count(), 1)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertIs(self.widget.input.table, self.data)
+        self.assertIs(self.widget.view.model().source, self.data)
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertIsNone(self.widget.input)
+        self.assertIsNone(self.widget.view.model())
 
     def test_input_data_empty(self):
         self.send_signal(self.widget.Inputs.data, self.data[:0])
@@ -45,9 +42,8 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(len(output), 0)
 
     def test_data_model(self):
-        self.send_signal(self.widget.Inputs.data, self.data, 1)
-        self.assertEqual(self.widget.tabs.widget(0).model().rowCount(),
-                         len(self.data))
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertEqual(self.widget.view.model().rowCount(), len(self.data))
 
     def test_reset_select(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -69,11 +65,8 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         new_domain.metas[0].attributes = {"c": "foo"}
         new_domain.attributes[0].attributes = {"a": "bar", "c": "baz"}
         new_domain.class_var.attributes = {"b": "foo"}
-        self.widget.set_corner_text = Mock()
         self.send_signal(self.widget.Inputs.data, self.data.transform(new_domain))
-        # false positive, pylint: disable=unsubscriptable-object
-        self.assertEqual(
-            self.widget.set_corner_text.call_args[0][1], "\na\nb\nc")
+        self.assertEqual(self.widget.view.cornerText(), "\na\nb\nc")
 
     def test_unconditional_commit_on_new_signal(self):
         with patch.object(self.widget.commit, 'now') as commit:
@@ -86,8 +79,8 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         widget = self.create_widget(OWDataTable, stored_settings=dict(
             selected_rows=[5, 6, 7, 8, 9],
             selected_cols=list(range(len(self.data.domain.variables)))))
-        self.send_signal(widget.Inputs.data, None, 1)
-        self.send_signal(widget.Inputs.data, self.data, 1)
+        self.send_signal(widget.Inputs.data, None)
+        self.send_signal(widget.Inputs.data, self.data)
         output = self.get_output(widget.Outputs.selected_data)
         self.assertEqual(5, len(output))
 
@@ -101,7 +94,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         output = output.get_column(0)
         output_original = output.tolist()
 
-        self.widget.tabs.currentWidget().sortByColumn(1, Qt.AscendingOrder)
+        self.widget.view.sortByColumn(1, Qt.AscendingOrder)
 
         output = self.get_output(self.widget.Outputs.selected_data)
         output = output.get_column(0)
@@ -114,37 +107,6 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(sorted(output_original) == output_sorted)
         self.assertTrue(sorted(output_sorted) == output_sorted)
 
-    def test_summary(self):
-        """Check if status bar is updated when data is received"""
-        info = self.widget.info
-        no_input, no_output = "No data on input", "No data on output"
-
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-        self.assertIsInstance(info._StateInfo__output_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__output_summary.details, no_output)
-
-        data = Table("zoo")
-        self.send_signal(self.widget.Inputs.data, data, 1)
-        summary, details = f"{len(data)}", format_summary_details(data)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-
-        data = self.data
-        self.send_signal(self.widget.Inputs.data, data, 2)
-        summary, details = f"{len(data)}", format_summary_details(data)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None, 1)
-        summary, details = f"{len(data)}", format_summary_details(data)
-        self.assertEqual(info._StateInfo__input_summary.brief, summary)
-        self.assertEqual(info._StateInfo__input_summary.details, details)
-
-        self.send_signal(self.widget.Inputs.data, None, 2)
-        self.assertIsInstance(info._StateInfo__input_summary, StateInfo.Empty)
-        self.assertEqual(info._StateInfo__input_summary.details, no_input)
-
     def test_info(self):
         info_text = self.widget.info_text
         no_input = "No data."
@@ -152,7 +114,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
 
     def test_show_distributions(self):
         w = self.widget
-        self.send_signal(w.Inputs.data, self.data, 0)
+        self.send_signal(w.Inputs.data, self.data)
         # run through the delegate paint routines
         with excepthook_catch():
             w.grab()
@@ -166,7 +128,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
 
     def test_whole_rows(self):
         w = self.widget
-        self.send_signal(w.Inputs.data, self.data, 0)
+        self.send_signal(w.Inputs.data, self.data)
         self.assertTrue(w.select_rows)  # default value
         with excepthook_catch():
             w.controls.select_rows.toggle()
@@ -181,42 +143,18 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
             w.controls.select_rows.toggle()
         out = self.get_output(w.Outputs.selected_data)
         self.assertTrue(w.select_rows)
-        self.assertEqual(out.domain,
-                         self.data.domain)
+        self.assertEqual(out.domain, self.data.domain)
 
     def test_show_attribute_labels(self):
         w = self.widget
-        self.send_signal(w.Inputs.data, self.data, 0)
+        self.send_signal(w.Inputs.data, self.data)
         self.assertTrue(w.show_attribute_labels)  # default value
         with excepthook_catch():
             w.controls.show_attribute_labels.toggle()
         self.assertFalse(w.show_attribute_labels)
 
-    def test_deprecate_multiple_inputs(self):
-        w = self.widget
-        self.assertFalse(w.Warning.multiple_inputs.is_shown())
-        self.send_signal(w.Inputs.data, self.data, 0)
-        self.assertFalse(w.Warning.multiple_inputs.is_shown())
-        self.send_signal(w.Inputs.data, self.data, 0)
-        self.assertFalse(w.Warning.multiple_inputs.is_shown())
-        self.send_signal(w.Inputs.data, self.data, 1)
-        self.assertTrue(w.Warning.multiple_inputs.is_shown())
-        self.send_signal(w.Inputs.data, self.data, 2)
-        self.assertTrue(w.Warning.multiple_inputs.is_shown())
-        self.send_signal(w.Inputs.data, None, 1)
-        self.assertTrue(w.Warning.multiple_inputs.is_shown())
-        self.send_signal(w.Inputs.data, None, 0)
-        self.assertFalse(w.Warning.multiple_inputs.is_shown())
-        self.send_signal(w.Inputs.data, None, 2)
-        self.assertFalse(w.Warning.multiple_inputs.is_shown())
-
 
 class TestOWDataTableSQL(TestOWDataTable, dbt):
-    def setUp(self):
-        super().setUp()
-        self._set_input_summary = self.widget._set_input_summary
-        self.widget._set_input_summary = Mock()
-
     def setUpDB(self):
         # pylint: disable=attribute-defined-outside-init
         conn, iris = self.create_iris_sql_table()
@@ -259,12 +197,6 @@ class TestOWDataTableSQL(TestOWDataTable, dbt):
     def test_sorting(self):
         super().test_sorting()
 
-    @dbt.run_on(["postgres", "mssql"])
-    def test_summary(self):
-        self.widget._set_input_summary = self._set_input_summary
-        super().test_summary()
-        self.widget._set_input_summary = Mock()
-
     @unittest.skip("does nothing")
     def test_info(self):
         super().test_info()
@@ -280,10 +212,6 @@ class TestOWDataTableSQL(TestOWDataTable, dbt):
     @dbt.run_on(["postgres", "mssql"])
     def test_show_attribute_labels(self):
         super().test_show_distributions()
-
-    @dbt.run_on(["postgres", "mssql"])
-    def test_deprecate_multiple_inputs(self):
-        super().test_deprecate_multiple_inputs()
 
 
 if __name__ == "__main__":
