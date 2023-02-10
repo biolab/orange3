@@ -6,8 +6,6 @@ import concurrent.futures
 from collections import namedtuple
 from typing import List, Optional
 
-from math import isnan
-
 import numpy
 from scipy.sparse import issparse
 
@@ -18,7 +16,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
     Qt, QSize, QEvent, QObject, QMetaObject,
-    QAbstractProxyModel, QIdentityProxyModel, QModelIndex,
+    QAbstractProxyModel,
     QItemSelectionModel, QItemSelection, QItemSelectionRange,
 )
 from AnyQt.QtCore import pyqtSlot as Slot
@@ -31,6 +29,7 @@ from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.data.utils.models import TableSliceProxy, RichTableModel
 from Orange.widgets.utils.itemdelegates import TableDataDelegate
 from Orange.widgets.utils.itemselectionmodel import (
     BlockSelectionModel, ranges, selection_blocks
@@ -45,124 +44,6 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.state_summary import format_summary_details
-
-
-class RichTableModel(TableModel):
-    """A TableModel with some extra bells and whistles/
-
-    (adds support for gui.BarRole, include variable labels and icons
-    in the header)
-    """
-    #: Rich header data flags.
-    Name, Labels, Icon = 1, 2, 4
-
-    def __init__(self, sourcedata, parent=None):
-        super().__init__(sourcedata, parent)
-
-        self._header_flags = RichTableModel.Name
-        self._continuous = [var.is_continuous for var in self.vars]
-        labels = []
-        for var in self.vars:
-            if isinstance(var, Orange.data.Variable):
-                labels.extend(var.attributes.keys())
-        self._labels = list(sorted(
-            {label for label in labels if not label.startswith("_")}))
-
-    def data(self, index, role=Qt.DisplayRole,
-             # for faster local lookup
-             _BarRole=gui.TableBarItem.BarRole):
-        # pylint: disable=arguments-differ
-        if role == _BarRole and self._continuous[index.column()]:
-            val = super().data(index, TableModel.ValueRole)
-            if val is None or isnan(val):
-                return None
-
-            dist = super().data(index, TableModel.VariableStatsRole)
-            if dist is not None and dist.max > dist.min:
-                return (val - dist.min) / (dist.max - dist.min)
-            else:
-                return None
-        elif role == Qt.TextAlignmentRole and self._continuous[index.column()]:
-            return Qt.AlignRight | Qt.AlignVCenter
-        else:
-            return super().data(index, role)
-
-    def headerData(self, section, orientation, role):
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            var = super().headerData(
-                section, orientation, TableModel.VariableRole)
-            if var is None:
-                return super().headerData(
-                    section, orientation, Qt.DisplayRole)
-
-            lines = []
-            if self._header_flags & RichTableModel.Name:
-                lines.append(var.name)
-            if self._header_flags & RichTableModel.Labels:
-                lines.extend(str(var.attributes.get(label, ""))
-                             for label in self._labels)
-            return "\n".join(lines)
-        elif orientation == Qt.Horizontal and role == Qt.DecorationRole and \
-                self._header_flags & RichTableModel.Icon:
-            var = super().headerData(
-                section, orientation, TableModel.VariableRole)
-            if var is not None:
-                return gui.attributeIconDict[var]
-            else:
-                return None
-        else:
-            return super().headerData(section, orientation, role)
-
-    def setRichHeaderFlags(self, flags):
-        if flags != self._header_flags:
-            self._header_flags = flags
-            self.headerDataChanged.emit(
-                Qt.Horizontal, 0, self.columnCount() - 1)
-
-    def richHeaderFlags(self):
-        return self._header_flags
-
-
-class TableSliceProxy(QIdentityProxyModel):
-    def __init__(self, parent=None, rowSlice=slice(0, -1), **kwargs):
-        super().__init__(parent, **kwargs)
-        self.__rowslice = rowSlice
-
-    def setRowSlice(self, rowslice):
-        if rowslice.step is not None and rowslice.step != 1:
-            raise ValueError("invalid stride")
-
-        if self.__rowslice != rowslice:
-            self.beginResetModel()
-            self.__rowslice = rowslice
-            self.endResetModel()
-
-    def mapToSource(self, proxyindex):
-        model = self.sourceModel()
-        if model is None or not proxyindex.isValid():
-            return QModelIndex()
-
-        row, col = proxyindex.row(), proxyindex.column()
-        row = row + self.__rowslice.start
-        assert 0 <= row < model.rowCount()
-        return model.createIndex(row, col, proxyindex.internalPointer())
-
-    def mapFromSource(self, sourceindex):
-        model = self.sourceModel()
-        if model is None or not sourceindex.isValid():
-            return QModelIndex()
-        row, col = sourceindex.row(), sourceindex.column()
-        row = row - self.__rowslice.start
-        assert 0 <= row < self.rowCount()
-        return self.createIndex(row, col, sourceindex.internalPointer())
-
-    def rowCount(self, parent=QModelIndex()):
-        if parent.isValid():
-            return 0
-        count = super().rowCount()
-        start, stop, step = self.__rowslice.indices(count)
-        assert step == 1
-        return stop - start
 
 
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
