@@ -1015,6 +1015,20 @@ class TestReinterpretTransforms(TestCase):
         v = apply_transform(domain.metas[0],table, [])
         self.assertIs(v, domain.metas[0])
 
+    def test_to_time_variable(self):
+        table = self.data
+        tr = AsTime()
+        dtr = []
+        for v in table.domain:
+            strp = StrpTime("Detect automatically", None, 1, 1)
+            vtr = apply_transform_var(
+                apply_reinterpret(v, tr, table_column_data(table, v)), [strp]
+            )
+            dtr.append(vtr)
+        ttable = table.transform(Domain([], metas=dtr))
+        for var in ttable.domain:
+            self.assertTrue(var.have_date or var.have_time)
+
 
 class TestUtils(TestCase):
     def test_mapper(self):
