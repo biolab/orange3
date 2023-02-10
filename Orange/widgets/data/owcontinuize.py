@@ -126,6 +126,8 @@ class ContDomainModel(DomainModel):
             valid_types=(valid_type, ), strict_type=True)
 
     def data(self, index, role=Qt.DisplayRole):
+        if role == Qt.ToolTipRole:
+            return None
         if role == self.FilterRole:
             name = super().data(index, Qt.DisplayRole)
             if not isinstance(name, str):
@@ -259,9 +261,12 @@ class ListViewSearch(listview.ListViewSearch):
         margins.setTop(def_height + 2 + src_height)
         self.setViewportMargins(margins)
 
-    def enterEvent(self, _):
-        self.itemDelegate().set_default_hints(True)
-        self.viewport().update()
+    def event(self, ev):
+        if ev.type() == ev.ToolTip:
+            self.itemDelegate().set_default_hints(True)
+            self.viewport().update()
+            return True
+        return super().event(ev)
 
     def leaveEvent(self, _):
         self.itemDelegate().set_default_hints(False)
