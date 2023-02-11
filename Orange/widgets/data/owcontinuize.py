@@ -116,7 +116,8 @@ NormalizationDefault = Normalize.Leave
 
 
 class ContDomainModel(DomainModel):
-    FilterRole = Qt.UserRole + 2
+    HintRole = next(gui.OrangeUserRole)
+    FilterRole = next(gui.OrangeUserRole)
     """Domain model that adds description of chosen methods"""
     def __init__(self, valid_type):
         super().__init__(
@@ -132,13 +133,15 @@ class ContDomainModel(DomainModel):
             name = super().data(index, Qt.DisplayRole)
             if not isinstance(name, str):
                 return None
-            hint = index.data(Qt.UserRole)
+            hint = index.data(self.HintRole)
             if hint is None:
                 return name
             return f"{name} {hint[0]}"
         value = super().data(index, role)
-        if role == Qt.DisplayRole and not isinstance(value, LabelledSeparator):
-            return value, *index.data(Qt.UserRole)
+        if role == Qt.DisplayRole:
+            if isinstance(value, LabelledSeparator):
+                return None
+            return value, *(index.data(self.HintRole) or ("", False))
         return value
 
 
@@ -198,14 +201,14 @@ class ListViewSearch(listview.ListViewSearch):
 
         def initStyleOption(self, option, index):
             super().initStyleOption(option, index)
-            hint = index.data(Qt.UserRole)
+            hint = index.data(ContDomainModel.HintRole)
             option.font.setBold(hint is not None and hint[1])
 
         def set_default_hints(self, show):
             self._default_hints = show
 
         def displayText(self, value, _):
-            if isinstance(value, LabelledSeparator):
+            if value is None:
                 return None
             name, hint, nondefault = value
             if self._default_hints or nondefault:
@@ -453,7 +456,7 @@ class OWContinuize(widget.OWWidget):
             desc = methods[method_id].short_desc
             for index, var in zip(indexes, selvars):
                 show = method_id != self.default_for_var(var)
-                model.setData(index, (desc, show), Qt.UserRole)
+                model.setData(index, (desc, show), model.HintRole)
         self.commit.deferred()
 
     @Inputs.data
@@ -492,7 +495,7 @@ class OWContinuize(widget.OWWidget):
                 model.setData(
                     model.index(i, 0),
                     (options[method_id].short_desc, nondefault),
-                    Qt.UserRole)
+                    model.HintRole)
             hints.clear()
             hints.update(filtered)
 

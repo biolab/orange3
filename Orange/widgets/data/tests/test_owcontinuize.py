@@ -11,8 +11,9 @@ from orangewidget.tests.base import GuiTest
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.widgets.data.owcontinuize import OWContinuize, DefaultKey, \
     ContinuousOptions, Normalize, Continuize, DiscreteOptions, ContDomainModel, \
-    DefaultContModel
+    DefaultContModel, ListViewSearch
 from Orange.widgets.tests.base import WidgetTest
+from orangewidget.utils.itemmodels import SeparatedListDelegate
 
 
 class TestOWContinuize(WidgetTest):
@@ -254,11 +255,11 @@ class TestOWContinuize(WidgetTest):
         self.send_signal(w.Inputs.data, data)
 
         model = w.cont_view.model()
-        self.assertIsNone(model.index(0, 0).data(Qt.UserRole))
-        self.assertEqual(model.index(1, 0).data(Qt.UserRole),
-                         ContinuousOptions[Normalize.Leave].short_desc)
-        self.assertEqual(model.index(5, 0).data(Qt.UserRole),
-                         ContinuousOptions[Normalize.Normalize11].short_desc)
+        self.assertEqual(model.index(0, 0).data(model.HintRole), ("preset", False))
+        self.assertEqual(model.index(1, 0).data(model.HintRole),
+                         (ContinuousOptions[Normalize.Leave].short_desc, True))
+        self.assertEqual(model.index(5, 0).data(model.HintRole),
+                         (ContinuousOptions[Normalize.Normalize11].short_desc, True))
         self.assertNotIn("x", w.cont_var_hints)
 
     def test_change_hints_disc(self):
@@ -274,8 +275,8 @@ class TestOWContinuize(WidgetTest):
 
         self.send_signal(w.Inputs.data, Table("heart_disease"))
         self.assertEqual(
-            dmod.index(3, 0).data(Qt.UserRole),
-            DiscreteOptions[Continuize.Remove].short_desc)
+            dmod.index(3, 0).data(dmod.HintRole),
+            (DiscreteOptions[Continuize.Remove].short_desc, True))
 
         dselmod.select(dmod.index(1, 0), QItemSelectionModel.ClearAndSelect)  # chest pain
         dselmod.select(dmod.index(4, 0), QItemSelectionModel.Select)  # exerc ind ang
@@ -295,10 +296,10 @@ class TestOWContinuize(WidgetTest):
         self.assertFalse("gender" in w.disc_var_hints)
         self.assertEqual(w.disc_var_hints["rest ECG"], Continuize.Remove)
 
-        self.assertIsNone(dmod.index(0, 0).data(Qt.UserRole))
+        self.assertEqual(dmod.index(0, 0).data(dmod.HintRole), ("preset", False))
         self.assertEqual(
-            dmod.index(3, 0).data(Qt.UserRole),
-            DiscreteOptions[Continuize.Remove].short_desc)
+            dmod.index(3, 0).data(dmod.HintRole),
+            (DiscreteOptions[Continuize.Remove].short_desc, True))
 
         dview.select_default()
         dgroup.button(Continuize.AsOrdinal).setChecked(True)
@@ -334,10 +335,10 @@ class TestOWContinuize(WidgetTest):
         self.assertFalse("cholesterol" in w.cont_var_hints)
         self.assertEqual(w.cont_var_hints["max HR"], Normalize.Normalize11)
 
-        self.assertIsNone(cmod.index(0, 0).data(Qt.UserRole))
+        self.assertEqual(cmod.index(0, 0).data(cmod.HintRole), ("preset", False))
         self.assertEqual(
-            cmod.index(3, 0).data(Qt.UserRole),
-            ContinuousOptions[Normalize.Normalize11].short_desc)
+            cmod.index(3, 0).data(cmod.HintRole),
+            (ContinuousOptions[Normalize.Normalize11].short_desc, True))
 
     def test_transformations(self):
         domain = Domain([DiscreteVariable(c, values="abc")
@@ -449,13 +450,29 @@ class TestOWContinuize(WidgetTest):
 
 class TestModelsAndViews(GuiTest):
     def test_contmodel(self):
-        domain = Domain([ContinuousVariable(c) for c in "abc"])
+        domain = Domain([ContinuousVariable(c) for c in "abc"],
+                        ContinuousVariable("y"))
         model = ContDomainModel(ContinuousVariable)
         model.set_domain(domain)
+
+        ind = model.index(0, 0)
+        self.assertEqual(ind.data()[0], "a")
+        self.assertEqual(ind.data(model.FilterRole)[0], "a")
+        self.assertIsNone(ind.data(Qt.ToolTipRole))
+
         ind = model.index(1, 0)
-        model.setData(ind, "mega encoding", Qt.UserRole)
-        self.assertEqual(model.index(0, 0).data(), "a")
-        self.assertEqual(ind.data(), "b: mega encoding")
+        model.setData(ind, ("mega encoding", True), model.HintRole)
+        self.assertEqual(ind.data(), ("b", "mega encoding", True))
+        self.assertEqual(ind.data(model.HintRole), ("mega encoding", True))
+        self.assertIn("b", ind.data(model.FilterRole))
+        self.assertIn("mega encoding", ind.data(model.FilterRole))
+        self.assertNotIn("bmega encoding", ind.data(model.FilterRole))
+        self.assertIsNone(ind.data(Qt.ToolTipRole))
+
+        ind = model.index(3, 0)  # separator
+        self.assertIsNone(ind.data())
+        self.assertIsNone(ind.data(model.HintRole))
+        self.assertIsNone(ind.data(model.FilterRole))
 
     def test_defaultcontmodel(self):
         model = DefaultContModel()
@@ -463,10 +480,35 @@ class TestModelsAndViews(GuiTest):
         self.assertEqual(1, model.columnCount(QModelIndex()))
         ind = model.index(0, 0)
         model.setMethod("mega encoding")
-        self.assertEqual(ind.data(), "Default: mega encoding")
+        self.assertEqual(ind.data(), "Preset: mega encoding")
         self.assertIsNotNone(ind.data(Qt.DecorationRole))
         self.assertIsNotNone(ind.data(Qt.ToolTipRole))
 
+
+class TestListViewDelegate(unittest.TestCase):
+    def test_displaytext(self):
+        delegate = ListViewSearch.Delegate()
+        self.assertEqual(delegate.displayText(("a", "foo", False), Mock()), "a")
+        self.assertEqual(delegate.displayText(("a", "foo", True), Mock()), "a: foo")
+        delegate.set_default_hints(True)
+        self.assertEqual(delegate.displayText(("a", "foo", False), Mock()), "a: foo")
+        delegate.set_default_hints(False)
+        self.assertEqual(delegate.displayText(("a", "foo", False), Mock()), "a")
+
+    @patch.object(SeparatedListDelegate, "initStyleOption")
+    def test_bold(self, _):
+        delegate = ListViewSearch.Delegate()
+        option = Mock()
+        index = Mock()
+        index.data = lambda role: ("foo", True) if role == ContDomainModel.HintRole else None
+        delegate.initStyleOption(option, index)
+        option.font.setBold.assert_called_with(True)
+        index.data = lambda role: ("foo", False) if role == ContDomainModel.HintRole else None
+        delegate.initStyleOption(option, index)
+        option.font.setBold.assert_called_with(False)
+        index.data = lambda role: None if role == ContDomainModel.HintRole else None
+        delegate.initStyleOption(option, index)
+        option.font.setBold.assert_called_with(False)
 
 if __name__ == "__main__":
     unittest.main()
