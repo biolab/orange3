@@ -1,10 +1,12 @@
 import sys
 
-from AnyQt.QtCore import Qt, QObject, QEvent, QSize
+from AnyQt.QtCore import Qt, QObject, QEvent, QSize, QAbstractProxyModel
 from AnyQt.QtGui import QPainter
 from AnyQt.QtWidgets import (
     QStyle, QWidget, QStyleOptionHeader, QAbstractButton
 )
+
+from Orange.widgets.data.utils.models import RichTableModel
 from Orange.widgets.utils.tableview import TableView
 
 
@@ -84,3 +86,37 @@ class DataTableView(TableView):
                 self.selectAll()
         else:
             self.selectAll()
+
+
+class RichTableView(DataTableView):
+    """
+    The preferred table view for RichTableModel.
+
+    Handles the display of variable's labels keys in top left corner.
+    """
+    def setModel(self, model: RichTableModel):
+        current = self.model()
+        if current is not None:
+            current.headerDataChanged.disconnect(self.__headerDataChanged)
+        super().setModel(model)
+        if model is not None:
+            model.headerDataChanged.connect(self.__headerDataChanged)
+            self.__headerDataChanged(Qt.Horizontal)
+
+    def __headerDataChanged(
+            self,
+            orientation: Qt.Orientation,
+    ) -> None:
+        if orientation == Qt.Horizontal:
+            model = self.model()
+            while isinstance(model, QAbstractProxyModel):
+                model = model.sourceModel()
+            if model.richHeaderFlags() & RichTableModel.Labels:
+                items = model.headerData(
+                    0, Qt.Horizontal, RichTableModel.LabelsItemsRole
+                )
+                text = "\n"
+                text += "\n".join(key for key, _ in items)
+            else:
+                text = ""
+            self.setCornerText(text)

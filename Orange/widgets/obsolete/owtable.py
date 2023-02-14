@@ -1,4 +1,3 @@
-import sys
 import threading
 import itertools
 import concurrent.futures
@@ -9,13 +8,10 @@ from typing import List, Optional
 import numpy
 from scipy.sparse import issparse
 
-from AnyQt.QtWidgets import (
-    QTableView, QHeaderView, QAbstractButton, QApplication, QStyleOptionHeader,
-    QStyle, QStylePainter
-)
+from AnyQt.QtWidgets import QTableView, QHeaderView, QApplication, QStyle
 from AnyQt.QtGui import QColor, QClipboard
 from AnyQt.QtCore import (
-    Qt, QSize, QEvent, QObject, QMetaObject,
+    Qt, QSize, QMetaObject,
     QAbstractProxyModel,
     QItemSelectionModel, QItemSelection, QItemSelectionRange,
 )
@@ -28,6 +24,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
+from Orange.widgets.data.utils.tableview import DataTableView
 from Orange.widgets.settings import Setting
 from Orange.widgets.data.utils.models import TableSliceProxy, RichTableModel
 from Orange.widgets.utils.itemdelegates import TableDataDelegate
@@ -49,7 +46,7 @@ from Orange.widgets.utils.state_summary import format_summary_details
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 
-class DataTableView(gui.HScrollStepMixin, TableView):
+class DataTableView(gui.HScrollStepMixin, DataTableView):
     dataset: Table
     input_slot: TableSlot
 
@@ -311,68 +308,9 @@ class OWDataTable(OWWidget):
         view.setSelectionModel(selmodel)
         view.selectionFinished.connect(self.update_selection)
 
-    #noinspection PyBroadException
-    def set_corner_text(self, table, text):
+    def set_corner_text(self, table: DataTableView, text: str):
         """Set table corner text."""
-        # As this is an ugly hack, do everything in
-        # try - except blocks, as it may stop working in newer Qt.
-        # pylint: disable=broad-except
-        if not hasattr(table, "btn") and not hasattr(table, "btnfailed"):
-            try:
-                btn = table.findChild(QAbstractButton)
-
-                class Efc(QObject):
-                    @staticmethod
-                    def eventFilter(o, e):
-                        if (isinstance(o, QAbstractButton) and
-                                e.type() == QEvent.Paint):
-                            # paint by hand (borrowed from QTableCornerButton)
-                            btn = o
-                            opt = QStyleOptionHeader()
-                            opt.initFrom(btn)
-                            state = QStyle.State_None
-                            if btn.isEnabled():
-                                state |= QStyle.State_Enabled
-                            if btn.isActiveWindow():
-                                state |= QStyle.State_Active
-                            if btn.isDown():
-                                state |= QStyle.State_Sunken
-                            opt.state = state
-                            opt.rect = btn.rect()
-                            opt.text = btn.text()
-                            opt.position = QStyleOptionHeader.OnlyOneSection
-                            painter = QStylePainter(btn)
-                            painter.drawControl(QStyle.CE_Header, opt)
-                            return True     # eat event
-                        return False
-                table.efc = Efc()
-                # disconnect default handler for clicks and connect a new one, which supports
-                # both selection and deselection of all data
-                btn.clicked.disconnect()
-                btn.installEventFilter(table.efc)
-                btn.clicked.connect(self._on_select_all)
-                table.btn = btn
-
-                if sys.platform == "darwin":
-                    btn.setAttribute(Qt.WA_MacSmallSize)
-
-            except Exception:
-                table.btnfailed = True
-
-        if hasattr(table, "btn"):
-            try:
-                btn = table.btn
-                btn.setText(text)
-                opt = QStyleOptionHeader()
-                opt.text = btn.text()
-                s = btn.style().sizeFromContents(
-                    QStyle.CT_HeaderSection,
-                    opt, QSize(),
-                    btn)
-                if s.isValid():
-                    table.verticalHeader().setMinimumWidth(s.width())
-            except Exception:
-                pass
+        table.setCornerText(text)
 
     def _set_input_summary(self, slot):
         def format_summary(summary):
