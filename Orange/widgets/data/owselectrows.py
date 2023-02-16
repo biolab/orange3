@@ -379,7 +379,7 @@ class OWSelectRows(widget.OWWidget):
                     model = child.popup.list_view.model()
                     for row in range(model.rowCount()):
                         item = model.item(row)
-                        if item.checkState():
+                        if item.checkState() == Qt.Checked:
                             cont.append(row + 1)
                             names.append(item.text())
                     child.desc_text = ', '.join(names)
