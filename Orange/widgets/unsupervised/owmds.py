@@ -400,10 +400,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
     def on_done(self, result: Result):
         assert isinstance(result.embedding, np.ndarray)
         assert len(result.embedding) == len(self.effective_matrix)
-        self.embedding = result.embedding
-        self.graph.update_coordinates()
-        self.graph.update_density()
-        self.update_stress()
+        # embedding, graph and stress are already updated in on_partial_result
         self.run_button.setText("Start")
         self.step_button.setEnabled(True)
         self.commit.deferred()
