@@ -6,26 +6,26 @@ from AnyQt.QtCore import Qt
 
 from orangewidget.tests.utils import excepthook_catch
 
-from Orange.widgets.data.owtable import OWDataTable
+from Orange.widgets.data.owtable import OWTable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.data import Table, Domain
 from Orange.data.sql.table import SqlTable
 from Orange.tests.sql.base import DataBaseTest as dbt
 
 
-class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
+class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls,
                                     output_all_on_no_selection=True)
 
-        cls.signal_name = OWDataTable.Inputs.data
+        cls.signal_name = OWTable.Inputs.data
         cls.signal_data = cls.data  # pylint: disable=no-member
 
     def setUp(self):
         super().setUp()
-        self.widget = self.create_widget(OWDataTable)
+        self.widget = self.create_widget(OWTable)
 
     def test_input_data(self):
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -76,7 +76,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
             commit.assert_called()
 
     def test_pending_selection(self):
-        widget = self.create_widget(OWDataTable, stored_settings=dict(
+        widget = self.create_widget(OWTable, stored_settings=dict(
             selected_rows=[5, 6, 7, 8, 9],
             selected_cols=list(range(len(self.data.domain.variables)))))
         self.send_signal(widget.Inputs.data, None)
@@ -154,7 +154,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(w.show_attribute_labels)
 
 
-class TestOWDataTableSQL(TestOWDataTable, dbt):
+class TestOWTableSQL(TestOWTable, dbt):
     def setUpDB(self):
         # pylint: disable=attribute-defined-outside-init
         conn, iris = self.create_iris_sql_table()

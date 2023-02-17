@@ -57,7 +57,7 @@ class InputData:
     model: TableModel
 
 
-class OWDataTable(OWWidget):
+class OWTable(OWWidget):
     name = "Data Table"
     description = "View the dataset in a spreadsheet."
     icon = "icons/Table.svg"
@@ -602,6 +602,6 @@ def is_sortable(table):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWDataTable).run(
+    WidgetPreview(OWTable).run(
         input_data=Table("iris"),
     )
