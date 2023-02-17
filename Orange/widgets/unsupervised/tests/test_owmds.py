@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 import os
 from itertools import chain
 import unittest
@@ -319,6 +319,27 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.distances, dist)
         label_text = self.widget.controls.attr_label.currentText()
         self.assertEqual(label_text, "labels")
+
+    def test_update_stress(self):
+        w = self.widget
+        w.effective_matrix = np.array([[0, 4, 1],
+                                       [4, 0, 1],
+                                       [1, 1, 0]])  # sum of squares is 36
+        w.embedding = np.array([[0, 0],
+                                [0, 3],
+                                [4, 3]])
+        # dists [[0, 3, 5], diff [[0, 1, 4],  sqr  [[0, 1, 16],  sum = 52
+        #        [3, 0, 4],       [1, 0, 3],        [1, 0, 9],
+        #        [5, 4, 0]]       [4, 3, 0]]        [16, 9, 0]]
+        w.update_stress()
+        expected = np.sqrt(52 / 36)
+        self.assertAlmostEqual(w._compute_stress(), expected)
+        self.assertIn(f"{expected:.3f}", w.stress_label.text())
+
+        w.embedding = None
+        w.update_stress()
+        self.assertIsNone(w._compute_stress())
+        self.assertIn("-", w.stress_label.text())
 
 
 class TestOWMDSRunner(unittest.TestCase):

@@ -200,6 +200,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         self.embedding = None  # type: Optional[np.ndarray]
         self.effective_matrix = None  # type: Optional[DistMatrix]
+        self.stress = None
 
         self.size_model = self.gui.points_models[2]
         self.size_model.order = \
@@ -241,6 +242,8 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
                 sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed),
                 callback=self.__refresh_rate_combo_changed),
             1, 1)
+        self.stress_label = QLabel("Kruskal Stress: -")
+        grid.addWidget(self.stress_label, 2, 0, 1, 3)
 
     def __refresh_rate_combo_changed(self):
         if self.task is not None:
@@ -392,6 +395,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             if need_update:
                 self.graph.update_coordinates()
                 self.graph.update_density()
+                self.update_stress()
 
     def on_done(self, result: Result):
         assert isinstance(result.embedding, np.ndarray)
@@ -399,9 +403,22 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.embedding = result.embedding
         self.graph.update_coordinates()
         self.graph.update_density()
+        self.update_stress()
         self.run_button.setText("Start")
         self.step_button.setEnabled(True)
         self.commit.deferred()
+
+    def update_stress(self):
+        self.stress = self._compute_stress()
+        stress_val = "-" if self.stress is None else f"{self.stress:.3f}"
+        self.stress_label.setText(f"Kruskal Stress: {stress_val}")
+
+    def _compute_stress(self):
+        if self.embedding is None or self.effective_matrix is None:
+            return None
+        point_stress = self.get_stress(self.embedding, self.effective_matrix)
+        return np.sqrt(2 * np.sum(point_stress)
+                       / (np.sum(self.effective_matrix ** 2) or 1))
 
     def on_exception(self, ex: Exception):
         if isinstance(ex, MemoryError):
@@ -436,6 +453,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         # (Random or PCA), restarting the optimization if necessary.
         if self.effective_matrix is None:
             self.graph.reset_graph()
+            self.update_stress()
             return
 
         X = self.effective_matrix
@@ -451,6 +469,8 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         # restart the optimization if it was interrupted.
         if self.task is not None:
             self._run()
+        else:
+            self.update_stress()
 
     def handleNewSignals(self):
         self._initialize()
@@ -473,12 +493,12 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def get_size_data(self):
         if self.attr_size == "Stress":
-            return self.stress(self.embedding, self.effective_matrix)
+            return self.get_stress(self.embedding, self.effective_matrix)
         else:
             return super().get_size_data()
 
     @staticmethod
-    def stress(X, distD):
+    def get_stress(X, distD):
         assert X.shape[0] == distD.shape[0] == distD.shape[1]
         D1_c = scipy.spatial.distance.pdist(X, metric="euclidean")
         D1 = scipy.spatial.distance.squareform(D1_c, checks=False)
