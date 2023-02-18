@@ -1,17 +1,19 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object,protected-access
 import unittest
+from itertools import chain
 from unittest.mock import Mock, patch
 
 import numpy as np
 from AnyQt.QtCore import Qt, QModelIndex, QItemSelectionModel
+from AnyQt.QtTest import QSignalSpy
 
 from orangewidget.tests.base import GuiTest
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.widgets.data.owcontinuize import OWContinuize, DefaultKey, \
-    ContinuousOptions, Normalize, Continuize, DiscreteOptions, ContDomainModel, \
-    DefaultContModel, ListViewSearch
+    ContinuousOptions, Normalize, Continuize, DiscreteOptions, \
+    ContDomainModel, DefaultContModel, ListViewSearch
 from Orange.widgets.tests.base import WidgetTest
 from orangewidget.utils.itemmodels import SeparatedListDelegate
 
@@ -43,11 +45,6 @@ class TestOWContinuize(WidgetTest):
         self.widget.commit.now()
 
     def test_one_column_equal_values(self):
-        """
-        No crash on a column with equal values and with selected option
-        normalize by standard deviation.
-        GH-2144
-        """
         table = Table("iris")
         table = table[:, 1].copy()
         with table.unlocked():
@@ -58,12 +55,6 @@ class TestOWContinuize(WidgetTest):
         self.widget.commit.now()
 
     def test_one_column_nan_values_normalize_sd(self):
-        """
-        No crash on a column with NaN values and with selected option
-        normalize by standard deviation (Not the same issue which is
-        tested above).
-        GH-2144
-        """
         table = Table("iris")
         with table.unlocked():
             table[:, 2] = np.NaN
@@ -79,11 +70,6 @@ class TestOWContinuize(WidgetTest):
         self.widget.commit.now()
 
     def test_one_column_nan_values_normalize_span(self):
-        """
-        No crash on a column with NaN values and with selected option
-        normalize by span.
-        GH-2144
-        """
         table = Table("iris")
         with table.unlocked():
             table[:, 2] = np.NaN

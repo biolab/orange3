@@ -353,8 +353,6 @@ class OWContinuize(widget.OWWidget):
         for box in boxes:
             box.setFixedWidth(width)
 
-        box = self.class_box = gui.hBox(self.mainArea)
-
         box = gui.hBox(self.mainArea)
         gui.button(
             box, self, "Reset All", callback=self._on_reset_hints,
@@ -467,12 +465,6 @@ class OWContinuize(widget.OWWidget):
         domain = data.domain if data else None
         self.disc_view.model().set_domain(domain)
         self.cont_view.model().set_domain(domain)
-        self.disc_box.setVisible(
-            domain is None or domain.has_discrete_attributes(include_metas=True))
-        self.cont_box.setVisible(
-            domain is None or domain.has_continuous_attributes(include_metas=True))
-        self.class_box.setVisible(
-            domain is None or domain.has_discrete_class)
         if data:
             # Clean up hints only when receiving new data, not on disconnection
             self._set_hints()
@@ -538,6 +530,10 @@ class OWContinuize(widget.OWWidget):
         domain = self.data.domain
         disc = set()
         cont = set()
+        # At the time of writing, self.data.Y cannot be sparse (setter for
+        # `Y` converts it to dense, as done in
+        # https://github.com/biolab/orange3/commit/a18f38059caf37f3b329d6ad688189561959bb24)
+        # Including it here doesn't hurt, though.
         for part, attrs in ((self.data.X, domain.attributes),
                             (self.data.Y, domain.class_vars),
                             (self.data.metas, domain.metas)):
@@ -546,7 +542,7 @@ class OWContinuize(widget.OWWidget):
                          for var in attrs
                          if var.is_discrete}
                 cont |= {self._hint_for_var(var)
-                         for var in domain.attributes
+                         for var in attrs
                          if type(var) is ContinuousVariable}
         disc &= {method.id_
                  for method in DiscreteOptions.values()
@@ -587,7 +583,7 @@ class OWContinuize(widget.OWWidget):
 
     def is_attr(self, var):
         domain = self.data.domain
-        return domain.index(var) < len(domain.attributes)
+        return 0 <= domain.index(var) < len(domain.attributes)
 
     def default_for_var(self, var):
         if self.is_attr(var):
