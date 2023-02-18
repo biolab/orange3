@@ -11,6 +11,8 @@ from AnyQt.QtGui import QColor
 from AnyQt.QtWidgets import QButtonGroup, QRadioButton, QListView
 
 from orangewidget.utils import listview
+from orangewidget.utils.itemmodels import SeparatedListDelegate, \
+    LabelledSeparator
 
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
 from Orange.preprocess import Continuize as Continuizer
@@ -21,8 +23,6 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
-from orangewidget.utils.itemmodels import SeparatedListDelegate, \
-    LabelledSeparator
 
 
 class MethodDesc(NamedTuple):
@@ -35,7 +35,7 @@ class MethodDesc(NamedTuple):
 
 DefaultKey = ""
 DefaultId = 99
-
+BackCompatClass = object()
 
 Continuize = SimpleNamespace(
     Default=DefaultId,
@@ -459,7 +459,7 @@ class OWContinuize(widget.OWWidget):
 
     @Inputs.data
     @check_sql_input
-    def setData(self, data):
+    def set_data(self, data):
         self.data = data
         self._var_cache.clear()
         domain = data.domain if data else None
@@ -472,6 +472,14 @@ class OWContinuize(widget.OWWidget):
 
     def _set_hints(self):
         assert self.data
+
+        # Backward compatibility for settings < 3
+        class_treatment = self.disc_var_hints.get(BackCompatClass, None)
+        if class_treatment is not None \
+                and self.data.domain.class_var is not None:
+            self.disc_var_hints[self.data.domain.class_var.name] \
+                = class_treatment
+
         for hints, model, options in (
                 (self.cont_var_hints, self.cont_view.model(), ContinuousOptions),
                 (self.disc_var_hints, self.disc_view.model(), DiscreteOptions)):
@@ -727,6 +735,9 @@ class OWContinuize(widget.OWWidget):
             settings["disc_var_hints"] = \
                 {DefaultKey:
                  settings.pop("multinomial_treatment", Continuize.FirstAsBase)}
+            class_treatment = settings.pop("class_treatment", Continuize.Leave)
+            if class_treatment != Continuize.Leave:
+                settings["disc_var_hints"][BackCompatClass] = class_treatment
 
 
 # Backward compatibility for unpickling settings
