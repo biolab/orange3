@@ -62,28 +62,11 @@ def prepare_tsne_obj(data, perplexity, multiscale, exaggeration):
     else:
         perplexity = perplexity
 
-    # Determine whether to use settings for large data sets
-    if n_samples > 10_000:
-        neighbor_method, gradient_method = "approx", "fft"
-    else:
-        neighbor_method, gradient_method = "exact", "bh"
-
-    # Larger data sets need a larger number of iterations
-    if n_samples > 100_000:
-        early_exagg_iter, n_iter = 500, 1000
-    else:
-        early_exagg_iter, n_iter = 250, 750
-
     return manifold.TSNE(
         n_components=2,
         perplexity=perplexity,
         multiscale=multiscale,
-        early_exaggeration_iter=early_exagg_iter,
-        n_iter=n_iter,
         exaggeration=exaggeration,
-        neighbors=neighbor_method,
-        negative_gradient_method=gradient_method,
-        theta=0.8,
         random_state=0,
     )
 
@@ -159,7 +142,7 @@ class TSNERunner:
 
         # Run early exaggeration phase
         was_interrupted = run_optimization(
-            dict(exaggeration=tsne.early_exaggeration, momentum=0.5, inplace=False),
+            dict(exaggeration=tsne.early_exaggeration, momentum=0.8, inplace=False),
             iterations_needed=tsne.early_exaggeration_iter,
         )
         if was_interrupted:

@@ -382,12 +382,12 @@ class TSNE(Projector):
         Orange.preprocess.SklImpute(),
     ]
 
-    def __init__(self, n_components=2, perplexity=30, learning_rate=200,
+    def __init__(self, n_components=2, perplexity=30, learning_rate="auto",
                  early_exaggeration_iter=250, early_exaggeration=12,
-                 n_iter=750, exaggeration=None, theta=0.5,
+                 n_iter=500, exaggeration=None, theta=0.5,
                  min_num_intervals=10, ints_in_interval=1,
                  initialization="pca", metric="euclidean", n_jobs=1,
-                 neighbors="exact", negative_gradient_method="bh",
+                 neighbors="auto", negative_gradient_method="auto",
                  multiscale=False, callbacks=None, callbacks_every_iters=50,
                  random_state=None, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
@@ -498,7 +498,7 @@ class TSNE(Projector):
         # Run standard t-SNE optimization
         embedding.optimize(
             n_iter=self.early_exaggeration_iter, exaggeration=self.early_exaggeration,
-            inplace=True, momentum=0.5, propagate_exception=True,
+            inplace=True, momentum=0.8, propagate_exception=True,
         )
         embedding.optimize(
             n_iter=self.n_iter, exaggeration=self.exaggeration,
