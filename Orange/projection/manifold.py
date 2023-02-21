@@ -461,6 +461,10 @@ class TSNE(Projector):
             initialization = openTSNE.initialization.pca(
                 X, self.n_components, random_state=self.random_state
             )
+        elif self.initialization == "spectral":
+            initialization = openTSNE.initialization.spectral(
+                X, self.n_components, random_state=self.random_state,
+            )
         elif self.initialization == "random":
             initialization = openTSNE.initialization.random(
                 X, self.n_components, random_state=self.random_state

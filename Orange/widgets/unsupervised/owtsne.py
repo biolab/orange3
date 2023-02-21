@@ -24,6 +24,8 @@ _STEP_SIZE = 25
 _MAX_PCA_COMPONENTS = 50
 _DEFAULT_PCA_COMPONENTS = 20
 
+INITIALIZATIONS = [("PCA", "pca"), ("Spectral", "spectral")]
+
 
 class Task(namespace):
     """Completely determines the t-SNE task spec and intermediate results."""
@@ -39,6 +41,7 @@ class Task(namespace):
     perplexity = None               # type: Optional[float]
     multiscale = None               # type: Optional[bool]
     exaggeration = None             # type: Optional[float]
+    initialization_method = None    # type: Optional[str]
     initialization = None           # type: Optional[np.ndarray]
     affinities = None               # type: Optional[openTSNE.affinity.Affinities]
     tsne_embedding = None           # type: Optional[manifold.TSNEModel]
@@ -55,8 +58,8 @@ class Task(namespace):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Set `effective_data` to data if data provided, and effective data
-        # not provided
+        # Set `effective_data` to `data` if provided and effective data is not
+        # provided
         if self.effective_data is None and self.data is not None:
             self.effective_data = self.data
 
@@ -72,7 +75,7 @@ def pca_preprocessing(data, n_components):
     return model(data)
 
 
-def prepare_tsne_obj(data, perplexity, multiscale, exaggeration):
+def prepare_tsne_obj(data, initialization_method, perplexity, multiscale, exaggeration):
     # type: (Table, float, bool, float) -> manifold.TSNE
     """Automatically determine the best parameters for the given data set."""
     # Compute perplexity settings for multiscale
@@ -84,6 +87,7 @@ def prepare_tsne_obj(data, perplexity, multiscale, exaggeration):
 
     return manifold.TSNE(
         n_components=2,
+        initialization=initialization_method,
         perplexity=perplexity,
         multiscale=multiscale,
         exaggeration=exaggeration,
@@ -113,7 +117,16 @@ class TSNERunner:
     def compute_initialization(task: Task, state: TaskState, **_) -> None:
         # Prepare initial positions for t-SNE
         state.set_status("Preparing initialization...")
-        task.initialization = task.tsne.compute_initialization(task.effective_data.X)
+        if task.initialization_method == "pca":
+            x = task.effective_data.X
+        elif task.initialization_method == "spectral":
+            assert task.affinities is not None
+            x = task.affinities.P
+        else:
+            raise RuntimeError(
+                f"Unrecognized initialization scheme `{task.initialization_method}`!"
+            )
+        task.initialization = task.tsne.compute_initialization(x)
         state.set_partial_result(("initialization", task))
 
     @staticmethod
@@ -187,7 +200,11 @@ class TSNERunner:
 
         # Prepare the tsne object and add it to the spec
         task.tsne = prepare_tsne_obj(
-            task.data, task.perplexity, task.multiscale, task.exaggeration
+            task.data,
+            task.initialization_method,
+            task.perplexity,
+            task.multiscale,
+            task.exaggeration,
         )
 
         job_queue = []
@@ -200,11 +217,11 @@ class TSNERunner:
         if task.use_pca_preprocessing and task.pca_projection is None:
             job_queue.append((cls.compute_pca, weights["pca"]))
 
-        if task.initialization is None:
-            job_queue.append((cls.compute_initialization, weights["init"]))
-
         if task.affinities is None:
             job_queue.append((cls.compute_affinities, weights["aff"]))
+
+        if task.initialization is None:
+            job_queue.append((cls.compute_initialization, weights["init"]))
 
         total_iterations = task.tsne.early_exaggeration_iter + task.tsne.n_iter
         if task.tsne_embedding is None or task.iterations_done < total_iterations:
@@ -252,27 +269,28 @@ class OWtSNEGraph(OWScatterPlotBase):
 
 class invalidated:
     # pylint: disable=invalid-name
-    normalized_data = pca_projection = affinities = tsne_embedding = False
+    normalized_data = pca_projection = initialization = affinities = tsne_embedding = False
 
     def __set__(self, instance, value):
         # `self._invalidate = True` should invalidate everything
         self.normalized_data = value
         self.pca_projection = value
+        self.initialization = value
         self.affinities = value
         self.tsne_embedding = value
 
     def __bool__(self):
         # If any of the values are invalidated, this should return true
         return (
-            self.normalized_data or self.pca_projection or self.affinities or
-            self.tsne_embedding
+            self.normalized_data or self.pca_projection or self.initialization or
+            self.affinities or self.tsne_embedding
         )
 
     def __str__(self):
         return "%s(%s)" % (self.__class__.__name__, ", ".join(
             "=".join([k, str(getattr(self, k))])
-            for k in ["normalized_data", "pca_projection", "affinities",
-                      "tsne_embedding"]
+            for k in ["normalized_data", "pca_projection", "initialization",
+                      "affinities", "tsne_embedding"]
         ))
 
 
@@ -287,6 +305,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     perplexity = ContextSetting(30)
     multiscale = ContextSetting(False)
     exaggeration = ContextSetting(1)
+    initialization_method_idx = ContextSetting(0)
 
     normalize = ContextSetting(True)
     use_pca_preprocessing = ContextSetting(True)
@@ -359,6 +378,12 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
         )
 
+        self.initialization_combo = gui.comboBox(
+            self.controlArea, self, "initialization_method_idx",
+            items=[m[0] for m in INITIALIZATIONS],
+            callback=self._invalidate_initialization,
+        )
+        form.addRow("Initialization:", self.initialization_combo)
         self.perplexity_spin = gui.spin(
             box, self, "perplexity", 1, 500, step=1, alignment=Qt.AlignRight,
             callback=self._invalidate_affinities, addToLayout=False
@@ -381,7 +406,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         self.run_button = gui.button(box, self, "Start", callback=self._toggle_run)
 
-    # Control callbacks
+    # GUI control callbacks
     def _normalize_data_changed(self):
         self._invalidate_normalized_data()
 
@@ -399,7 +424,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.controls.perplexity.setDisabled(self.multiscale)
         self._invalidate_affinities()
 
-    # Invalidateion cascade
+    # Invalidation cascade
     def _invalidate_normalized_data(self):
         self._invalidated.normalized_data = True
         self._invalidate_pca_projection()
@@ -410,6 +435,10 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def _invalidate_affinities(self):
         self._invalidated.affinities = True
+        self._invalidate_tsne_embedding()
+
+    def _invalidate_initialization(self):
+        self._invalidated.initialization = True
         self._invalidate_tsne_embedding()
 
     def _invalidate_tsne_embedding(self):
@@ -538,6 +567,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self.pca_projection = None
         if self._invalidated.affinities:
             self.affinities = None
+        if self._invalidated.initialization:
+            self.initialization = None
         if self._invalidated.tsne_embedding:
             self.iterations_done = 0
             self.tsne_embedding = None
@@ -556,6 +587,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.data is None:
             return
 
+        initialization_method = INITIALIZATIONS[self.initialization_method_idx][1]
+
         task = Task(
             data=self.data,
             # Normalization
@@ -566,10 +599,11 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             pca_components=self.pca_components,
             pca_projection=self.pca_projection,
             # t-SNE parameters
+            initialization_method=initialization_method,
+            initialization=self.initialization,
             perplexity=self.perplexity,
             multiscale=self.multiscale,
             exaggeration=self.exaggeration,
-            initialization=self.initialization,
             affinities=self.affinities,
             # Misc
             tsne_embedding=self.tsne_embedding,
@@ -593,6 +627,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
                 len(task.pca_projection) == len(self.data)
 
     def __ensure_task_same_for_initialization(self, task: Task):
+        initialization_method = INITIALIZATIONS[self.initialization_method_idx][1]
+        assert task.initialization_method == initialization_method
         assert isinstance(task.initialization, np.ndarray) and \
             len(task.initialization) == len(self.data)
 
