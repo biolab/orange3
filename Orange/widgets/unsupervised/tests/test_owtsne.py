@@ -306,11 +306,13 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.data, self.data)
         self.wait_until_finished()
         self.assertFalse(self.widget.Information.modified.is_shown())
-        # All the embedding components should computed
+        # All the embedding components should be computed
+        self.assertIsNotNone(w.normalized_data)
         self.assertIsNotNone(w.pca_projection)
         self.assertIsNotNone(w.affinities)
         self.assertIsNotNone(w.tsne_embedding)
         # All the invalidation flags should be set to false
+        self.assertFalse(w._invalidated.normalized_data)
         self.assertFalse(w._invalidated.pca_projection)
         self.assertFalse(w._invalidated.affinities)
         self.assertFalse(w._invalidated.tsne_embedding)
@@ -320,12 +322,14 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.Information.modified.is_shown())
         # Setting `multiscale` to true should set the invalidate flags for
         # the affinities and embedding, but not the pca_projection
+        self.assertFalse(w._invalidated.normalized_data)
         self.assertFalse(w._invalidated.pca_projection)
         self.assertTrue(w._invalidated.affinities)
         self.assertTrue(w._invalidated.tsne_embedding)
 
         # The flags should now be set, but the embedding should still be
         # available when selecting a subset of data and such
+        self.assertIsNotNone(w.normalized_data)
         self.assertIsNotNone(w.pca_projection)
         self.assertIsNotNone(w.affinities)
         self.assertIsNotNone(w.tsne_embedding)
@@ -356,11 +360,60 @@ class TestTSNERunner(unittest.TestCase):
     def setUpClass(cls):
         cls.data = Table("iris")
 
-    def test_run(self):
+    def test_run_with_normalization_and_pca_preprocessing(self):
         state = Mock()
         state.is_interruption_requested = Mock(return_value=False)
 
-        task = TSNERunner.run(Task(data=self.data, perplexity=30), state)
+        task = Task(
+            normalize=True, use_pca_preprocessing=True, data=self.data, perplexity=30
+        )
+        task = TSNERunner.run(task, state)
+
+        self.assertEqual(len(state.set_status.mock_calls), 5)
+        state.set_status.assert_has_calls([
+            call("Normalizing data..."),
+            call("Computing PCA..."),
+            call("Preparing initialization..."),
+            call("Finding nearest neighbors..."),
+            call("Running optimization..."),
+        ])
+
+        self.assertIsInstance(task.normalized_data, Table)
+        self.assertIsInstance(task.pca_projection, Table)
+        self.assertIsInstance(task.tsne, TSNE)
+        self.assertIsInstance(task.tsne_embedding, TSNEModel)
+
+    def test_run_with_normalization(self):
+        state = Mock()
+        state.is_interruption_requested = Mock(return_value=False)
+
+        task = Task(
+            normalize=True, use_pca_preprocessing=False, data=self.data, perplexity=30
+        )
+        task = TSNERunner.run(task, state)
+
+        self.assertEqual(len(state.set_status.mock_calls), 4)
+        state.set_status.assert_has_calls([
+            call("Normalizing data..."),
+            call("Preparing initialization..."),
+            call("Finding nearest neighbors..."),
+            call("Running optimization..."),
+        ])
+
+        self.assertIsNone(task.pca_projection, Table)
+
+        self.assertIsInstance(task.normalized_data, Table)
+        self.assertIsInstance(task.tsne, TSNE)
+        self.assertIsInstance(task.tsne_embedding, TSNEModel)
+
+    def test_run_with_pca_preprocessing(self):
+        state = Mock()
+        state.is_interruption_requested = Mock(return_value=False)
+
+        task = Task(
+            normalize=False, use_pca_preprocessing=True, data=self.data, perplexity=30
+        )
+        task = TSNERunner.run(task, state)
 
         self.assertEqual(len(state.set_status.mock_calls), 4)
         state.set_status.assert_has_calls([
@@ -369,6 +422,9 @@ class TestTSNERunner(unittest.TestCase):
             call("Finding nearest neighbors..."),
             call("Running optimization..."),
         ])
+        state.set_status.assert_has_calls
+
+        self.assertIsNone(task.normalized_data, Table)
 
         self.assertIsInstance(task.pca_projection, Table)
         self.assertIsInstance(task.tsne, TSNE)
@@ -383,6 +439,7 @@ class TestTSNERunner(unittest.TestCase):
         task.tsne = prepare_tsne_obj(
             task.data, task.perplexity, task.multiscale, task.exaggeration
         )
+        TSNERunner.compute_normalization(task, state)
         TSNERunner.compute_pca(task, state)
         TSNERunner.compute_initialization(task, state)
         TSNERunner.compute_affinities(task, state)
