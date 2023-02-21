@@ -368,7 +368,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             callback=self._invalidate_normalized_data,
         )
         self.pca_preprocessing_cbx = gui.checkBox(
-            preprocessing_box, self, "use_pca_preprocessing", "Preprocess using PCA",
+            preprocessing_box, self, "use_pca_preprocessing", "Apply PCA preprocessing",
             callback=self._pca_preprocessing_changed,
         )
         self.pca_component_slider = gui.hSlider(
