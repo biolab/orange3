@@ -412,7 +412,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         sbe = gui.hBox(self.controlArea, False, addToLayout=False)
         gui.hSlider(
-            sbe, self, "exaggeration", minValue=1, maxValue=4, step=1,
+            sbe, self, "exaggeration", minValue=1, maxValue=4, step=0.25,
+            intOnly=False, labelFormat="%.2f",
             callback=self._invalidate_tsne_embedding,
         )
         form.addRow("Exaggeration:", sbe)
