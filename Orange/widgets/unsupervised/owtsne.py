@@ -25,6 +25,7 @@ _MAX_PCA_COMPONENTS = 50
 _DEFAULT_PCA_COMPONENTS = 20
 
 INITIALIZATIONS = [("PCA", "pca"), ("Spectral", "spectral")]
+DISTANCE_METRICS = [("Euclidean", "l2"), ("Manhattan", "l1"), ("Cosine", "cosine")]
 
 
 class Task(namespace):
@@ -38,6 +39,7 @@ class Task(namespace):
     pca_components = None           # type: Optional[int]
     pca_projection = None           # type: Optional[Table]
 
+    distance_metric = None          # type: Optional[str]
     perplexity = None               # type: Optional[float]
     multiscale = None               # type: Optional[bool]
     exaggeration = None             # type: Optional[float]
@@ -75,7 +77,8 @@ def pca_preprocessing(data, n_components):
     return model(data)
 
 
-def prepare_tsne_obj(data, initialization_method, perplexity, multiscale, exaggeration):
+def prepare_tsne_obj(data, initialization_method, distance_metric, perplexity,
+                     multiscale, exaggeration):
     # type: (Table, float, bool, float) -> manifold.TSNE
     """Automatically determine the best parameters for the given data set."""
     # Compute perplexity settings for multiscale
@@ -88,6 +91,7 @@ def prepare_tsne_obj(data, initialization_method, perplexity, multiscale, exagge
     return manifold.TSNE(
         n_components=2,
         initialization=initialization_method,
+        metric=distance_metric,
         perplexity=perplexity,
         multiscale=multiscale,
         exaggeration=exaggeration,
@@ -202,6 +206,7 @@ class TSNERunner:
         task.tsne = prepare_tsne_obj(
             task.data,
             task.initialization_method,
+            task.distance_metric,
             task.perplexity,
             task.multiscale,
             task.exaggeration,
@@ -306,6 +311,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     multiscale = ContextSetting(False)
     exaggeration = ContextSetting(1)
     initialization_method_idx = ContextSetting(0)
+    distance_metric_idx = ContextSetting(0)
 
     normalize = ContextSetting(True)
     use_pca_preprocessing = ContextSetting(True)
@@ -384,12 +390,21 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             callback=self._invalidate_initialization,
         )
         form.addRow("Initialization:", self.initialization_combo)
+
+        self.distance_metric_combo = gui.comboBox(
+            self.controlArea, self, "distance_metric_idx",
+            items=[m[0] for m in DISTANCE_METRICS],
+            callback=self._invalidate_affinities,
+        )
+        form.addRow("Distance metric:", self.distance_metric_combo)
+
         self.perplexity_spin = gui.spin(
             box, self, "perplexity", 1, 500, step=1, alignment=Qt.AlignRight,
             callback=self._invalidate_affinities, addToLayout=False
         )
         self.controls.perplexity.setDisabled(self.multiscale)
         form.addRow("Perplexity:", self.perplexity_spin)
+
         form.addRow(gui.checkBox(
             box, self, "multiscale", label="Preserve global structure",
             callback=self._multiscale_changed, addToLayout=False
@@ -588,6 +603,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             return
 
         initialization_method = INITIALIZATIONS[self.initialization_method_idx][1]
+        distance_metric = DISTANCE_METRICS[self.distance_metric_idx][1]
 
         task = Task(
             data=self.data,
@@ -601,6 +617,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             # t-SNE parameters
             initialization_method=initialization_method,
             initialization=self.initialization,
+            distance_metric=distance_metric,
             perplexity=self.perplexity,
             multiscale=self.multiscale,
             exaggeration=self.exaggeration,
@@ -635,6 +652,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     def __ensure_task_same_for_affinities(self, task: Task):
         assert task.perplexity == self.perplexity
         assert task.multiscale == self.multiscale
+        distance_metric = DISTANCE_METRICS[self.distance_metric_idx][1]
+        assert task.distance_metric == distance_metric
 
     def __ensure_task_same_for_embedding(self, task: Task):
         assert task.exaggeration == self.exaggeration
@@ -688,7 +707,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         # type: (Task) -> None
         self.run_button.setText("Start")
         # NOTE: All of these have already been set by on_partial_result,
-        # we double check that they are aliases
+        # we double-check that they are aliases
         if task.pca_projection is not None:
             self.__ensure_task_same_for_pca(task)
             assert task.pca_projection is self.pca_projection
