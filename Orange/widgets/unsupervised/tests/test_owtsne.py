@@ -297,6 +297,14 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
             "The information message was not cleared on no data"
         )
 
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.wait_until_stop_blocking()
+        self.assertFalse(
+            self.widget.Information.modified.is_shown(),
+            "The modified info message should be hidden after the widget "
+            "computes the embedding"
+        )
+
     def test_invalidation_flow(self):
         # pylint: disable=protected-access
         w = self.widget
@@ -353,6 +361,71 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.wait_until_stop_blocking()
         # All of the inavalidation flags should have been cleared
         self.assertFalse(w._invalidated)
+
+    def test_pca_preprocessing_warning_with_large_number_of_features(self):
+        self.assertFalse(
+            self.widget.Warning.consider_using_pca_preprocessing.is_shown(),
+            "The PCA warning should be hidden by default"
+        )
+
+        self.widget.controls.use_pca_preprocessing.setChecked(False)
+        self.assertFalse(
+            self.widget.Warning.consider_using_pca_preprocessing.is_shown(),
+            "The PCA warning should be hidden even after toggling options if "
+            "no data is on input"
+        )
+
+        # Setup data classes
+        x_small = np.random.normal(0, 1, size=(50, 4))
+        data_small = Table.from_numpy(Domain.from_numpy(x_small), x_small)
+        x_large = np.random.normal(0, 1, size=(50, 250))
+        data_large = Table.from_numpy(Domain.from_numpy(x_large), x_large)
+
+        # SMALL data with PCA preprocessing ENABLED
+        self.send_signal(self.widget.Inputs.data, data_small)
+        self.widget.controls.use_pca_preprocessing.setChecked(True)
+        self.widget.run_button.click(), self.wait_until_stop_blocking()
+        self.assertFalse(
+            self.widget.Warning.consider_using_pca_preprocessing.is_shown(),
+            "The PCA warning should be hidden when PCA preprocessing enabled "
+            "when the data has <50 features"
+        )
+
+        # SMALL data with PCA preprocessing DISABLED
+        self.send_signal(self.widget.Inputs.data, data_small)
+        self.widget.controls.use_pca_preprocessing.setChecked(False)
+        self.widget.run_button.click(), self.wait_until_stop_blocking()
+        self.assertFalse(
+            self.widget.Warning.consider_using_pca_preprocessing.is_shown(),
+            "The PCA warning should be hidden with disabled PCA preprocessing "
+            "when the data has <50 features"
+        )
+
+        # LARGE data with PCA preprocessing ENABLED
+        self.send_signal(self.widget.Inputs.data, data_large)
+        self.widget.controls.use_pca_preprocessing.setChecked(True)
+        self.widget.run_button.click(), self.wait_until_stop_blocking()
+        self.assertFalse(
+            self.widget.Warning.consider_using_pca_preprocessing.is_shown(),
+            "The PCA warning should be hidden when PCA preprocessing enabled "
+            "when has >50 features"
+        )
+
+        # LARGE data with PCA preprocessing DISABLED
+        self.send_signal(self.widget.Inputs.data, data_large)
+        self.widget.controls.use_pca_preprocessing.setChecked(False)
+        self.widget.run_button.click(), self.wait_until_stop_blocking()
+        self.assertTrue(
+            self.widget.Warning.consider_using_pca_preprocessing.is_shown(),
+            "The PCA warning should be shown when PCA preprocessing disabled "
+            "when the data has >50 features"
+        )
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(
+            self.widget.Information.modified.is_shown(),
+            "The PCA warning should be cleared when problematic data is removed"
+        )
 
 
 class TestTSNERunner(unittest.TestCase):

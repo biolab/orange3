@@ -305,6 +305,12 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         modified = Msg("The parameter settings have been changed. Press "
                        "\"Start\" to rerun with the new settings.")
 
+    class Warning(OWDataProjectionWidget.Warning):
+        consider_using_pca_preprocessing = Msg(
+            "The input data contains a large number of features, which may slow"
+            " down t-SNE computation. Consider enabling PCA preprocessing."
+        )
+
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
         not_enough_cols = Msg("Input data needs at least 2 attributes")
@@ -382,6 +388,12 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     def _pca_preprocessing_changed(self):
         self.controls.pca_components.setEnabled(self.use_pca_preprocessing)
         self._invalidate_pca_projection()
+
+        should_warn_pca = False
+        if self.data is not None and not self.use_pca_preprocessing:
+            if len(self.data.domain.attributes) >= _MAX_PCA_COMPONENTS:
+                should_warn_pca = True
+        self.Warning.consider_using_pca_preprocessing(shown=should_warn_pca)
 
     def _multiscale_changed(self):
         self.controls.perplexity.setDisabled(self.multiscale)
