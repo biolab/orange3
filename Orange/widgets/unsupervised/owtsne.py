@@ -579,6 +579,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
     def run(self):
         # Reset invalidated values as indicated by the flags
+        if self._invalidated.normalized_data:
+            self.normalized_data = None
         if self._invalidated.pca_projection:
             self.pca_projection = None
         if self._invalidated.affinities:
@@ -709,6 +711,9 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.run_button.setText("Start")
         # NOTE: All of these have already been set by on_partial_result,
         # we double-check that they are aliases
+        if task.normalized_data is not None:
+            self.__ensure_task_same_for_normalization(task)
+            assert task.normalized_data is self.normalized_data
         if task.pca_projection is not None:
             self.__ensure_task_same_for_pca(task)
             assert task.pca_projection is self.pca_projection
