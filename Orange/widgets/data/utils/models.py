@@ -2,11 +2,11 @@ from math import isnan
 
 from AnyQt.QtCore import Qt, QIdentityProxyModel, QModelIndex
 
+from orangewidget.gui import OrangeUserRole
+
 import Orange
 from Orange.widgets import gui
-
 from Orange.widgets.utils.itemmodels import TableModel
-
 
 _BarRole = gui.TableBarItem.BarRole
 
@@ -19,6 +19,9 @@ class RichTableModel(TableModel):
     """
     #: Rich header data flags.
     Name, Labels, Icon = 1, 2, 4
+
+    #: Qt.ItemData role to retrieve variable's header attributes.
+    LabelsItemsRole = next(OrangeUserRole)
 
     def __init__(self, sourcedata, parent=None):
         super().__init__(sourcedata, parent)
@@ -64,6 +67,14 @@ class RichTableModel(TableModel):
                 lines.extend(str(var.attributes.get(label, ""))
                              for label in self._labels)
             return "\n".join(lines)
+        elif orientation == Qt.Horizontal and \
+                role == RichTableModel.LabelsItemsRole:
+            var = super().headerData(
+                section, orientation, TableModel.VariableRole)
+            if var is None:
+                return super().headerData(section, orientation, Qt.DisplayRole)
+            return [(label, var.attributes.get(label))
+                    for label in self._labels]
         elif orientation == Qt.Horizontal and role == Qt.DecorationRole and \
                 self._header_flags & RichTableModel.Icon:
             var = super().headerData(
