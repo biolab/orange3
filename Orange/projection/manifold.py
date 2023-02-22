@@ -1,3 +1,5 @@
+from typing import Union
+
 import logging
 import warnings
 from collections.abc import Iterable
@@ -13,6 +15,7 @@ import Orange
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.util import get_unique_names
 from Orange.distance import Distance, DistanceModel, Euclidean
+from Orange.misc import DistMatrix
 from Orange.projection import SklProjector, Projector, Projection
 from Orange.projection.base import TransformDomain, ComputeValueProjector
 
@@ -511,17 +514,40 @@ class TSNE(Projector):
 
         return embedding
 
-    def convert_embedding_to_model(self, data, embedding):
+    def convert_embedding_to_model(self, data: Union[Table, DistMatrix], embedding: np.ndarray):
         # The results should be accessible in an Orange table, which doesn't
         # need the full embedding attributes and is cast into a regular array
         n = self.n_components
+
+        if self.metric == "precomputed":
+            if not isinstance(data, DistMatrix):
+                raise ValueError(
+                    f"Expected `data` to be instance of "
+                    f"{DistMatrix.__class__.__name__} when using "
+                    f"`metric='precomputed'. Got {data.__class__.__name__} "
+                    f"instead!"
+                )
+            # The distance matrix need not come attached with the original data
+            if data.row_items is not None:
+                data = data.row_items
+            else:
+                data = Table.from_domain(Domain([]))
+
+        # Determine variable names
         postfixes = ["x", "y"] if n == 2 else list(range(1, n + 1))
+        tsne_colnames = [f"t-SNE-{p}" for p in postfixes]
         names = [var.name for var in chain(data.domain.class_vars, data.domain.metas) if var]
-        proposed = [(f"t-SNE-{p}") for p in postfixes]
-        uniq_names = get_unique_names(names, proposed)
-        tsne_cols = [ContinuousVariable(name) for name in uniq_names]
-        embedding_domain = Domain(tsne_cols, data.domain.class_vars, data.domain.metas)
-        embedding_table = Table(embedding_domain, embedding.view(np.ndarray), data.Y, data.metas)
+        tsne_colnames = get_unique_names(names, tsne_colnames)
+        tsne_cols = [ContinuousVariable(name) for name in tsne_colnames]
+
+        # Distance matrices need not come attached with the original data
+        if len(data.domain) == 0:
+            embedding_domain = Domain(tsne_cols)
+            embedding_table = Table(embedding_domain, embedding.view(np.ndarray))
+
+        else:  # data table was available
+            embedding_domain = Domain(tsne_cols, data.domain.class_vars, data.domain.metas)
+            embedding_table = Table(embedding_domain, embedding.view(np.ndarray), data.Y, data.metas)
 
         # Create a model object which will be capable of transforming new data
         # into the existing embedding

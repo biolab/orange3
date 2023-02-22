@@ -1,9 +1,13 @@
+import os
+
 import unittest
 from unittest.mock import patch, Mock, call
 
 import numpy as np
 
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
+from Orange.distance import Euclidean
+from Orange.misc import DistMatrix
 from Orange.preprocess import Normalize
 from Orange.projection import manifold, TSNE
 from Orange.projection.manifold import TSNEModel
@@ -35,6 +39,19 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
 
         cls.signal_name = OWtSNE.Inputs.data
         cls.signal_data = cls.data
+
+        cls.iris = Table("iris")
+        cls.iris_distances = Euclidean(cls.iris)
+        cls.housing = Table("housing")[:200]
+        cls.housing_distances = Euclidean(cls.housing)
+
+        # Load distance-only DistMatrix, without accompanying `.row_items`
+        my_dir = os.path.dirname(__file__)
+        datasets_dir = os.path.join(my_dir, '..', '..', '..', 'datasets')
+        cls.datasets_dir = os.path.realpath(datasets_dir)
+        cls.towns = DistMatrix.from_file(
+            os.path.join(cls.datasets_dir, "slovenian-towns.dst")
+        )
 
     def setUp(self):
         # For almost all the tests, we won't need to verify t-SNE validity and
@@ -345,7 +362,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         # We should still be able to send a data subset to the input and have
         # the points be highlighted
         self.send_signal(w.Inputs.data_subset, self.data[:10])
-        self.wait_until_stop_blocking()
+        self.wait_until_finished()
         subset = [brush.color().name() == "#46befa" for brush in
                   w.graph.scatterplot_item.data["brush"][:10]]
         other = [brush.color().name() == "#000000" for brush in
@@ -357,8 +374,8 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.send_signal(w.Inputs.data_subset, None)
 
         # Run the optimization
-        self.widget.run_button.clicked.emit()
-        self.wait_until_stop_blocking()
+        self.widget.run_button.click()
+        self.wait_until_finished()
         # All of the inavalidation flags should have been cleared
         self.assertFalse(w._invalidated)
 
@@ -427,18 +444,264 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
             "The PCA warning should be cleared when problematic data is removed"
         )
 
+    def test_distance_matrix_not_symmetric(self):
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_not_symmetric.is_shown())
+
+        self.send_signal(w.Inputs.distances, DistMatrix([[1, 2, 3], [4, 5, 6]]))
+        self.assertTrue(w.Error.distance_matrix_not_symmetric.is_shown())
+
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.Error.distance_matrix_not_symmetric.is_shown())
+
+    def test_matrix_too_small(self):
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.distances, DistMatrix([[1]]))
+        self.assertTrue(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+    def test_mismatching_distances_and_data_size(self):
+        w = self.widget
+        self.assertFalse(w.Error.dimension_mismatch.is_shown())
+
+        # Send incompatible combination
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.send_signal(w.Inputs.data, self.housing)
+        self.wait_until_finished()
+        self.assertTrue(w.Error.dimension_mismatch.is_shown())
+
+        # Remove offending data
+        self.send_signal(w.Inputs.data, None)
+        self.wait_until_finished()
+        self.assertFalse(w.Error.dimension_mismatch.is_shown())
+
+        # Send incompatible combination
+        self.send_signal(w.Inputs.distances, None)
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.send_signal(w.Inputs.data, self.housing)
+        self.wait_until_finished()
+
+        # Remove offending distance matrix
+        self.send_signal(w.Inputs.distances, None)
+        self.wait_until_finished()
+        self.assertFalse(w.Error.dimension_mismatch.is_shown())
+
+        # Clear any data
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.Error.dimension_mismatch.is_shown())
+
+    def test_invalid_distance_matrix_with_valid_data_signal_1(self):
+        """Provide valid data table and an invalid distance matrix at the
+        same time."""
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.distances, DistMatrix([[1]]))
+        self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
+
+        self.assertIsNone(w.graph.scatterplot_item)
+        self.assertIsNone(self.get_output(w.Outputs.annotated_data))
+
+    def test_invalid_distance_matrix_with_valid_data_signal_2(self):
+        """Provide an invalid distance matrix, wait to finish, then provide a
+        valid data table."""
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.distances, DistMatrix([[1]]))
+        self.wait_until_finished()
+        self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
+
+        self.assertIsNone(w.graph.scatterplot_item)
+        self.assertIsNone(self.get_output(w.Outputs.annotated_data))
+
+    def test_invalid_distance_matrix_with_valid_data_signal_3(self):
+        """Provide a valid data table, wait to finish, then provide an
+        invalid distance matrix."""
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
+        self.send_signal(w.Inputs.distances, DistMatrix([[1]]))
+        self.wait_until_finished()
+
+        self.assertIsNone(w.graph.scatterplot_item)
+        self.assertIsNone(self.get_output(w.Outputs.annotated_data))
+
+    def test_valid_distance_matrix_with_mismatching_data_signal_1(self):
+        """Provide valid distance matrix and a mismatching data table at the
+        same time."""
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.send_signal(w.Inputs.data, self.iris[:5])
+        self.wait_until_finished()
+
+        self.assertIsNone(w.graph.scatterplot_item)
+        self.assertIsNone(self.get_output(w.Outputs.annotated_data))
+
+    def test_valid_distance_matrix_with_mismatching_data_signal_2(self):
+        """Provide valid distance matrix, wait to finish, then provide a
+        mismatching data table."""
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.wait_until_finished()
+        self.send_signal(w.Inputs.data, self.iris[:5])
+        self.wait_until_finished()
+
+        self.assertIsNone(w.graph.scatterplot_item)
+        self.assertIsNone(self.get_output(w.Outputs.annotated_data))
+
+    def test_invalid_combination_followed_by_valid_combination(self):
+        """Provide valid distance matrix and a mismatching data table at the
+        same time."""
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.send_signal(w.Inputs.data, self.iris[:5])
+        self.wait_until_finished()
+
+        self.assertIsNone(w.graph.scatterplot_item)
+        self.assertIsNone(self.get_output(w.Outputs.annotated_data))
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
+        self.assertIsNotNone(w.graph.scatterplot_item)
+        self.assertIsNotNone(self.get_output(w.Outputs.annotated_data))
+
+    def test_invalid_combination_followed_by_valid_distance_only(self):
+        """Provide valid distance matrix and a mismatching data table at the
+        same time."""
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.send_signal(w.Inputs.data, self.iris[:5])
+        self.wait_until_finished()
+
+        self.assertIsNone(w.graph.scatterplot_item)
+        self.assertIsNone(self.get_output(w.Outputs.annotated_data))
+
+        self.send_signal(w.Inputs.data, None)
+        self.wait_until_finished()
+        self.assertIsNotNone(w.graph.scatterplot_item)
+        self.assertIsNotNone(self.get_output(w.Outputs.annotated_data))
+
+    def test_invalid_combination_followed_by_valid_data_only(self):
+        """Provide valid distance matrix and a mismatching data table at the
+        same time."""
+        w = self.widget
+        self.assertFalse(w.Error.distance_matrix_too_small.is_shown())
+
+        self.send_signal(w.Inputs.distances, DistMatrix([[1]]))
+        self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
+
+        self.assertIsNone(w.graph.scatterplot_item)
+        self.assertIsNone(self.get_output(w.Outputs.annotated_data))
+
+        self.send_signal(w.Inputs.distances, None)
+        self.wait_until_finished()
+        self.assertIsNotNone(w.graph.scatterplot_item)
+        self.assertIsNotNone(self.get_output(w.Outputs.annotated_data))
+
+    def test_adding_data_table_to_distance_matrix_doesnt_trigger_rerun(self):
+        """If the embedding is already constructed, and we just update the data
+        signal, then we don't need to recompute the embedding."""
+        w = self.widget
+
+        with patch("Orange.widgets.unsupervised.owtsne.TSNERunner.run", wraps=TSNERunner.run) as runner:
+            self.send_signal(w.Inputs.distances, Euclidean(self.housing[:150]))
+            self.wait_until_finished()
+
+            housing_colors = [
+                brush.color().name() for brush in
+                w.graph.scatterplot_item.data["brush"]
+            ]
+
+            self.send_signal(w.Inputs.data, self.iris)
+            self.wait_until_finished()
+            iris_colors = [
+                brush.color().name() for brush in
+                w.graph.scatterplot_item.data["brush"]
+            ]
+
+            # Ensure the colors have changed
+            self.assertTrue(all(c1 != c2 for c1, c2 in zip(housing_colors, iris_colors)))
+            # And that the embedding has not been recomputed
+            runner.assert_called_once()
+
+    def test_data_change_doesnt_crash(self):
+        w = self.widget
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
+
+        self.send_signal(w.Inputs.data, self.housing)
+        self.wait_until_finished()
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
+
+    def test_distance_change_doesnt_crash(self):
+        w = self.widget
+
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.wait_until_finished()
+
+        self.send_signal(w.Inputs.distances, self.housing_distances)
+        self.wait_until_finished()
+
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.wait_until_finished()
+
+    def test_distances_without_data_axis_0(self):
+        w = self.widget
+        signal_data = Euclidean(self.data, axis=0)
+        signal_data.row_items = None
+        self.send_signal(w.Inputs.distances, signal_data)
+
+    def test_distances_without_data_axis_1(self):
+        signal_data = Euclidean(self.data, axis=1)
+        signal_data.row_items = None
+        self.send_signal("Distances", signal_data)
+
+    def test_data_table_with_no_attributes_with_distance_matrix_works(self):
+        w = self.widget
+        self.send_signal(w.Inputs.distances, self.towns)
+        self.wait_until_finished()
+        # No errors should be shown
+        self.assertEqual(len(w.Error.active), 0)
+
 
 class TestTSNERunner(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = Table("iris")
+        cls.distances = Euclidean(cls.data)
 
     def test_run_with_normalization_and_pca_preprocessing(self):
         state = Mock()
         state.is_interruption_requested = Mock(return_value=False)
 
         task = Task(
-            normalize=True, use_pca_preprocessing=True, data=self.data, perplexity=30
+            normalize=True,
+            use_pca_preprocessing=True,
+            data=self.data,
+            perplexity=30,
+            initialization_method="pca",
+            distance_metric="l2",
         )
         task = TSNERunner.run(task, state)
 
@@ -446,8 +709,8 @@ class TestTSNERunner(unittest.TestCase):
         state.set_status.assert_has_calls([
             call("Normalizing data..."),
             call("Computing PCA..."),
-            call("Preparing initialization..."),
             call("Finding nearest neighbors..."),
+            call("Preparing initialization..."),
             call("Running optimization..."),
         ])
 
@@ -461,15 +724,20 @@ class TestTSNERunner(unittest.TestCase):
         state.is_interruption_requested = Mock(return_value=False)
 
         task = Task(
-            normalize=True, use_pca_preprocessing=False, data=self.data, perplexity=30
+            normalize=True,
+            use_pca_preprocessing=False,
+            data=self.data,
+            initialization_method="pca",
+            distance_metric="l2",
+            perplexity=30,
         )
         task = TSNERunner.run(task, state)
 
         self.assertEqual(len(state.set_status.mock_calls), 4)
         state.set_status.assert_has_calls([
             call("Normalizing data..."),
-            call("Preparing initialization..."),
             call("Finding nearest neighbors..."),
+            call("Preparing initialization..."),
             call("Running optimization..."),
         ])
 
@@ -484,15 +752,20 @@ class TestTSNERunner(unittest.TestCase):
         state.is_interruption_requested = Mock(return_value=False)
 
         task = Task(
-            normalize=False, use_pca_preprocessing=True, data=self.data, perplexity=30
+            normalize=False,
+            use_pca_preprocessing=True,
+            data=self.data,
+            initialization_method="pca",
+            distance_metric="l2",
+            perplexity=30,
         )
         task = TSNERunner.run(task, state)
 
         self.assertEqual(len(state.set_status.mock_calls), 4)
         state.set_status.assert_has_calls([
             call("Computing PCA..."),
-            call("Preparing initialization..."),
             call("Finding nearest neighbors..."),
+            call("Preparing initialization..."),
             call("Running optimization..."),
         ])
         state.set_status.assert_has_calls
@@ -507,10 +780,22 @@ class TestTSNERunner(unittest.TestCase):
         state = Mock()
         state.is_interruption_requested.return_value = True
 
-        task = Task(data=self.data, perplexity=30, multiscale=False, exaggeration=1)
+        task = Task(
+            data=self.data,
+            initialization_method="pca",
+            distance_metric="l2",
+            perplexity=30,
+            multiscale=False,
+            exaggeration=1,
+        )
         # Run through all the steps to prepare the t-SNE object
         task.tsne = prepare_tsne_obj(
-            task.data, task.perplexity, task.multiscale, task.exaggeration
+            task.data.X.shape[0],
+            task.initialization_method,
+            task.distance_metric,
+            task.perplexity,
+            task.multiscale,
+            task.exaggeration,
         )
         TSNERunner.compute_normalization(task, state)
         TSNERunner.compute_pca(task, state)
@@ -527,6 +812,128 @@ class TestTSNERunner(unittest.TestCase):
 
         state.set_partial_result.assert_called_once()
         self.assertIsNot(tsne_obj_before, tsne_obj_after)
+
+    def test_run_with_distance_matrix(self):
+        state = Mock()
+        state.is_interruption_requested = Mock(return_value=False)
+
+        task = Task(
+            normalize=False,
+            use_pca_preprocessing=False,
+            # data=self.data,
+            distance_matrix=self.distances,
+            perplexity=30,
+            initialization_method="spectral",
+            distance_metric="precomputed",
+        )
+        task = TSNERunner.run(task, state)
+
+        self.assertEqual(len(state.set_status.mock_calls), 3)
+        state.set_status.assert_has_calls([
+            call("Finding nearest neighbors..."),
+            call("Preparing initialization..."),
+            call("Running optimization..."),
+        ])
+
+        self.assertIsNone(task.normalized_data)
+        self.assertIsNone(task.pca_projection)
+        self.assertIsInstance(task.initialization, np.ndarray)
+        self.assertIsInstance(task.tsne, TSNE)
+        self.assertIsInstance(task.tsne_embedding, TSNEModel)
+
+    def test_task_validation(self):
+        # distance matrix with no data table
+        Task(
+            normalize=True,
+            use_pca_preprocessing=True,
+            distance_matrix=self.distances,
+            perplexity=30,
+            initialization_method="spectral",
+            distance_metric="precomputed",
+        ).validate()
+
+        # both distance matrix and data table are provided
+        Task(
+            normalize=True,
+            use_pca_preprocessing=True,
+            data=self.data,
+            distance_matrix=self.distances,
+            perplexity=30,
+            initialization_method="spectral",
+            distance_metric="precomputed",
+        ).validate()
+
+        # data table with no distance matrix
+        Task(
+            normalize=True,
+            use_pca_preprocessing=True,
+            data=self.data,
+            perplexity=30,
+            initialization_method="pca",
+            distance_metric="cosine",
+        ).validate()
+
+        # distance_metric="precomputed" with no distance matrix
+        with self.assertRaises(Task.ValidationError):
+            Task(
+                normalize=True,
+                use_pca_preprocessing=True,
+                data=self.data,
+                perplexity=30,
+                initialization_method="spectral",
+                distance_metric="precomputed",
+            ).validate()
+
+        # initialization_method="pca" with distance matrix
+        with self.assertRaises(Task.ValidationError):
+            Task(
+                normalize=True,
+                use_pca_preprocessing=True,
+                data=self.data,
+                distance_matrix=self.distances,
+                perplexity=30,
+                initialization_method="pca",
+                distance_metric="precomputed",
+            ).validate()
+
+        # distance_metric="l2" with distance matrix
+        with self.assertRaises(Task.ValidationError):
+            Task(
+                normalize=True,
+                use_pca_preprocessing=True,
+                data=self.data,
+                distance_matrix=self.distances,
+                perplexity=30,
+                initialization_method="spectral",
+                distance_metric="l2",
+            ).validate()
+
+    def test_run_with_distance_matrix_ignores_preprocessing(self):
+        state = Mock()
+        state.is_interruption_requested = Mock(return_value=False)
+
+        task = Task(
+            normalize=True,
+            use_pca_preprocessing=True,
+            distance_matrix=self.distances,
+            perplexity=30,
+            initialization_method="spectral",
+            distance_metric="precomputed",
+        )
+        task = TSNERunner.run(task, state)
+
+        self.assertEqual(len(state.set_status.mock_calls), 3)
+        state.set_status.assert_has_calls([
+            call("Finding nearest neighbors..."),
+            call("Preparing initialization..."),
+            call("Running optimization..."),
+        ])
+
+        self.assertIsNone(task.normalized_data)
+        self.assertIsNone(task.pca_projection)
+        self.assertIsInstance(task.initialization, np.ndarray)
+        self.assertIsInstance(task.tsne, TSNE)
+        self.assertIsInstance(task.tsne_embedding, TSNEModel)
 
 
 if __name__ == "__main__":
