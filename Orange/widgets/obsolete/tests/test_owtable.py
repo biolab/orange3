@@ -1,4 +1,4 @@
-# pylint: disable=protected-access
+# pylint: skip-file
 import unittest
 from unittest.mock import Mock, patch
 
@@ -68,11 +68,10 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
         new_domain.metas[0].attributes = {"c": "foo"}
         new_domain.attributes[0].attributes = {"a": "bar", "c": "baz"}
         new_domain.class_var.attributes = {"b": "foo"}
-        self.widget.set_corner_text = Mock()
         self.send_signal(self.widget.Inputs.data, self.data.transform(new_domain))
-        # false positive, pylint: disable=unsubscriptable-object
         self.assertEqual(
-            self.widget.set_corner_text.call_args[0][1], "\na\nb\nc")
+            self.widget.tabs.currentWidget().cornerText(), "\na\nb\nc"
+        )
 
     def test_unconditional_commit_on_new_signal(self):
         with patch.object(self.widget.commit, 'now') as commit:

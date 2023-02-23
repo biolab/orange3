@@ -24,7 +24,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
-from Orange.widgets.data.utils.tableview import DataTableView
+from Orange.widgets.data.utils.tableview import RichTableView
 from Orange.widgets.settings import Setting
 from Orange.widgets.data.utils.models import TableSliceProxy, RichTableModel
 from Orange.widgets.utils.itemdelegates import TableDataDelegate
@@ -46,7 +46,7 @@ from Orange.widgets.utils.state_summary import format_summary_details
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
 
 
-class DataTableView(gui.HScrollStepMixin, DataTableView):
+class DataTableView(gui.HScrollStepMixin, RichTableView):
     dataset: Table
     input_slot: TableSlot
 
@@ -308,10 +308,6 @@ class OWDataTable(OWWidget):
         view.setSelectionModel(selmodel)
         view.selectionFinished.connect(self.update_selection)
 
-    def set_corner_text(self, table: DataTableView, text: str):
-        """Set table corner text."""
-        table.setCornerText(text)
-
     def _set_input_summary(self, slot):
         def format_summary(summary):
             if isinstance(summary, ApproxSummary):
@@ -389,14 +385,6 @@ class OWDataTable(OWWidget):
             text.append("No meta attributes.")
         return text
 
-    def _on_select_all(self, _):
-        data_info = self.tabs.currentWidget().input_slot.summary
-        if len(self.selected_rows) == data_info.len \
-                and len(self.selected_cols) == len(data_info.domain.variables):
-            self.tabs.currentWidget().clearSelection()
-        else:
-            self.tabs.currentWidget().selectAll()
-
     def _on_current_tab_changed(self, index):
         """Update the status bar on current tab change"""
         view = self.tabs.widget(index)
@@ -415,17 +403,8 @@ class OWDataTable(OWWidget):
         if self.show_attribute_labels:
             model.setRichHeaderFlags(
                 RichTableModel.Labels | RichTableModel.Name)
-
-            labelnames = set()
-            domain = model.source.domain
-            for a in itertools.chain(domain.metas, domain.variables):
-                labelnames.update(a.attributes.keys())
-            labelnames = sorted(
-                [label for label in labelnames if not label.startswith("_")])
-            self.set_corner_text(view, "\n".join([""] + labelnames))
         else:
             model.setRichHeaderFlags(RichTableModel.Name)
-            self.set_corner_text(view, "")
 
     def _on_show_variable_labels_changed(self):
         """The variable labels (var.attribues) visibility was changed."""
