@@ -4,7 +4,9 @@ import unittest
 from unittest.mock import patch, Mock, call
 
 import numpy as np
+import scipy.sparse as sp
 
+import openTSNE.affinity
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain, Table
 from Orange.distance import Euclidean
 from Orange.misc import DistMatrix
@@ -18,13 +20,32 @@ from Orange.widgets.unsupervised.owtsne import OWtSNE, TSNERunner, Task, prepare
 
 
 class DummyTSNE(manifold.TSNE):
+    def compute_affinities(self, X):
+
+        class DummyAffinities(openTSNE.affinity.Affinities):
+            def __init__(self, data=None, *args, **kwargs):
+                n_samples = data.shape[0]
+                self.P = sp.random(n_samples, n_samples, density=0.1)
+                self.P /= self.P.sum()
+
+            def to_new(self, data, return_distances=False):
+                ones = np.ones((len(data), 2), float)
+                if return_distances:
+                    return ones, ones
+                return ones
+
+        return DummyAffinities(X)
+
+    def compute_initialization(self, X):
+        return np.ones((X.shape[0], 2), float)
+
     def fit(self, X, Y=None):
-        return np.ones((len(X), 2), float)
+        return np.ones((X.shape[0], 2), float)
 
 
 class DummyTSNEModel(manifold.TSNEModel):
     def transform(self, X, **kwargs):
-        return np.ones((len(X), 2), float)
+        return np.ones((X.shape[0], 2), float)
 
     def optimize(self, n_iter, **kwargs):
         return self
