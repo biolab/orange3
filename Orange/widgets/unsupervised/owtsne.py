@@ -756,6 +756,8 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.controls.pca_components.setValue(_DEFAULT_PCA_COMPONENTS)
 
         self.exaggeration = 1
+        self.normalize = True
+        self.use_pca_preprocessing = True
 
     def enable_controls(self):
         super().enable_controls()
