@@ -780,30 +780,51 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         form = self.parameter_box.layout().itemAt(0)
         assert isinstance(form, QFormLayout)
 
+        # Reset all tooltips and controls
+        self.normalize_cbx.setDisabled(False)
+        self.normalize_cbx.setToolTip("")
+
+        self.pca_preprocessing_cbx.setDisabled(False)
+        self.pca_preprocessing_cbx.setToolTip("")
+
+        self.initialization_combo.setDisabled(False)
+        self.initialization_combo.setToolTip("")
+        form.labelForField(self.initialization_combo).setDisabled(False)
+
+        self.distance_metric_combo.setDisabled(False)
+        self.distance_metric_combo.setToolTip("")
+        form.labelForField(self.distance_metric_combo).setDisabled(False)
+
         if has_distance_matrix:
             self.normalize = False
             self.normalize_cbx.setDisabled(True)
+            self.normalize_cbx.setToolTip(
+                "Precomputed distances provided. Preprocessing is unnecessary!"
+            )
 
             self.use_pca_preprocessing = False
             self.pca_preprocessing_cbx.setDisabled(True)
+            self.pca_preprocessing_cbx.setToolTip(
+                "Precomputed distances provided. Preprocessing is unnecessary!"
+            )
 
             # Only spectral init is valid with a precomputed distance matrix
             spectral_init_idx = self.initialization_combo.findText("Spectral")
             self.initialization_method_idx = spectral_init_idx
             self.initialization_combo.setCurrentIndex(spectral_init_idx)
             self.initialization_combo.setDisabled(True)
+            self.initialization_combo.setToolTip(
+                "Only spectral intialization is supported with precomputed "
+                "distance matrices."
+            )
             form.labelForField(self.initialization_combo).setDisabled(True)
 
             self.distance_metric_combo.setDisabled(True)
             self.distance_metric_combo.setCurrentIndex(-1)
+            self.distance_metric_combo.setToolTip(
+                "Precomputed distances provided."
+            )
             form.labelForField(self.distance_metric_combo).setDisabled(True)
-        else:
-            self.normalize_cbx.setDisabled(False)
-            self.pca_preprocessing_cbx.setDisabled(False)
-            self.initialization_combo.setDisabled(False)
-            self.distance_metric_combo.setDisabled(False)
-            form.labelForField(self.initialization_combo).setDisabled(False)
-            form.labelForField(self.distance_metric_combo).setDisabled(False)
 
         # PCA doesn't support normalization on sparse data, as this would
         # require centering and normalizing the matrix
@@ -813,8 +834,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self.normalize_cbx.setToolTip(
                 "Data normalization is not supported on sparse matrices."
             )
-        else:
-            self.normalize_cbx.setToolTip("")
 
         # Disable slider parent, because we want to disable the labels too
         self.pca_component_slider.parent().setEnabled(self.use_pca_preprocessing)
