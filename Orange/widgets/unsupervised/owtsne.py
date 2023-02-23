@@ -434,22 +434,22 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         super()._add_controls()
 
     def _add_controls_start_box(self):
-        preprocessing_box = gui.vBox(self.controlArea, box="Preprocessing")
+        self.preprocessing_box = gui.vBox(self.controlArea, box="Preprocessing")
         self.normalize_cbx = gui.checkBox(
-            preprocessing_box, self, "normalize", "Normalize data",
+            self.preprocessing_box, self, "normalize", "Normalize data",
             callback=self._invalidate_normalized_data,
         )
         self.pca_preprocessing_cbx = gui.checkBox(
-            preprocessing_box, self, "use_pca_preprocessing", "Apply PCA preprocessing",
+            self.preprocessing_box, self, "use_pca_preprocessing", "Apply PCA preprocessing",
             callback=self._pca_preprocessing_changed,
         )
         self.pca_component_slider = gui.hSlider(
-            preprocessing_box, self, "pca_components", label="PCA Components:",
+            self.preprocessing_box, self, "pca_components", label="PCA Components:",
             minValue=2, maxValue=_MAX_PCA_COMPONENTS, step=1,
             callback=self._pca_slider_changed,
         )
 
-        box = gui.vBox(self.controlArea, box="Parameters")
+        self.parameter_box = gui.vBox(self.controlArea, box="Parameters")
         form = QFormLayout(
             labelAlignment=Qt.AlignLeft,
             formAlignment=Qt.AlignLeft,
@@ -471,14 +471,14 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         form.addRow("Distance metric:", self.distance_metric_combo)
 
         self.perplexity_spin = gui.spin(
-            box, self, "perplexity", 1, 500, step=1, alignment=Qt.AlignRight,
-            callback=self._invalidate_affinities, addToLayout=False
+            self.controlArea, self, "perplexity", 1, 500, step=1,
+            alignment=Qt.AlignRight, addToLayout=False,
+            callback=self._invalidate_affinities,
         )
-        self.controls.perplexity.setDisabled(self.multiscale)
         form.addRow("Perplexity:", self.perplexity_spin)
 
         form.addRow(gui.checkBox(
-            box, self, "multiscale", label="Preserve global structure",
+            self.controlArea, self, "multiscale", label="Preserve global structure",
             callback=self._multiscale_changed, addToLayout=False
         ))
 
@@ -490,9 +490,11 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         )
         form.addRow("Exaggeration:", sbe)
 
-        box.layout().addLayout(form)
+        self.parameter_box.layout().addLayout(form)
 
-        self.run_button = gui.button(box, self, "Start", callback=self._toggle_run)
+        self.run_button = gui.button(
+            self.parameter_box, self, "Start", callback=self._toggle_run
+        )
 
     # GUI control callbacks
     def _normalize_data_changed(self):
@@ -509,7 +511,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         # when we programmatically enable/disable the checkbox in
         # `enable_controls`
         if self.distance_matrix is None:
-            self.controls.pca_components.setEnabled(self.use_pca_preprocessing)
+            self.controls.pca_components.box.setEnabled(self.use_pca_preprocessing)
 
             self._invalidate_pca_projection()
 
@@ -528,7 +530,11 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self._invalidate_pca_projection()
 
     def _multiscale_changed(self):
+        form = self.parameter_box.layout().itemAt(0)
+        assert isinstance(form, QFormLayout)
+        form.labelForField(self.perplexity_spin).setDisabled(self.multiscale)
         self.controls.perplexity.setDisabled(self.multiscale)
+
         self._invalidate_affinities()
 
     # Invalidation cascade
@@ -746,8 +752,10 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         if self.data is not None:
             n_attrs = len(self.data.domain.attributes)
             max_components = min(_MAX_PCA_COMPONENTS, n_attrs)
+            should_use_pca = len(self.data.domain.attributes) > 10
         else:
             max_components = _MAX_PCA_COMPONENTS
+            should_use_pca = False
 
         # We set this to the default number of components here, so it resets
         # properly, any previous settings will be restored from context
@@ -757,47 +765,63 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         self.exaggeration = 1
         self.normalize = True
-        self.use_pca_preprocessing = True
+        self.use_pca_preprocessing = should_use_pca
+        self.distance_metric_idx = 0
+        self.initialization_method_idx = 0
 
     def enable_controls(self):
         super().enable_controls()
 
-        if self.distance_matrix is not None:
+        has_distance_matrix = self.distance_matrix is not None
+        has_data = self.data is not None
+
+        # When we disable controls in the form layout, we also want to ensure
+        # the labels are disabled, to be consistent with the preprocessing box
+        form = self.parameter_box.layout().itemAt(0)
+        assert isinstance(form, QFormLayout)
+
+        if has_distance_matrix:
             self.normalize = False
             self.normalize_cbx.setDisabled(True)
 
             self.use_pca_preprocessing = False
             self.pca_preprocessing_cbx.setDisabled(True)
-            self.pca_component_slider.setDisabled(True)
 
             # Only spectral init is valid with a precomputed distance matrix
             spectral_init_idx = self.initialization_combo.findText("Spectral")
             self.initialization_method_idx = spectral_init_idx
             self.initialization_combo.setCurrentIndex(spectral_init_idx)
             self.initialization_combo.setDisabled(True)
+            form.labelForField(self.initialization_combo).setDisabled(True)
 
             self.distance_metric_combo.setDisabled(True)
             self.distance_metric_combo.setCurrentIndex(-1)
-
-        elif self.data is not None:
-            # PCA doesn't support normalization on sparse data, as this would
-            # require centering and normalizing the matrix
-            if self.data.is_sparse():
-                self.normalize = False
-                self.normalize_cbx.setDisabled(True)
-                self.normalize_cbx.setToolTip(
-                    "Data normalization is not supported on sparse matrices."
-                )
+            form.labelForField(self.distance_metric_combo).setDisabled(True)
         else:
             self.normalize_cbx.setDisabled(False)
-            self.normalize_cbx.setToolTip("")
             self.pca_preprocessing_cbx.setDisabled(False)
-            self.pca_component_slider.setDisabled(False)
             self.initialization_combo.setDisabled(False)
             self.distance_metric_combo.setDisabled(False)
+            form.labelForField(self.initialization_combo).setDisabled(False)
+            form.labelForField(self.distance_metric_combo).setDisabled(False)
+
+        # PCA doesn't support normalization on sparse data, as this would
+        # require centering and normalizing the matrix
+        if not has_distance_matrix and has_data and self.data.is_sparse():
+            self.normalize = False
+            self.normalize_cbx.setDisabled(True)
+            self.normalize_cbx.setToolTip(
+                "Data normalization is not supported on sparse matrices."
+            )
+        else:
+            self.normalize_cbx.setToolTip("")
+
+        # Disable slider parent, because we want to disable the labels too
+        self.pca_component_slider.parent().setEnabled(self.use_pca_preprocessing)
 
         # Disable the perplexity spin box if multiscale is turned on
-        self.controls.perplexity.setDisabled(self.multiscale)
+        self.perplexity_spin.setDisabled(self.multiscale)
+        form.labelForField(self.perplexity_spin).setDisabled(self.multiscale)
 
     def run(self):
         # Reset invalidated values as indicated by the flags

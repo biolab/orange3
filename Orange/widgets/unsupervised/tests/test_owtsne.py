@@ -705,6 +705,59 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         # No errors should be shown
         self.assertEqual(len(w.Error.active), 0)
 
+    def test_controls_are_properly_disabled_with_distance_matrix_1(self):
+        """Send both signals first, then disconnect distances."""
+        w = self.widget
+
+        disabled_fields = [
+            "normalize", "use_pca_preprocessing", "pca_components",
+            "initialization_method_idx", "distance_metric_idx",
+        ]
+
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
+
+        for field in disabled_fields:
+            self.assertFalse(getattr(w.controls, field).isEnabled())
+
+        # Remove distance matrix, can use data, so fields should be enabled
+        self.send_signal(w.Inputs.distances, None)
+        # Ensure PCA checkbox is ticked, to enable slider
+        w.controls.use_pca_preprocessing.setChecked(True)
+        self.wait_until_finished()
+
+        for field in disabled_fields:
+            self.assertTrue(getattr(w.controls, field).isEnabled())
+
+    def test_controls_are_properly_disabled_with_distance_matrix_2(self):
+        """Send distances first, disconnect distances, then send data."""
+        w = self.widget
+
+        disabled_fields = [
+            "normalize", "use_pca_preprocessing", "pca_components",
+            "initialization_method_idx", "distance_metric_idx",
+        ]
+
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+        self.wait_until_finished()
+
+        for field in disabled_fields:
+            self.assertFalse(getattr(w.controls, field).isEnabled())
+
+        # Remove distance matrix
+        self.send_signal(w.Inputs.distances, None)
+        self.wait_until_finished()
+        # Send data
+        self.send_signal(w.Inputs.data, self.iris)
+        # Ensure PCA checkbox is ticked, to enable slider
+        w.controls.use_pca_preprocessing.setChecked(True)
+        self.wait_until_finished()
+
+        # Should now be enabled
+        for field in disabled_fields:
+            self.assertTrue(getattr(w.controls, field).isEnabled())
+
 
 class TestTSNERunner(unittest.TestCase):
     @classmethod
