@@ -966,27 +966,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         self.commit.deferred()
 
-    def _get_projection_data(self):
-        if self.data is None:
-            return None
-
-        data = self.data.transform(
-            Domain(
-                self.data.domain.attributes,
-                self.data.domain.class_vars,
-                self.data.domain.metas + self._get_projection_variables()
-            )
-        )
-        with data.unlocked(data.metas):
-            data.metas[:, -2:] = self.get_embedding()
-        if self.tsne_embedding is not None:
-            data.domain = Domain(
-                self.data.domain.attributes,
-                self.data.domain.class_vars,
-                self.data.domain.metas + self.tsne_embedding.domain.attributes,
-            )
-        return data
-
     def cancel(self):
         self.run_button.setText("Start")
         super().cancel()
