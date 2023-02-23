@@ -762,7 +762,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     def enable_controls(self):
         super().enable_controls()
 
-        if self.signal_data is None and self.distance_matrix is not None:
+        if self.distance_matrix is not None:
             self.normalize = False
             self.normalize_cbx.setDisabled(True)
 
