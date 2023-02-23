@@ -39,10 +39,10 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.state_summary import format_summary_details
-from Orange.widgets.data.utils.tableview import DataTableView
+from Orange.widgets.data.utils.tableview import RichTableView
 
 
-class DataTableView(gui.HScrollStepMixin, DataTableView):
+class DataTableView(gui.HScrollStepMixin, RichTableView):
     pass
 
 
@@ -350,16 +350,8 @@ class OWTable(OWWidget):
             model.setRichHeaderFlags(
                 RichTableModel.Labels | RichTableModel.Name
             )
-            labelnames = set()
-            domain = model.source.domain
-            for a in itertools.chain(domain.metas, domain.variables):
-                labelnames.update(a.attributes.keys())
-            labelnames = sorted(
-                [label for label in labelnames if not label.startswith("_")])
-            self.view.setCornerText("\n".join([""] + labelnames))
         else:
             model.setRichHeaderFlags(RichTableModel.Name)
-            self.view.setCornerText("")
 
     def _on_distribution_color_changed(self):
         if self.input is None:
