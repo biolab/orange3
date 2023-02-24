@@ -1,4 +1,3 @@
-import threading
 import itertools
 import concurrent.futures
 
@@ -18,10 +17,8 @@ from AnyQt.QtCore import (
 from AnyQt.QtCore import pyqtSlot as Slot
 
 import Orange.data
-from Orange.data.storage import Storage
 from Orange.data.table import Table
 from Orange.data.sql.table import SqlTable
-from Orange.statistics import basic_stats
 
 from Orange.widgets import gui
 from Orange.widgets.data.utils.tableview import RichTableView
@@ -31,16 +28,14 @@ from Orange.widgets.utils.itemdelegates import TableDataDelegate
 from Orange.widgets.utils.itemselectionmodel import (
     BlockSelectionModel, ranges, selection_blocks
 )
-from Orange.widgets.utils.tableview import TableView, \
-    table_selection_to_mime_data
+from Orange.widgets.utils.tableview import table_selection_to_mime_data
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, MultiInput, Output, Msg
-from Orange.widgets.utils import datacaching
-from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.data.utils import tablesummary as tsummary
 
 
 TableSlot = namedtuple("TableSlot", ["input_id", "table", "summary", "view"])
@@ -178,7 +173,7 @@ class OWDataTable(OWWidget):
         assert self.tabs.indexOf(view) != -1
         self.tabs.setTabText(self.tabs.indexOf(view), datasetname)
         view.dataset = data
-        slot = TableSlot(index, data, table_summary(data), view)
+        slot = TableSlot(index, data, tsummary.table_summary(data), view)
         view.input_slot = slot
         self._inputs[index] = slot
         self._setup_table_view(view, data)
@@ -189,7 +184,7 @@ class OWDataTable(OWWidget):
     def insert_dataset(self, index: int, data: Table):
         datasetname = getattr(data, "name", "Data")
         view = self._create_table_view()
-        slot = TableSlot(None, data, table_summary(data), view)
+        slot = TableSlot(None, data, tsummary.table_summary(data), view)
         view.dataset = data
         view.input_slot = slot
         self._inputs.insert(index, slot)
@@ -310,10 +305,10 @@ class OWDataTable(OWWidget):
 
     def _set_input_summary(self, slot):
         def format_summary(summary):
-            if isinstance(summary, ApproxSummary):
+            if isinstance(summary, tsummary.ApproxSummary):
                 length = summary.len.result() if summary.len.done() else \
                     summary.approx_len
-            elif isinstance(summary, Summary):
+            elif isinstance(summary, tsummary.Summary):
                 length = summary.len
             return length
 
@@ -322,68 +317,11 @@ class OWDataTable(OWWidget):
             summary = format_summary(slot.summary)
             details = format_summary_details(slot.table)
         self.info.set_input_summary(summary, details)
-
-        self.info_text.setText("\n".join(self._info_box_text(slot)))
-
-    @staticmethod
-    def _info_box_text(slot):
-        def format_part(part):
-            if isinstance(part, DenseArray):
-                if not part.nans:
-                    return ""
-                perc = 100 * part.nans / (part.nans + part.non_nans)
-                return f" ({perc:.1f} % missing data)"
-
-            if isinstance(part, SparseArray):
-                tag = "sparse"
-            elif isinstance(part, SparseBoolArray):
-                tag = "tags"
-            else:  # isinstance(part, NotAvailable)
-                return ""
-            dens = 100 * part.non_nans / (part.nans + part.non_nans)
-            return f" ({tag}, density {dens:.2f} %)"
-
         if slot is None:
-            return ["No data."]
-        summary = slot.summary
-        text = []
-        if isinstance(summary, ApproxSummary):
-            if summary.len.done():
-                ninst = summary.len.result()
-                text.append(f"{ninst} {pl(ninst, 'instance')}")
-            else:
-                ninst = summary.approx_len
-                text.append(f"~{ninst} {pl(ninst, 'instance')}")
-        elif isinstance(summary, Summary):
-            ninst = summary.len
-            text.append(f"{ninst} {pl(ninst, 'instance')}")
-            if sum(p.nans for p in [summary.X, summary.Y, summary.M]) == 0:
-                text[-1] += " (no missing data)"
-
-        nattrs = len(summary.domain.attributes)
-        text.append(f"{nattrs}  {pl(nattrs, 'feature')}"
-                    + format_part(summary.X))
-
-        if not summary.domain.class_vars:
-            text.append("No target variable.")
+            summary = ["No data."]
         else:
-            nclasses = len(summary.domain.class_vars)
-            if nclasses > 1:
-                c_text = f"{nclasses} {pl(nclasses, 'outcome')}"
-            elif summary.domain.has_continuous_class:
-                c_text = "Numeric outcome"
-            else:
-                nvalues = len(summary.domain.class_var.values)
-                c_text = f"Target with {nvalues} {pl(nvalues, 'value')}"
-            text.append(c_text + format_part(summary.Y))
-
-        nmetas = len(summary.domain.metas)
-        if nmetas:
-            text.append(f"{nmetas} {pl(nmetas, 'meta attribute')}"
-                        + format_part(summary.M))
-        else:
-            text.append("No meta attributes.")
-        return text
+            summary = tsummary.format_summary(slot.summary)
+        self.info_text.setText("\n".join(summary))
 
     def _on_current_tab_changed(self, index):
         """Update the status bar on current tab change"""
@@ -588,75 +526,6 @@ class OWDataTable(OWWidget):
         model = self._get_model(view)
         self.report_data_brief(model.source)
         self.report_table(view)
-
-
-# Table Summary
-
-# Basic statistics for X/Y/metas arrays
-DenseArray = namedtuple(
-    "DenseArray", ["nans", "non_nans", "stats"])
-SparseArray = namedtuple(
-    "SparseArray", ["nans", "non_nans", "stats"])
-SparseBoolArray = namedtuple(
-    "SparseBoolArray", ["nans", "non_nans", "stats"])
-NotAvailable = namedtuple("NotAvailable", [])
-
-#: Orange.data.Table summary
-Summary = namedtuple(
-    "Summary",
-    ["len", "domain", "X", "Y", "M"])
-
-#: Orange.data.sql.table.SqlTable summary
-ApproxSummary = namedtuple(
-    "ApproxSummary",
-    ["approx_len", "len", "domain", "X", "Y", "M"])
-
-
-def table_summary(table):
-    if isinstance(table, SqlTable):
-        approx_len = table.approx_len()
-        len_future = concurrent.futures.Future()
-
-        def _len():
-            len_future.set_result(len(table))
-        threading.Thread(target=_len).start()  # KILL ME !!!
-
-        return ApproxSummary(approx_len, len_future, table.domain,
-                             NotAvailable(), NotAvailable(), NotAvailable())
-    else:
-        domain = table.domain
-        n_instances = len(table)
-        # dist = basic_stats.DomainBasicStats(table, include_metas=True)
-        bstats = datacaching.getCached(
-            table, basic_stats.DomainBasicStats, (table, True)
-        )
-
-        dist = bstats.stats
-        # pylint: disable=unbalanced-tuple-unpacking
-        X_dist, Y_dist, M_dist = numpy.split(
-            dist, numpy.cumsum([len(domain.attributes),
-                                len(domain.class_vars)]))
-
-        def parts(array, density, col_dist):
-            array = numpy.atleast_2d(array)
-            nans = sum([dist.nans for dist in col_dist])
-            non_nans = sum([dist.non_nans for dist in col_dist])
-            if density == Storage.DENSE:
-                return DenseArray(nans, non_nans, col_dist)
-            elif density == Storage.SPARSE:
-                return SparseArray(nans, non_nans, col_dist)
-            elif density == Storage.SPARSE_BOOL:
-                return SparseBoolArray(nans, non_nans, col_dist)
-            elif density == Storage.MISSING:
-                return NotAvailable()
-            else:
-                assert False
-                return None
-
-        X_part = parts(table.X, table.X_density(), X_dist)
-        Y_part = parts(table.Y, table.Y_density(), Y_dist)
-        M_part = parts(table.metas, table.metas_density(), M_dist)
-        return Summary(n_instances, domain, X_part, Y_part, M_part)
 
 
 def is_sortable(table):
