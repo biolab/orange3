@@ -2,7 +2,7 @@ import itertools
 import concurrent.futures
 
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import numpy
 from scipy.sparse import issparse
@@ -74,18 +74,18 @@ class OWTable(OWWidget):
     auto_commit = Setting(True)
 
     color_by_class = Setting(True)
-    selected_rows = Setting([], schema_only=True)
-    selected_cols = Setting([], schema_only=True)
+    stored_selection = Setting({
+        "rows": [], "columns": []
+    })
+    # selected_rows = Setting([], schema_only=True)
+    # selected_cols = Setting([], schema_only=True)
 
     settings_version = 1
 
     def __init__(self):
         super().__init__()
         self.input: Optional[InputData] = None
-        self.__pending_selected_rows = self.selected_rows
-        self.selected_rows = None
-        self.__pending_selected_cols = self.selected_cols
-        self.selected_cols = None
+        self.__pending_selection = self.stored_selection
         self.dist_color = QColor(220, 220, 220, 255)
 
         info_box = gui.vBox(self.controlArea, "Info")
@@ -179,19 +179,11 @@ class OWTable(OWWidget):
 
         self._update_input_summary()
 
-        if data is not None and self.__pending_selected_rows is not None:
-            self.selected_rows = self.__pending_selected_rows
-            self.__pending_selected_rows = None
-        else:
-            self.selected_rows = []
-
-        if data and self.__pending_selected_cols is not None:
-            self.selected_cols = self.__pending_selected_cols
-            self.__pending_selected_cols = None
-        else:
-            self.selected_cols = []
-
-        self.set_selection()
+        if data is not None and self.__pending_selection is not None:
+            selection = self.__pending_selection
+            rows = selection["rows"]
+            columns = selection["columns"]
+            self.set_selection(rows, columns)
         self.commit.now()
 
     def _setup_table_view(self):
@@ -336,28 +328,28 @@ class OWTable(OWWidget):
     def update_selection(self, *_):
         self.commit.deferred()
 
-    def set_selection(self):
-        if self.selected_rows and self.selected_cols:
-            view = self.view
-            model = view.model()
-            if model.rowCount() <= self.selected_rows[-1] or \
-                    model.columnCount() <= self.selected_cols[-1]:
-                return
+    def set_selection(self, rows: List[int], columns: List[int]) -> None:
+        view = self.view
+        model = view.model()
+        if not rows or not columns or model.rowCount() <= rows[-1] or \
+                model.columnCount() <= columns[-1]:
+            # selection out of range for the model
+            rows = columns = []
 
-            selection = QItemSelection()
-            rowranges = list(ranges(self.selected_rows))
-            colranges = list(ranges(self.selected_cols))
+        selection = QItemSelection()
+        rowranges = list(ranges(rows))
+        colranges = list(ranges(columns))
 
-            for rowstart, rowend in rowranges:
-                for colstart, colend in colranges:
-                    selection.append(
-                        QItemSelectionRange(
-                            view.model().index(rowstart, colstart),
-                            view.model().index(rowend - 1, colend - 1)
-                        )
+        for rowstart, rowend in rowranges:
+            for colstart, colend in colranges:
+                selection.append(
+                    QItemSelectionRange(
+                        model.index(rowstart, colstart),
+                        model.index(rowend - 1, colend - 1)
                     )
-            view.selectionModel().select(
-                selection, QItemSelectionModel.ClearAndSelect)
+                )
+        view.selectionModel().select(
+            selection, QItemSelectionModel.ClearAndSelect)
 
     @staticmethod
     def get_selection(view):
@@ -404,7 +396,7 @@ class OWTable(OWWidget):
                 return
 
             rowsel, colsel = self.get_selection(view)
-            self.selected_rows, self.selected_cols = rowsel, colsel
+            self.stored_selection = {"rows": rowsel, "columns": colsel}
 
             domain = table.domain
 
