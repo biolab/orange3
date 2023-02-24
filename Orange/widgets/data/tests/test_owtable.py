@@ -16,7 +16,7 @@ from Orange.data.sql.table import SqlTable
 from Orange.tests.sql.base import DataBaseTest as dbt
 
 
-class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
+class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -28,14 +28,6 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
 
     def setUp(self):
         self.widget = self.create_widget(OWDataTable)
-
-    def setUpDB(self):
-        # pylint: disable=attribute-defined-outside-init
-        conn, self.iris = self.create_iris_sql_table()
-        self.table = SqlTable(conn, self.iris)
-
-    def tearDownDB(self):
-        self.drop_iris_sql_table()
 
     def test_input_data(self):
         """Check number of tabs with data on the input"""
@@ -71,15 +63,14 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         return self.widget.selected_rows
 
     def test_attrs_appear_in_corner_text(self):
-        iris = Table("iris")
-        domain = iris.domain
+        domain = self.data.domain
         new_domain = Domain(
-            domain.attributes[1:], iris.domain.class_var, domain.attributes[:1])
+            domain.attributes[1:], domain.class_var, domain.attributes[:1])
         new_domain.metas[0].attributes = {"c": "foo"}
         new_domain.attributes[0].attributes = {"a": "bar", "c": "baz"}
         new_domain.class_var.attributes = {"b": "foo"}
         self.widget.set_corner_text = Mock()
-        self.send_signal(self.widget.Inputs.data, iris.transform(new_domain))
+        self.send_signal(self.widget.Inputs.data, self.data.transform(new_domain))
         # false positive, pylint: disable=unsubscriptable-object
         self.assertEqual(
             self.widget.set_corner_text.call_args[0][1], "\na\nb\nc")
@@ -139,7 +130,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
         self.assertEqual(info._StateInfo__input_summary.details, details)
 
-        data = Table("iris")
+        data = self.data
         self.send_signal(self.widget.Inputs.data, data, 2)
         summary, details = f"{len(data)}", format_summary_details(data)
         self.assertEqual(info._StateInfo__input_summary.brief, summary)
@@ -161,8 +152,7 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
 
     def test_show_distributions(self):
         w = self.widget
-        data = Table("heart_disease")[::3].copy()
-        self.send_signal(w.Inputs.data, data, 0)
+        self.send_signal(w.Inputs.data, self.data, 0)
         # run through the delegate paint routines
         with excepthook_catch():
             w.grab()
@@ -219,6 +209,81 @@ class TestOWDataTable(WidgetTest, WidgetOutputsTestMixin, dbt):
         self.assertFalse(w.Warning.multiple_inputs.is_shown())
         self.send_signal(w.Inputs.data, None, 2)
         self.assertFalse(w.Warning.multiple_inputs.is_shown())
+
+
+class TestOWDataTableSQL(TestOWDataTable, dbt):
+    def setUp(self):
+        super().setUp()
+        self._set_input_summary = self.widget._set_input_summary
+        self.widget._set_input_summary = Mock()
+
+    def setUpDB(self):
+        # pylint: disable=attribute-defined-outside-init
+        conn, iris = self.create_iris_sql_table()
+        data = SqlTable(conn, iris, inspect_values=True)
+        self.data = data.transform(Domain(data.domain.attributes[:-1],
+                                          data.domain.attributes[-1]))
+
+    def tearDownDB(self):
+        self.drop_iris_sql_table()
+
+    @dbt.run_on(["postgres", "mssql"])
+    def test_input_data(self):
+        super().test_input_data()
+
+    @unittest.skip("no data output")
+    def test_input_data_empty(self):
+        super().test_input_data_empty()
+
+    @unittest.skip("approx_len messes up row count")
+    def test_data_model(self):
+        super().test_data_model()
+
+    @dbt.run_on(["postgres", "mssql"])
+    def test_unconditional_commit_on_new_signal(self):
+        super().test_unconditional_commit_on_new_signal()
+
+    @dbt.run_on(["postgres", "mssql"])
+    def test_reset_select(self):
+        super().test_reset_select()
+
+    @dbt.run_on(["postgres", "mssql"])
+    def test_attrs_appear_in_corner_text(self):
+        super().test_attrs_appear_in_corner_text()
+
+    @unittest.skip("no data output")
+    def test_pending_selection(self):
+        super().test_pending_selection()
+
+    @unittest.skip("sorting not implemented")
+    def test_sorting(self):
+        super().test_sorting()
+
+    @dbt.run_on(["postgres", "mssql"])
+    def test_summary(self):
+        self.widget._set_input_summary = self._set_input_summary
+        super().test_summary()
+        self.widget._set_input_summary = Mock()
+
+    @unittest.skip("does nothing")
+    def test_info(self):
+        super().test_info()
+
+    @dbt.run_on(["postgres", "mssql"])
+    def test_show_distributions(self):
+        super().test_show_distributions()
+
+    @unittest.skip("no data output")
+    def test_whole_rows(self):
+        super().test_whole_rows()
+
+    @dbt.run_on(["postgres", "mssql"])
+    def test_show_attribute_labels(self):
+        super().test_show_distributions()
+
+    @dbt.run_on(["postgres", "mssql"])
+    def test_deprecate_multiple_inputs(self):
+        super().test_deprecate_multiple_inputs()
 
 
 if __name__ == "__main__":

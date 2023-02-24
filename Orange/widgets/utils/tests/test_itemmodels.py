@@ -10,7 +10,7 @@ from AnyQt.QtGui import QBrush, QColor
 from orangewidget.tests.base import GuiTest
 
 from Orange.data import \
-    Domain, Table, \
+    Domain, Table, Value, \
     ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
 from Orange.statistics.basic_stats import BasicStats
 from Orange.widgets.utils import colorpalettes
@@ -20,6 +20,8 @@ from Orange.widgets.utils.itemmodels import \
     TableModel, _as_contiguous_range
 from Orange.widgets.gui import TableVariable
 from Orange.tests import test_filename
+from Orange.tests.sql.base import DataBaseTest as dbt
+from Orange.data.sql.table import SqlTable
 
 
 class TestUtils(unittest.TestCase):
@@ -531,50 +533,73 @@ class TestPyListModelTooltip(GuiTest):
         self.assertEqual(tip(1), "footip")
 
 
-class TestTableModel(unittest.TestCase):
+class TestTableModel(unittest.TestCase, dbt):
+    def setUpDB(self):
+        # pylint: disable=attribute-defined-outside-init
+        self.conn, self.iris = self.create_iris_sql_table()
+
+    def tearDownDB(self):
+        self.drop_iris_sql_table()
+
+    @dbt.run_on(["postgres", "mssql"])
     def test_dense_data(self):
+        table = SqlTable(self.conn, self.iris, inspect_values=True)
+        table.domain = Domain(table.domain.attributes[:-1],
+                              table.domain.attributes[-1])
+        model = TableModel(table)
+
+        self._dense_data(table, model.data, model.index)
+
+    def test_local_dense_data(self):
         table = Table("iris.tab")
         model = TableModel(table)
-        data, index = model.data, model.index
 
-        # check categorical Y
+        self._dense_data(table, model.data, model.index)
+
+    def _dense_data(self, table, data, index):
+        # Y: categorical
         self.assertEqual(table[0, 4], data(index(0, 0), Qt.DisplayRole))
         self.assertIsInstance(data(index(0, 0), Qt.DisplayRole), str)
         self.assertEqual(table[0, 4], data(index(0, 0), Qt.EditRole))
+        self.assertIsInstance(data(index(0, 0), Qt.EditRole), Value)
         self.assertIsInstance(data(index(0, 0), Qt.BackgroundRole), QBrush)
         self.assertIsInstance(data(index(0, 0), Qt.ForegroundRole), QColor)
         self.assertEqual(table[0, 4], data(index(0, 0), TableModel.ValueRole))
         self.assertEqual(table[0, 4], data(index(0, 0), TableModel.ClassValueRole))
-        self.assertEqual(table.domain.class_vars[0], data(index(0, 0), TableModel.VariableRole))
+        self.assertEqual(table.domain[4], data(index(0, 0), TableModel.VariableRole))
         self.assertIsInstance(data(index(0, 0), TableModel.VariableStatsRole), BasicStats)
 
-        # check numeric X
-        self.assertEqual(table[0, 3-1], data(index(0, 3), Qt.DisplayRole))
-        self.assertIsInstance(data(index(0, 3), Qt.DisplayRole), str)
-        self.assertEqual(table[0, 3-1], data(index(0, 3), Qt.EditRole))
-        self.assertIsNone(data(index(0, 3), Qt.BackgroundRole))
-        self.assertIsNone(data(index(0, 3), Qt.ForegroundRole))
-        self.assertEqual(table[0, 3-1], data(index(0, 3), TableModel.ValueRole))
-        self.assertEqual(table[0, 4], data(index(0, 3), TableModel.ClassValueRole))
-        self.assertEqual(table.domain.attributes[3-1], data(index(0, 3), TableModel.VariableRole))
-        self.assertIsInstance(data(index(0, 3), TableModel.VariableStatsRole), BasicStats)
+        # X: continuous
+        self.assertEqual(table[0, 0], data(index(0, 1), Qt.DisplayRole))
+        self.assertIsInstance(data(index(0, 1), Qt.DisplayRole), str)
+        self.assertEqual(table[0, 0], data(index(0, 1), Qt.EditRole))
+        self.assertIsInstance(data(index(0, 1), Qt.EditRole), Value)
+        self.assertIsNone(data(index(0, 1), Qt.BackgroundRole))
+        self.assertIsNone(data(index(0, 1), Qt.ForegroundRole))
+        self.assertEqual(table[0, 0], data(index(0, 1), TableModel.ValueRole))
+        self.assertEqual(table[0, 4], data(index(0, 1), TableModel.ClassValueRole))
+        self.assertEqual(table.domain[0], data(index(0, 1), TableModel.VariableRole))
+        self.assertIsInstance(data(index(0, 1), TableModel.VariableStatsRole), BasicStats)
 
     def test_sparse_data(self):
         table = Table(test_filename("datasets/iris_basket.basket"))
         model = TableModel(table)
         data, index = model.data, model.index
 
-        # check numeric Y
-        self.assertEqual("1", data(index(0, 0), Qt.DisplayRole))
-        self.assertEqual(table[0, 0+4], data(index(0, 0), Qt.EditRole))
+        # Y: 2d
+        self.assertListEqual([table[0, 4], table[0, 5], table[0, 6]],
+                             [data(index(0, i), Qt.DisplayRole) for i in range(3)])
+        self.assertIsInstance(data(index(0, 0), Qt.DisplayRole), str)
+        self.assertEqual(table[0, 4], data(index(0, 0), Qt.EditRole))
+        self.assertIsInstance(data(index(0, 0), Qt.EditRole), Value)
         self.assertIsInstance(data(index(0, 0), Qt.BackgroundRole), QBrush)
         self.assertIsInstance(data(index(0, 0), Qt.ForegroundRole), QColor)
-        self.assertEqual(table[0, 0+4], data(index(0, 0), TableModel.ValueRole))
+        self.assertEqual(table[0, 4], data(index(0, 0), TableModel.ValueRole))
         self.assertIsNone(data(index(0, 0), TableModel.ClassValueRole))
-        self.assertEqual(table.domain.class_vars[0], data(index(0, 0), TableModel.VariableRole))
+        self.assertEqual(table.domain[4], data(index(0, 0), TableModel.VariableRole))
         self.assertIsInstance(data(index(0, 0), TableModel.VariableStatsRole), BasicStats)
 
-        # check basket X
+        # X: basket
         self.assertEqual("sepal_length=1.5, sepal_width=5.3, petal_length=4.1, petal_width=2",
                          data(index(0, 3), Qt.DisplayRole))
         self.assertIsNone(data(index(0, 3), Qt.EditRole))
