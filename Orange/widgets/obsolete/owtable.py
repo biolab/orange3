@@ -76,7 +76,6 @@ class OWDataTable(OWWidget):
     buttons_area_orientation = Qt.Vertical
 
     show_distributions = Setting(False)
-    dist_color_RGB = Setting((220, 220, 220, 255))
     show_attribute_labels = Setting(True)
     select_rows = Setting(True)
     auto_commit = Setting(True)
@@ -95,7 +94,7 @@ class OWDataTable(OWWidget):
         self.__pending_selected_cols = self.selected_cols
         self.selected_cols = None
 
-        self.dist_color = QColor(*self.dist_color_RGB)
+        self.dist_color = QColor(220, 220, 220, 255)
 
         info_box = gui.vBox(self.controlArea, "Info")
         self.info_text = gui.widgetLabel(info_box)
@@ -134,8 +133,7 @@ class OWDataTable(OWWidget):
     def copy_to_clipboard(self):
         self.copy()
 
-    @staticmethod
-    def sizeHint():
+    def sizeHint(self):
         return QSize(800, 500)
 
     def _create_table_view(self):
