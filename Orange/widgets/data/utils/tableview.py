@@ -1,12 +1,23 @@
 import sys
+from itertools import chain, starmap
+from typing import Sequence, Tuple, cast
 
-from AnyQt.QtCore import Qt, QObject, QEvent, QSize, QAbstractProxyModel
+import numpy as np
+
+from AnyQt.QtCore import (
+    Qt, QObject, QEvent, QSize, QAbstractProxyModel, QItemSelection,
+    QItemSelectionModel, QItemSelectionRange
+)
 from AnyQt.QtGui import QPainter
 from AnyQt.QtWidgets import (
     QStyle, QWidget, QStyleOptionHeader, QAbstractButton
 )
 
 from Orange.widgets.data.utils.models import RichTableModel
+from Orange.widgets.utils.itemmodels import TableModel
+from Orange.widgets.utils.itemselectionmodel import (
+    BlockSelectionModel, selection_blocks, ranges
+)
 from Orange.widgets.utils.tableview import TableView
 
 
@@ -102,6 +113,9 @@ class RichTableView(DataTableView):
         if model is not None:
             model.headerDataChanged.connect(self.__headerDataChanged)
             self.__headerDataChanged(Qt.Horizontal)
+            select_rows = self.selectionBehavior() == TableView.SelectRows
+            sel_model = BlockSelectionModel(model, selectBlocks=not select_rows)
+            self.setSelectionModel(sel_model)
 
     def __headerDataChanged(
             self,
@@ -120,3 +134,88 @@ class RichTableView(DataTableView):
             else:
                 text = ""
             self.setCornerText(text)
+
+    def setBlockSelection(
+            self, rows: Sequence[int], columns: Sequence[int]
+    ) -> None:
+        """
+        Set the block row and column selection.
+
+        Note
+        ----
+        The `rows` indices refer to the underlying TableModel's rows.
+
+        Parameters
+        ----------
+        rows: Sequence[int]
+            The rows to select.
+        columns: Sequence[int]
+            The columns to select.
+
+        See Also
+        --------
+        blockSelection()
+        """
+        model = self.model()
+        if model is None:
+            return
+        sel_model = self.selectionModel()
+        assert isinstance(sel_model, BlockSelectionModel)
+        if not rows or not columns or model.rowCount() <= rows[-1] or \
+                model.columnCount() <= columns[-1]:
+            # selection out of range for the model
+            rows = columns = []
+        proxy_chain = []
+        while isinstance(model, QAbstractProxyModel):
+            proxy_chain.append(model)
+            model = model.sourceModel()
+        assert isinstance(model, TableModel)
+
+        rows = model.mapFromSourceRows(rows)
+
+        selection = QItemSelection()
+        rowranges = list(ranges(rows))
+        colranges = list(ranges(columns))
+
+        for rowstart, rowend in rowranges:
+            for colstart, colend in colranges:
+                selection.append(
+                    QItemSelectionRange(
+                        model.index(rowstart, colstart),
+                        model.index(rowend - 1, colend - 1)
+                    )
+                )
+        for proxy in proxy_chain[::-1]:
+            selection = proxy.mapSelectionFromSource(selection)
+        sel_model.select(selection, QItemSelectionModel.ClearAndSelect)
+
+    def blockSelection(self) -> Tuple[Sequence[int], Sequence[int]]:
+        """
+        Return the current selected rows and columns.
+
+        Note
+        ----
+        The `rows` indices refer to the underlying TableModel's rows.
+        """
+        model = self.model()
+        if model is None:
+            return [], []
+        sel_model = self.selectionModel()
+        selection = sel_model.selection()
+
+        # map through the proxies into input table.
+        while isinstance(model, QAbstractProxyModel):
+            selection = model.mapSelectionToSource(selection)
+            model = model.sourceModel()
+
+        assert isinstance(sel_model, BlockSelectionModel)
+        assert isinstance(model, TableModel)
+
+        row_spans, col_spans = selection_blocks(selection)
+        rows = list(chain.from_iterable(starmap(range, row_spans)))
+        cols = list(chain.from_iterable(starmap(range, col_spans)))
+        rows = np.array(rows, dtype=np.intp)
+        # map the rows through the applied sorting (if any)
+        rows = model.mapToSourceRows(rows)
+        rows = cast(Sequence[int], rows.tolist())
+        return rows, cols
