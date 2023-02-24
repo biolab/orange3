@@ -309,7 +309,6 @@ class OWTable(OWWidget):
         else:
             delegate = TableDataDelegate(widget)
         widget.setItemDelegate(delegate)
-        self.view.reset()
 
     def _on_select_rows_changed(self):
         if self.input is None:
