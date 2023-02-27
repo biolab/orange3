@@ -209,6 +209,9 @@ class TestSqlTable(unittest.TestCase, dbt):
     def test_getitem_single_value(self):
         table = SqlTable(self.conn, self.iris, inspect_values=True)
         self.assertAlmostEqual(table[0, 0], 5.1)
+        self.assertAlmostEqual(table[0, table.domain[0]], 5.1)
+        self.assertEqual(table[0, 4], "Iris-setosa")
+        self.assertEqual(table[0, table.domain[4]], "Iris-setosa")
 
     @dbt.run_on(["postgres", "mssql"])
     def test_type_hints(self):

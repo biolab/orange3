@@ -160,6 +160,8 @@ class Value(float):
         :param value: value
         """
         if variable.is_primitive():
+            if isinstance(variable, DiscreteVariable) and isinstance(value, str):
+                value = variable.to_val(value)
             self = super().__new__(cls, value)
             self.variable = variable
             self._value = None
