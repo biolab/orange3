@@ -437,11 +437,11 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.preprocessing_box = gui.vBox(self.controlArea, box="Preprocessing")
         self.normalize_cbx = gui.checkBox(
             self.preprocessing_box, self, "normalize", "Normalize data",
-            callback=self._invalidate_normalized_data,
+            callback=self._invalidate_normalized_data, stateWhenDisabled=False,
         )
         self.pca_preprocessing_cbx = gui.checkBox(
             self.preprocessing_box, self, "use_pca_preprocessing", "Apply PCA preprocessing",
-            callback=self._pca_preprocessing_changed,
+            callback=self._pca_preprocessing_changed, stateWhenDisabled=False,
         )
         self.pca_component_slider = gui.hSlider(
             self.preprocessing_box, self, "pca_components", label="PCA Components:",
@@ -796,13 +796,11 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         form.labelForField(self.distance_metric_combo).setDisabled(False)
 
         if has_distance_matrix:
-            self.normalize = False
             self.normalize_cbx.setDisabled(True)
             self.normalize_cbx.setToolTip(
                 "Precomputed distances provided. Preprocessing is unnecessary!"
             )
 
-            self.use_pca_preprocessing = False
             self.pca_preprocessing_cbx.setDisabled(True)
             self.pca_preprocessing_cbx.setToolTip(
                 "Precomputed distances provided. Preprocessing is unnecessary!"
@@ -810,7 +808,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
             # Only spectral init is valid with a precomputed distance matrix
             spectral_init_idx = self.initialization_combo.findText("Spectral")
-            self.initialization_method_idx = spectral_init_idx
             self.initialization_combo.setCurrentIndex(spectral_init_idx)
             self.initialization_combo.setDisabled(True)
             self.initialization_combo.setToolTip(
@@ -829,7 +826,6 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         # PCA doesn't support normalization on sparse data, as this would
         # require centering and normalizing the matrix
         if not has_distance_matrix and has_data and self.data.is_sparse():
-            self.normalize = False
             self.normalize_cbx.setDisabled(True)
             self.normalize_cbx.setToolTip(
                 "Data normalization is not supported on sparse matrices."
@@ -872,9 +868,9 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         initialization_method = INITIALIZATIONS[self.initialization_method_idx][1]
         distance_metric = DISTANCE_METRICS[self.distance_metric_idx][1]
-
         if self.distance_matrix is not None:
             distance_metric = "precomputed"
+            initialization_method = "spectral"
 
         task = Task(
             data=self.data,
@@ -901,26 +897,28 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         return self.start(TSNERunner.run, task)
 
     def __ensure_task_same_for_normalization(self, task: Task):
-        assert task.data is self.data
         assert task.normalize == self.normalize
-        if task.normalize:
+        if task.normalize and task.distance_metric != "precomputed":
+            assert task.data is self.data
             assert isinstance(task.normalized_data, Table) and \
                 len(task.normalized_data) == len(self.data)
 
     def __ensure_task_same_for_pca(self, task: Task):
-        assert task.data is self.data
         assert task.use_pca_preprocessing == self.use_pca_preprocessing
-        if task.use_pca_preprocessing:
+        if task.use_pca_preprocessing and task.distance_metric != "precomputed":
+            assert task.data is self.data
             assert task.pca_components == self.pca_components
             assert isinstance(task.pca_projection, Table) and \
                 len(task.pca_projection) == len(self.data)
 
     def __ensure_task_same_for_initialization(self, task: Task):
-        initialization_method = INITIALIZATIONS[self.initialization_method_idx][1]
-        assert task.initialization_method == initialization_method
         if self.distance_matrix is not None:
             n_samples = self.distance_matrix.shape[0]
         else:
+            initialization_method = INITIALIZATIONS[self.initialization_method_idx][1]
+            # If distance matrix is provided, the control value will be set to
+            # whatever it was from the context, but we will use `spectral`
+            assert task.initialization_method == initialization_method
             assert self.data is not None
             n_samples = self.data.X.shape[0]
         assert isinstance(task.initialization, np.ndarray) and \
@@ -1054,7 +1052,6 @@ if __name__ == "__main__":
     from Orange.distance import Euclidean
     dist_matrix = Euclidean(data, normalize=True)
     WidgetPreview(OWtSNE).run(
-        # set_data=data,
         set_distances=dist_matrix,
         set_subset_data=data[np.random.choice(len(data), 10)],
     )

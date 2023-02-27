@@ -758,6 +758,61 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         for field in disabled_fields:
             self.assertTrue(getattr(w.controls, field).isEnabled())
 
+    def test_controls_ignored_by_distance_matrix_retain_values_on_table_signal(self):
+        """The controls for `normalize`, `pca_preprocessing`, `metric`, and
+        `initialization` are overridden/ignored when using a distance matrix
+        signal. However, we want to remember their values when using Data
+        table signals."""
+        w = self.widget
+
+        self.send_signal(w.Inputs.data, self.iris)
+        w.normalize_cbx.setChecked(True)
+        w.pca_preprocessing_cbx.setChecked(True)
+        w.pca_component_slider.setValue(3)
+        w.initialization_combo.setCurrentIndex(0)
+        w.distance_metric_combo.setCurrentIndex(2)
+        w.perplexity_spin.setValue(42)
+        # Disconnect data, save context settings
+        self.send_signal(w.Inputs.data, None)
+
+        # Send distances signal
+        self.send_signal(w.Inputs.distances, self.iris_distances)
+
+        self.assertFalse(w.normalize_cbx.isEnabled())
+
+        self.assertFalse(w.pca_preprocessing_cbx.isEnabled())
+        self.assertFalse(w.pca_component_slider.isEnabled())
+
+        self.assertFalse(w.initialization_combo.isEnabled())
+        self.assertEqual(w.initialization_combo.currentText(), "Spectral")
+
+        self.assertFalse(w.distance_metric_combo.isEnabled())
+        self.assertEqual(w.distance_metric_combo.currentText(), "")
+
+        self.assertTrue(w.perplexity_spin.isEnabled())
+        self.assertEqual(w.perplexity_spin.value(), 42)
+        # Disconnect signal, the context settings should not be overridden
+        self.send_signal(w.Inputs.distances, None)
+
+        # Send data signal, the data-only settings should be restored
+        self.send_signal(w.Inputs.data, self.iris)
+
+        self.assertTrue(w.normalize_cbx.isEnabled())
+        self.assertTrue(w.normalize_cbx.isChecked())
+
+        self.assertTrue(w.pca_preprocessing_cbx.isEnabled())
+        self.assertTrue(w.pca_preprocessing_cbx.isChecked())
+        self.assertTrue(w.pca_component_slider.isEnabled())
+
+        self.assertTrue(w.initialization_combo.isEnabled())
+        self.assertTrue(w.initialization_combo.currentText(), "PCA")
+
+        self.assertTrue(w.distance_metric_combo.isEnabled())
+        self.assertEqual(w.distance_metric_combo.currentIndex(), 2)
+
+        self.assertTrue(w.perplexity_spin.isEnabled())
+        self.assertEqual(w.perplexity_spin.value(), 42)
+
 
 class TestTSNERunner(unittest.TestCase):
     @classmethod
