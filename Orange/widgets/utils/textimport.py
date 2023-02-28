@@ -55,6 +55,7 @@ from AnyQt.QtWidgets import (
 
 from Orange.widgets.utils import encodings
 from Orange.widgets.utils.overlay import OverlayWidget
+from Orange.widgets.utils.combobox import TextEditCombo
 
 
 __all__ = ["ColumnType", "RowSpec", "CSVOptionsWidget", "CSVImportWidget"]
@@ -231,27 +232,6 @@ class LineEdit(QLineEdit):
             return self.sizeHint()
         else:
             return super(LineEdit, self).sizeHint()
-
-
-class TextEditCombo(QComboBox):
-    def text(self):
-        # type: () -> str
-        """
-        Return the current text.
-        """
-        return self.itemText(self.currentIndex())
-
-    def setText(self, text):
-        # type: (str) -> None
-        """
-        Set `text` as the current text (adding it to the model if necessary).
-        """
-        idx = self.findData(text, Qt.EditRole, Qt.MatchExactly)
-        if idx != -1:
-            self.setCurrentIndex(idx)
-        else:
-            self.addItem(text)
-            self.setCurrentIndex(self.count() - 1)
 
 
 class CSVOptionsWidget(QWidget):

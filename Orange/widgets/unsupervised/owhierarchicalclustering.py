@@ -10,9 +10,11 @@ from AnyQt.QtWidgets import (
     QGraphicsWidget, QGraphicsScene, QGridLayout, QSizePolicy,
     QAction, QComboBox, QGraphicsGridLayout, QGraphicsSceneMouseEvent, QLabel
 )
-from AnyQt.QtGui import QPen, QFont, QKeySequence, QPainterPath, QColor
-from AnyQt.QtCore import Qt, QSizeF, QPointF, QRectF, QLineF, QEvent, \
-    QModelIndex
+from AnyQt.QtGui import (QPen, QFont, QKeySequence, QPainterPath, QColor,
+    QFontMetrics)
+from AnyQt.QtCore import (
+    Qt, QObject, QSize, QPointF, QRectF, QLineF, QEvent, QModelIndex
+)
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from orangewidget.utils.itemmodels import PyListModel
@@ -36,6 +38,7 @@ from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
 
 from Orange.widgets.utils.stickygraphicsview import StickyGraphicsView
+from Orange.widgets.utils.graphicsview import GraphicsWidgetView
 from Orange.widgets.utils.graphicstextlist import TextListView
 from Orange.widgets.utils.dendrogram import DendrogramWidget
 
@@ -148,6 +151,22 @@ class SelectedLabelsModel(PyListModel):
         return super().data(index, role)
 
 
+class GraphicsView(GraphicsWidgetView, StickyGraphicsView):
+    def minimumSizeHint(self) -> QSize:
+        msh = super().minimumSizeHint()
+        w = self.centralWidget()
+        if w is not None:
+            width = w.minimumWidth() + 4 + self.verticalScrollBar().width()
+            msh.setWidth(max(int(width), msh.width()))
+        return msh
+
+    def eventFilter(self, recv: QObject, event: QEvent) -> bool:
+        ret = super().eventFilter(recv, event)
+        if event.type() == QEvent.LayoutRequest and recv is self.centralWidget():
+            self.updateGeometry()
+        return ret
+
+
 class OWHierarchicalClustering(widget.OWWidget):
     name = "Hierarchical Clustering"
     description = "Display a dendrogram of a hierarchical clustering " \
@@ -201,7 +220,9 @@ class OWHierarchicalClustering(widget.OWWidget):
     basic_annotations = [None, "Enumeration"]
 
     class Error(widget.OWWidget.Error):
+        empty_matrix = Msg("Distance matrix is empty.")
         not_finite_distances = Msg("Some distances are infinite")
+        not_symmetric = widget.Msg("Distance matrix is not symmetric.")
 
     class Warning(widget.OWWidget.Warning):
         subset_on_no_table = \
@@ -228,6 +249,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._displayed_root = None
         self.cutoff_height = 0.0
 
+        spin_width = QFontMetrics(self.font()).horizontalAdvance("M" * 7)
         gui.comboBox(
             self.controlArea, self, "linkage", items=LINKAGE, box="Linkage",
             callback=self._invalidate_clustering)
@@ -285,9 +307,12 @@ class OWHierarchicalClustering(widget.OWWidget):
         )
         self.max_depth_spin = gui.spin(
             box, self, "max_depth", minv=1, maxv=100,
-            callback=self._invalidate_pruning,
+            controlWidth=spin_width, alignment=Qt.AlignRight,
+            callback=self._max_depth_changed,
             keyboardTracking=False, addToLayout=False
         )
+        self.max_depth_spin.lineEdit().returnPressed.connect(
+            self._max_depth_return)
 
         grid.addWidget(
             gui.appendRadioButton(box, "Max depth:", addToLayout=False),
@@ -313,10 +338,13 @@ class OWHierarchicalClustering(widget.OWWidget):
         )
         self.cut_ratio_spin = gui.spin(
             self.selection_box, self, "cut_ratio", 0, 100, step=1e-1,
-            spinType=float, callback=self._selection_method_changed,
+            controlWidth=spin_width, alignment = Qt.AlignRight,
+            spinType=float, callback=self._cut_ratio_changed,
             addToLayout=False
         )
-        self.cut_ratio_spin.setSuffix("%")
+        self.cut_ratio_spin.setSuffix(" %")
+        self.cut_ratio_spin.lineEdit().returnPressed.connect(
+            self._cut_ratio_return)
 
         grid.addWidget(self.cut_ratio_spin, 1, 1)
 
@@ -325,9 +353,11 @@ class OWHierarchicalClustering(widget.OWWidget):
                 self.selection_box, "Top N:", addToLayout=False),
             2, 0
         )
-        self.top_n_spin = gui.spin(self.selection_box, self, "top_n", 1, 20,
-                                   callback=self._selection_method_changed,
-                                   addToLayout=False)
+        self.top_n_spin = gui.spin(
+            self.selection_box, self, "top_n", 1, 20,
+            controlWidth=spin_width, alignment=Qt.AlignRight,
+            callback=self._top_n_changed, addToLayout=False)
+        self.top_n_spin.lineEdit().returnPressed.connect(self._top_n_return)
         grid.addWidget(self.top_n_spin, 2, 1)
 
         self.zoom_slider = gui.hSlider(
@@ -355,12 +385,16 @@ class OWHierarchicalClustering(widget.OWWidget):
         gui.auto_send(self.buttonsArea, self, "autocommit")
 
         self.scene = QGraphicsScene(self)
-        self.view = StickyGraphicsView(
+        self.view = GraphicsView(
             self.scene,
             horizontalScrollBarPolicy=Qt.ScrollBarAlwaysOff,
             verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
-            alignment=Qt.AlignLeft | Qt.AlignVCenter
+            alignment=Qt.AlignLeft | Qt.AlignVCenter,
+            widgetResizable=True,
         )
+        # Disable conflicting action shortcuts. We define our own.
+        for a in self.view.viewActions():
+            a.setEnabled(False)
         self.mainArea.layout().setSpacing(1)
         self.mainArea.layout().addWidget(self.view)
 
@@ -375,12 +409,16 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.top_axis = axis_view("top")
         self.bottom_axis = axis_view("bottom")
 
-        self._main_graphics = QGraphicsWidget()
+        self._main_graphics = QGraphicsWidget(
+            sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+        )
         scenelayout = QGraphicsGridLayout()
         scenelayout.setHorizontalSpacing(10)
         scenelayout.setVerticalSpacing(10)
 
         self._main_graphics.setLayout(scenelayout)
+        self.scene.addItem(self._main_graphics)
+        self.view.setCentralWidget(self._main_graphics)
         self.scene.addItem(self._main_graphics)
 
         self.dendrogram = DendrogramWidget(pen_width=2)
@@ -404,9 +442,6 @@ class OWHierarchicalClustering(widget.OWWidget):
                             alignment=Qt.AlignLeft | Qt.AlignVCenter)
         scenelayout.addItem(self.bottom_axis, 2, 0,
                             alignment=Qt.AlignLeft | Qt.AlignVCenter)
-        self.view.viewport().installEventFilter(self)
-        self._main_graphics.installEventFilter(self)
-
         self.top_axis.setZValue(self.dendrogram.zValue() + 10)
         self.bottom_axis.setZValue(self.dendrogram.zValue() + 10)
         self.cut_line = SliderLine(self.top_axis,
@@ -420,17 +455,18 @@ class OWHierarchicalClustering(widget.OWWidget):
     def set_distances(self, matrix):
         self.error()
         self.Error.clear()
-        if matrix is not None:
-            N, _ = matrix.shape
-            if N < 2:
-                self.error("Empty distance matrix")
-                matrix = None
-        if matrix is not None:
-            if not np.all(np.isfinite(matrix)):
-                self.Error.not_finite_distances()
-                matrix = None
 
-        self.matrix = matrix
+        self.matrix = None
+        self.Error.clear()
+        if matrix is not None:
+            if len(matrix) < 2:
+                self.Error.empty_matrix()
+            elif not matrix.is_symmetric():
+                self.Error.not_symmetric()
+            elif not np.all(np.isfinite(matrix)):
+                self.Error.not_finite_distances()
+            else:
+                self.matrix = matrix
 
     @Inputs.subset
     def set_subset(self, subset):
@@ -542,14 +578,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         self._clear_plot()
         self._displayed_root = root
         self.dendrogram.set_root(root)
-
         self._update_labels()
-
-        self._main_graphics.resize(
-            self._main_graphics.size().width(),
-            self._main_graphics.sizeHint(Qt.PreferredSize).height()
-        )
-        self._main_graphics.layout().activate()
 
     def _update(self):
         self._clear_plot()
@@ -694,6 +723,15 @@ class OWHierarchicalClustering(widget.OWWidget):
         finally:
             self.dendrogram.selectionChanged.connect(self._invalidate_output)
 
+    def _max_depth_return(self):
+        if self.pruning != 1:
+            self.pruning = 1
+            self._invalidate_pruning()
+
+    def _max_depth_changed(self):
+        self.pruning = 1
+        self._invalidate_pruning()
+
     def _invalidate_clustering(self):
         self._update()
         self._update_labels()
@@ -804,24 +842,6 @@ class OWHierarchicalClustering(widget.OWWidget):
         self.Outputs.selected_data.send(selected_data)
         self.Outputs.annotated_data.send(annotated_data)
 
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.Resize and obj is self.view.viewport():
-            # NOTE: not using viewport.width(), due to 'transient' scroll bars
-            # (macOS). Viewport covers the whole view, but QGraphicsView still
-            # scrolls left, right with scroll bar extent (other
-            # QAbstractScrollArea widgets behave as expected).
-            w_frame = self.view.frameWidth()
-            margin = self.view.viewportMargins()
-            w_scroll = self.view.verticalScrollBar().width()
-            width = (self.view.width() - w_frame * 2 -
-                     margin.left() - margin.right() - w_scroll)
-            # layout with new width constraint
-            self.__layout_main_graphics(width=width)
-        elif event.type() == QEvent.LayoutRequest and obj is self._main_graphics:
-            # layout preserving the width (vertical re layout)
-            self.__layout_main_graphics()
-        return super().eventFilter(obj, event)
-
     @Slot(QPointF)
     def _activate_cut_line(self, pos: QPointF):
         """Activate cut line selection an set cut value to `pos.x()`."""
@@ -893,6 +913,24 @@ class OWHierarchicalClustering(widget.OWWidget):
         if root:
             clusters = clusters_at_height(root, height)
             self.dendrogram.set_selected_clusters(clusters)
+
+    def _cut_ratio_changed(self):
+        self.selection_method = 1
+        self._selection_method_changed()
+
+    def _cut_ratio_return(self):
+        if self.selection_method != 1:
+            self.selection_method = 1
+            self._selection_method_changed()
+
+    def _top_n_changed(self):
+        self.selection_method = 2
+        self._selection_method_changed()
+
+    def _top_n_return(self):
+        if self.selection_method != 2:
+            self.selection_method = 2
+            self._selection_method_changed()
 
     def _selection_method_changed(self):
         self._set_cut_line_visible(self.selection_method == 1)
@@ -987,16 +1025,6 @@ class OWHierarchicalClustering(widget.OWWidget):
     def __zoom_reset(self):
         self.zoom_factor = 0
         self.__update_font_scale()
-
-    def __layout_main_graphics(self, width=-1):
-        if width < 0:
-            # Preserve current width.
-            width = self._main_graphics.size().width()
-        preferred = self._main_graphics.effectiveSizeHint(
-            Qt.PreferredSize, constraint=QSizeF(width, -1))
-        self._main_graphics.resize(QSizeF(width, preferred.height()))
-        mw = self._main_graphics.minimumWidth() + 4
-        self.view.setMinimumWidth(int(mw + self.view.verticalScrollBar().width()))
 
     def __update_font_scale(self):
         font = self.scene.font()

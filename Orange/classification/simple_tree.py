@@ -157,8 +157,8 @@ class SimpleTreeModel(Model):
             learner.bootstrap,
             learner.seed)
 
-    def predict_storage(self, data):
-        X = np.ascontiguousarray(data.X)
+    def predict(self, X):
+        X = np.ascontiguousarray(X)
         if self.type == Classification:
             p = np.zeros((X.shape[0], self.cls_vals))
             _tree.predict_classification(

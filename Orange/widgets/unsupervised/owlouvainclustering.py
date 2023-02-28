@@ -25,6 +25,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.annotated_data import add_columns, \
     ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.concurrent import FutureWatcher
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg
@@ -365,7 +366,8 @@ class OWLouvainClustering(widget.OWWidget):
 
         # Display the number of found clusters in the UI
         num_clusters = len(np.unique(self.partition))
-        self.info_label.setText("%d clusters found." % num_clusters)
+        self.info_label.setText(
+            f"{num_clusters} {pl(num_clusters, 'cluster')} found.")
 
         self._send_data()
 
@@ -460,7 +462,7 @@ class OWLouvainClustering(widget.OWWidget):
     def send_report(self):
         pca = report.bool_str(self.apply_pca)
         if self.apply_pca:
-            pca += report.plural(", {number} component{s}", self.pca_components)
+            pca += f", {self.pca_components} {pl(self.pca_components, 'component')}"
 
         self.report_items((
             ("Normalize data", report.bool_str(self.normalize)),

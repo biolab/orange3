@@ -17,6 +17,8 @@ Loads an existing distance file.
 5. Browse documentation datasets.
 6. Produce a report.
 
+The simplest way to prepare a distance file is to use Excel. The widget currently processes only single-sheet workbooks. The matrix can be either rectangular, or upper- or lower-triangular, with labels given for columns (immediately above) or rows (immediately to the left) or both. Empty cells are treated as zeros. If the matrix is triangular and only one set of labels is given or both sets are equal, the other half can be filled automatically, making the matrix symmetric.
+
 Example
 -------
 

@@ -6,6 +6,7 @@ import numpy as np
 
 from AnyQt.QtCore import Qt, QRectF, QLineF, QPoint
 from AnyQt.QtGui import QPalette
+from AnyQt.QtWidgets import QSizePolicy
 
 import pyqtgraph as pg
 
@@ -173,7 +174,9 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
         gui.comboBox(
             box, self, "initialization", label="Initialization:",
             items=InitType.items(), orientation=Qt.Horizontal,
-            labelWidth=90, callback=self.__init_combo_changed)
+            callback=self.__init_combo_changed,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
+        )
         self.run_button = gui.button(box, self, "Start", self._toggle_run)
 
     @property

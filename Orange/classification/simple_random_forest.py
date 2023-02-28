@@ -71,9 +71,14 @@ class SimpleRandomForestModel(Model):
             tree.seed = learner.seed + i
             self.estimators_.append(tree(data))
 
-    def predict_storage(self, data):
-        p = np.zeros((data.X.shape[0], self.cls_vals))
+    def predict(self, X):
+        p = np.zeros((X.shape[0], self.cls_vals))
+        X = np.ascontiguousarray(X)  # so that it is a no-op for individual trees
         for tree in self.estimators_:
-            p += tree(data, tree.Probs)
+            # SimpleTrees do not have preprocessors and domain conversion
+            # was already handled within this class so we can call tree.predict() directly
+            # instead of going through tree.__call__
+            _, pt = tree.predict(X)
+            p += pt
         p /= len(self.estimators_)
         return p.argmax(axis=1), p

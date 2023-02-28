@@ -324,10 +324,10 @@ class OWRadviz(OWAnchorProjectionWidget):
     graph = SettingProvider(OWRadvizGraph)
 
     class Warning(OWAnchorProjectionWidget.Warning):
-        invalid_embedding = widget.Msg("No projection for selected features")
-        removed_vars = widget.Msg("Categorical variables with more than"
-                                  " two values are not shown.")
-        max_vars_selected = widget.Msg("Maximum number of selected variables reached.")
+        removed_vars = widget.Msg(
+            "Categorical variables with more than two values are not shown.")
+        max_vars_selected = widget.Msg(
+            "Maximum number of selected variables reached.")
 
     def _add_controls(self):
         box = gui.vBox(self.controlArea, box="Features")

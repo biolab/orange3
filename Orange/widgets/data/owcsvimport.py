@@ -1554,10 +1554,13 @@ def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
             file, sep=opts.dialect.delimiter, dialect=opts.dialect,
             skipinitialspace=opts.dialect.skipinitialspace,
             header=header, skiprows=skiprows,
-            dtype=dtypes, parse_dates=parse_dates, prefix=prefix,
+            dtype=dtypes, parse_dates=parse_dates,
             na_values=na_values, keep_default_na=False,
             **numbers_format_kwds
         )
+
+        if prefix:
+            df.columns = [f"{prefix}{column}" for column in df.columns]
 
         # for older workflows avoid guessing type guessing
         if not compatibility_mode:
@@ -1834,7 +1837,7 @@ def pandas_to_table(df):
     if cols_x:
         X = np.column_stack([a for _, a in cols_x])
     else:
-        X = np.empty((df.shape[0], 0), dtype=np.float)
+        X = np.empty((df.shape[0], 0), dtype=np.float64)
     metas = [v for v, _ in cols_m]
     if cols_m:
         M = np.column_stack([a for _, a in cols_m])

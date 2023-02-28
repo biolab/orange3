@@ -20,6 +20,7 @@ from Orange.preprocess import decimal_binnings, time_binnings
 from Orange.projection.som import SOM
 
 from Orange.widgets import gui
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.settings import \
     DomainContextHandler, ContextSetting, Setting
@@ -214,13 +215,12 @@ class OWSOM(OWWidget):
             Msg("Some data instances have undefined value of '{}'.")
         no_defined_colors = \
             Msg("'{}' has no defined values.")
-        missing_values = \
-            Msg("{} data instance{} with undefined value(s) {} not shown.")
+        missing_values = Msg("{}")
         single_attribute = Msg("Data contains a single numeric column.")
 
     class Error(OWWidget.Error):
         no_numeric_variables = Msg("Data contains no numeric columns.")
-        no_defined_rows = Msg("All rows contain at least one undefined value.")
+        not_enough_data = Msg("SOM needs at least two data rows without missing values.")
 
     def __init__(self):
         super().__init__()
@@ -318,8 +318,8 @@ class OWSOM(OWWidget):
                 self.cont_x = x.tocsr()
             else:
                 mask = np.all(np.isfinite(x), axis=1)
-                if not np.any(mask):
-                    self.Error.no_defined_rows()
+                if np.sum(mask) <= 1:
+                    self.Error.not_enough_data()
                 else:
                     if np.all(mask):
                         self.data = data
@@ -334,10 +334,9 @@ class OWSOM(OWWidget):
 
         def set_warnings():
             missing = len(data) - len(self.data)
-            if missing == 1:
-                self.Warning.missing_values(1, "", "is")
-            elif missing > 1:
-                self.Warning.missing_values(missing, "s", "are")
+            if missing:
+                self.Warning.missing_values(
+                    f'{missing} data {pl(missing, "instance")} with undefined value(s) {pl(missing, "is|are")} not shown.')
 
         cont_x = self.cont_x.copy() if self.cont_x is not None else None
         self.data = self.cont_x = None

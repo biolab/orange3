@@ -490,6 +490,7 @@ class OWCreateInstance(OWWidget):
                            "removed from the list.")
 
     want_main_area = False
+    BUTTONS = ["Median", "Mean", "Random", "Input"]
     ACTIONS = ["median", "mean", "random", "input"]
     HEADER = [["name", "Variable"],
               ["variable", "Value"]]
@@ -535,10 +536,10 @@ class OWCreateInstance(OWWidget):
 
         box = gui.hBox(vbox, objectName="buttonBox")
         gui.rubber(box)
-        for name in self.ACTIONS:
+        for name, action in zip(self.BUTTONS, self.ACTIONS):
             gui.button(
-                box, self, name.capitalize(),
-                lambda *args, fun=name: self._initialize_values(fun),
+                box, self, name,
+                lambda *args, fun=action: self._initialize_values(fun),
                 autoDefault=False
             )
         gui.rubber(box)

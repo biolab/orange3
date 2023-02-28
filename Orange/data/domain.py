@@ -164,16 +164,38 @@ class Domain:
         if not all(var.is_primitive() for var in self._variables):
             raise TypeError("variables must be primitive")
 
-        self._indices = dict(chain.from_iterable(
-            ((var, idx), (var.name, idx), (idx, idx))
-            for idx, var in enumerate(self._variables)))
-        self._indices.update(chain.from_iterable(
-            ((var, -1-idx), (var.name, -1-idx), (-1-idx, -1-idx))
-            for idx, var in enumerate(self.metas)))
+        self._indices = None
 
         self.anonymous = False
 
         self._hash = None  # cache for __hash__()
+
+    def _ensure_indices(self):
+        if self._indices is None:
+            indices = dict(chain.from_iterable(
+                ((var, idx), (var.name, idx), (idx, idx))
+                for idx, var in enumerate(self._variables)))
+            indices.update(chain.from_iterable(
+                ((var, -1-idx), (var.name, -1-idx), (-1-idx, -1-idx))
+                for idx, var in enumerate(self.metas)))
+            self._indices = indices
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._variables = self.attributes + self.class_vars
+        self._indices = None
+        self._hash = None
+
+    def __getstate__(self):
+        # Do not pickle dictionaries because unpickling dictionaries that
+        # include objects that redefine __hash__ as keys is sometimes problematic
+        # (when said objects do not have __dict__ filled yet in but are used as
+        # keys in a restored dictionary).
+        state = self.__dict__.copy()
+        del state["_variables"]
+        del state["_indices"]
+        del state["_hash"]
+        return state
 
     # noinspection PyPep8Naming
     @classmethod
@@ -289,7 +311,7 @@ class Domain:
         """
         if isinstance(idx, slice):
             return self._variables[idx]
-
+        self._ensure_indices()
         index = self._indices.get(idx)
         if index is None:
             var = self._get_equivalent(idx)
@@ -306,6 +328,7 @@ class Domain:
         Return `True` if the item (`str`, `int`, :class:`Variable`) is
         in the domain.
         """
+        self._ensure_indices()
         return item in self._indices or self._get_equivalent(item) is not None
 
     def __iter__(self):
@@ -334,7 +357,7 @@ class Domain:
         Return the index of the given variable or meta attribute, represented
         with an instance of :class:`Variable`, `int` or `str`.
         """
-
+        self._ensure_indices()
         idx = self._indices.get(var)
         if idx is not None:
             return idx

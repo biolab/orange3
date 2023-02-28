@@ -226,20 +226,34 @@ class TestTools(unittest.TestCase):
         self.assertEqual(freevars_("{a, b}"), ["a", "b"])
         self.assertEqual(freevars_("0 if abs(a) < 0.1 else b", ["abs"]),
                          ["a", "b"])
+        self.assertEqual(freevars_("lambda: a", []), ["a"])
+        self.assertEqual(freevars_("lambda: a", ["a"]), [])
         self.assertEqual(freevars_("lambda a: b + 1"), ["b"])
         self.assertEqual(freevars_("lambda a: b + 1", ["b"]), [])
         self.assertEqual(freevars_("lambda a: a + 1"), [])
         self.assertEqual(freevars_("(lambda a: a + 1)(a)"), ["a"])
         self.assertEqual(freevars_("lambda a, *arg: arg + (a,)"), [])
         self.assertEqual(freevars_("lambda a, *arg, **kwargs: arg + (a,)"), [])
-
+        self.assertEqual(freevars_("lambda a: a + c", []), ["c"])
+        self.assertEqual(freevars_("lambda a: a + c", ["c"]), [])
+        self.assertEqual(freevars_("lambda a, b=k: a + c", []), ["k", "c"])
+        self.assertEqual(freevars_("lambda *a, b=k: a + c", []), ["k", "c"])
+        self.assertEqual(freevars_("lambda a,/, b=k: a + c", []), ["k", "c"])
+        self.assertEqual(freevars_("lambda a,/, b=k, **kwg: a + c and kwg", []),
+                         ["k", "c"])
         self.assertEqual(freevars_("[a for a in b]"), ["b"])
+        self.assertEqual(freevars_("[a for a, k in b]"), ["b"])
+        self.assertEqual(freevars_("[(a, j) for a in b]"), ["j", "b"])
+        self.assertEqual(freevars_("[a for k in b for a in k]"), ["b"])
+        self.assertEqual(freevars_("[a for k in b if k for a in k if a]"),
+                         ["b"])
+        self.assertEqual(freevars_("[a for k in b if kk for a in k if aa]"),
+                         ["b", "kk", "aa"])
         self.assertEqual(freevars_("[1 + a for c in b if c]"), ["a", "b"])
         self.assertEqual(freevars_("{a for _ in [] if b}"), ["a", "b"])
         self.assertEqual(freevars_("{a for _ in [] if b}", ["a", "b"]), [])
 
     def test_validate_exp(self):
-
         stmt = ast.parse("1", mode="single")
         with self.assertRaises(ValueError):
             validate_exp(stmt)
@@ -272,16 +286,10 @@ class TestTools(unittest.TestCase):
         self.assertTrue(validate_("[]"))
 
         with self.assertRaises(ValueError):
-            validate_("[a for a in s]")
+            validate_("[i async for i in s]")
 
         with self.assertRaises(ValueError):
-            validate_("(a for a in s)")
-
-        with self.assertRaises(ValueError):
-            validate_("{a for a in s}")
-
-        with self.assertRaises(ValueError):
-            validate_("{a:1 for a in s}")
+            validate_("(i async for i in s)")
 
 
 class FeatureFuncTest(unittest.TestCase):

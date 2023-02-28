@@ -128,9 +128,9 @@ class TestDistMatrix(TestCase):
         assertErrorMsg("axis=1\n1\t3\n4",
                        "distance file must begin with dimension")
         assertErrorMsg("3 col_labels\na\tb\n1\n\2\n3",
-                       "mismatching number of column labels")
+                       "mismatching number of column labels, 2 != 3")
         assertErrorMsg("3 col_labels\na\tb\tc\td\n1\n\2\n3",
-                       "mismatching number of column labels")
+                       "mismatching number of column labels, 4 != 3")
         assertErrorMsg("2\n  1\t2\t3\n  5",
                        "too many columns in matrix row 1")
         assertErrorMsg("2 row_labels\na\t1\t2\t3\nb\t5",
@@ -199,6 +199,16 @@ class TestDistMatrix(TestCase):
         with self.assertRaises(AssertionError):
             np.testing.assert_array_equal(dm1, dm2)
 
+    def test_symmetric(self):
+        self.assertFalse(
+            DistMatrix([[1, 2, 3], [4, 5, 6]]).is_symmetric()
+        )
+        self.assertFalse(
+            DistMatrix([[1, 2], [4, 5]]).is_symmetric()
+        )
+        self.assertTrue(
+            DistMatrix([[1, 2, 3], [2, 0, 4], [3, 4, 5]]).is_symmetric()
+        )
 
 # noinspection PyTypeChecker
 class TestEuclidean(TestCase):
@@ -577,6 +587,12 @@ class TestSpearmanR(TestCase):
                       [0.075, 0.38333333, 0., 0.63333333],
                       [0.61666667, 0.53333333, 0.63333333, 0.]]))
         np.testing.assert_almost_equal(
+            self.dist(self.breast[:4], similarity=True),
+            1 - 2 * np.array([[0., 0.50833333, 0.075, 0.61666667],
+                              [0.50833333, 0., 0.38333333, 0.53333333],
+                              [0.075, 0.38333333, 0., 0.63333333],
+                              [0.61666667, 0.53333333, 0.63333333, 0.]]))
+        np.testing.assert_almost_equal(
             self.dist(self.breast[:3], axis=0),
             np.array([[0., 0.25, 0., 0.25, 0.25, 0.25, 0.75, 0.25, 0.25],
                       [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.75],
@@ -666,59 +682,63 @@ class TestSpearmanRAbsolute(TestCase):
             np.array([[0]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[0], self.breast[1]),
-            np.array([[0.49166666666666664]]))
+            2 * np.array([[0.49166666666666664]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[0], self.breast[1], axis=1),
-            np.array([[0.49166666666666664]]))
+            2 * np.array([[0.49166666666666664]]))
 
     def test_spearmanrabsolute_distance_many_examples(self):
         np.testing.assert_almost_equal(
             self.dist(self.breast[:2]),
-            np.array([[0., 0.49166667],
-                      [0.49166667, 0.]]))
+            2 * np.array([[0., 0.49166667],
+                          [0.49166667, 0.]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.breast[:2], similarity=True),
+            1 - 2 * np.array([[0., 0.49166667],
+                          [0.49166667, 0.]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[:3], axis=0),
-            np.array([[0., 0.25, 0., 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
-                      [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
-                      [0., 0.25, 0., 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
-                      [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
-                      [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
-                      [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
-                      [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0., 0.25, 0.],
-                      [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
-                      [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0., 0.25, 0.]]))
+            2 * np.array([[0., 0.25, 0., 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
+                           [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
+                           [0., 0.25, 0., 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
+                           [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
+                           [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
+                           [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
+                           [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0., 0.25, 0.],
+                           [0.25, 0., 0.25, 0., 0., 0., 0.25, 0., 0.25],
+                           [0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0., 0.25, 0.]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[:3], self.breast[:4]),
-            np.array([[0., 0.49166667, 0.075, 0.38333333],
-                      [0.49166667, 0., 0.38333333, 0.46666667],
-                      [0.075, 0.38333333, 0., 0.36666667]]))
+            2 * np.array([[0., 0.49166667, 0.075, 0.38333333],
+                          [0.49166667, 0., 0.38333333, 0.46666667],
+                          [0.075, 0.38333333, 0., 0.36666667]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[3], self.breast[:4]),
-            np.array([[0.3833333, 0.4666667, 0.3666667, 0.]]))
+            2 * np.array([[0.3833333, 0.4666667, 0.3666667, 0.]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[:4], self.breast[3]),
-            np.array([[0.3833333],
-                      [0.4666667],
-                      [0.3666667],
-                      [0.]]))
+            2 * np.array([[0.3833333],
+                          [0.4666667],
+                          [0.3666667],
+                          [0.]]))
 
     def test_spearmanrabsolute_distance_numpy(self):
         np.testing.assert_almost_equal(
             self.dist(self.breast[0].x, self.breast[1].x, axis=1),
-            np.array([[0.49166666666666664]]))
+            2 * np.array([[0.49166666666666664]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[:2].X),
-            np.array([[0., 0.49166667],
+            2 * np.array([[0., 0.49166667],
                       [0.49166667, 0.]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[3].x, self.breast[:4].X),
-            np.array([[0.3833333, 0.4666667, 0.3666667, 0.]]))
+            2 * np.array([[0.3833333, 0.4666667, 0.3666667, 0.]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[:4].X, self.breast[3].x),
-            np.array([[0.3833333],
-                      [0.4666667],
-                      [0.3666667],
-                      [0.]]))
+            2 * np.array([[0.3833333],
+                          [0.4666667],
+                          [0.3666667],
+                          [0.]]))
 
 
 # noinspection PyTypeChecker
@@ -754,6 +774,10 @@ class TestPearsonR(TestCase):
             self.dist(self.breast[:2]),
             np.array([[0., 0.48462294],
                       [0.48462294, 0.]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.breast[:2], similarity=True),
+            1 - 2 * np.array([[0., 0.48462294],
+                              [0.48462294, 0.]]))
         # pylint: disable=line-too-long
         # Because it looks better
         np.testing.assert_almost_equal(
@@ -848,57 +872,61 @@ class TestPearsonRAbsolute(TestCase):
             np.array([[0]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[0], self.breast[1]),
-            np.array([[0.48462293898088876]]))
+            2 * np.array([[0.48462293898088876]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[0], self.breast[1], axis=1),
-            np.array([[0.48462293898088876]]))
+            2 * np.array([[0.48462293898088876]]))
 
     def test_pearsonrabsolute_distance_many_examples(self):
         np.testing.assert_almost_equal(
             self.dist(self.breast[:2]),
-            np.array([[0., 0.48462294],
-                      [0.48462294, 0.]]))
+            np.array([[0., 0.9692459],
+                      [0.9692459, 0.]]))
+        np.testing.assert_almost_equal(
+            self.dist(self.breast[:2], similarity=True),
+            1 - np.array([[0., 0.9692459],
+                          [0.9692459, 0.]]))
         # pylint: disable=line-too-long
         # Because it looks better
         np.testing.assert_almost_equal(
             self.dist(self.breast[:20], axis=0),
-            np.array([[0., 0.10239274, 0.12786763, 0.13435117, 0.15580385, 0.27429811, 0.21006195, 0.24072005, 0.42847752],
-                      [0.10239274, 0., 0.01695375, 0.10313851, 0.1138925, 0.16978203, 0.1155948, 0.08043531, 0.43326547],
-                      [0.12786763, 0.01695375, 0., 0.16049178, 0.13692762, 0.21784201, 0.11607395, 0.06493949, 0.46590168],
-                      [0.13435117, 0.10313851, 0.16049178, 0., 0.07181648, 0.15585667, 0.13891172, 0.21622332, 0.37404826],
-                      [0.15580385, 0.1138925, 0.13692762, 0.07181648, 0., 0.16301705, 0.17324382, 0.21452448, 0.42283252],
-                      [0.27429811, 0.16978203, 0.21784201, 0.15585667, 0.16301705, 0., 0.25512861, 0.29560909, 0.42766076],
-                      [0.21006195, 0.1155948, 0.11607395, 0.13891172, 0.17324382, 0.25512861, 0., 0.14419442, 0.42023881],
-                      [0.24072005, 0.08043531, 0.06493949, 0.21622332, 0.21452448, 0.29560909, 0.14419442, 0., 0.45930368],
-                      [0.42847752, 0.43326547, 0.46590168, 0.37404826, 0.42283252, 0.42766076, 0.42023881, 0.45930368, 0.]]))
+            2 * np.array([[0., 0.10239274, 0.12786763, 0.13435117, 0.15580385, 0.27429811, 0.21006195, 0.24072005, 0.42847752],
+                          [0.10239274, 0., 0.01695375, 0.10313851, 0.1138925, 0.16978203, 0.1155948, 0.08043531, 0.43326547],
+                          [0.12786763, 0.01695375, 0., 0.16049178, 0.13692762, 0.21784201, 0.11607395, 0.06493949, 0.46590168],
+                          [0.13435117, 0.10313851, 0.16049178, 0., 0.07181648, 0.15585667, 0.13891172, 0.21622332, 0.37404826],
+                          [0.15580385, 0.1138925, 0.13692762, 0.07181648, 0., 0.16301705, 0.17324382, 0.21452448, 0.42283252],
+                          [0.27429811, 0.16978203, 0.21784201, 0.15585667, 0.16301705, 0., 0.25512861, 0.29560909, 0.42766076],
+                          [0.21006195, 0.1155948, 0.11607395, 0.13891172, 0.17324382, 0.25512861, 0., 0.14419442, 0.42023881],
+                          [0.24072005, 0.08043531, 0.06493949, 0.21622332, 0.21452448, 0.29560909, 0.14419442, 0., 0.45930368],
+                          [0.42847752, 0.43326547, 0.46590168, 0.37404826, 0.42283252, 0.42766076, 0.42023881, 0.45930368, 0.]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[:3], self.breast[:4]),
-            np.array([[0., 0.48462294, 0.10133593, 0.4983256],
-                      [0.48462294, 0., 0.32783865, 0.42682613],
-                      [0.10133593, 0.32783865, 0., 0.36210365]]))
+            2 * np.array([[0., 0.48462294, 0.10133593, 0.4983256],
+                          [0.48462294, 0., 0.32783865, 0.42682613],
+                          [0.10133593, 0.32783865, 0., 0.36210365]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[2], self.breast[:3]),
-            np.array([[0.10133593, 0.32783865, 0.]]))
+            2 * np.array([[0.10133593, 0.32783865, 0.]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[:2], self.breast[3]),
-            np.array([[0.4983256],
-                      [0.42682613]]))
+            2 * np.array([[0.4983256],
+                          [0.42682613]]))
 
     def test_pearsonrabsolute_distance_numpy(self):
         np.testing.assert_almost_equal(
             self.dist(self.breast[0].x, self.breast[1].x, axis=1),
-            np.array([[0.48462293898088876]]))
+            2 * np.array([[0.48462293898088876]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[:2].X),
-            np.array([[0., 0.48462294],
-                      [0.48462294, 0.]]))
+            2 * np.array([[0., 0.48462294],
+                          [0.48462294, 0.]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[2].x, self.breast[:3].X),
-            np.array([[0.10133593, 0.32783865, 0.]]))
+            2 * np.array([[0.10133593, 0.32783865, 0.]]))
         np.testing.assert_almost_equal(
             self.dist(self.breast[:2].X, self.breast[3].x),
-            np.array([[0.4983256],
-                      [0.42682613]]))
+            2 * np.array([[0.4983256],
+                          [0.42682613]]))
 
 
 # noinspection PyTypeChecker

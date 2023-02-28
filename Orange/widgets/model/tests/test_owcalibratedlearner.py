@@ -31,7 +31,7 @@ class TestOWCalibratedLearner(WidgetTest, WidgetLearnerTestMixin):
         # Overridden to change the output type in the last test
         initial = self.get_output("Learner")
         self.assertIsNotNone(initial, "Does not initialize the learner output")
-        self.widget.apply_button.button.click()
+        self.click_apply()
         newlearner = self.get_output("Learner")
         self.assertIsNot(initial, newlearner,
                          "Does not send a new learner instance on `Apply`.")
@@ -44,10 +44,10 @@ class TestOWCalibratedLearner(WidgetTest, WidgetLearnerTestMixin):
         """Check if model is on output after sending data and apply"""
         # Overridden to change the output type in the last two test
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.send_signal('Data', self.data)
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.wait_until_stop_blocking()
         model = self.get_output(self.widget.Outputs.model)
         self.assertIsNotNone(model)

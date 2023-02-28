@@ -6,8 +6,7 @@ import Orange
 from Orange.data import Table
 from Orange.widgets.data.owtable import RichTableModel, TableBarItemDelegate, \
     TableDataDelegate
-from Orange.widgets.unsupervised.owdistancematrix import DistanceMatrixModel, \
-    TableBorderItem
+from Orange.widgets.utils.distmatrixmodel import DistMatrixModel
 from Orange.widgets.utils.tableview import TableView
 
 from .base import benchmark, Benchmark
@@ -77,16 +76,13 @@ class BenchDistanceDelegate(BaseBenchTableView):
         super().setUp()
         data = Table("iris")
         dist = Orange.distance.Euclidean(data)
-        self.model = DistanceMatrixModel()
+        self.model = DistMatrixModel()
         self.model.set_data(dist)
-        self.delegate = TableBorderItem()
-        self.view.setItemDelegate(self.delegate)
         self.view.setModel(self.model)
 
     def tearDown(self) -> None:
         super().tearDown()
         del self.model
-        del self.delegate
 
     @benchmark(number=3, warmup=1, repeat=10)
     def bench_paint(self):

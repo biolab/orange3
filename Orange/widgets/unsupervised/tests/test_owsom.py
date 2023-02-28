@@ -86,7 +86,7 @@ class TestOWSOM(WidgetTest):
                 self.iris.X[i, i % 4] = np.nan
 
         self.send_signal(widget.Inputs.data, self.iris)
-        self.assertTrue(widget.Error.no_defined_rows.is_shown())
+        self.assertTrue(widget.Error.not_enough_data.is_shown())
         self.assertFalse(widget.Warning.ignoring_disc_variables.is_shown())
         self.assertIsNone(widget.data)
         self.assertIsNone(widget.cont_x)
@@ -100,7 +100,7 @@ class TestOWSOM(WidgetTest):
             self.iris.X[:50, 0] = np.nan
 
         self.send_signal(widget.Inputs.data, self.iris)
-        self.assertFalse(widget.Error.no_defined_rows.is_shown())
+        self.assertFalse(widget.Error.not_enough_data.is_shown())
         self.assertTrue(widget.Warning.missing_values.is_shown())
         np.testing.assert_almost_equal(
             widget.data.Y.flatten(), [1] * 50 + [2] * 50)
@@ -115,11 +115,31 @@ class TestOWSOM(WidgetTest):
             self.iris.X[5, 0] = np.nan
 
         self.send_signal(widget.Inputs.data, self.iris)
-        self.assertFalse(widget.Error.no_defined_rows.is_shown())
+        self.assertFalse(widget.Error.not_enough_data.is_shown())
         self.assertTrue(widget.Warning.missing_values.is_shown())
 
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(widget.Warning.missing_values.is_shown())
+
+    @_patch_recompute_som
+    def test_single_row_data(self):
+        widget = self.widget
+        with self.iris.unlocked():
+            self.iris.X[:-1] = np.nan
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertTrue(widget.Error.not_enough_data.is_shown())
+
+        self.send_signal(widget.Inputs.data, Table("heart_disease"))
+        self.assertFalse(widget.Error.not_enough_data.is_shown())
+        self.assertTrue(widget.Warning.ignoring_disc_variables.is_shown())
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertTrue(widget.Error.not_enough_data.is_shown())
+        self.assertFalse(widget.Warning.ignoring_disc_variables.is_shown())
+
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(widget.Error.not_enough_data.is_shown())
 
     @_patch_recompute_som
     def test_sparse_data(self):

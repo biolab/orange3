@@ -86,16 +86,19 @@ def describe_domain(domain):
     :rtype: OrderedDict
     """
 
-    def clip_attrs(items, s):
-        return clipped_list([a.name for a in items], 1000,
-                            total_min=10, total=" (total: {{}} {})".format(s))
+    def clip_attrs(items, desc):
+        s = clipped_list([a.name for a in items], 1000)
+        nitems = len(items)
+        if nitems >= 10:
+            s += f" (total: {nitems} {desc})"
+        return s
 
     return OrderedDict(
         [("Features", clip_attrs(domain.attributes, "features")),
          ("Meta attributes", bool(domain.metas) and
           clip_attrs(domain.metas, "meta attributes")),
          ("Target", bool(domain.class_vars) and
-          clip_attrs(domain.class_vars, "targets variables"))])
+          clip_attrs(domain.class_vars, "target variables"))])
 
 
 def describe_data(data):

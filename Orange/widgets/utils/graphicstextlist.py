@@ -209,7 +209,7 @@ class TextListBase(QGraphicsWidget):
         fm = QFontMetrics(self.font())
         spacing = self.__spacing
         N = self.count()
-        width = self.__width_for_font(self.font())
+        width = self.__width_for_font(self.font()) + 1
         if self.has_color_strip():
             width += int(round((fm.height() + spacing) * 1.3))
         height = N * fm.height() + max(N - 1, 0) * spacing

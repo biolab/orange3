@@ -82,7 +82,6 @@ class XGBClassifier(XGBBase, Learner, _FeatureScorerMixin):
                          importance_type=importance_type,
                          gpu_id=gpu_id,
                          validate_parameters=validate_parameters,
-                         use_label_encoder=False,
                          preprocessors=preprocessors)
 
 
@@ -146,5 +145,4 @@ class XGBRFClassifier(XGBBase, Learner, _FeatureScorerMixin):
                          importance_type=importance_type,
                          gpu_id=gpu_id,
                          validate_parameters=validate_parameters,
-                         use_label_encoder=False,
                          preprocessors=preprocessors)

@@ -10,6 +10,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
+from orangecanvas.utils.localization import pl
 from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.base import TreeModel, SklModel
@@ -307,9 +308,9 @@ class OWTreeGraph(OWTreeViewer2D):
             self.openContext(self.domain.class_var)
             # self.root_node = self.walkcreate(model.root, None)
             self.root_node = self.walkcreate(self.tree_adapter.root)
-            self.infolabel.setText('{} nodes, {} leaves'.format(
-                self.tree_adapter.num_nodes,
-                len(self.tree_adapter.leaves(self.tree_adapter.root))))
+            nodes = self.tree_adapter.num_nodes
+            leaves = len(self.tree_adapter.leaves(self.tree_adapter.root))
+            self.infolabel.setText(f'{nodes} {pl(nodes, "node")}, {leaves} {pl(leaves, "leaf|leaves")}')
         self.setup_scene()
         self.Outputs.selected_data.send(None)
         self.Outputs.annotated_data.send(create_annotated_table(self.dataset, []))

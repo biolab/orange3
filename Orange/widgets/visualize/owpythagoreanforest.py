@@ -3,11 +3,13 @@ from math import log, sqrt
 from typing import Any, Callable, Optional
 
 from AnyQt.QtCore import Qt, QRectF, QSize, QPointF, QSizeF, QModelIndex, \
-    QItemSelection, QItemSelectionModel, QT_VERSION
+    QItemSelection, QItemSelectionModel, QT_VERSION, QByteArray, QBuffer, \
+    QIODevice
 from AnyQt.QtGui import QPainter, QPen, QColor, QBrush, QMouseEvent
 from AnyQt.QtWidgets import QSizePolicy, QGraphicsScene, QLabel, QSlider, \
     QListView, QStyledItemDelegate, QStyleOptionViewItem, QStyle
 
+from orangewidget.io import PngFormat
 from Orange.base import RandomForestModel, TreeModel
 from Orange.data import Table
 from Orange.widgets import gui, settings
@@ -21,6 +23,53 @@ from Orange.widgets.visualize.pythagorastreeviewer import (
 from Orange.widgets.visualize.utils.tree.skltreeadapter import \
     SklTreeAdapter
 from Orange.widgets.widget import OWWidget
+
+
+REPORT_STYLE = """
+<style>
+* {
+  box-sizing: border-box;
+}
+
+.forest_model_row {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 4px;
+}
+
+.forest_model_col {
+  flex: 10%;
+  max-width: 10%;
+  padding: 0 4px;
+}
+
+.forest_model_col img {
+  margin-top: 8px;
+  vertical-align: middle;
+}
+
+@media screen and (max-width: 2200px) {
+  .forest_model_col {
+    flex: 25%;
+    max-width: 25%;
+  }
+}
+
+@media screen and (max-width: 1200px) {
+  .forest_model_col {
+    flex: 50%;
+    max-width: 50%;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .forest_model_col {
+    flex: 100%;
+    max-width: 100%;
+  }
+}
+</style>
+"""
 
 
 class PythagoreanForestModel(PyListModel):
@@ -377,7 +426,30 @@ class OWPythagoreanForest(OWWidget):
 
     def send_report(self):
         """Send report."""
-        self.report_plot()
+        model = self.forest_model
+        max_rows = 30
+
+        def item_html(row):
+            img_data = model.data(model.index(row))
+            byte_array = QByteArray()
+            filename = QBuffer(byte_array)
+            filename.open(QIODevice.WriteOnly)
+            PngFormat.write(filename, img_data)
+            img_encoded = byte_array.toBase64().data().decode("utf-8")
+            return f'<img style="width:100%" ' \
+                   f'src="data:image/png;base64,{img_encoded}"/>'
+
+        html = ["<div class='forest_model_row'>"]
+        for i in range(model.rowCount())[:max_rows]:
+            html.append("<div class='forest_model_col'>")
+            html.extend(item_html(i))
+            html.append("</div>")
+        html.append("</div>")
+
+        html = REPORT_STYLE + "".join(html)
+        if model.rowCount() > max_rows:
+            html += "<p>. . .</p>"
+        self.report_raw(html)
 
 
 class SklRandomForestAdapter:

@@ -71,35 +71,53 @@ class TestOWConcatenate(WidgetTest):
         outvars = output.domain.variables
         self.assertEqual(0, len(outvars))
 
+    def get_source_var(self, vars_before):
+        output = self.get_output(self.widget.Outputs.data)
+        outvars = output.domain.variables + output.domain.metas
+        return (set(outvars) - set(vars_before)).pop()
+
     def test_source(self):
         self.send_signal(self.widget.Inputs.additional_data, self.iris, 0)
         self.send_signal(self.widget.Inputs.additional_data, self.titanic, 1)
         outputb = self.get_output(self.widget.Outputs.data)
         outvarsb = outputb.domain.variables
-        def get_source():
-            output = self.get_output(self.widget.Outputs.data)
-            outvars = output.domain.variables + output.domain.metas
-            return (set(outvars) - set(outvarsb)).pop()
         # test adding source
         self.widget.controls.append_source_column.toggle()
-        source = get_source()
+        source = self.get_source_var(outvarsb)
         self.assertEqual(source.name, "Source ID")
         # test name changing
         self.widget.controls.source_attr_name.setText("Source")
         self.widget.controls.source_attr_name.callback()
-        source = get_source()
+        source = self.get_source_var(outvarsb)
         self.assertEqual(source.name, "Source")
         # test source_column role
         places = ["class_vars", "attributes", "metas"]
         for i, place in enumerate(places):
             self.widget.source_column_role = i
             self.widget.commit.now()
-            source = get_source()
+            source = self.get_source_var(outvarsb)
             output = self.get_output(self.widget.Outputs.data)
             self.assertTrue(source in getattr(output.domain, place))
             data = output.transform(Domain([source]))
+            self.assertTupleEqual(("iris", "titanic"), source.values)
             np.testing.assert_equal(data[:len(self.iris)].X, 0)
             np.testing.assert_equal(data[len(self.iris):].X, 1)
+
+    def test_source_ignore_compute_value(self):
+        """Test source variable correct also when ignore_compute_value on"""
+        self.send_signal(self.widget.Inputs.additional_data, self.iris, 0)
+        self.send_signal(self.widget.Inputs.additional_data, self.titanic, 1)
+        outputb = self.get_output(self.widget.Outputs.data)
+        outvarsb = outputb.domain.variables
+
+        self.widget.controls.append_source_column.toggle()
+        self.widget.controls.ignore_compute_value.toggle()  # on
+        source = self.get_source_var(outvarsb)
+        output = self.get_output(self.widget.Outputs.data)
+        data = output.transform(Domain([source]))
+        self.assertTupleEqual(("iris", "titanic"), source.values)
+        np.testing.assert_equal(data[: len(self.iris)].X, 0)
+        np.testing.assert_equal(data[len(self.iris) :].X, 1)
 
     def test_singleclass_source_class(self):
         self.send_signal(self.widget.Inputs.primary_data, self.iris)

@@ -5,7 +5,6 @@ import pickle
 import pkgutil
 import unittest
 
-import traceback
 import warnings
 
 import numpy as np
@@ -273,6 +272,9 @@ class ModelTest(unittest.TestCase):
         data = Table("heart_disease")
         for learner in all_learners():
             with self.subTest(learner.__name__):
+                # Skip slow tests
+                if issubclass(learner, _RuleLearner):
+                    continue
                 if learner in (ThresholdLearner, CalibratedLearner):
                     model = learner(LogisticRegressionLearner())(data)
                 else:
@@ -416,11 +418,9 @@ class LearnerAccessibility(unittest.TestCase):
             if learner in (ThresholdLearner, CalibratedLearner):
                 continue
             # Skip slow tests
-            if isinstance(learner, _RuleLearner):
+            if issubclass(learner, _RuleLearner):
                 continue
             with self.subTest(learner.__name__):
-                if "RandomForest" not in learner.__name__:
-                    continue
                 learner = learner()
                 for ds in datasets:
                     model = learner(ds)
@@ -434,6 +434,31 @@ class LearnerAccessibility(unittest.TestCase):
                         model(ds), model2(ds),
                         err_msg='%s does not return same values when unpickled %s'
                         % (learner.__class__.__name__, ds.name))
+
+    def test_all_models_work_after_unpickling_pca(self):
+        datasets = [Table('iris'), Table('titanic')]
+        for learner in list(all_learners()):
+            # calibration, threshold learners' __init__ require arguments
+            if learner in (ThresholdLearner, CalibratedLearner):
+                continue
+            # Skip slow tests
+            if issubclass(learner, _RuleLearner):
+                continue
+            with self.subTest(learner.__name__):
+                learner = learner()
+                for ds in datasets:
+                    pca_ds = Orange.projection.PCA()(ds)(ds)
+                    model = learner(pca_ds)
+                    s = pickle.dumps(model, 0)
+                    model2 = pickle.loads(s)
+
+                    np.testing.assert_almost_equal(
+                        Table.from_table(model.domain, ds).X,
+                        Table.from_table(model2.domain, ds).X)
+                    np.testing.assert_almost_equal(
+                        model(ds), model2(ds),
+                        err_msg='%s does not return same values when unpickled %s'
+                                % (learner.__class__.__name__, ds.name))
 
     def test_adequacy_all_learners(self):
         for learner in all_learners():

@@ -957,17 +957,6 @@ class TestReinterpretTransforms(TestCase):
             np.array(list(chain(expected, expected)), dtype=float).transpose()
         )
 
-    def test_raise_pandas_version(self):
-        """
-        When this test start to fail:
-        - remove this test
-        - remove if clause in datetime_to_epoch function and supporting comments
-        - remove same if clause in var function in owgroupby (line 77, 78)
-        - set pandas dependency version to pandas>=1.4
-        """
-        from datetime import datetime
-        self.assertLess(datetime.today(), datetime(2023, 1, 1))
-
     def test_reinterpret_string(self):
         table = self.data_str
         domain = table.domain
@@ -1025,6 +1014,20 @@ class TestReinterpretTransforms(TestCase):
         domain = table.domain
         v = apply_transform(domain.metas[0],table, [])
         self.assertIs(v, domain.metas[0])
+
+    def test_to_time_variable(self):
+        table = self.data
+        tr = AsTime()
+        dtr = []
+        for v in table.domain:
+            strp = StrpTime("Detect automatically", None, 1, 1)
+            vtr = apply_transform_var(
+                apply_reinterpret(v, tr, table_column_data(table, v)), [strp]
+            )
+            dtr.append(vtr)
+        ttable = table.transform(Domain([], metas=dtr))
+        for var in ttable.domain:
+            self.assertTrue(var.have_date or var.have_time)
 
 
 class TestUtils(TestCase):

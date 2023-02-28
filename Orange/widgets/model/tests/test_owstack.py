@@ -23,10 +23,10 @@ class TestOWStackedLearner(WidgetTest):
         """Check if learner is on output after apply"""
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.send_signal("Learners", LogisticRegressionLearner(), 0)
-        self.widget.apply_button.button.click()
+        self.widget.apply_button.button.clicked.emit()
         initial = self.get_output("Learner")
         self.assertIsNotNone(initial, "Does not initialize the learner output")
-        self.widget.apply_button.button.click()
+        self.widget.apply_button.button.clicked.emit()
         newlearner = self.get_output("Learner")
         self.assertIsNot(initial, newlearner,
                          "Does not send a new learner instance on `Apply`.")
@@ -37,10 +37,10 @@ class TestOWStackedLearner(WidgetTest):
         """Check if model is on output after sending data and apply"""
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.send_signal("Learners", LogisticRegressionLearner(), 0)
-        self.widget.apply_button.button.click()
+        self.widget.apply_button.button.clicked.emit()
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.send_signal('Data', self.data)
-        self.widget.apply_button.button.click()
+        self.widget.apply_button.button.clicked.emit()
         self.wait_until_stop_blocking()
         model = self.get_output(self.widget.Outputs.model)
         self.assertIsNotNone(model)

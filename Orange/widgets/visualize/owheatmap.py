@@ -191,7 +191,7 @@ class OWHeatMap(widget.OWWidget):
 
     class Information(widget.OWWidget.Information):
         sampled = Msg("Data has been sampled")
-        discrete_ignored = Msg("{} categorical feature{} ignored")
+        discrete_ignored = Msg("Categorical features are ignored.")
         row_clust = Msg("{}")
         col_clust = Msg("{}")
         sparse_densified = Msg("Showing this data may require a lot of memory")
@@ -618,8 +618,7 @@ class OWHeatMap(widget.OWWidget):
                 self.Error.no_continuous()
                 input_data = data = None
             else:
-                self.Information.discrete_ignored(
-                    ndisc, "s" if ndisc > 1 else "")
+                self.Information.discrete_ignored()
 
         self.data = data
         self.input_data = input_data

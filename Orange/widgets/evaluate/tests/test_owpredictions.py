@@ -1168,6 +1168,11 @@ class TestOWPredictions(WidgetTest):
             widget.send_report()
             self.assertIn(value, widget.report_paragraph.call_args[0][1])
 
+    def test_migrate_shown_scores(self):
+        settings = {"score_table": {"shown_scores": {"Sensitivity"}}}
+        self.widget.migrate_settings(settings, 1)
+        self.assertTrue(settings["score_table"]["show_score_hints"]["Sensitivity"])
+
 
 class SelectionModelTest(unittest.TestCase):
     def setUp(self):

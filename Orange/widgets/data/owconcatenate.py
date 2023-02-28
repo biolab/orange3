@@ -263,6 +263,7 @@ class OWConcatenate(widget.OWWidget):
                 dumb_domain,
                 table.X, table.Y, table.metas, table.W,
                 table.attributes, table.ids)
+            dumb_table.name = table.name
             dumb_tables.append(dumb_table)
         return dumb_tables
 

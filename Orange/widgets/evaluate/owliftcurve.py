@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import NamedTuple, Dict, Tuple
+from typing import NamedTuple, Dict, Tuple, List
 
 import numpy as np
 from sklearn.metrics import precision_recall_curve
@@ -202,6 +202,9 @@ class OWLiftCurve(widget.OWWidget):
 
         gui.rubber(self.controlArea)
 
+        box = gui.vBox(self.controlArea, box="Area under the curve")
+        self._area_info = gui.label(box, self, "/", textFormat=Qt.RichText)
+
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
         self.plotview = GraphicsView()
@@ -250,6 +253,7 @@ class OWLiftCurve(widget.OWWidget):
         self.classifier_names = []
         self.colors = []
         self._points = {}
+        self._update_info([])
 
     def _initialize(self, results):
         n_models = len(results.predicted)
@@ -313,6 +317,7 @@ class OWLiftCurve(widget.OWWidget):
             self._plot_curve(self.target_index, clf_idx, self.curve_type)
             for clf_idx in self.selected_classifiers
         ]
+        self._update_info(is_valid)
         self.plot.autoRange()
         if self.curve_type != CurveTypes.LiftCurve:
             self.plot.getViewBox().setYRange(0, 1)
@@ -377,6 +382,12 @@ class OWLiftCurve(widget.OWWidget):
             curve.scatter.opts["hoverable"] = True
             curve.scatter.opts["tip"] = tip
             self.plot.addItem(curve)
+            bottom = pg.PlotDataItem(contacted, np.zeros(len(contacted)))
+            area_color = QColor(color)
+            area_color.setAlphaF(0.1)
+            area_item = pg.FillBetweenItem(curve, bottom,
+                                           brush=pg.mkBrush(area_color))
+            self.plot.addItem(area_item)
             return curve
 
         light_color = QColor(color)
@@ -387,6 +398,33 @@ class OWLiftCurve(widget.OWWidget):
 
         self.plot.curve_items.append(_plot(points, wide_pen, line_kwargs))
         return True
+
+    def _update_info(self, is_valid: List[bool]):
+        self._area_info.setText("/")
+        if any(is_valid):
+            text = "<table>"
+            for clf_idx, valid in zip(self.selected_classifiers, is_valid):
+                if valid:
+                    if self.curve_type == CurveTypes.PrecisionRecall:
+                        curve_type = self.curve_type
+                    else:
+                        curve_type = CurveTypes.LiftCurve
+                    key = self.target_index, clf_idx, curve_type
+                    contacted, respondents, _ = self._points[key]
+                    if self.curve_type == CurveTypes.LiftCurve:
+                        respondents = respondents / contacted
+                    area = compute_area(contacted, respondents)
+                    area = f"{round(area, 3)}"
+                else:
+                    area = "/"
+                text += \
+                    f"<tr align=left>" \
+                    f"<td style='color:{self.colors[clf_idx].name()}'>■</td>" \
+                    f"<td>{self.classifier_names[clf_idx]}:  </td>" \
+                    f"<td align=right>{area}</td>" \
+                    f"</tr>"
+            text += "<table>"
+            self._area_info.setText(text)
 
     def _set_tooltip(self):
         html = ""
@@ -552,6 +590,13 @@ def cumulative_gains(y_true, y_score, target=1):
     respondents = respondents / respondents[-1]
     contacted = (1 + threshold_idxs) / (1 + threshold_idxs[-1])
     return contacted, respondents, y_score[threshold_idxs]
+
+
+def compute_area(x: np.ndarray, y: np.ndarray) -> float:
+    ids = np.argsort(x)
+    x = x[ids]
+    y = y[ids]
+    return np.dot(x[1:] - x[:-1], y[:-1])
 
 
 if __name__ == "__main__":  # pragma: no cover

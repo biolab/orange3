@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
-import time
+import unittest
 from unittest.mock import patch
 import numpy as np
 
@@ -558,6 +558,32 @@ class TestOWSelectRows(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.assertListEqual([c[0] for c in self.widget.conditions], vars_)
 
+    def test_one_of_click(self):
+        """Test items checked in is one of dropdown"""
+        zoo = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, zoo)
+        self.widget.remove_all_button.click()
+        self.enterFilter(zoo.domain[1], "is one of")
+        model = self.widget.cond_list.cellWidget(0, 2).popup.list_view.model()
+
+        output = self.get_output(self.widget.Outputs.matching_data)
+        self.assertEqual(len(zoo), len(output))
+
+        # check second item (group 1) - only 20 elements in this group
+        model.item(1).setCheckState(Qt.Checked)
+        output = self.get_output(self.widget.Outputs.matching_data)
+        self.assertEqual(20, len(output))
+
+        # check first item (group 0) - now all elements should be at the output
+        model.item(0).setCheckState(Qt.Checked)
+        output = self.get_output(self.widget.Outputs.matching_data)
+        self.assertEqual(len(zoo), len(output))
+
+        # uncheck second element (group 1) - only elements fo group 0 at output
+        model.item(1).setCheckState(Qt.Unchecked)
+        output = self.get_output(self.widget.Outputs.matching_data)
+        self.assertEqual(81, len(output))
+
     def widget_with_context(self, domain, conditions):
         ch = SelectRowsContextHandler()
         context = ch.new_context(domain, *ch.encode_domain(domain))
@@ -612,3 +638,7 @@ class TestOWSelectRows(WidgetTest):
             widget.setDate(value)
         else:
             raise ValueError("Unsupported widget {}".format(widget))
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -16,20 +16,13 @@ The **Feature Statistics** widget provides a quick way to inspect and find inter
 
 ![](images/feature_statistics-stamped.png)
 
-The Feature Statistics widget on the *heart-disease* data set. The feature *exerc ind ang* was manually changed to a meta variable for illustration purposes.
+The Feature Statistics widget on the *heart-disease* data set.
 
-1. Info on the current data set size and number and types of features
-2. The histograms on the right can be colored by any feature. If the selected feature is categorical, a discrete color palette is used (as shown in the example). If the selected feature is numerical, a continuous color palette is used. The table on the right contains statistics about each feature in the data set. The features can be sorted by each statistic, which we now describe.
-3. The feature type - can be one of categorical, numeric, time and string.
-4. The name of the feature.
-5. A histogram of feature values. If the feature is numeric, we appropriately discretize the values into bins. If the feature is categorical, each value is assigned its own bar in the histogram.
-6. The central tendency of the feature values. For categorical features, this is the [mode](https://en.wikipedia.org/wiki/Mode_(statistics)). For numeric features, this is [mean](https://en.wikipedia.org/wiki/Mean) value.
-7. The dispersion of the feature values. For categorical features, this is the [entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory)) of the value distribution. For numeric features, this is the [coefficient of variation](https://en.wikipedia.org/wiki/Coefficient_of_variation).
-8. The minimum value. This is computed for numerical and ordinal categorical features.
-9. The maximum value. This is computed for numerical and ordinal categorical features.
-10. The number of missing values in the data.
-
-Notice also that some rows are colored differently. White rows indicate regular features, gray rows indicate class variables and the lighter gray indicates meta variables.
+1. The feature type - can be categorical, numeric, time and string.
+2. The name of the feature.
+3. The histogram showing the distribution of feature's values. Values of numeric features are split into bins.
+4. Further columns show different statistics. Mean, minimal and maximal value are computed only for numeric features. Mode shows the most common value for numeric or categorical feature. Dispersion shows [coefficient of variation](https://en.wikipedia.org/wiki/Coefficient_of_variation) for numeric features, and [entropy](https://en.wikipedia.org/wiki/Entropy_(information_theory)) for categorical.
+5. The bars in the histogram can be further split by value of another variable. The default choice is the target variable, but the user can change this to an arbitrary feature or none.
 
 Example
 -------

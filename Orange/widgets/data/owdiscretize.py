@@ -19,6 +19,7 @@ from orangewidget.utils import listview
 from Orange.data import (
     Variable, ContinuousVariable, DiscreteVariable, TimeVariable, Domain, Table)
 import Orange.preprocess.discretize as disc
+from Orange.widgets.utils.localization import pl
 from Orange.widgets import widget, gui
 from Orange.widgets.utils import unique_everseen
 from Orange.widgets.utils.itemmodels import DomainModel
@@ -308,14 +309,12 @@ def format_desc(hint: VarHint) -> str:
     desc = Options[hint.method_id].short_desc
     if hint.method_id == Methods.FixedWidthTime:
         width, unit = hint.args
-        unit = time_units[unit]
         try:
             width = int(width)
         except ValueError:
-            unit += "(s)"
+            unit = f"{time_units[unit]}(s)"
         else:
-            if width != 1:
-                unit += "s"
+            unit = f"{pl(width, time_units[unit])}"
         return desc.format(width, unit)
     return desc.format(*hint.args)
 
@@ -643,7 +642,7 @@ class OWDiscretize(widget.OWWidget):
 
         self.width_time_unit = u = QComboBox(self)
         u.setContentsMargins(0, 0, 0, 0)
-        u.addItems([unit + "(s)" for unit in time_units])
+        u.addItems([f"{unit}(s)" for unit in time_units])
         validator = QIntValidator()
         validator.setBottom(1)
         self.width_time_line = button(Methods.FixedWidthTime,

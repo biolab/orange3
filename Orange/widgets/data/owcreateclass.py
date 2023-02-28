@@ -5,7 +5,7 @@ from itertools import count
 import numpy as np
 
 from AnyQt.QtWidgets import QGridLayout, QLabel, QLineEdit, QSizePolicy, QWidget
-from AnyQt.QtCore import QSize, Qt
+from AnyQt.QtCore import Qt
 
 from Orange.data import StringVariable, DiscreteVariable, Domain
 from Orange.data.table import Table
@@ -14,6 +14,7 @@ from Orange.preprocess.transformation import Transformation, Lookup
 from Orange.widgets import gui, widget
 from Orange.widgets.settings import DomainContextHandler, ContextSetting
 from Orange.widgets.utils.itemmodels import DomainModel
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
@@ -472,8 +473,9 @@ class OWCreateClass(widget.OWWidget):
                 if n_before and (lab or patt):
                     lab_total.setText("+ {}".format(n_before))
                     if n_matched:
-                        tip = "{} of the {} matching instances are already " \
-                              "covered above".format(n_before, n_total)
+                        tip = f"{n_before} o" \
+                              f"f {n_total} matching {pl(n_total, 'instance')} " \
+                              f"{pl(n_before, 'is|are')} already covered above."
                     else:
                         tip = "All matching instances are already covered above"
                     lab_total.setToolTip(tip)
@@ -562,23 +564,30 @@ class OWCreateClass(widget.OWWidget):
         # within the loop
         # pylint: disable=undefined-loop-variable
         def _cond_part():
-            rule = "<b>{}</b> ".format(class_name)
+            rule = f"<b>{class_name}</b> "
             if patt:
-                rule += "if <b>{}</b> contains <b>{}</b>".format(
-                    self.attribute.name, patt)
+                rule += f"if <b>{self.attribute.name}</b> contains <b>{patt}</b>"
             else:
                 rule += "otherwise"
             return rule
 
         def _count_part():
+            aca = "already covered above"
             if not n_matched:
-                return "all {} matching instances are already covered " \
-                       "above".format(n_total)
-            elif n_matched < n_total and patt:
-                return "{} matching instances (+ {} that are already " \
-                       "covered above".format(n_matched, n_total - n_matched)
+                if n_total == 1:
+                    return f"the single matching instance is {aca}"
+                elif n_total == 2:
+                    return f"both matching instances are {aca}"
+                else:
+                    return f"all {n_total} matching instances are {aca}"
+            elif not patt:
+                return f"{n_matched} {pl(n_matched, 'instance')}"
             else:
-                return "{} matching instances".format(n_matched)
+                m = f"{n_matched} matching {pl(n_matched, 'instance')}"
+                if n_matched < n_total:
+                    n_already = n_total - n_matched
+                    m += f" (+{n_already} that {pl(n_already, 'is|are')} {aca})"
+                return m
 
         if not self.attribute:
             return

@@ -10,6 +10,7 @@ from AnyQt.QtTest import QTest
 import Orange.misc
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.distance import Euclidean
+from Orange.misc import DistMatrix
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.unsupervised.owhierarchicalclustering import \
     OWHierarchicalClustering
@@ -139,6 +140,20 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.distances, self.distances)
         self.assertFalse(self.widget.Error.not_finite_distances.is_shown())
 
+    def test_not_symmetric(self):
+        w = self.widget
+        self.send_signal(w.Inputs.distances, DistMatrix([[1, 2, 3], [4, 5, 6]]))
+        self.assertTrue(w.Error.not_symmetric.is_shown())
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.Error.not_symmetric.is_shown())
+
+    def test_empty_matrix(self):
+        w = self.widget
+        self.send_signal(w.Inputs.distances, DistMatrix([[]]))
+        self.assertTrue(w.Error.empty_matrix.is_shown())
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.Error.empty_matrix.is_shown())
+
     def test_output_cut_ratio(self):
         self.send_signal(self.widget.Inputs.distances, self.distances)
 
@@ -147,6 +162,7 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         annotated = self.get_output(self.widget.Outputs.annotated_data)
         self.assertIsNotNone(annotated)
 
+        self.widget.grab()  # Force layout
         # selecting clusters with cutoff should select all data
         QTest.mousePress(
             self.widget.view.headerView().viewport(),

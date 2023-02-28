@@ -77,8 +77,6 @@ def var(s):
     """
     if is_datetime64_any_dtype(s):
         initial_ts = pd.Timestamp("1970-01-01", tz=None if s.dt.tz is None else "UTC")
-        if s.dt.tz is not None:
-            s = s.tz_convert("UTC")
         s = (s - initial_ts) / pd.Timedelta("1s")
     var_ = s.var()
     return var_.total_seconds() if isinstance(var_, pd.Timedelta) else var_
@@ -96,6 +94,10 @@ def span(s):
 AGGREGATIONS = {
     "Mean": Aggregation("mean", {ContinuousVariable, TimeVariable}),
     "Median": Aggregation("median", {ContinuousVariable, TimeVariable}),
+    "Q1": Aggregation(lambda s: s.quantile(0.25), {ContinuousVariable, TimeVariable}),
+    "Q3": Aggregation(lambda s: s.quantile(0.75), {ContinuousVariable, TimeVariable}),
+    "Min. value": Aggregation("min", {ContinuousVariable, TimeVariable}),
+    "Max. value": Aggregation("max", {ContinuousVariable, TimeVariable}),
     "Mode": Aggregation(
         lambda x: pd.Series.mode(x).get(0, nan),
         {ContinuousVariable, DiscreteVariable, TimeVariable}
@@ -107,8 +109,6 @@ AGGREGATIONS = {
         concatenate,
         {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
     ),
-    "Min. value": Aggregation("min", {ContinuousVariable, TimeVariable}),
-    "Max. value": Aggregation("max", {ContinuousVariable, TimeVariable}),
     "Span": Aggregation(span, {ContinuousVariable, TimeVariable}),
     "First value": Aggregation(
         "first", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
@@ -400,7 +400,7 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
 
         col = 0
         row = 0
-        break_rows = (5, 5, 99)
+        break_rows = (6, 6, 99)
         for agg in AGGREGATIONS:
             self.agg_checkboxes[agg] = cb = CheckBox(agg, self)
             cb.setDisabled(True)
