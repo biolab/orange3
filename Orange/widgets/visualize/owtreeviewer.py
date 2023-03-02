@@ -10,7 +10,6 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
-from orangecanvas.utils.localization import pl
 from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.base import TreeModel, SklModel
@@ -20,6 +19,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
+from Orange.widgets.utils.localization import pl
 from Orange.data import Table
 from Orange.util import color_to_hex
 
