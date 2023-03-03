@@ -656,14 +656,11 @@ class SqlTable(Table):
         return np.nan
 
     def __get_nan_frequency(self, columns):
-        nans = 0
-        for column in columns:
-            col_field = column.to_sql()
-            query = self._sql_query(["COUNT(*)"],
-                                    filters=[f"{col_field} IS NULL OR {col_field} = 'NaN'"])
-            with self.backend.execute_sql_query(query) as get_nans:
-                nans += get_nans.fetchall()[0][0]
-        return nans / (len(self) * len(columns))
+        query = self._sql_query([" + ".join([f"COUNT(*) - COUNT({col.to_sql()})"
+                                             for col in columns])])
+        with self.backend.execute_sql_query(query) as cur:
+            nans = cur.fetchone()
+        return nans[0] / (len(self) * len(columns))
 
     def get_nan_frequency_attribute(self):
         return self.__get_nan_frequency(self.domain.attributes)
