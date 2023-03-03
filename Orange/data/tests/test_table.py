@@ -253,6 +253,25 @@ class TestTableInit(unittest.TestCase):
             tabw.metas,
             np.hstack((tab.metas, np.array(list("abcde")).reshape(5, -1))))
 
+    def test_copy(self):
+        domain = Domain([ContinuousVariable("x")],
+                        ContinuousVariable("y"),
+                        [ContinuousVariable("z")])
+        data1 = Table.from_list(domain, [[1, 2, 3]], weights=[4])
+        data1.ids[0]= 5
+        data2 = data1.copy()
+        with data2.unlocked():
+            data2.X += 1
+            data2.Y += 1
+            data2.metas += 1
+            data2.W += 1
+            data2.ids += 1
+        self.assertEqual(data1.X, [[1]])
+        self.assertEqual(data1.Y, [[2]])
+        self.assertEqual(data1.metas, [[3]])
+        self.assertEqual(data1.W, [[4]])
+        self.assertEqual(data1.ids, [[5]])
+
 
 class TestTableLocking(unittest.TestCase):
     @classmethod
