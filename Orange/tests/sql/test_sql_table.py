@@ -495,6 +495,7 @@ class TestSqlTable(unittest.TestCase, dbt):
 
         sql_table = SqlTable(conn, table_name, inspect_values=True)
         self.assertFirstAttrIsInstance(sql_table, TimeVariable)
+        self.drop_sql_table(table_name)
 
     @dbt.run_on(["postgres"])
     def test_time_time(self):
