@@ -764,7 +764,7 @@ class TestSqlTable(unittest.TestCase, dbt):
             with self.backend.execute_sql_query("DROP SCHEMA IF EXISTS orange_tests CASCADE"):
                 pass
 
-    @dbt.run_on(["postgres"])
+    @dbt.run_on(["postgres", "mssql"])
     def test_nan_frequency(self):
         ar = np.random.random((4, 3))
         ar[:2, 1:] = np.nan
