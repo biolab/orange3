@@ -1,18 +1,12 @@
-import itertools
 import concurrent.futures
-
 from dataclasses import dataclass
-from typing import Optional, Union, List
+from typing import Optional, Union, Sequence, TypedDict, Tuple
 
-import numpy
 from scipy.sparse import issparse
 
 from AnyQt.QtWidgets import QTableView, QHeaderView, QApplication, QStyle
 from AnyQt.QtGui import QColor, QClipboard
-from AnyQt.QtCore import (
-    Qt, QSize, QMetaObject, QAbstractProxyModel, QItemSelectionModel,
-    QItemSelection, QItemSelectionRange,
-)
+from AnyQt.QtCore import Qt, QSize, QMetaObject, QItemSelectionModel
 from AnyQt.QtCore import Slot
 
 import Orange.data
@@ -23,9 +17,6 @@ from Orange.widgets import gui
 from Orange.widgets.data.utils.models import RichTableModel, TableSliceProxy
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemdelegates import TableDataDelegate
-from Orange.widgets.utils.itemselectionmodel import (
-    BlockSelectionModel, ranges, selection_blocks
-)
 from Orange.widgets.utils.tableview import table_selection_to_mime_data
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output
@@ -52,6 +43,11 @@ class InputData:
     model: TableModel
 
 
+class _Selection(TypedDict):
+    rows: Tuple[int]
+    columns: Tuple[int]
+
+
 class OWTable(OWWidget):
     name = "Data Table"
     description = "View the dataset in a spreadsheet."
@@ -74,12 +70,9 @@ class OWTable(OWWidget):
     auto_commit = Setting(True)
 
     color_by_class = Setting(True)
-    stored_selection = Setting({
-        "rows": [], "columns": []
-    })
-    # selected_rows = Setting([], schema_only=True)
-    # selected_cols = Setting([], schema_only=True)
-
+    stored_selection: _Selection = Setting(
+        {"rows": [], "columns": []}, schema_only=True
+    )
     settings_version = 1
 
     def __init__(self):
@@ -181,6 +174,7 @@ class OWTable(OWWidget):
 
         if data is not None and self.__pending_selection is not None:
             selection = self.__pending_selection
+            self.__pending_selection = None
             rows = selection["rows"]
             columns = selection["columns"]
             self.set_selection(rows, columns)
@@ -245,10 +239,6 @@ class OWTable(OWWidget):
 
         # update the header (attribute names)
         self._update_variable_labels()
-
-        selmodel = BlockSelectionModel(
-            view.model(), parent=view, selectBlocks=not self.select_rows)
-        view.setSelectionModel(selmodel)
         view.selectionFinished.connect(self.update_selection)
 
     def _update_input_summary(self):
@@ -328,54 +318,19 @@ class OWTable(OWWidget):
     def update_selection(self, *_):
         self.commit.deferred()
 
-    def set_selection(self, rows: List[int], columns: List[int]) -> None:
-        view = self.view
-        model = view.model()
-        if not rows or not columns or model.rowCount() <= rows[-1] or \
-                model.columnCount() <= columns[-1]:
-            # selection out of range for the model
-            rows = columns = []
+    def set_selection(self, rows: Sequence[int], columns: Sequence[int]) -> None:
+        """
+        Set the selected `rows` and `columns`.
 
-        selection = QItemSelection()
-        rowranges = list(ranges(rows))
-        colranges = list(ranges(columns))
+        `rows` are indices into underlying :class:`Table`
+        """
+        self.view.setBlockSelection(rows, columns)
 
-        for rowstart, rowend in rowranges:
-            for colstart, colend in colranges:
-                selection.append(
-                    QItemSelectionRange(
-                        model.index(rowstart, colstart),
-                        model.index(rowend - 1, colend - 1)
-                    )
-                )
-        view.selectionModel().select(
-            selection, QItemSelectionModel.ClearAndSelect)
-
-    @staticmethod
-    def get_selection(view):
+    def get_selection(self):
         """
         Return the selected row and column indices of the selection in view.
         """
-        selmodel = view.selectionModel()
-
-        selection = selmodel.selection()
-        model = view.model()
-        # map through the proxies into input table.
-        while isinstance(model, QAbstractProxyModel):
-            selection = model.mapSelectionToSource(selection)
-            model = model.sourceModel()
-
-        assert isinstance(selmodel, BlockSelectionModel)
-        assert isinstance(model, TableModel)
-
-        row_spans, col_spans = selection_blocks(selection)
-        rows = list(itertools.chain.from_iterable(itertools.starmap(range, row_spans)))
-        cols = list(itertools.chain.from_iterable(itertools.starmap(range, col_spans)))
-        rows = numpy.array(rows, dtype=numpy.intp)
-        # map the rows through the applied sorting (if any)
-        rows = model.mapToSourceRows(rows)
-        rows = rows.tolist()
-        return rows, cols
+        return self.view.blockSelection()
 
     @gui.deferred
     def commit(self):
@@ -383,7 +338,6 @@ class OWTable(OWWidget):
         Commit/send the current selected row/column selection.
         """
         selected_data = table = rowsel = None
-        view = self.view
         if self.input is not None:
             model = self.input.model
             table = self.input.table
@@ -395,7 +349,7 @@ class OWTable(OWWidget):
                 self.Outputs.annotated_data.send(None)
                 return
 
-            rowsel, colsel = self.get_selection(view)
+            rowsel, colsel = self.get_selection()
             self.stored_selection = {"rows": rowsel, "columns": colsel}
 
             domain = table.domain

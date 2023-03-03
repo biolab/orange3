@@ -49,14 +49,15 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, self.data)
         self._select_data()
         self.send_signal(self.widget.Inputs.data, Table('heart_disease'))
-        self.assertListEqual([], self.widget.selected_cols)
-        self.assertListEqual([], self.widget.selected_rows)
+        self.assertListEqual([], self.widget.stored_selection["columns"])
+        self.assertListEqual([], self.widget.stored_selection["rows"])
 
     def _select_data(self):
-        self.widget.selected_cols = list(range(len(self.data.domain.variables)))
-        self.widget.selected_rows = list(range(0, len(self.data), 10))
-        self.widget.set_selection()
-        return self.widget.selected_rows
+        self.widget.set_selection(
+            list(range(0, len(self.data), 10)),
+            list(range(len(self.data.domain.variables))),
+        )
+        return self.widget.stored_selection["rows"]
 
     def test_attrs_appear_in_corner_text(self):
         domain = self.data.domain
@@ -76,9 +77,12 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
             commit.assert_called()
 
     def test_pending_selection(self):
-        widget = self.create_widget(OWTable, stored_settings=dict(
-            selected_rows=[5, 6, 7, 8, 9],
-            selected_cols=list(range(len(self.data.domain.variables)))))
+        widget = self.create_widget(OWTable, stored_settings={
+            "stored_selection": {
+                "rows": [5, 6, 7, 8, 9],
+                "columns": list(range(len(self.data.domain.variables)))
+            }
+        })
         self.send_signal(widget.Inputs.data, None)
         self.send_signal(widget.Inputs.data, self.data)
         output = self.get_output(widget.Outputs.selected_data)
@@ -86,10 +90,10 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
 
     def test_sorting(self):
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.widget.selected_rows = [0, 1, 2, 3, 4]
-        self.widget.selected_cols = list(range(len(self.data.domain.variables)))
-        self.widget.set_selection()
-
+        self.widget.set_selection(
+            [0, 1, 2, 3, 4],
+            list(range(len(self.data.domain.variables)))
+        )
         output = self.get_output(self.widget.Outputs.selected_data)
         output = output.get_column(0)
         output_original = output.tolist()
@@ -133,9 +137,7 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         with excepthook_catch():
             w.controls.select_rows.toggle()
         self.assertFalse(w.select_rows)
-        w.selected_cols = [0, 1]
-        w.selected_rows = [0, 1, 2, 3]
-        w.set_selection()
+        w.set_selection([0, 1, 2, 3], [0, 1])
         out = self.get_output(w.Outputs.selected_data)
         self.assertEqual(out.domain,
                          Domain([self.data.domain.attributes[0]], self.data.domain.class_var))
