@@ -96,10 +96,13 @@ class RichTableModel(TableModel):
         return self._header_flags
 
 
+# This is used for sub-setting large (SQL) models. Largely untested probably
+# broken.
 class TableSliceProxy(QIdentityProxyModel):
     def __init__(self, parent=None, rowSlice=slice(0, None, 1), **kwargs):
         super().__init__(parent, **kwargs)
-        self.__rowslice = rowSlice
+        self.__rowslice = slice(0, None, 1)
+        self.setRowSlice(rowSlice)
 
     def setRowSlice(self, rowslice):
         if rowslice.step is not None and rowslice.step != 1:
@@ -110,6 +113,17 @@ class TableSliceProxy(QIdentityProxyModel):
             self.__rowslice = rowslice
             self.endResetModel()
 
+    def index(
+            self, row: int, column: int, _parent: QModelIndex = QModelIndex()
+    ) -> QModelIndex:
+        return self.createIndex(row, column)
+
+    def parent(self, _child: QModelIndex) -> QModelIndex:
+        return QModelIndex()
+
+    def sibling(self, row: int, column: int, _idx: QModelIndex) -> QModelIndex:
+        return self.index(row, column)
+
     def mapToSource(self, proxyindex):
         model = self.sourceModel()
         if model is None or not proxyindex.isValid():
@@ -117,8 +131,10 @@ class TableSliceProxy(QIdentityProxyModel):
 
         row, col = proxyindex.row(), proxyindex.column()
         row = row + self.__rowslice.start
-        assert 0 <= row < model.rowCount()
-        return model.createIndex(row, col, proxyindex.internalPointer())
+        if 0 <= row < model.rowCount():
+            return model.createIndex(row, col)
+        else:
+            return QModelIndex()
 
     def mapFromSource(self, sourceindex):
         model = self.sourceModel()
@@ -126,8 +142,10 @@ class TableSliceProxy(QIdentityProxyModel):
             return QModelIndex()
         row, col = sourceindex.row(), sourceindex.column()
         row = row - self.__rowslice.start
-        assert 0 <= row < self.rowCount()
-        return self.createIndex(row, col, sourceindex.internalPointer())
+        if 0 <= row < self.rowCount():
+            return self.createIndex(row, col)
+        else:
+            return QModelIndex()
 
     def rowCount(self, parent=QModelIndex()):
         if parent.isValid():
