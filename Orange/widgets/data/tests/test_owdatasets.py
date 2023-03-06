@@ -3,7 +3,7 @@ from unittest.mock import patch, Mock
 
 import requests
 
-from AnyQt.QtCore import QItemSelectionModel
+from AnyQt.QtCore import QItemSelectionModel, Qt
 
 from Orange.widgets.data.owdatasets import OWDataSets
 from Orange.widgets.tests.base import WidgetTest
@@ -34,19 +34,32 @@ class TestOWDataSets(WidgetTest):
     @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(side_effect=requests.exceptions.ConnectionError))
     @patch("Orange.widgets.data.owdatasets.list_local",
-           Mock(return_value={('core', 'foo.tab'): {},
-                              ('core', 'bar.tab'): {}}))
+           Mock(return_value={('core', 'foo.tab'): {"language": "English"},
+                              ('core', 'bar.tab'): {"language": "Slovenščina"}}))
     @patch("Orange.widgets.data.owdatasets.log", Mock())
     def test_filtering(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
+        model = w.view.model()
+        model.setLanguage(None)
         self.wait_until_stop_blocking(w)
-        self.assertEqual(w.view.model().rowCount(), 2)
+        self.assertEqual(model.rowCount(), 2)
         w.filterLineEdit.setText("foo")
-        self.assertEqual(w.view.model().rowCount(), 1)
+        self.assertEqual(model.rowCount(), 1)
         w.filterLineEdit.setText("baz")
-        self.assertEqual(w.view.model().rowCount(), 0)
+        self.assertEqual(model.rowCount(), 0)
         w.filterLineEdit.setText("")
-        self.assertEqual(w.view.model().rowCount(), 2)
+        self.assertEqual(model.rowCount(), 2)
+
+        model.setLanguage("Slovenščina")
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(Qt.UserRole).title, "bar.tab")
+
+        model.setLanguage("English")
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(Qt.UserRole).title, "foo.tab")
+
+        model.setLanguage(None)
+        self.assertEqual(model.rowCount(), 2)
 
     @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(return_value={('core', 'iris.tab'): {}}))
