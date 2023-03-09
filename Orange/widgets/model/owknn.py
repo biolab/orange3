@@ -24,6 +24,9 @@ class OWKNNLearner(OWBaseLearner):
     weights = ["uniform", "distance"]
     metrics = ["euclidean", "manhattan", "chebyshev", "mahalanobis"]
 
+    weights_options = ["Uniform", "By Distances"]
+    metrics_options = ["Euclidean", "Manhattan", "Chebyshev", "Mahalanobis"]
+
     learner_name = Setting("kNN")
     n_neighbors = Setting(5)
     metric_index = Setting(0)
@@ -38,11 +41,11 @@ class OWKNNLearner(OWBaseLearner):
             controlWidth=80)
         self.metrics_combo = gui.comboBox(
             box, self, "metric_index", orientation=Qt.Horizontal,
-            label="Metric:", items=[i.capitalize() for i in self.metrics],
+            label="Metric:", items=self.metrics_options,
             callback=self.settings_changed)
         self.weights_combo = gui.comboBox(
             box, self, "weight_index", orientation=Qt.Horizontal,
-            label="Weight:", items=[i.capitalize() for i in self.weights],
+            label="Weight:", items=self.weights_options,
             callback=self.settings_changed)
 
     def create_learner(self):
