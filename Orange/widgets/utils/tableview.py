@@ -2,7 +2,7 @@ import io
 import csv
 
 from AnyQt.QtCore import Signal, QItemSelectionModel, Qt, QSize, QEvent, \
-    QByteArray, QMimeData
+    QByteArray, QMimeData, QT_VERSION_INFO
 from AnyQt.QtGui import QMouseEvent
 from AnyQt.QtWidgets import QTableView, QStyleOptionViewItem, QStyle
 
@@ -49,6 +49,16 @@ class TableView(QTableView):
         self.setHorizontalHeader(hheader)
         self.setVerticalHeader(vheader)
         table_view_compact(self)
+        if QT_VERSION_INFO < (5, 13):
+            hheader.sortIndicatorChanged.connect(self.__sort_reset)
+
+    if QT_VERSION_INFO < (5, 13):
+        def __sort_reset(self, column, order):
+            # Prior to Qt 5.13 QTableView did not propagate sort by -1 column
+            # (i.e. sort reset) to models.
+            if self.model() is not None and column == -1 and \
+                    self.isSortingEnabled():
+                self.model().sort(column, order)
 
     def setSelectionModel(self, selectionModel: QItemSelectionModel) -> None:
         """Reimplemented from QTableView"""

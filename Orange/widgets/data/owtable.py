@@ -126,14 +126,6 @@ class OWTable(OWWidget):
         header.setSortIndicator(-1, Qt.AscendingOrder)
         header.sortIndicatorChanged.connect(self.update_selection)
 
-        # QHeaderView does not 'reset' the model sort column,
-        # because there is no guaranty (requirement) that the
-        # models understand the -1 sort column.
-        def sort_reset(index, order):
-            if view.model() is not None and index == -1:
-                view.model().sort(index, order)
-
-        header.sortIndicatorChanged.connect(sort_reset)
         self.view = view
         self.mainArea.layout().addWidget(self.view)
         self._update_input_summary()
@@ -309,7 +301,7 @@ class OWTable(OWWidget):
 
     def restore_order(self):
         """Restore the original data order of the current view."""
-        self.view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
+        self.view.sortByColumn(-1, Qt.AscendingOrder)
 
     @Slot()
     def _update_info(self):

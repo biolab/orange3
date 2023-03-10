@@ -111,6 +111,10 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(sorted(output_original) == output_sorted)
         self.assertTrue(sorted(output_sorted) == output_sorted)
 
+        self.widget.restore_order()
+        output = self.get_output(self.widget.Outputs.selected_data)
+        self.assertEqual(output.get_column(0).tolist(), output_original)
+
     def test_info(self):
         info_text = self.widget.info_text
         no_input = "No data."
