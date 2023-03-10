@@ -130,6 +130,8 @@ def format_summary_details(data, format=Qt.PlainText):
 def missing_values(value):
     if value:
         return f'({value*100:.1f}% missing values)'
+    elif value is None:
+        return ''
     else:
         return '(no missing values)'
 

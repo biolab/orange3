@@ -29,6 +29,7 @@ from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
 from Orange.widgets.utils.combobox import TextEditCombo
+from Orange.widgets.utils.state_summary import missing_values
 
 
 # Backward compatibility: class RecentPath used to be defined in this module,
@@ -512,12 +513,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     @staticmethod
     def _describe(table):
-        def missing_prop(prop):
-            if prop:
-                return f"({prop * 100:.1f}% missing values)"
-            else:
-                return "(no missing values)"
-
         domain = table.domain
         text = ""
 
@@ -533,8 +528,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         missing_in_attr = missing_in_class = ""
         if table.X.size < OWFile.SIZE_LIMIT:
-            missing_in_attr = missing_prop(table.get_nan_frequency_attribute())
-            missing_in_class = missing_prop(table.get_nan_frequency_class())
+            missing_in_attr = missing_values(table.get_nan_frequency_attribute())
+            missing_in_class = missing_values(table.get_nan_frequency_class())
         nattrs = len(domain.attributes)
         text += f"<br/>{nattrs} {pl(nattrs, 'feature')} {missing_in_attr}"
         if domain.has_continuous_class:
