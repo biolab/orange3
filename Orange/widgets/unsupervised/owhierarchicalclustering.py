@@ -47,6 +47,8 @@ __all__ = ["OWHierarchicalClustering"]
 
 LINKAGE = ["Single", "Average", "Weighted", "Complete", "Ward"]
 LINKAGE_ARGS = ["single", "average", "weighted", "complete", "ward"]
+DEFAULT_LINKAGE = "Ward"
+
 
 def make_pen(brush=Qt.black, width=1, style=Qt.SolidLine,
              cap_style=Qt.SquareCap, join_style=Qt.BevelJoin,
@@ -187,7 +189,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     settingsHandler = _DomainContextHandler()
 
     #: Selected linkage
-    linkage = settings.Setting(1)
+    linkage = settings.Setting(LINKAGE.index(DEFAULT_LINKAGE))
     #: Index of the selected annotation item (variable, ...)
     annotation = settings.ContextSetting("Enumeration")
     #: Out-of-context setting for the case when the "Name" option is available
