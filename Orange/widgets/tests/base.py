@@ -511,6 +511,7 @@ class WidgetOutputsTestMixin:
         self.output_all_on_no_selection = output_all_on_no_selection
 
     def test_outputs(self, timeout=DEFAULT_TIMEOUT):
+        self.widget.linkage = 1
         self.send_signal(self.signal_name, self.signal_data)
 
         self.wait_until_finished(timeout=timeout)
