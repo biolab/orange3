@@ -1,6 +1,7 @@
 import math
 from collections import namedtuple
 from itertools import chain, count
+
 import numpy as np
 
 from AnyQt.QtWidgets import (
@@ -70,10 +71,63 @@ class BoxData:
 
 
 class FilterGraphicsRectItem(QGraphicsRectItem):
-    def __init__(self, data_range, *args):
+    def __init__(self, data_range, *args, add_lpad=True, add_rpad=True):
         super().__init__(*args)
         self.data_range = data_range
+        self.__add_lpad = add_lpad
+        self.__add_rpad = add_rpad
+        self.__is_hovered = False
         self.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.setAcceptHoverEvents(True)
+
+    def set_right_padding(self, add_rpad: bool):
+        self.__add_rpad = add_rpad
+
+    def hoverEnterEvent(self, _) -> None:
+        self.__is_hovered = True
+        self.update()
+
+    def hoverLeaveEvent(self, _) -> None:
+        self.__is_hovered = False
+        self.update()
+
+    def boundingRect(self) -> QRectF:
+        br = super().boundingRect()
+        d = 7
+        return br.adjusted(-d if self.__add_lpad else 0, -d,
+                           d if self.__add_rpad else 0, d)
+
+    def shape(self) -> QPainterPath:
+        sh = QPainterPath()
+        sh.addRect(self.boundingRect())
+        return sh
+
+    def paint(self, painter: QPainter, *_, **__) -> None:
+        if self.__is_hovered:
+            painter.save()
+            brush = self.brush()
+            color = brush.color()
+            color.setAlpha(100)
+            brush.setColor(color)
+            painter.setBrush(brush)
+            painter.setPen(Qt.NoPen)
+            painter.drawRoundedRect(self.boundingRect(), 2, 2)
+            painter.restore()
+
+        painter.save()
+        painter.setBrush(self.brush())
+        painter.setPen(self.pen())
+        painter.drawRect(self.rect())
+        painter.restore()
+
+        if self.isSelected():
+            painter.save()
+            pen = QPen(Qt.black)
+            pen.setStyle(Qt.DashLine)
+            pen.setWidth(2)
+            painter.setPen(pen)
+            painter.drawRect(self.rect())
+            painter.restore()
 
 
 class SortProxyModel(QSortFilterProxyModel):
@@ -1082,6 +1136,7 @@ class OWBoxPlot(widget.OWWidget):
         values = attr.values + ("",)
         colors = attr.palette.qcolors_w_nan
         total = sum(dist)
+        rect = None
         for freq, value, color in zip(dist, values, colors):
             if freq < 1e-6:
                 continue
@@ -1090,7 +1145,8 @@ class OWBoxPlot(widget.OWWidget):
                 v /= ss
             v *= self.scale_x
             cond = DiscDataRange(value, group_val)
-            rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12)
+            kw = {"add_lpad": rect is None, "add_rpad": False}
+            rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12, **kw)
             rect.setBrush(QBrush(color))
             rect.setPen(QPen(Qt.NoPen))
             value = value or missing_val_str
@@ -1103,6 +1159,8 @@ class OWBoxPlot(widget.OWWidget):
             box.append(rect)
             box.append(text)
             cum += v
+        if rect is not None:
+            rect.set_right_padding(True)
         return box
 
     def on_selection_changed(self):
