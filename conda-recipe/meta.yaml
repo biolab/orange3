@@ -47,7 +47,7 @@ requirements:
     - xlsxwriter
     - anyqt >=0.1.0
     - pyqt >=5.12,!=5.15.1,<6.0
-    - pyqtgraph >=0.12.2,!=0.12.4
+    - pyqtgraph >=0.13.1
     - joblib >=1.0.0
     - keyring
     - keyrings.alt
