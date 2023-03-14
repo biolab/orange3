@@ -352,6 +352,7 @@ class OWBoxPlot(widget.OWWidget):
             self.apply_attr_sorting()
             self.apply_group_sorting()
             self.update_graph()
+            self._scroll_to_top()
             self.select_box_items()
 
         self.update_box_visibilities()
@@ -495,6 +496,7 @@ class OWBoxPlot(widget.OWWidget):
             return  # should never come here
         self.group_var = selected.indexes()[0].data(gui.TableVariable)
         self._variables_changed(self.apply_attr_sorting)
+        self._scroll_to_top()
 
     def attr_changed(self, selected):
         if not selected:
@@ -509,6 +511,10 @@ class OWBoxPlot(widget.OWWidget):
         self.update_graph()
         self.update_box_visibilities()
         self.commit()
+
+    def _scroll_to_top(self):
+        scrollbar = self.box_view.verticalScrollBar()
+        scrollbar.setValue(scrollbar.minimum())
 
     def update_graph(self):
         pending_selection = self.selection
@@ -526,14 +532,6 @@ class OWBoxPlot(widget.OWWidget):
             self.selection = pending_selection
             self.draw_stat()
             self.select_box_items()
-
-            if self.attribute.is_continuous:
-                heights = 90 if self.show_annotations else 60
-                self.box_view.centerOn(self.scene_min_x + self.scene_width / 2,
-                                       -30 - len(self.stats) * heights / 2 + 45)
-            else:
-                self.box_view.centerOn(self.scene_width / 2,
-                                       -30 - len(self.boxes) * 40 / 2 + 45)
         finally:
             self.box_scene.selectionChanged.connect(self.on_selection_changed)
 
