@@ -93,15 +93,6 @@ def table_summary(table: Table) -> Union[Summary, ApproxSummary]:
         return Summary(n_instances, domain, X_part, Y_part, M_part)
 
 
-def is_sortable(table: Table) -> bool:
-    if isinstance(table, SqlTable):
-        return False
-    elif isinstance(table, Table):
-        return True
-    else:
-        return False
-
-
 def format_summary(summary: Union[ApproxSummary, Summary]) -> List[str]:
     def format_part(part: Optional[_ArrayStat]) -> str:
         if isinstance(part, DenseArray):

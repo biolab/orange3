@@ -259,11 +259,7 @@ class OWDataTable(OWWidget):
         else:
             view.setItemDelegate(TableDataDelegate(view))
 
-        # Enable/disable view sorting based on data's type
-        view.setSortingEnabled(is_sortable(data))
         header = view.horizontalHeader()
-        header.setSectionsClickable(is_sortable(data))
-        header.setSortIndicatorShown(is_sortable(data))
         header.sortIndicatorChanged.connect(self.update_selection)
 
         view.setModel(datamodel)
@@ -524,15 +520,6 @@ class OWDataTable(OWWidget):
         model = self._get_model(view)
         self.report_data_brief(model.source)
         self.report_table(view)
-
-
-def is_sortable(table):
-    if isinstance(table, SqlTable):
-        return False
-    elif isinstance(table, Orange.data.Table):
-        return True
-    else:
-        return False
 
 
 if __name__ == "__main__":  # pragma: no cover

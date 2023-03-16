@@ -1,17 +1,20 @@
 import sys
 from itertools import chain, starmap
-from typing import Sequence, Tuple, cast
+from typing import Sequence, Tuple, cast, Optional
 
 import numpy as np
 
 from AnyQt.QtCore import (
     Qt, QObject, QEvent, QSize, QAbstractProxyModel, QItemSelection,
-    QItemSelectionModel, QItemSelectionRange
+    QItemSelectionModel, QItemSelectionRange, QAbstractItemModel
 )
 from AnyQt.QtGui import QPainter
 from AnyQt.QtWidgets import (
     QStyle, QWidget, QStyleOptionHeader, QAbstractButton
 )
+
+import Orange.data
+import Orange.data.sql.table
 
 from Orange.widgets.data.utils.models import RichTableModel
 from Orange.widgets.utils.itemmodels import TableModel
@@ -99,13 +102,33 @@ class DataTableView(TableView):
             self.selectAll()
 
 
+def source_model(model: QAbstractItemModel) -> Optional[QAbstractItemModel]:
+    while isinstance(model, QAbstractProxyModel):
+        model = model.sourceModel()
+    return model
+
+
+def is_table_sortable(table):
+    if isinstance(table, Orange.data.sql.table.SqlTable):
+        return False
+    elif isinstance(table, Orange.data.Table):
+        return True
+    else:
+        return False
+
+
 class RichTableView(DataTableView):
     """
     The preferred table view for RichTableModel.
 
     Handles the display of variable's labels keys in top left corner.
     """
-    def setModel(self, model: RichTableModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        header = self.horizontalHeader()
+        header.setSortIndicator(-1, Qt.AscendingOrder)
+
+    def setModel(self, model: QAbstractItemModel):
         current = self.model()
         if current is not None:
             current.headerDataChanged.disconnect(self.__headerDataChanged)
@@ -117,15 +140,34 @@ class RichTableView(DataTableView):
             sel_model = BlockSelectionModel(model, selectBlocks=not select_rows)
             self.setSelectionModel(sel_model)
 
+            sortable = self.isModelSortable(model)
+            self.setSortingEnabled(sortable)
+            header = self.horizontalHeader()
+            header.setSectionsClickable(sortable)
+            header.setSortIndicatorShown(sortable)
+
+    def isModelSortable(self, model: QAbstractItemModel) -> bool:
+        """
+        Should the `model` be sortable via the view header click.
+
+        This predicate is called when a model is set on the view and
+        enables/disables the model sorting and header section sort indicators.
+        """
+        model = source_model(model)
+        if isinstance(model, TableModel):
+            table = model.source
+            return is_table_sortable(table)
+        return False
+
     def __headerDataChanged(
             self,
             orientation: Qt.Orientation,
     ) -> None:
         if orientation == Qt.Horizontal:
             model = self.model()
-            while isinstance(model, QAbstractProxyModel):
-                model = model.sourceModel()
-            if model.richHeaderFlags() & RichTableModel.Labels:
+            model = source_model(model)
+            if isinstance(model, RichTableModel) and \
+                    model.richHeaderFlags() & RichTableModel.Labels:
                 items = model.headerData(
                     0, Qt.Horizontal, RichTableModel.LabelsItemsRole
                 )
