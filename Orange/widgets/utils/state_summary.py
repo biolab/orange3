@@ -175,7 +175,7 @@ def _nobr(s):
 
 
 @summarize.register
-def summarize_(data: Table):  # pylint: disable=function-redefined
+def summarize_table(data: Table):  # pylint: disable=function-redefined
     def previewer():
         view = TableView(selectionMode=TableView.NoSelection)
         view.setModel(TableModel(data))
@@ -188,7 +188,7 @@ def summarize_(data: Table):  # pylint: disable=function-redefined
 
 
 @summarize.register
-def summarize_(matrix: DistMatrix):  # pylint: disable=function-redefined
+def summarize_matrix(matrix: DistMatrix):  # pylint: disable=function-redefined
     def previewer():
         view = DistMatrixView(selectionMode=TableView.NoSelection)
         model = DistMatrixModel()
@@ -220,7 +220,7 @@ def summarize_(matrix: DistMatrix):  # pylint: disable=function-redefined
 
 
 @summarize.register
-def summarize_(results: Results):  # pylint: disable=function-redefined
+def summarize_results(results: Results):  # pylint: disable=function-redefined
     nmethods, ninstances = results.predicted.shape
     summary = f"{nmethods}×{ninstances}"
     details = f"{nmethods} {pl(nmethods, 'method')} " \
@@ -229,7 +229,7 @@ def summarize_(results: Results):  # pylint: disable=function-redefined
 
 
 @summarize.register
-def summarize_(attributes: AttributeList):  # pylint: disable=function-redefined
+def summarize_attributes(attributes: AttributeList):  # pylint: disable=function-redefined
     n = len(attributes)
     if n == 0:
         details = "empty list"
@@ -242,7 +242,7 @@ def summarize_(attributes: AttributeList):  # pylint: disable=function-redefined
 
 
 @summarize.register
-def summarize_(preprocessor: Preprocess):  # pylint: disable=function-redefined
+def summarize_preprocessor(preprocessor: Preprocess):  # pylint: disable=function-redefined
     if isinstance(preprocessor, PreprocessorList):
         if preprocessor.preprocessors:
             details = "<br/>".join(map(_name_of, preprocessor.preprocessors))
