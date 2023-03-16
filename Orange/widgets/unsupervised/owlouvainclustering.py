@@ -141,7 +141,7 @@ class OWLouvainClustering(widget.OWWidget):
         self.apply_button = gui.auto_apply(
             self.buttonsArea, self, "auto_commit",
             commit=lambda: self.commit(), callback=lambda: self._on_auto_commit_changed()
-        )  # type: QWidget
+        ).button  # type: QWidget
 
     def _preprocess_data(self):
         if self.preprocessed_data is None:
@@ -202,6 +202,7 @@ class OWLouvainClustering(widget.OWWidget):
         elif self.auto_commit:
             # does not apply when auto commit is on
             state = False
+        self.apply_button.setEnabled(state)
         self.Information.modified(shown=state)
 
     def _on_auto_commit_changed(self):
