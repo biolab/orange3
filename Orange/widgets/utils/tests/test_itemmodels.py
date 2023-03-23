@@ -3,6 +3,8 @@
 import unittest
 from unittest.mock import patch
 
+from scipy.sparse import csr_matrix
+
 from AnyQt.QtCore import Qt, QModelIndex
 from AnyQt.QtTest import QSignalSpy
 from AnyQt.QtGui import QBrush, QColor
@@ -599,7 +601,7 @@ class TestTableModel(unittest.TestCase, dbt):
         self.assertEqual(table.domain[4], data(index(0, 0), TableModel.VariableRole))
         self.assertIsInstance(data(index(0, 0), TableModel.VariableStatsRole), BasicStats)
 
-        # X: basket
+        # X: sparse
         self.assertEqual("sepal_length=1.5, sepal_width=5.3, petal_length=4.1, petal_width=2",
                          data(index(0, 3), Qt.DisplayRole))
         self.assertIsNone(data(index(0, 3), Qt.EditRole))
@@ -609,6 +611,20 @@ class TestTableModel(unittest.TestCase, dbt):
         self.assertIsNone(data(index(0, 3), TableModel.ClassValueRole))
         self.assertIsNone(data(index(0, 3), TableModel.VariableRole))
         self.assertIsNone(data(index(0, 3), TableModel.VariableStatsRole))
+
+        # X: sparse_bool
+        table = Table.from_numpy(Domain(table.domain.class_vars, metas=table.domain.attributes),
+                                 csr_matrix(table.Y), metas=table.X)
+        model = TableModel(table)
+        data, index = model.data, model.index
+
+        self.assertEqual("Iris-setosa", data(index(0, 1), Qt.DisplayRole))
+
+        # metas: sparse
+        self.assertEqual("sepal_length=1.5, sepal_width=5.3, petal_length=4.1, petal_width=2",
+                         data(index(0, 0), Qt.DisplayRole))
+        self.assertIsInstance(data(index(0, 0), Qt.BackgroundRole), QBrush)
+        self.assertIsInstance(data(index(0, 0), Qt.ForegroundRole), QColor)
 
 
 if __name__ == "__main__":

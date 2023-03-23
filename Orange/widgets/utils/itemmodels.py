@@ -844,7 +844,7 @@ class TableModel(AbstractSortTableModel):
 
         def make_basket(vars, density, role):
             return TableModel.Basket(
-                vars, TableModel.Attribute, brush_for_role[role], density,
+                vars, role, brush_for_role[role], density,
                 make_basket_formatter(vars, density)
             )
 
@@ -903,8 +903,7 @@ class TableModel(AbstractSortTableModel):
         if isinstance(coldesc, self.Basket):
             # `self.source[row:row + 1]` returns Table
             # `self.source[row]` returns RowInstance
-            if coldesc.role is self.ClassVar:
-                return self.source[row:row + 1].Y
+            # We only worry about X and metas, as Y cannot be sparse
             if coldesc.role is self.Meta:
                 return self.source[row:row + 1].metas
             if coldesc.role is self.Attribute:
