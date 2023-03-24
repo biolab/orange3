@@ -8,7 +8,6 @@ A widget for manual editing of a domain's attributes.
 import warnings
 from xml.sax.saxutils import escape
 from itertools import zip_longest, repeat, chain
-from contextlib import contextmanager
 from collections import namedtuple, Counter
 from functools import singledispatch, partial
 from typing import (
@@ -44,7 +43,7 @@ from Orange.preprocess.transformation import (
 from Orange.misc.collections import DictMissingConst
 from Orange.util import frompyfunc
 from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, ftry
+from Orange.widgets.utils import itemmodels, ftry, disconnected
 from Orange.widgets.utils.buttons import FixedSizeButton
 from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -868,15 +867,6 @@ class GroupItemsDialog(QDialog):
         if checked:
             settings_dict["selected_radio"] = checked[0]
         return settings_dict
-
-
-@contextmanager
-def disconnected(signal, slot, connection_type=Qt.AutoConnection):
-    signal.disconnect(slot)
-    try:
-        yield
-    finally:
-        signal.connect(slot, connection_type)
 
 
 #: In 'reordable' models holds the original position of the item
