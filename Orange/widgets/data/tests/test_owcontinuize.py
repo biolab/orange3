@@ -760,7 +760,7 @@ class TestOWContinuize(WidgetTest):
 
         widget = self.create_widget(
             OWContinuize,
-            stored_settings=dict(multinomial_treatment=Continuize.Indicators)
+            stored_settings=dict(multinomial_treatment=2)
         )
         self.assertEqual(widget.disc_var_hints[DefaultKey],
                          Continuize.Indicators)
@@ -773,8 +773,8 @@ class TestOWContinuize(WidgetTest):
 
         widget = self.create_widget(
             OWContinuize,
-            stored_settings=dict(multinomial_treatment=Continuize.Remove,
-                                 class_treatment=Continuize.Indicators)
+            stored_settings=dict(multinomial_treatment=4,
+                                 class_treatment=3)
         )
         self.send_signal(widget.Inputs.data, data)
         self.assertEqual(widget.disc_var_hints["y"], Continuize.Indicators)
@@ -782,12 +782,12 @@ class TestOWContinuize(WidgetTest):
 
         widget = self.create_widget(
             OWContinuize,
-            stored_settings=dict(multinomial_treatment=Continuize.Remove,
-                                 class_treatment=Continuize.Leave)
+            stored_settings=dict(multinomial_treatment=4,
+                                 class_treatment=0)
         )
         self.send_signal(widget.Inputs.data, data)
         self.assertNotIn("y", widget.disc_var_hints)
-        self.assertEqual(widget.disc_var_hints[DefaultKey], Continuize.Remove)
+        self.assertEqual(widget.disc_var_hints[DefaultKey], 4)
 
         widget = self.create_widget(
             OWContinuize,

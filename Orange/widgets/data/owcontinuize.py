@@ -732,10 +732,22 @@ class OWContinuize(widget.OWWidget):
             settings["cont_var_hints"] = \
                 {DefaultKey:
                  settings.pop("continuous_treatment", Normalize.Leave)}
+
+            # DISC OPS: Default=99, Indicators=1, FirstAsBase=2, FrequentAsBase=3, Remove=4,
+            # RemoveMultinomial=5, ReportError=6, AsOrdinal=7, AsNormalizedOrdinal=8, Leave=9
+
+            # OLD ORDER: [FirstAsBase, FrequentAsBase, Indicators, RemoveMultinomial, Remove,
+            # AsOrdinal, AsNormalizedOrdinal]
+            old_to_new = [2, 3, 1, 5, 4, 7, 8]
+
             settings["disc_var_hints"] = \
                 {DefaultKey:
-                 settings.pop("multinomial_treatment", Continuize.FirstAsBase)}
-            class_treatment = settings.pop("class_treatment", Continuize.Leave)
+                 old_to_new[settings.pop("multinomial_treatment", 0)]}
+
+            # OLD ORDER: [Leave, AsOrdinal, AsNormalizedOrdinal, Indicators]
+            old_to_new = [9, 7, 8, 1]
+
+            class_treatment = old_to_new[settings.pop("class_treatment", 0)]
             if class_treatment != Continuize.Leave:
                 settings["disc_var_hints"][BackCompatClass] = class_treatment
 
