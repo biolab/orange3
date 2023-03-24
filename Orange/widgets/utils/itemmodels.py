@@ -5,7 +5,7 @@ import operator
 from collections import namedtuple, defaultdict
 from collections.abc import Sequence
 from contextlib import contextmanager
-from functools import reduce, partial, lru_cache, wraps
+from functools import reduce, partial, wraps
 from itertools import chain
 from warnings import warn
 from xml.sax.saxutils import escape
@@ -26,7 +26,7 @@ from orangewidget.utils.itemmodels import (
 )
 
 from Orange.widgets.utils.colorpalettes import ContinuousPalettes, ContinuousPalette
-from Orange.data import Variable, Storage, DiscreteVariable, ContinuousVariable
+from Orange.data import Value, Variable, Storage, DiscreteVariable, ContinuousVariable
 from Orange.data.domain import filter_visible
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
@@ -825,33 +825,27 @@ class TableModel(AbstractSortTableModel):
             for role, c in self.ColorForRole.items()
         }
 
-        def format_sparse(vars, datagetter, instance):
-            data = datagetter(instance)
-            return ", ".join("{}={}".format(vars[i].name, vars[i].repr_val(v))
-                             for i, v in zip(data.indices, data.data))
+        def format_sparse(vars, row):
+            row = row.tocsr()
+            return ", ".join("{}={}".format(vars[i].name, vars[i].str_val(v))
+                             for i, v in zip(row.indices, row.data))
 
-        def format_sparse_bool(vars, datagetter, instance):
-            data = datagetter(instance)
-            return ", ".join(vars[i].name for i in data.indices)
+        def format_sparse_bool(vars, row):
+            row = row.tocsr()
+            return ", ".join(vars[i].name for i in row.indices)
 
-        def format_dense(var, instance):
-            return str(instance[var])
+        def format_dense(var, val):
+            return var.str_val(val)
 
-        def make_basket_formater(vars, density, role):
-            formater = (format_sparse if density == Storage.SPARSE
-                        else format_sparse_bool)
-            if role == TableModel.Attribute:
-                getter = operator.attrgetter("sparse_x")
-            elif role == TableModel.ClassVar:
-                getter = operator.attrgetter("sparse_y")
-            elif role == TableModel.Meta:
-                getter = operator.attrgetter("sparse_metas")
-            return partial(formater, vars, getter)
+        def make_basket_formatter(vars, density):
+            formatter = (format_sparse if density == Storage.SPARSE
+                         else format_sparse_bool)
+            return partial(formatter, vars)
 
         def make_basket(vars, density, role):
             return TableModel.Basket(
-                vars, TableModel.Attribute, brush_for_role[role], density,
-                make_basket_formater(vars, density, role)
+                vars, role, brush_for_role[role], density,
+                make_basket_formatter(vars, density)
             )
 
         def make_column(var, role):
@@ -896,11 +890,6 @@ class TableModel(AbstractSortTableModel):
                    [set(var.attributes) for var in self.vars],
                    set()))
 
-        @lru_cache(maxsize=1000)
-        def row_instance(index):
-            return self.source[int(index)]
-        self._row_instance = row_instance
-
         # column basic statistics (VariableStatsRole), computed when
         # first needed.
         self.__stats = None
@@ -909,6 +898,17 @@ class TableModel(AbstractSortTableModel):
 
         if self.__rowCount > (2 ** 31 - 1):
             raise ValueError("len(sourcedata) > 2 ** 31 - 1")
+
+    def _get_source_item(self, row, coldesc):
+        if isinstance(coldesc, self.Basket):
+            # `self.source[row:row + 1]` returns Table
+            # `self.source[row]` returns RowInstance
+            # We only worry about X and metas, as Y cannot be sparse
+            if coldesc.role is self.Meta:
+                return self.source[row:row + 1].metas
+            if coldesc.role is self.Attribute:
+                return self.source[row:row + 1].X
+        return self.source[row, coldesc.var]
 
     def sortColumnData(self, column):
         return self._columnSortKeyData(column, TableModel.ValueRole)
@@ -964,14 +964,16 @@ class TableModel(AbstractSortTableModel):
         if role not in _recognizedRoles:
             return None
 
-        row, col = index.row(), index.column()
-        if  not 0 <= row <= self.__rowCount:
+        row = index.row()
+        if not 0 <= row <= self.__rowCount:
             return None
 
         row = self.mapToSourceRows(row)
+        col = 0 if role is _ClassValueRole else index.column()
 
         try:
-            instance = self._row_instance(row)
+            coldesc = self.columns[col]
+            instance = self._get_source_item(row, coldesc)
         except IndexError:
             self.layoutAboutToBeChanged.emit()
             self.beginRemoveRows(self.parent(), row, max(self.rowCount(), row))
@@ -979,27 +981,20 @@ class TableModel(AbstractSortTableModel):
             self.endRemoveRows()
             self.layoutChanged.emit()
             return None
-        coldesc = self.columns[col]
 
         if role == _Qt_DisplayRole:
             return coldesc.format(instance)
-        elif role == _Qt_EditRole and isinstance(coldesc, TableModel.Column):
-            return instance[coldesc.var]
+        elif role in (_Qt_EditRole, _ValueRole) and isinstance(coldesc, TableModel.Column):
+            return Value(coldesc.var, instance)
         elif role == _Qt_BackgroundRole:
             return coldesc.background
         elif role == _Qt_ForegroundRole:
-            if coldesc.background is not None:
-                # The background is light-ish, force dark text color
-                return QColor(0, 0, 0, 200)
-            else:
-                return None
-        elif role == _ValueRole and isinstance(coldesc, TableModel.Column):
-            return instance[coldesc.var]
-        elif role == _ClassValueRole:
-            try:
-                return instance.get_class()
-            except TypeError:
-                return None
+            # The background is light-ish, force dark text color
+            return coldesc.background and QColor(0, 0, 0, 200)
+        elif role == _ClassValueRole \
+                and isinstance(coldesc, TableModel.Column) \
+                and len(self.domain.class_vars) == 1:
+            return Value(coldesc.var, instance)
         elif role == _VariableRole and isinstance(coldesc, TableModel.Column):
             return coldesc.var
         elif role == _DomainRole:
