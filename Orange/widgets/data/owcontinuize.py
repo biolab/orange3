@@ -62,8 +62,8 @@ DiscreteOptions: Dict[int, MethodDesc] = {
             "One indicator variable for each value",
             False),
         MethodDesc(
-            Continuize.RemoveMultinomial, "Remove if more than 3 values", "remove if >3",
-            "Remove variables with more than three values; indicator otherwise"),
+            Continuize.RemoveMultinomial, "Remove if more than 2 values", "remove if >2",
+            "Remove variables with more than two values; indicator otherwise"),
         MethodDesc(
             Continuize.Remove, "Remove", "remove",
             "Remove variable"),
