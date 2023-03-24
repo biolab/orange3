@@ -1,6 +1,6 @@
 import concurrent.futures
 from dataclasses import dataclass
-from typing import Optional, Union, Sequence, TypedDict, Tuple
+from typing import Optional, Union, Sequence, List, TypedDict, Tuple, Dict
 
 from scipy.sparse import issparse
 
@@ -10,6 +10,7 @@ from AnyQt.QtCore import Qt, QSize, QMetaObject, QItemSelectionModel
 from AnyQt.QtCore import Slot
 
 import Orange.data
+from Orange.data import Variable
 from Orange.data.table import Table
 from Orange.data.sql.table import SqlTable
 
@@ -19,11 +20,12 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.itemdelegates import TableDataDelegate
 from Orange.widgets.utils.tableview import table_selection_to_mime_data
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.widget import OWWidget, Input, Output
+from Orange.widgets.widget import OWWidget, Input, Output, Msg
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.state_summary import format_summary_details
+from Orange.widgets.utils import disconnected
 from Orange.widgets.data.utils.tableview import RichTableView
 from Orange.widgets.data.utils import tablesummary as tsummary
 
@@ -48,6 +50,9 @@ class _Selection(TypedDict):
     columns: Tuple[int]
 
 
+_Sorting = List[Tuple[str, int]]
+
+
 class OWTable(OWWidget):
     name = "Data Table"
     description = "View the dataset in a spreadsheet."
@@ -62,6 +67,15 @@ class OWTable(OWWidget):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
+    class Warning(OWWidget.Warning):
+        missing_sort_columns = Msg(
+            "Cannot restore sorting.\n"
+            "Missing columns in input table: {}"
+        )
+        non_sortable_input = Msg(
+            "Cannot restore sorting.\n"
+            "Input table cannot be sorted due to implementation constraints."
+        )
     buttons_area_orientation = Qt.Vertical
 
     show_distributions = Setting(False)
@@ -73,12 +87,16 @@ class OWTable(OWWidget):
     stored_selection: _Selection = Setting(
         {"rows": [], "columns": []}, schema_only=True
     )
+    stored_sort: _Sorting = Setting(
+        [], schema_only=True
+    )
     settings_version = 1
 
     def __init__(self):
         super().__init__()
         self.input: Optional[InputData] = None
-        self.__pending_selection = self.stored_selection
+        self.__pending_selection: Optional[_Selection] = self.stored_selection
+        self.__pending_sort: Optional[_Sorting] = self.stored_sort
         self.dist_color = QColor(220, 220, 220, 255)
 
         info_box = gui.vBox(self.controlArea, "Info")
@@ -124,7 +142,9 @@ class OWTable(OWWidget):
         header.setSectionsClickable(True)
         header.setSortIndicatorShown(True)
         header.setSortIndicator(-1, Qt.AscendingOrder)
-        header.sortIndicatorChanged.connect(self.update_selection)
+        header.sortIndicatorChanged.connect(
+            self._on_sort_indicator_changed, Qt.UniqueConnection
+        )
 
         self.view = view
         self.mainArea.layout().addWidget(self.view)
@@ -154,6 +174,8 @@ class OWTable(OWWidget):
 
     def handleNewSignals(self):
         super().handleNewSignals()
+        self.Warning.non_sortable_input.clear()
+        self.Warning.missing_sort_columns.clear()
         data: Optional[Table] = self.input.table if self.input else None
         slot = self.input
         if slot is not None and isinstance(slot.summary.len, concurrent.futures.Future):
@@ -163,6 +185,9 @@ class OWTable(OWWidget):
             slot.summary.len.add_done_callback(update)
 
         self._update_input_summary()
+
+        if data is not None and self.__pending_sort is not None:
+            self.__restore_sort()
 
         if data is not None and self.__pending_selection is not None:
             selection = self.__pending_selection
@@ -296,10 +321,86 @@ class OWTable(OWWidget):
     def restore_order(self):
         """Restore the original data order of the current view."""
         self.view.sortByColumn(-1, Qt.AscendingOrder)
+        self.stored_sort = []
+        self.Warning.missing_sort_columns.clear()
 
     @Slot()
     def _update_info(self):
         self._update_input_summary()
+
+    def _on_sort_indicator_changed(self, index: int, order: Qt.SortOrder) -> None:
+        if index == -1:
+            self.stored_sort = []
+        elif self.input is not None:
+            model = self.input.model
+            var = model.headerData(index, Qt.Horizontal, TableModel.VariableRole)
+            order = -1 if order == Qt.DescendingOrder else 1
+            # Drop any previously applied sort on this column
+            self.stored_sort = [(n, d) for n, d in self.stored_sort
+                                if n != var.name]
+            self.stored_sort.append((var.name, order))
+        self.update_selection()
+        self.Warning.missing_sort_columns.clear()
+
+    def set_sort_columns(self, sorting: List[Tuple[str, int]]):
+        """
+        Set the model sorting parameters.
+
+        Parameters
+        ----------
+        sorting: List[Tuple[str, int]]
+            For each (name: str, inc: int) tuple where `name` is the column
+            name and `inc` is 1 for increasing order and -1 for decreasing
+            order, the model is sorted by that column.
+        """
+        if self.input is None:
+            return  # pragma: no cover
+        self.stored_sort = []
+        # Map header names/titles to column indices
+        columns = {var.name: i for
+                   var, i in self.__header_variable_indices().items()}
+        # Suppress the _on_sort_indicator_changed -> commit calls
+        with disconnected(self.view.horizontalHeader().sortIndicatorChanged,
+                          self._on_sort_indicator_changed, Qt.UniqueConnection):
+            for name, order in sorting:
+                if name in columns:
+                    self.view.sortByColumn(
+                        columns[name],
+                        Qt.AscendingOrder if order == 1 else Qt.DescendingOrder
+                    )
+                self.stored_sort.append((name, order))
+
+    def __restore_sort(self) -> None:
+        assert self.input is not None
+        sort = self.__pending_sort
+        self.__pending_sort = None
+        if sort is None:
+            return  # pragma: no cover
+        if not self.view.isSortingEnabled() and sort:
+            self.Warning.non_sortable_input()
+            self.Warning.missing_sort_columns.clear()
+            return
+        # Map header names/titles to column indices
+        vars_ = self.__header_variable_indices()
+        columns = {var.name: i for var, i in vars_.items()}
+        missing_columns = []
+        sort_ = []
+        for name, order in sort:
+            if name in columns:
+                sort_.append((name, order))
+            else:
+                missing_columns.append(name)
+        self.set_sort_columns(sort_)
+        if missing_columns:
+            self.Warning.missing_sort_columns(", ".join(missing_columns))
+
+    def __header_variable_indices(self) -> Dict[Variable, int]:
+        model = self.view.model()
+        if model is None:
+            return {}  # pragma: no cover
+        vars_ = [model.headerData(i, Qt.Horizontal, TableModel.VariableRole)
+                 for i in range(model.columnCount())]
+        return {v: i for i, v in enumerate(vars_) if isinstance(v, Variable)}
 
     def update_selection(self, *_):
         self.commit.deferred()
@@ -360,11 +461,16 @@ class OWTable(OWWidget):
                 metas = select_vars(TableModel.Meta)
                 domain = Orange.data.Domain(attrs, class_vars, metas)
 
-            # Send all data by default
-            if not rowsel:
-                selected_data = table
-            else:
+            sortsection = self.view.horizontalHeader().sortIndicatorSection()
+            if rowsel:
                 selected_data = table.from_table(domain, table, rowsel)
+            elif sortsection != -1:
+                # Send sorted data
+                permutation = model.mapToSourceRows(...)
+                selected_data = table.from_table(table.domain, table, permutation)
+            else:
+                # Send all data by default
+                selected_data = table
 
         self.Outputs.selected_data.send(selected_data)
         self.Outputs.annotated_data.send(create_annotated_table(table, rowsel))
