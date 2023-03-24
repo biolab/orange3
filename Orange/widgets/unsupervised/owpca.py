@@ -25,7 +25,7 @@ class OWPCA(widget.OWWidget):
     description = "Principal component analysis with a scree-diagram."
     icon = "icons/PCA.svg"
     priority = 3050
-    keywords = ["principal component analysis", "linear transformation"]
+    keywords = "pca, principal component analysis, linear transformation"
 
     class Inputs:
         data = Input("Data", Table)

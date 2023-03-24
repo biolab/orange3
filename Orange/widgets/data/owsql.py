@@ -43,7 +43,7 @@ class OWSql(OWBaseSql):
     icon = "icons/SQLTable.svg"
     priority = 30
     category = "Data"
-    keywords = ["load"]
+    keywords = "sql table, load"
 
     class Outputs:
         data = Output("Data", Table, doc="Attribute-valued dataset read from the input file.")

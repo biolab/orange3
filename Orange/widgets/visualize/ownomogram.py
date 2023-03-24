@@ -651,7 +651,7 @@ class OWNomogram(OWWidget):
                   " and Logistic Regression Classifiers."
     icon = "icons/Nomogram.svg"
     priority = 2000
-    keywords = []
+    keywords = "nomogram"
 
     class Inputs:
         classifier = Input("Classifier", Model)

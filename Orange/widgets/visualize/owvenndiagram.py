@@ -66,7 +66,7 @@ class OWVennDiagram(widget.OWWidget):
                   "from a collection of input datasets."
     icon = "icons/VennDiagram.svg"
     priority = 280
-    keywords = []
+    keywords = "venn diagram"
     settings_version = 2
 
     class Inputs:

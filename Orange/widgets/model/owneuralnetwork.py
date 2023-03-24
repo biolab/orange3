@@ -68,7 +68,7 @@ class OWNNLearner(OWBaseLearner):
                   "backpropagation."
     icon = "icons/NN.svg"
     priority = 90
-    keywords = ["mlp"]
+    keywords = "neural network, mlp"
 
     LEARNER = NNLearner
 

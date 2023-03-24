@@ -370,7 +370,7 @@ class OWBarPlot(OWWidget):
     description = "Visualizes comparisons among categorical variables."
     icon = "icons/BarPlot.svg"
     priority = 190
-    keywords = ["chart"]
+    keywords = "bar plot, chart"
 
     class Inputs:
         data = Input("Data", Table, default=True)

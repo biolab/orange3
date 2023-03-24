@@ -247,7 +247,7 @@ class OWCurveFit(OWBaseLearner):
     description = "Fit a function to data."
     icon = "icons/CurveFit.svg"
     priority = 90
-    keywords = ["function"]
+    keywords = "curve fit, function"
 
     class Outputs(OWBaseLearner.Outputs):
         coefficients = Output("Coefficients", Table, explicit=True)

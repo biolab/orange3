@@ -128,7 +128,7 @@ class OWLiftCurve(widget.OWWidget):
                   "from the evaluation of classifiers."
     icon = "icons/LiftCurve.svg"
     priority = 1020
-    keywords = ["lift", "cumulative gain", "precision", "recall", "curve"]
+    keywords = "performance curve, lift, cumulative gain, precision, recall, curve"
 
     class Inputs:
         evaluation_results = Input(

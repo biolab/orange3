@@ -88,7 +88,7 @@ class OWConfusionMatrix(widget.OWWidget):
                   "the results of classifier evaluations."
     icon = "icons/ConfusionMatrix.svg"
     priority = 1001
-    keywords = []
+    keywords = "confusion matrix"
 
     class Inputs:
         evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)

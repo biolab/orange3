@@ -61,7 +61,7 @@ class OWPredictions(OWWidget):
     icon = "icons/Predictions.svg"
     priority = 200
     description = "Display predictions of models for an input dataset."
-    keywords = []
+    keywords = "predictions"
 
     settings_version = 2
 

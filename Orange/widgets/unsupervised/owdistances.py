@@ -95,7 +95,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
     name = "Distances"
     description = "Compute a matrix of pairwise distances."
     icon = "icons/Distance.svg"
-    keywords = []
+    keywords = "distances"
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

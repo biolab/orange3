@@ -1086,7 +1086,7 @@ class OWPreprocess(widget.OWWidget, openclass=True):
     category = "Transform"
     icon = "icons/Preprocess.svg"
     priority = 2100
-    keywords = ["process"]
+    keywords = "preprocess, process"
 
     settings_version = 2
 

@@ -137,7 +137,7 @@ class OWHeatMap(widget.OWWidget):
     description = "Plot a data matrix heatmap."
     icon = "icons/Heatmap.svg"
     priority = 260
-    keywords = []
+    keywords = "heat map"
 
     class Inputs:
         data = Input("Data", Table)

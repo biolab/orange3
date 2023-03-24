@@ -16,7 +16,7 @@ class OWNaiveBayes(OWBaseLearner):
         "Orange.widgets.classify.ownaivebayes.OWNaiveBayes",
     ]
     priority = 70
-    keywords = []
+    keywords = "naive bayes"
 
     LEARNER = NaiveBayesLearner
 

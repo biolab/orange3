@@ -289,8 +289,7 @@ class OWGradientBoosting(OWBaseLearner):
     description = "Predict using gradient boosting on decision trees."
     icon = "icons/GradientBoosting.svg"
     priority = 45
-    keywords = ["catboost", "gradient", "boost", "tree", "forest",
-                "xgb", "gb", "extreme"]
+    keywords = "gradient boosting, catboost, gradient, boost, tree, forest, xgb, gb, extreme"
 
     LEARNER: Learner = GBLearner
     editor: BaseEditor = None

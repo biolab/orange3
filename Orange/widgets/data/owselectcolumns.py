@@ -153,7 +153,7 @@ class OWSelectAttributes(widget.OWWidget):
     category = "Transform"
     icon = "icons/SelectColumns.svg"
     priority = 100
-    keywords = ["filter", "attributes", "target", "variable"]
+    keywords = "select columns, filter, attributes, target, variable"
 
     class Inputs:
         data = Input("Data", Table, default=True)

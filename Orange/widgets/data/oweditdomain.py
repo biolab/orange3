@@ -1887,7 +1887,7 @@ class OWEditDomain(widget.OWWidget):
     description = "Rename variables, edit categories and variable annotations."
     icon = "icons/EditDomain.svg"
     priority = 3125
-    keywords = ["rename", "drop", "reorder", "order"]
+    keywords = "edit domain, rename, drop, reorder, order"
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

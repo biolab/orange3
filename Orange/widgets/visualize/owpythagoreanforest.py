@@ -205,11 +205,11 @@ class ClickToClearSelectionListView(QListView):
 
 
 class OWPythagoreanForest(OWWidget):
-    name = 'Pythagorean Forest'
+    name = "Pythagorean Forest"
     description = 'Pythagorean forest for visualising random forests.'
     icon = 'icons/PythagoreanForest.svg'
     settings_version = 2
-    keywords = ["fractal"]
+    keywords = "pythagorean forest, fractal"
 
     priority = 1001
 

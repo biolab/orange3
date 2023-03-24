@@ -209,7 +209,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
     description = "Rank and filter data features by their relevance."
     icon = "icons/Rank.svg"
     priority = 1102
-    keywords = []
+    keywords = "rank, filter"
 
     buttons_area_orientation = Qt.Vertical
 
