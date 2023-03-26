@@ -31,7 +31,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWViolinPlot.Inputs.data
         cls.signal_data = cls.data
         cls.housing = Table("housing")
 

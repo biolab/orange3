@@ -113,10 +113,10 @@ class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
         with data.unlocked():
             data.X = sparse.csr_matrix(data.X)
         self.assertTrue(sparse.issparse(data.X))
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.click_apply()
         self.assertTrue(self.widget.Error.sparse_not_supported.is_shown())
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.click_apply()
         self.assertFalse(self.widget.Error.sparse_not_supported.is_shown())
 
@@ -130,13 +130,13 @@ class TestOWRulesClassification(WidgetTest, WidgetLearnerTestMixin):
         with unittest.mock.patch(
             "Orange.widgets.model.owrules.CustomRuleLearner.__call__",
             side_effect=MemoryError):
-            self.send_signal("Data", data)
+            self.send_signal(self.widget.Inputs.data, data)
             self.assertTrue(self.widget.Error.out_of_memory.is_shown())
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.out_of_memory.is_shown())
 
     def test_default_rule(self):
         data = Table("zoo")
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.click_apply()
         self.assertEqual(sum(self.widget.model.rule_list[-1].curr_class_dist.tolist()), len(data))

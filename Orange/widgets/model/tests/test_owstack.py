@@ -15,19 +15,19 @@ class TestOWStackedLearner(WidgetTest):
     def test_input_data(self):
         """Check widget's data with data on the input"""
         self.assertEqual(self.widget.data, None)
-        self.send_signal("Data", self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.assertEqual(self.widget.data, self.data)
         self.wait_until_stop_blocking()
 
     def test_output_learner(self):
         """Check if learner is on output after apply"""
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
-        self.send_signal("Learners", LogisticRegressionLearner(), 0)
+        self.send_signal(self.widget.Inputs.learners, LogisticRegressionLearner(), 0)
         self.widget.apply_button.button.clicked.emit()
-        initial = self.get_output("Learner")
+        initial = self.get_output(self.widget.Outputs.learner)
         self.assertIsNotNone(initial, "Does not initialize the learner output")
         self.widget.apply_button.button.clicked.emit()
-        newlearner = self.get_output("Learner")
+        newlearner = self.get_output(self.widget.Outputs.learner)
         self.assertIsNot(initial, newlearner,
                          "Does not send a new learner instance on `Apply`.")
         self.assertIsNotNone(newlearner)
@@ -36,10 +36,10 @@ class TestOWStackedLearner(WidgetTest):
     def test_output_model(self):
         """Check if model is on output after sending data and apply"""
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
-        self.send_signal("Learners", LogisticRegressionLearner(), 0)
+        self.send_signal(self.widget.Inputs.learners, LogisticRegressionLearner(), 0)
         self.widget.apply_button.button.clicked.emit()
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
-        self.send_signal('Data', self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.apply_button.button.clicked.emit()
         self.wait_until_stop_blocking()
         model = self.get_output(self.widget.Outputs.model)

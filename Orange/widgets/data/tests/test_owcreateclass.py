@@ -541,7 +541,7 @@ class TestOWCreateClass(WidgetTest):
         def assertError(class_name, class_name_empty, class_name_duplicated, is_out):
             widget.class_name = class_name
             widget.apply()
-            output = self.get_output("Data")
+            output = self.get_output()
             self.assertEqual(widget.Error.class_name_empty.is_shown(), class_name_empty)
             self.assertEqual(widget.Error.class_name_duplicated.is_shown(), class_name_duplicated)
             self.assertEqual(output is not None, is_out)

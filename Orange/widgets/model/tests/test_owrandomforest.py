@@ -51,7 +51,7 @@ class TestOWRandomForest(WidgetTest, WidgetLearnerTestMixin):
 
     def test_class_weights(self):
         table = Table("iris")
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         self.assertFalse(self.widget.class_weight)
         self.widget.controls.class_weight.setChecked(True)
         self.assertTrue(self.widget.class_weight)

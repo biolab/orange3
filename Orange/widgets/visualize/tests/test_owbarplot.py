@@ -21,7 +21,7 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWBarPlot.Inputs.data
         cls.signal_data = cls.data
         cls.titanic = Table("titanic")
         cls.housing = Table("housing")

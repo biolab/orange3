@@ -21,31 +21,32 @@ class TestOWDataSampler(WidgetTest):
         """ Check if error message appears and then disappears when
         data is removed from input"""
         self.widget.controls.sampling_type.buttons[2].click()
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.iris)
         self.assertFalse(self.widget.Error.too_many_folds.is_shown())
-        self.send_signal("Data", self.iris[:5])
+        self.send_signal(self.iris[:5])
         self.assertTrue(self.widget.Error.too_many_folds.is_shown())
-        self.send_signal("Data", None)
+        self.send_signal(None)
         self.assertFalse(self.widget.Error.too_many_folds.is_shown())
-        self.send_signal("Data", Table.from_domain(self.iris.domain))
+        self.send_signal(Table.from_domain(self.iris.domain))
         self.assertTrue(self.widget.Error.no_data.is_shown())
 
     def test_stratified_on_unbalanced_data(self):
         unbalanced_data = self.iris[:51]
 
         self.widget.controls.stratify.setChecked(True)
-        self.send_signal("Data", unbalanced_data)
+        self.send_signal(unbalanced_data)
         self.assertTrue(self.widget.Warning.could_not_stratify.is_shown())
 
     def test_bootstrap(self):
         self.select_sampling_type(self.widget.Bootstrap)
 
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.iris)
 
         in_input = set(self.iris.ids)
-        sample = self.get_output("Data Sample")
+        sample = self.get_output(self.widget.Outputs.data_sample)
         in_sample = set(sample.ids)
-        in_remaining = set(self.get_output("Remaining Data").ids)
+        in_remaining = set(
+            self.get_output(self.widget.Outputs.remaining_data).ids)
 
         # Bootstrap should sample len(input) instances
         self.assertEqual(len(sample), len(self.iris))
@@ -66,7 +67,7 @@ class TestOWDataSampler(WidgetTest):
     def test_no_intersection_in_outputs(self):
         """ Check whether outputs intersect and whether length of outputs sums
         to length of original data"""
-        self.send_signal("Data", self.iris)
+        self.send_signal(self.iris)
         w = self.widget
         sampling_types = [w.FixedProportion, w.FixedSize, w.CrossValidation]
 
@@ -78,43 +79,43 @@ class TestOWDataSampler(WidgetTest):
                     self.select_sampling_type(sampling_type)
                     self.widget.commit()
 
-                    sample = self.get_output("Data Sample")
-                    other = self.get_output("Remaining Data")
+                    sample = self.get_output(self.widget.Outputs.data_sample)
+                    other = self.get_output(self.widget.Outputs.remaining_data)
                     self.assertEqual(len(self.iris), len(sample) + len(other))
                     self.assertNoIntersection(sample, other)
 
     def test_bigger_size_with_replacement(self):
         """Allow bigger output without replacement."""
-        self.send_signal('Data', self.iris[:2])
+        self.send_signal(self.iris[:2])
         sample_size = self.set_fixed_sample_size(3, with_replacement=True)
         self.assertEqual(3, sample_size, 'Should be able to set a bigger size '
                          'with replacement')
 
     def test_bigger_size_without_replacement(self):
         """Lower output samples to match input's without replacement."""
-        self.send_signal('Data', self.iris[:2])
+        self.send_signal(self.iris[:2])
         sample_size = self.set_fixed_sample_size(3)
         self.assertEqual(2, sample_size)
 
     def test_bigger_output_warning(self):
         """Should warn when sample size is bigger than input."""
-        self.send_signal('Data', self.iris[:2])
+        self.send_signal(self.iris[:2])
         self.set_fixed_sample_size(3, with_replacement=True)
         self.assertTrue(self.widget.Warning.bigger_sample.is_shown())
 
     def test_shuffling(self):
-        self.send_signal('Data', self.iris)
+        self.send_signal(self.iris)
 
         self.set_fixed_sample_size(150)
         self.assertFalse(self.widget.Warning.bigger_sample.is_shown())
-        sample = self.get_output("Data Sample")
+        sample = self.get_output(self.widget.Outputs.data_sample)
         self.assertTrue((self.iris.ids != sample.ids).any())
         self.assertEqual(set(self.iris.ids), set(sample.ids))
 
         self.select_sampling_type(self.widget.FixedProportion)
         self.widget.sampleSizePercentage = 100
         self.widget.commit()
-        sample = self.get_output("Data Sample")
+        sample = self.get_output(self.widget.Outputs.data_sample)
         self.assertTrue((self.iris.ids != sample.ids).any())
         self.assertEqual(set(self.iris.ids), set(sample.ids))
 

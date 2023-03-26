@@ -29,7 +29,7 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWHeatMap.Inputs.data
         cls.signal_data = cls.data
 
     def setUp(self):
