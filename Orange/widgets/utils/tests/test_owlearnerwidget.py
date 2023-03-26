@@ -68,6 +68,7 @@ class TestOWBaseLearner(WidgetTest):
         self.assertEqual(WidgetA.Outputs.learner.type, KNNLearner)
         self.assertFalse(hasattr(WidgetA.Outputs, "test"))
 
+    @WidgetTest.skipNonEnglish
     def test_send_backward_compatibility(self):
         class WidgetA(OWBaseLearner):
             name = "A"

@@ -327,6 +327,7 @@ class TestOWLinePLot(WidgetTest, WidgetOutputsTestMixin):
             self.send_signal(self.widget.Inputs.data, self.titanic)
             commit.assert_called()
 
+    @WidgetTest.skipNonEnglish
     def test_visual_settings(self, timeout=DEFAULT_TIMEOUT):
         graph = self.widget.graph
         font = QFont()

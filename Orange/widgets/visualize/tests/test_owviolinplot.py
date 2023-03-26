@@ -318,6 +318,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
                                     widget=widget)
         self.assert_table_equal(selected2, selected3)
 
+    @WidgetTest.skipNonEnglish
     def test_visual_settings(self):
         graph = self.widget.graph
 

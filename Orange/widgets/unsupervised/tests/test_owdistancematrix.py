@@ -190,6 +190,7 @@ class TestOWDistanceMatrix(WidgetTest):
         self.assertEqual(header(1, Qt.Horizontal), "dd")
         self.assertEqual(header(1, Qt.Vertical), "bb")
 
+    @WidgetTest.skipNonEnglish
     def test_migrate_settings_v1_and_use_them(self):
         ind = [1, 2, 5, 6, 7, 8]
         context = Context(

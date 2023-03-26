@@ -308,6 +308,7 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
 
+    @WidgetTest.skipNonEnglish
     def test_visual_settings(self):
         graph = self.widget.graph
         font = QFont()

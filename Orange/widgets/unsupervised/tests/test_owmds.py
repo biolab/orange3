@@ -159,6 +159,7 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.initialization = 0
         self.widget._OWMDS__invalidate_embedding()  # pylint: disable=protected-access
 
+    @WidgetTest.skipNonEnglish
     def test_migrate_settings_from_version_1(self):
         context_settings = [
             Context(attributes={'iris': 1,

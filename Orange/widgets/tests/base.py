@@ -771,6 +771,7 @@ class ProjectionWidgetTestMixin:
         self.wait_until_finished(timeout=timeout)
         self.send_signal(self.widget.Inputs.data, table)
 
+    @WidgetTest.skipNonEnglish
     def test_visual_settings(self, timeout=DEFAULT_TIMEOUT):
         graph = self.widget.graph
         font = QFont()
