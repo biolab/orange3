@@ -267,7 +267,7 @@ class OWRuleLearner(OWBaseLearner):
             widget=insert_gamma_box, master=self, value="gamma", minv=0.0,
             maxv=1.0, step=0.01, label="γ:", orientation=Qt.Horizontal,
             callback=self.settings_changed, alignment=Qt.AlignRight,
-            enabled=self.storage_covers[self.covering_algorithm] == "weighted")
+            enabled=self.covering_algorithm == 1)
 
         # bottom-level search procedure (search bias)
         middle_box = gui.vBox(widget=self.controlArea, box="Rule search")
@@ -314,8 +314,7 @@ class OWRuleLearner(OWBaseLearner):
             checked="checked_parent_alpha")
 
     def settings_changed(self, *args, **kwargs):
-        self.gamma_spin.setDisabled(
-            self.storage_covers[self.covering_algorithm] != "weighted")
+        self.gamma_spin.setDisabled(self.covering_algorithm == 0)
         super().settings_changed(*args, **kwargs)
 
     def update_model(self):
