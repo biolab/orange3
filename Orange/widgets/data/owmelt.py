@@ -62,7 +62,7 @@ class OWMelt(widget.OWWidget):
     description = "Convert wide data to narrow data, a list of item-value pairs"
     category = "Transform"
     icon = "icons/Melt.svg"
-    keywords = ["shopping list", "wide", "narrow"]
+    keywords = "melt, shopping list, wide, narrow"
     priority = 2230
 
     class Inputs:

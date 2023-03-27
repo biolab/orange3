@@ -247,7 +247,7 @@ class OWMergeData(widget.OWWidget):
     category = "Transform"
     icon = "icons/MergeData.svg"
     priority = 1110
-    keywords = ["join"]
+    keywords = "merge data, join"
 
     class Inputs:
         data = Input("Data", Orange.data.Table, default=True, replaces=["Data A"])

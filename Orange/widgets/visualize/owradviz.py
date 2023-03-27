@@ -314,7 +314,7 @@ class OWRadviz(OWAnchorProjectionWidget):
     description = "Display Radviz projection"
     icon = "icons/Radviz.svg"
     priority = 241
-    keywords = ["viz"]
+    keywords = "radviz, viz"
 
     settings_version = 3
 

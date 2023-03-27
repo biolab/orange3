@@ -725,7 +725,7 @@ class OWPivot(OWWidget):
     category = "Transform"
     icon = "icons/Pivot.svg"
     priority = 1220
-    keywords = ["pivot", "group", "aggregate"]
+    keywords = "pivot table, pivot, group, aggregate"
 
     class Inputs:
         data = Input("Data", Table, default=True)

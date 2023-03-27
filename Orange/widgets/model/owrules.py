@@ -215,7 +215,7 @@ class OWRuleLearner(OWBaseLearner):
         "Orange.widgets.classify.owrules.OWRuleLearner",
     ]
     priority = 19
-    keywords = []
+    keywords = "cn2 rule induction"
 
     LEARNER = CustomRuleLearner
     supports_sparse = False

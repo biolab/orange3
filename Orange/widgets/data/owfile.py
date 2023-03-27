@@ -90,7 +90,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     icon = "icons/File.svg"
     priority = 10
     category = "Data"
-    keywords = ["file", "load", "read", "open"]
+    keywords = "file, load, read, open"
 
     class Outputs:
         data = Output("Data", Table,

@@ -22,8 +22,7 @@ class OWContinuize(widget.OWWidget):
                    "optionally, normalize numeric values.")
     icon = "icons/Continuize.svg"
     category = "Transform"
-    keywords = ["encode", "dummy", "numeric", "one-hot", "binary",
-                "treatment", "contrast"]
+    keywords = "continuize, encode, dummy, numeric, one-hot, binary, treatment, contrast"
     priority = 2120
 
     class Inputs:

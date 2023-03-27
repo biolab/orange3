@@ -96,7 +96,7 @@ class OWCalibrationPlot(widget.OWWidget):
     description = "Calibration plot based on evaluation of classifiers."
     icon = "icons/CalibrationPlot.svg"
     priority = 1030
-    keywords = []
+    keywords = "calibration plot"
 
     class Inputs:
         evaluation_results = Input("Evaluation Results", Results)

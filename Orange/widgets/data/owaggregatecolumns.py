@@ -31,8 +31,7 @@ class OWAggregateColumns(widget.OWWidget):
     category = "Transform"
     icon = "icons/AggregateColumns.svg"
     priority = 1200
-    keywords = ["aggregate", "sum", "product", "max", "min", "mean",
-                "median", "variance"]
+    keywords = "aggregate columns, aggregate, sum, product, max, min, mean, median, variance"
 
     class Inputs:
         data = Input("Data", Table, default=True)

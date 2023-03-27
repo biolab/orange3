@@ -167,7 +167,7 @@ class OWManifoldLearning(OWWidget):
     description = "Nonlinear dimensionality reduction."
     icon = "icons/Manifold.svg"
     priority = 2200
-    keywords = []
+    keywords = "manifold learning"
     settings_version = 2
 
     class Inputs:

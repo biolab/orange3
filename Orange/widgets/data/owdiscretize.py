@@ -486,7 +486,7 @@ class OWDiscretize(widget.OWWidget):
     description = "Discretize numeric variables"
     category = "Transform"
     icon = "icons/Discretize.svg"
-    keywords = ["bin", "categorical", "nominal", "ordinal"]
+    keywords = "discretize, bin, categorical, nominal, ordinal"
     priority = 2130
 
     class Inputs:

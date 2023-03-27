@@ -135,7 +135,7 @@ class OWSelectRows(widget.OWWidget):
     icon = "icons/SelectRows.svg"
     priority = 100
     category = "Transform"
-    keywords = ["filter"]
+    keywords = "select rows, filter"
 
     class Inputs:
         data = Input("Data", Table)

@@ -300,7 +300,7 @@ class OWROCAnalysis(widget.OWWidget):
                   "based on the evaluation of classifiers."
     icon = "icons/ROCAnalysis.svg"
     priority = 1010
-    keywords = []
+    keywords = "roc analysis, analyse"
 
     class Inputs:
         evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)

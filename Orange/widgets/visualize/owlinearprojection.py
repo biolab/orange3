@@ -269,7 +269,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
                   "a two-dimensional plane."
     icon = "icons/LinearProjection.svg"
     priority = 240
-    keywords = []
+    keywords = "linear projection"
 
     Projection_name = {Placement.Circular: "Circular Placement",
                        Placement.LDA: "Linear Discriminant Analysis",

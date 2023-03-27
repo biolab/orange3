@@ -730,7 +730,7 @@ class OWViolinPlot(OWWidget):
                   " values in a violin plot."
     icon = "icons/ViolinPlot.svg"
     priority = 110
-    keywords = ["kernel", "density"]
+    keywords = "violin plot, kernel, density"
 
     class Inputs:
         data = Input("Data", Table)

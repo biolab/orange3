@@ -143,7 +143,7 @@ class OWBoxPlot(widget.OWWidget):
     description = "Visualize the distribution of feature values in a box plot."
     icon = "icons/BoxPlot.svg"
     priority = 100
-    keywords = ["whisker"]
+    keywords = "box plot, whisker"
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

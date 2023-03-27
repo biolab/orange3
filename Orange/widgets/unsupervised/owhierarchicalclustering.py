@@ -175,7 +175,7 @@ class OWHierarchicalClustering(widget.OWWidget):
                   "constructed from the input distance matrix."
     icon = "icons/HierarchicalClustering.svg"
     priority = 2100
-    keywords = []
+    keywords = "hierarchical clustering"
 
     class Inputs:
         distances = Input("Distances", Orange.misc.DistMatrix)

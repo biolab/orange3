@@ -8,7 +8,7 @@ class OWSaveDistances(OWSaveBase):
     name = "Save Distance Matrix"
     description = "Save distance matrix to an output file."
     icon = "icons/SaveDistances.svg"
-    keywords = ["distance matrix", "save"]
+    keywords = "save distance matrix, distance matrix, save"
 
     filters = ["Excel File (*.xlsx)", "Distance File (*.dst)"]
 

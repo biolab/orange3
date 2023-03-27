@@ -20,7 +20,7 @@ class OWLogisticRegression(OWBaseLearner):
         "Orange.widgets.classify.owlogisticregression.OWLogisticRegression",
     ]
     priority = 60
-    keywords = []
+    keywords = "logistic regression"
 
     LEARNER = LogisticRegressionLearner
 

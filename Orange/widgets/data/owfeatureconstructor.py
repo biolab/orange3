@@ -514,7 +514,7 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
                   "existing features in the input dataset."
     category = "Transform"
     icon = "icons/FeatureConstructor.svg"
-    keywords = ['function', 'lambda']
+    keywords = "feature constructor, function, lambda"
     priority = 2240
 
     class Inputs:

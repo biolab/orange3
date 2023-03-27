@@ -311,12 +311,12 @@ class OWScatterPlot(OWDataProjectionWidget):
     """Scatterplot visualization with explorative analysis and intelligent
     data visualization enhancements."""
 
-    name = 'Scatter Plot'
+    name = "Scatter Plot"
     description = "Interactive scatter plot visualization with " \
                   "intelligent data visualization enhancements."
     icon = "icons/ScatterPlot.svg"
     priority = 140
-    keywords = []
+    keywords = "scatter plot"
 
     class Inputs(OWDataProjectionWidget.Inputs):
         features = Input("Features", AttributeList)
