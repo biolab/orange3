@@ -7,6 +7,7 @@ import numpy as np
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable, TimeVariable
+from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.state_summary import format_summary_details, \
     format_multiple_summaries
 
@@ -102,6 +103,7 @@ def make_table(attributes, target=None, metas=None):
 
 
 class TestUtils(unittest.TestCase):
+    @WidgetTest.skipNonEnglish
     def test_details(self):
         """Check if details part of the summary is formatted correctly"""
         data = Table('zoo')
@@ -196,6 +198,7 @@ class TestUtils(unittest.TestCase):
         data = None
         self.assertEqual('', format_summary_details(data))
 
+    @WidgetTest.skipNonEnglish
     def test_multiple_summaries(self):
         data = Table('zoo')
         extra_data = Table('zoo')[20:]

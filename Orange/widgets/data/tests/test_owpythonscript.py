@@ -39,6 +39,7 @@ class TestOWPythonScript(WidgetTest):
         sys.last_type = sys.last_value = sys.last_traceback = None
         super().tearDown()
 
+    @WidgetTest.skipNonEnglish
     def test_inputs(self):
         """Check widget's inputs"""
         for input_, data in (("Data", self.iris),
@@ -53,6 +54,7 @@ class TestOWPythonScript(WidgetTest):
             self.send_signal(input_, Input.Closed, 1)
             self.assertEqual(getattr(self.widget, input_.lower()), [])
 
+    @WidgetTest.skipNonEnglish
     def test_outputs(self):
         """Check widget's outputs"""
         for signal, data in (
@@ -104,6 +106,7 @@ class TestOWPythonScript(WidgetTest):
     def test_owns_errors(self):
         self.assertIsNot(self.widget.Error, OWWidget.Error)
 
+    @WidgetTest.skipNonEnglish
     def test_multiple_signals(self):
         click = self.widget.execute_button.click
         console_locals = self.widget.console.locals

@@ -257,17 +257,17 @@ class WidgetLearnerTestMixin:
     def test_input_data(self):
         """Check widget's data with data on the input"""
         self.assertEqual(self.widget.data, None)
-        self.send_signal("Data", self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.assertEqual(self.widget.data, self.data)
         self.wait_until_stop_blocking()
 
     def test_input_data_disconnect(self):
         """Check widget's data and model after disconnecting data from input"""
-        self.send_signal("Data", self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.assertEqual(self.widget.data, self.data)
         self.click_apply()
         self.wait_until_stop_blocking()
-        self.send_signal("Data", None)
+        self.send_signal(self.widget.Inputs.data, None)
         self.wait_until_stop_blocking()
         self.assertEqual(self.widget.data, None)
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
@@ -275,19 +275,19 @@ class WidgetLearnerTestMixin:
     def test_input_data_learner_adequacy(self):
         """Check if error message is shown with inadequate data on input"""
         for inadequate in self.inadequate_dataset:
-            self.send_signal("Data", inadequate)
+            self.send_signal(self.widget.Inputs.data, inadequate)
             self.click_apply()
             self.wait_until_stop_blocking()
             self.assertTrue(self.widget.Error.data_error.is_shown())
         for valid in self.valid_datasets:
-            self.send_signal("Data", valid)
+            self.send_signal(self.widget.Inputs.data, valid)
             self.wait_until_stop_blocking()
             self.assertFalse(self.widget.Error.data_error.is_shown())
 
     def test_input_preprocessor(self):
         """Check learner's preprocessors with an extra pp on input"""
         randomize = Randomize()
-        self.send_signal("Preprocessor", randomize)
+        self.send_signal(self.widget.Inputs.preprocessor, randomize)
         self.assertEqual(
             randomize, self.widget.preprocessors,
             'Preprocessor not added to widget preprocessors')
@@ -300,7 +300,7 @@ class WidgetLearnerTestMixin:
     def test_input_preprocessors(self):
         """Check multiple preprocessors on input"""
         pp_list = PreprocessorList([Randomize(), RemoveNaNColumns()])
-        self.send_signal("Preprocessor", pp_list)
+        self.send_signal(self.widget.Inputs.preprocessor, pp_list)
         self.click_apply()
         self.wait_until_stop_blocking()
         self.assertEqual(
@@ -310,12 +310,12 @@ class WidgetLearnerTestMixin:
     def test_input_preprocessor_disconnect(self):
         """Check learner's preprocessors after disconnecting pp from input"""
         randomize = Randomize()
-        self.send_signal("Preprocessor", randomize)
+        self.send_signal(self.widget.Inputs.preprocessor, randomize)
         self.click_apply()
         self.wait_until_stop_blocking()
         self.assertEqual(randomize, self.widget.preprocessors)
 
-        self.send_signal("Preprocessor", None)
+        self.send_signal(self.widget.Inputs.preprocessor, None)
         self.click_apply()
         self.wait_until_stop_blocking()
         self.assertIsNone(self.widget.preprocessors,
@@ -323,10 +323,10 @@ class WidgetLearnerTestMixin:
 
     def test_output_learner(self):
         """Check if learner is on output after apply"""
-        initial = self.get_output("Learner")
+        initial = self.get_output(self.widget.Outputs.learner)
         self.assertIsNotNone(initial, "Does not initialize the learner output")
         self.click_apply()
-        newlearner = self.get_output("Learner")
+        newlearner = self.get_output(self.widget.Outputs.learner)
         self.assertIsNot(initial, newlearner,
                          "Does not send a new learner instance on `Apply`.")
         self.assertIsNotNone(newlearner)
@@ -337,7 +337,7 @@ class WidgetLearnerTestMixin:
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
         self.click_apply()
         self.assertIsNone(self.get_output(self.widget.Outputs.model))
-        self.send_signal('Data', self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.click_apply()
         self.wait_until_stop_blocking()
         model = self.get_output(self.widget.Outputs.model)
@@ -355,20 +355,21 @@ class WidgetLearnerTestMixin:
         self.widget.name_line_edit.setText(new_name)
         self.click_apply()
         self.wait_until_stop_blocking()
-        self.assertEqual(self.get_output("Learner").name, new_name)
+        self.assertEqual(self.get_output(self.widget.Outputs.learner).name,
+                         new_name)
 
     def test_output_model_name(self):
         """Check if model's name properly changes"""
         new_name = "Model Name"
         self.widget.name_line_edit.setText(new_name)
-        self.send_signal("Data", self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.click_apply()
         self.wait_until_stop_blocking()
         self.assertEqual(self.get_output(self.widget.Outputs.model).name, new_name)
 
     def test_output_model_picklable(self):
         """Check if model can be pickled"""
-        self.send_signal("Data", self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.click_apply()
         self.wait_until_stop_blocking()
         model = self.get_output(self.widget.Outputs.model)
@@ -392,7 +393,7 @@ class WidgetLearnerTestMixin:
         """Check if learner's parameters are set to default (widget's) values
         """
         for dataset in self.valid_datasets:
-            self.send_signal("Data", dataset)
+            self.send_signal(self.widget.Inputs.data, dataset)
             self.click_apply()
             self.wait_until_stop_blocking()
             for parameter in self.parameters:
@@ -407,7 +408,7 @@ class WidgetLearnerTestMixin:
         # Test params on every valid dataset, since some attributes may apply
         # to only certain problem types
         for dataset in self.valid_datasets:
-            self.send_signal("Data", dataset)
+            self.send_signal(self.widget.Inputs.data, dataset)
             self.wait_until_stop_blocking()
 
             for parameter in self.parameters:
@@ -428,7 +429,9 @@ class WidgetLearnerTestMixin:
                     self.assertEqual(
                         param, value,
                         "Mismatching setting for parameter '%s'" % parameter)
-                    param = self._get_param_value(self.get_output("Learner"), parameter)
+                    param = self._get_param_value(
+                        self.get_output(self.widget.Outputs.learner),
+                        parameter)
                     self.assertEqual(
                         param, value,
                         "Mismatching setting for parameter '%s'" % parameter)
@@ -444,7 +447,7 @@ class WidgetLearnerTestMixin:
     def test_params_trigger_settings_changed(self):
         """Check that the learner gets updated whenever a param is changed."""
         for dataset in self.valid_datasets:
-            self.send_signal("Data", dataset)
+            self.send_signal(self.widget.Inputs.data, dataset)
             self.wait_until_stop_blocking()
 
             for parameter in self.parameters:
@@ -517,7 +520,7 @@ class WidgetOutputsTestMixin:
         self.wait_until_finished(timeout=timeout)
 
         # check selected data output
-        output = self.get_output("Selected Data")
+        output = self.get_output(self.widget.Outputs.selected_data)
         if self.output_all_on_no_selection:
             self.assertEqual(output, self.signal_data)
         else:
@@ -532,7 +535,7 @@ class WidgetOutputsTestMixin:
         selected_indices = self._select_data()
 
         # check selected data output
-        selected = self.get_output("Selected Data")
+        selected = self.get_output(self.widget.Outputs.selected_data)
         n_sel, n_attr = len(selected), len(self.data.domain.attributes)
         self.assertGreater(n_sel, 0)
         self.assertEqual(selected.domain == self.data.domain,
@@ -553,7 +556,7 @@ class WidgetOutputsTestMixin:
 
         # check output when data is removed
         self.send_signal(self.signal_name, None)
-        self.assertIsNone(self.get_output("Selected Data"))
+        self.assertIsNone(self.get_output(self.widget.Outputs.selected_data))
         self.assertIsNone(self.get_output(ANNOTATED_DATA_SIGNAL_NAME))
 
     def _select_data(self):
@@ -768,6 +771,7 @@ class ProjectionWidgetTestMixin:
         self.wait_until_finished(timeout=timeout)
         self.send_signal(self.widget.Inputs.data, table)
 
+    @WidgetTest.skipNonEnglish
     def test_visual_settings(self, timeout=DEFAULT_TIMEOUT):
         graph = self.widget.graph
         font = QFont()

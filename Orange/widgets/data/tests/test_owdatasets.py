@@ -25,6 +25,7 @@ class TestOWDataSets(WidgetTest):
     @patch("Orange.widgets.data.owdatasets.list_local",
            Mock(return_value={('core', 'foo.tab'): {}}))
     @patch("Orange.widgets.data.owdatasets.log", Mock())
+    @WidgetTest.skipNonEnglish
     def test_only_local(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
         self.wait_until_stop_blocking(w)
@@ -67,6 +68,7 @@ class TestOWDataSets(WidgetTest):
            Mock(return_value={}))
     @patch("Orange.widgets.data.owdatasets.ensure_local",
            Mock(return_value="iris.tab"))
+    @WidgetTest.skipNonEnglish
     def test_download_iris(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
         self.wait_until_stop_blocking(w)
@@ -83,6 +85,7 @@ class TestOWDataSets(WidgetTest):
            Mock(return_value={('dir1', 'dir2', 'foo.tab'): {},
                               ('bar.tab',): {}}))
     @patch("Orange.widgets.data.owdatasets.log", Mock())
+    @WidgetTest.skipNonEnglish
     def test_dir_depth(self):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
         self.wait_until_stop_blocking(w)

@@ -179,14 +179,14 @@ class TestOWEditDomain(WidgetTest):
     def test_input_from_owcolor(self):
         """Check widget's data sent from OWColor widget"""
         owcolor = self.create_widget(OWColor)
-        self.send_signal("Data", self.iris, widget=owcolor)
+        self.send_signal(owcolor.Inputs.data, self.iris)
         disc_model = owcolor.disc_model
         disc_model.setData(disc_model.index(0, 1), (1, 2, 3), ColorRole)
         cont_model = owcolor.cont_model
         palette = list(colorpalettes.ContinuousPalettes.values())[-1]
         cont_model.setData(cont_model.index(1, 1), palette, ColorRole)
-        owcolor_output = self.get_output("Data", owcolor)
-        self.send_signal("Data", owcolor_output)
+        owcolor_output = self.get_output(owcolor.Outputs.data)
+        self.send_signal(owcolor_output)
         self.assertEqual(self.widget.data, owcolor_output)
         np.testing.assert_equal(self.widget.data.domain.class_var.colors[0],
                                 (1, 2, 3))

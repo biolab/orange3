@@ -21,7 +21,7 @@ class TestOWRuleViewer(WidgetTest, WidgetOutputsTestMixin):
         # the Rules widget does. We simulate the model we get from the widget.
         cls.classifier.instances = cls.titanic
 
-        cls.signal_name = "Classifier"
+        cls.signal_name = OWRuleViewer.Inputs.classifier
         cls.signal_data = cls.classifier
         cls.data = cls.titanic
 

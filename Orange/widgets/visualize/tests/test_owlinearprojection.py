@@ -25,7 +25,7 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWLinearProjection.Inputs.data
         cls.signal_data = cls.data
         cls.same_input_output_domain = False
 

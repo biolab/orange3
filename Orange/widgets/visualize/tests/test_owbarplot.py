@@ -21,7 +21,7 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWBarPlot.Inputs.data
         cls.signal_data = cls.data
         cls.titanic = Table("titanic")
         cls.housing = Table("housing")
@@ -308,6 +308,7 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
 
+    @WidgetTest.skipNonEnglish
     def test_visual_settings(self):
         graph = self.widget.graph
         font = QFont()

@@ -16,7 +16,7 @@ from AnyQt.QtCore import (
     QModelIndex, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
-from orangewidget.report import plural
+from orangecanvas.utils.localization import pl
 from orangewidget.utils.itemmodels import AbstractSortTableModel
 
 import Orange
@@ -517,7 +517,7 @@ class OWPredictions(OWWidget):
         n_predictors = len(self.predictors)
         if n_predictors:
             n_valid = len(self._non_errored_predictors())
-            details += plural("Model: {number} model{s}", n_predictors)
+            details += f"Model: {n_predictors} {pl(n_predictors, 'model')}"
             if n_valid != n_predictors:
                 details += f" ({n_predictors - n_valid} failed)"
             details += "<ul>"

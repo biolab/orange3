@@ -16,7 +16,7 @@ class TestOWDistanceMap(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Distances"
+        cls.signal_name = OWDistanceMap.Inputs.distances
         cls.signal_data = Euclidean(cls.data)
 
     def setUp(self):

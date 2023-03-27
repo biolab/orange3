@@ -112,7 +112,7 @@ class TestOWCSVFileImport(WidgetTest):
         item = w.current_item()
         self.assertTrue(samepath(item.path(), path))
         self.assertEqual(item.options(), self.data_regions_options)
-        out = self.get_output("Data", w)
+        out = self.get_output(w.Outputs.data)
         self._check_data_regions(out)
         self.assertEqual(out.name, "data-regions")
 
@@ -144,7 +144,7 @@ class TestOWCSVFileImport(WidgetTest):
             "local settings item must be recorded in _session_items_v2 when "
             "activated",
         )
-        self._check_data_regions(self.get_output("Data", w))
+        self._check_data_regions(self.get_output(w.Outputs.data))
 
     data_csv_types_options = owcsvimport.Options(
         encoding="ascii", dialect=csv.excel_tab(),
@@ -168,7 +168,7 @@ class TestOWCSVFileImport(WidgetTest):
         )
         widget.commit()
         self.wait_until_finished(widget)
-        output = self.get_output("Data", widget)
+        output = self.get_output(widget.Outputs.data)
         domain = output.domain
 
         self.assertIsInstance(domain["time"], TimeVariable)
@@ -201,7 +201,7 @@ class TestOWCSVFileImport(WidgetTest):
         )
         widget.commit()
         self.wait_until_finished(widget)
-        output = self.get_output("Data", widget)
+        output = self.get_output(widget.Outputs.data)
         self.assertTupleEqual(('1', '3', '4', '5', '12'), output.domain.attributes[1].values)
 
     def test_backward_compatibility(self):
@@ -221,7 +221,7 @@ class TestOWCSVFileImport(WidgetTest):
         )
         widget.commit()
         self.wait_until_finished(widget)
-        output = self.get_output("Data", widget)
+        output = self.get_output(widget.Outputs.data)
         domain = output.domain
 
         self.assertIsInstance(domain["time"], StringVariable)
