@@ -308,7 +308,7 @@ class OWDataSets(OWWidget):
         self.view.setItemDelegate(UniformHeightDelegate(self))
         self.view.setItemDelegateForColumn(
             self.Header.islocal,
-            UniformHeightIndicatorDelegate(self, role=Qt.DisplayRole, indicatorSize=4)
+            UniformHeightIndicatorDelegate(self, indicatorSize=4)
         )
         self.view.setItemDelegateForColumn(
             self.Header.size,
@@ -373,10 +373,14 @@ class OWDataSets(OWWidget):
         model.setHorizontalHeaderLabels(self._header_labels)
 
         current_index = -1
+        localinfo = list_local(self.local_cache_path)
         for i, file_path in enumerate(allkeys):
             datainfo = self._parse_info(file_path)
             item1 = QStandardItem()
-            item1.setData(" " if datainfo.islocal else "", Qt.DisplayRole)
+            # this elegant and spotless trick is used for sorting
+            state = self.indicator_state_for_info(datainfo, localinfo)
+            item1.setData({None: "", False: " ", True: "  "}[state], Qt.DisplayRole)
+            item1.setData(state, UniformHeightIndicatorDelegate.IndicatorRole)
             item1.setData(self.IndicatorBrushes[0], Qt.ForegroundRole)
             item1.setData(datainfo, Qt.UserRole)
             item2 = QStandardItem(datainfo.title)
@@ -456,20 +460,26 @@ class OWDataSets(OWWidget):
                 QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
             self.commit()
 
+    def indicator_state_for_info(self, info, localinfo):
+        if not info.file_path in localinfo:
+            return None
+        return (
+            os.path.join(self.local_cache_path, *info.file_path)
+            == self.current_output)
+
     def __update_cached_state(self):
         model = self.view.model().sourceModel()
-        localinfo = list_local(self.local_cache_path)
         assert isinstance(model, QStandardItemModel)
         allinfo = []
+        localinfo = list_local(self.local_cache_path)
         for i in range(model.rowCount()):
             item = model.item(i, 0)
             info = item.data(Qt.UserRole)
-            is_local = info.file_path in localinfo
-            is_current = (is_local and
-                          os.path.join(self.local_cache_path, *info.file_path)
-                          == self.current_output)
-            item.setData(" " * (is_local + is_current), Qt.DisplayRole)
-            item.setData(self.IndicatorBrushes[is_current], Qt.ForegroundRole)
+            state = self.indicator_state_for_info(info, localinfo)
+            # this elegant and spotless trick is used for sorting
+            item.setData({None: "", False: " ", True: "  "}[state], Qt.DisplayRole)
+            item.setData(state, UniformHeightIndicatorDelegate.IndicatorRole)
+            item.setData(self.IndicatorBrushes[bool(state)], Qt.ForegroundRole)
             allinfo.append(info)
 
     def selected_dataset(self):
