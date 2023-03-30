@@ -22,7 +22,8 @@ from AnyQt.QtWidgets import (
 import numpy
 
 from orangewidget.utils.itemmodels import (
-    PyListModel, AbstractSortTableModel as _AbstractSortTableModel
+    PyListModel, AbstractSortTableModel as _AbstractSortTableModel,
+    LabelledSeparator, SeparatorItem
 )
 
 from Orange.widgets.utils.colorpalettes import ContinuousPalettes, ContinuousPalette
@@ -451,7 +452,9 @@ class DomainModel(VariableListModel):
     PRIMITIVE = (DiscreteVariable, ContinuousVariable)
 
     def __init__(self, order=SEPARATED, separators=True, placeholder=None,
-                 valid_types=None, alphabetical=False, skip_hidden_vars=True, **kwargs):
+                 valid_types=None, alphabetical=False, skip_hidden_vars=True,
+                 *, strict_type=False,
+                 **kwargs):
         """
 
         Parameters
@@ -465,9 +468,13 @@ class DomainModel(VariableListModel):
         valid_types: tuple
             (Sub)types of `Variable` that are included in the model
         alphabetical: bool
-            If true, variables are sorted alphabetically.
+            If True, variables are sorted alphabetically.
         skip_hidden_vars: bool
-            If true, variables marked as "hidden" are skipped.
+            If True, variables marked as "hidden" are skipped.
+        strict_type: bool
+            If True, variable must be one of specified valid_types and not a
+            derived type (i.e. TimeVariable is not accepted as
+            ContinuousVariable)
         """
         super().__init__(placeholder=placeholder, **kwargs)
         if isinstance(order, int):
@@ -479,9 +486,10 @@ class DomainModel(VariableListModel):
                     (self.Separator, ) * (self.Separator in order) + \
                     order
         if not separators:
-            order = [e for e in order if e is not self.Separator]
+            order = [e for e in order if not isinstance(e, SeparatorItem)]
         self.order = order
         self.valid_types = valid_types
+        self.strict_type = strict_type
         self.alphabetical = alphabetical
         self.skip_hidden_vars = skip_hidden_vars
         self._within_set_domain = False
@@ -493,10 +501,10 @@ class DomainModel(VariableListModel):
         # The logic related to separators is a bit complicated: it ensures that
         # even when a section is empty we don't have two separators in a row
         # or a separator at the end
-        add_separator = False
+        add_separator = None
         for section in self.order:
-            if section is self.Separator:
-                add_separator = True
+            if isinstance(section, SeparatorItem):
+                add_separator = section
                 continue
             if isinstance(section, int):
                 if domain is None:
@@ -509,7 +517,9 @@ class DomainModel(VariableListModel):
                     to_add = list(filter_visible(to_add))
                 if self.valid_types is not None:
                     to_add = [var for var in to_add
-                              if isinstance(var, self.valid_types)]
+                              if (type(var) in self.valid_types
+                                  if self.strict_type
+                                  else isinstance(var, self.valid_types))]
                 if self.alphabetical:
                     to_add = sorted(to_add, key=lambda x: x.name)
             elif isinstance(section, list):
@@ -517,9 +527,10 @@ class DomainModel(VariableListModel):
             else:
                 to_add = [section]
             if to_add:
-                if add_separator and content:
-                    content.append(self.Separator)
-                    add_separator = False
+                if add_separator and (
+                        content or isinstance(add_separator, LabelledSeparator)):
+                    content.append(add_separator)
+                    add_separator = None
                 content += to_add
         try:
             self._within_set_domain = True
