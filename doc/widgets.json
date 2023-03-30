@@ -20,6 +20,7 @@
     "icon": "../Orange/widgets/data/icons/CSVFile.svg",
     "background": "#FFD39F",
     "keywords": [
+     "csv file import",
      "file",
      "load",
      "read",
@@ -33,8 +34,10 @@
     "icon": "../Orange/widgets/data/icons/DataSets.svg",
     "background": "#FFD39F",
     "keywords": [
+     "datasets",
      "online",
-     "data sets"
+     "data",
+     "sets"
     ]
    },
    {
@@ -43,6 +46,7 @@
     "icon": "../Orange/widgets/data/icons/SQLTable.svg",
     "background": "#FFD39F",
     "keywords": [
+     "sql table",
      "load"
     ]
    },
@@ -51,7 +55,10 @@
     "doc": "visual-programming/source/widgets/data/datatable.md",
     "icon": "../Orange/widgets/data/icons/Table.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "data table",
+     "view"
+    ]
    },
    {
     "text": "Paint Data",
@@ -59,6 +66,7 @@
     "icon": "../Orange/widgets/data/icons/PaintData.svg",
     "background": "#FFD39F",
     "keywords": [
+     "paint data",
      "create",
      "draw"
     ]
@@ -69,6 +77,7 @@
     "icon": "../Orange/widgets/data/icons/DataInfo.svg",
     "background": "#FFD39F",
     "keywords": [
+     "data info",
      "information",
      "inspect"
     ]
@@ -78,7 +87,10 @@
     "doc": "visual-programming/source/widgets/data/rank.md",
     "icon": "../Orange/widgets/data/icons/Rank.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "rank",
+     "filter"
+    ]
    },
    {
     "text": "Edit Domain",
@@ -86,6 +98,7 @@
     "icon": "../Orange/widgets/data/icons/EditDomain.svg",
     "background": "#FFD39F",
     "keywords": [
+     "edit domain",
      "rename",
      "drop",
      "reorder",
@@ -112,6 +125,7 @@
     "icon": "../Orange/widgets/data/icons/Save.svg",
     "background": "#FFD39F",
     "keywords": [
+     "save data",
      "export"
     ]
    }
@@ -126,6 +140,7 @@
     "icon": "../Orange/widgets/data/icons/DataSampler.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "data sampler",
      "random"
     ]
    },
@@ -135,6 +150,7 @@
     "icon": "../Orange/widgets/data/icons/SelectColumns.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "select columns",
      "filter",
      "attributes",
      "target",
@@ -147,6 +163,7 @@
     "icon": "../Orange/widgets/data/icons/SelectRows.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "select rows",
      "filter"
     ]
    },
@@ -155,7 +172,9 @@
     "doc": "visual-programming/source/widgets/data/transpose.md",
     "icon": "../Orange/widgets/data/icons/Transpose.svg",
     "background": "#FF9D5E",
-    "keywords": []
+    "keywords": [
+     "transpose"
+    ]
    },
    {
     "text": "Merge Data",
@@ -163,6 +182,7 @@
     "icon": "../Orange/widgets/data/icons/MergeData.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "merge data",
      "join"
     ]
    },
@@ -172,6 +192,7 @@
     "icon": "../Orange/widgets/data/icons/Concatenate.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "concatenate",
      "append",
      "join",
      "extend"
@@ -197,6 +218,7 @@
     "icon": "../Orange/widgets/data/icons/AggregateColumns.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "aggregate columns",
      "aggregate",
      "sum",
      "product",
@@ -223,6 +245,7 @@
     "icon": "../Orange/widgets/data/icons/Pivot.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "pivot table",
      "pivot",
      "group",
      "aggregate"
@@ -234,6 +257,7 @@
     "icon": "../Orange/widgets/data/icons/Transform.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "apply domain",
      "transform"
     ]
    },
@@ -243,6 +267,7 @@
     "icon": "../Orange/widgets/data/icons/Preprocess.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "preprocess",
      "process"
     ]
    },
@@ -252,6 +277,7 @@
     "icon": "../Orange/widgets/data/icons/Impute.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "impute",
      "substitute",
      "missing"
     ]
@@ -262,6 +288,7 @@
     "icon": "../Orange/widgets/data/icons/Continuize.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "continuize",
      "encode",
      "dummy",
      "numeric",
@@ -277,6 +304,7 @@
     "icon": "../Orange/widgets/data/icons/Discretize.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "discretize",
      "bin",
      "categorical",
      "nominal",
@@ -288,7 +316,10 @@
     "doc": "visual-programming/source/widgets/data/randomize.md",
     "icon": "../Orange/widgets/data/icons/Random.svg",
     "background": "#FF9D5E",
-    "keywords": []
+    "keywords": [
+     "randomize",
+     "random"
+    ]
    },
    {
     "text": "Purge Domain",
@@ -307,6 +338,7 @@
     "icon": "../Orange/widgets/data/icons/Melt.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "melt",
      "shopping list",
      "wide",
      "narrow"
@@ -318,6 +350,7 @@
     "icon": "../Orange/widgets/data/icons/FeatureConstructor.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "feature constructor",
      "function",
      "lambda"
     ]
@@ -327,7 +360,10 @@
     "doc": "visual-programming/source/widgets/data/createclass.md",
     "icon": "../Orange/widgets/data/icons/CreateClass.svg",
     "background": "#FF9D5E",
-    "keywords": []
+    "keywords": [
+     "create",
+     "class"
+    ]
    },
    {
     "text": "Create Instance",
@@ -335,6 +371,7 @@
     "icon": "../Orange/widgets/data/icons/CreateInstance.svg",
     "background": "#FF9D5E",
     "keywords": [
+     "create instance",
      "simulator"
     ]
    },
@@ -358,7 +395,10 @@
     "doc": "visual-programming/source/widgets/visualize/treeviewer.md",
     "icon": "../Orange/widgets/visualize/icons/TreeViewer.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "tree",
+     "viewer"
+    ]
    },
    {
     "text": "Box Plot",
@@ -366,6 +406,7 @@
     "icon": "../Orange/widgets/visualize/icons/BoxPlot.svg",
     "background": "#FFB7B1",
     "keywords": [
+     "box plot",
      "whisker"
     ]
    },
@@ -375,6 +416,7 @@
     "icon": "../Orange/widgets/visualize/icons/ViolinPlot.svg",
     "background": "#FFB7B1",
     "keywords": [
+     "violin plot",
      "kernel",
      "density"
     ]
@@ -385,6 +427,7 @@
     "icon": "../Orange/widgets/visualize/icons/Distribution.svg",
     "background": "#FFB7B1",
     "keywords": [
+     "distributions",
      "histogram"
     ]
    },
@@ -393,7 +436,10 @@
     "doc": "visual-programming/source/widgets/visualize/scatterplot.md",
     "icon": "../Orange/widgets/visualize/icons/ScatterPlot.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "scatter",
+     "plot"
+    ]
    },
    {
     "text": "Line Plot",
@@ -408,6 +454,7 @@
     "icon": "../Orange/widgets/visualize/icons/BarPlot.svg",
     "background": "#FFB7B1",
     "keywords": [
+     "bar plot",
      "chart"
     ]
    },
@@ -416,14 +463,20 @@
     "doc": "visual-programming/source/widgets/visualize/sievediagram.md",
     "icon": "../Orange/widgets/visualize/icons/SieveDiagram.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "sieve",
+     "diagram"
+    ]
    },
    {
     "text": "Mosaic Display",
     "doc": "visual-programming/source/widgets/visualize/mosaicdisplay.md",
     "icon": "../Orange/widgets/visualize/icons/MosaicDisplay.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "mosaic",
+     "display"
+    ]
    },
    {
     "text": "FreeViz",
@@ -431,6 +484,7 @@
     "icon": "../Orange/widgets/visualize/icons/Freeviz.svg",
     "background": "#FFB7B1",
     "keywords": [
+     "freeviz",
      "viz"
     ]
    },
@@ -439,7 +493,10 @@
     "doc": "visual-programming/source/widgets/visualize/linearprojection.md",
     "icon": "../Orange/widgets/visualize/icons/LinearProjection.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "linear",
+     "projection"
+    ]
    },
    {
     "text": "Radviz",
@@ -447,6 +504,7 @@
     "icon": "../Orange/widgets/visualize/icons/Radviz.svg",
     "background": "#FFB7B1",
     "keywords": [
+     "radviz",
      "viz"
     ]
    },
@@ -455,21 +513,30 @@
     "doc": "visual-programming/source/widgets/visualize/heatmap.md",
     "icon": "../Orange/widgets/visualize/icons/Heatmap.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "heat",
+     "map"
+    ]
    },
    {
     "text": "Venn Diagram",
     "doc": "visual-programming/source/widgets/visualize/venndiagram.md",
     "icon": "../Orange/widgets/visualize/icons/VennDiagram.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "venn",
+     "diagram"
+    ]
    },
    {
     "text": "Silhouette Plot",
     "doc": "visual-programming/source/widgets/visualize/silhouetteplot.md",
     "icon": "../Orange/widgets/visualize/icons/SilhouettePlot.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "silhouette",
+     "plot"
+    ]
    },
    {
     "text": "Pythagorean Tree",
@@ -477,6 +544,7 @@
     "icon": "../Orange/widgets/visualize/icons/PythagoreanTree.svg",
     "background": "#FFB7B1",
     "keywords": [
+     "pythagorean tree",
      "fractal"
     ]
    },
@@ -486,6 +554,7 @@
     "icon": "../Orange/widgets/visualize/icons/PythagoreanForest.svg",
     "background": "#FFB7B1",
     "keywords": [
+     "pythagorean forest",
      "fractal"
     ]
    },
@@ -494,14 +563,20 @@
     "doc": "visual-programming/source/widgets/visualize/cn2ruleviewer.md",
     "icon": "../Orange/widgets/visualize/icons/CN2RuleViewer.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "cn2",
+     "rule",
+     "viewer"
+    ]
    },
    {
     "text": "Nomogram",
     "doc": "visual-programming/source/widgets/visualize/nomogram.md",
     "icon": "../Orange/widgets/visualize/icons/Nomogram.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "nomogram"
+    ]
    }
   ]
  ],
@@ -514,6 +589,7 @@
     "icon": "../Orange/widgets/model/icons/Constant.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "constant",
      "majority",
      "mean"
     ]
@@ -523,7 +599,11 @@
     "doc": "visual-programming/source/widgets/model/cn2ruleinduction.md",
     "icon": "../Orange/widgets/model/icons/CN2RuleInduction.svg",
     "background": "#FAC1D9",
-    "keywords": []
+    "keywords": [
+     "cn2",
+     "rule",
+     "induction"
+    ]
    },
    {
     "text": "Calibrated Learner",
@@ -531,6 +611,7 @@
     "icon": "../Orange/widgets/model/icons/CalibratedLearner.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "calibrated learner",
      "calibration",
      "threshold"
     ]
@@ -541,6 +622,7 @@
     "icon": "../Orange/widgets/model/icons/KNN.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "knn",
      "k nearest",
      "knearest",
      "neighbor",
@@ -553,7 +635,8 @@
     "icon": "../Orange/widgets/model/icons/Tree.svg",
     "background": "#FAC1D9",
     "keywords": [
-     "Classification Tree"
+     "tree",
+     "classification tree"
     ]
    },
    {
@@ -561,7 +644,10 @@
     "doc": "visual-programming/source/widgets/model/randomforest.md",
     "icon": "../Orange/widgets/model/icons/RandomForest.svg",
     "background": "#FAC1D9",
-    "keywords": []
+    "keywords": [
+     "random",
+     "forest"
+    ]
    },
    {
     "text": "Gradient Boosting",
@@ -569,6 +655,7 @@
     "icon": "../Orange/widgets/model/icons/GradientBoosting.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "gradient boosting",
      "catboost",
      "gradient",
      "boost",
@@ -585,6 +672,7 @@
     "icon": "../Orange/widgets/model/icons/SVM.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "svm",
      "support vector machines"
     ]
    },
@@ -594,6 +682,7 @@
     "icon": "../Orange/widgets/model/icons/LinearRegression.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "linear regression",
      "ridge",
      "lasso",
      "elastic net"
@@ -604,14 +693,20 @@
     "doc": "visual-programming/source/widgets/model/logisticregression.md",
     "icon": "../Orange/widgets/model/icons/LogisticRegression.svg",
     "background": "#FAC1D9",
-    "keywords": []
+    "keywords": [
+     "logistic",
+     "regression"
+    ]
    },
    {
     "text": "Naive Bayes",
     "doc": "visual-programming/source/widgets/model/naivebayes.md",
     "icon": "../Orange/widgets/model/icons/NaiveBayes.svg",
     "background": "#FAC1D9",
-    "keywords": []
+    "keywords": [
+     "naive",
+     "bayes"
+    ]
    },
    {
     "text": "AdaBoost",
@@ -619,6 +714,7 @@
     "icon": "../Orange/widgets/model/icons/AdaBoost.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "adaboost",
      "boost"
     ]
    },
@@ -628,6 +724,7 @@
     "icon": "../Orange/widgets/model/icons/CurveFit.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "curve fit",
      "function"
     ]
    },
@@ -637,6 +734,7 @@
     "icon": "../Orange/widgets/model/icons/NN.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "neural network",
      "mlp"
     ]
    },
@@ -646,6 +744,7 @@
     "icon": "../Orange/widgets/model/icons/SGD.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "stochastic gradient descent",
      "sgd"
     ]
    },
@@ -661,7 +760,10 @@
     "doc": "visual-programming/source/widgets/model/savemodel.md",
     "icon": "../Orange/widgets/model/icons/SaveModel.svg",
     "background": "#FAC1D9",
-    "keywords": []
+    "keywords": [
+     "save model",
+     "save"
+    ]
    },
    {
     "text": "Load Model",
@@ -669,6 +771,7 @@
     "icon": "../Orange/widgets/model/icons/LoadModel.svg",
     "background": "#FAC1D9",
     "keywords": [
+     "load model",
      "file",
      "open",
      "model"
@@ -685,8 +788,9 @@
     "icon": "../Orange/widgets/evaluate/icons/TestLearners1.svg",
     "background": "#C3F3F3",
     "keywords": [
-     "Cross Validation",
-     "CV"
+     "test and score",
+     "cross validation",
+     "cv"
     ]
    },
    {
@@ -694,21 +798,29 @@
     "doc": "visual-programming/source/widgets/evaluate/predictions.md",
     "icon": "../Orange/widgets/evaluate/icons/Predictions.svg",
     "background": "#C3F3F3",
-    "keywords": []
+    "keywords": [
+     "predictions"
+    ]
    },
    {
     "text": "Confusion Matrix",
     "doc": "visual-programming/source/widgets/evaluate/confusionmatrix.md",
     "icon": "../Orange/widgets/evaluate/icons/ConfusionMatrix.svg",
     "background": "#C3F3F3",
-    "keywords": []
+    "keywords": [
+     "confusion",
+     "matrix"
+    ]
    },
    {
     "text": "ROC Analysis",
     "doc": "visual-programming/source/widgets/evaluate/rocanalysis.md",
     "icon": "../Orange/widgets/evaluate/icons/ROCAnalysis.svg",
     "background": "#C3F3F3",
-    "keywords": []
+    "keywords": [
+     "roc analysis",
+     "analyse"
+    ]
    },
    {
     "text": "Performance Curve",
@@ -716,6 +828,7 @@
     "icon": "../Orange/widgets/evaluate/icons/LiftCurve.svg",
     "background": "#C3F3F3",
     "keywords": [
+     "performance curve",
      "lift",
      "cumulative gain",
      "precision",
@@ -728,7 +841,10 @@
     "doc": "visual-programming/source/widgets/evaluate/calibrationplot.md",
     "icon": "../Orange/widgets/evaluate/icons/CalibrationPlot.svg",
     "background": "#C3F3F3",
-    "keywords": []
+    "keywords": [
+     "calibration",
+     "plot"
+    ]
    }
   ]
  ],
@@ -741,6 +857,7 @@
     "icon": "../Orange/widgets/unsupervised/icons/DistanceFile.svg",
     "background": "#CAE1EF",
     "keywords": [
+     "distance file",
      "load",
      "read",
      "open"
@@ -751,7 +868,10 @@
     "doc": "visual-programming/source/widgets/unsupervised/distancematrix.md",
     "icon": "../Orange/widgets/unsupervised/icons/DistanceMatrix.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "distance",
+     "matrix"
+    ]
    },
    {
     "text": "t-SNE",
@@ -759,6 +879,7 @@
     "icon": "../Orange/widgets/unsupervised/icons/TSNE.svg",
     "background": "#CAE1EF",
     "keywords": [
+     "t-sne",
      "tsne"
     ]
    },
@@ -774,14 +895,20 @@
     "doc": "visual-programming/source/widgets/unsupervised/distancemap.md",
     "icon": "../Orange/widgets/unsupervised/icons/DistanceMap.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "distance",
+     "map"
+    ]
    },
    {
     "text": "Hierarchical Clustering",
     "doc": "visual-programming/source/widgets/unsupervised/hierarchicalclustering.md",
     "icon": "../Orange/widgets/unsupervised/icons/HierarchicalClustering.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "hierarchical",
+     "clustering"
+    ]
    },
    {
     "text": "k-Means",
@@ -789,6 +916,7 @@
     "icon": "../Orange/widgets/unsupervised/icons/KMeans.svg",
     "background": "#CAE1EF",
     "keywords": [
+     "k-means",
      "kmeans",
      "clustering"
     ]
@@ -812,7 +940,10 @@
     "doc": "visual-programming/source/widgets/unsupervised/manifoldlearning.md",
     "icon": "../Orange/widgets/unsupervised/icons/Manifold.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "manifold",
+     "learning"
+    ]
    },
    {
     "text": "Outliers",
@@ -820,6 +951,7 @@
     "icon": "../Orange/widgets/data/icons/Outliers.svg",
     "background": "#CAE1EF",
     "keywords": [
+     "outliers",
      "inlier"
     ]
    },
@@ -829,6 +961,7 @@
     "icon": "../Orange/widgets/unsupervised/icons/PCA.svg",
     "background": "#CAE1EF",
     "keywords": [
+     "pca",
      "principal component analysis",
      "linear transformation"
     ]
@@ -845,21 +978,29 @@
     "doc": "visual-programming/source/widgets/unsupervised/correspondenceanalysis.md",
     "icon": "../Orange/widgets/unsupervised/icons/CorrespondenceAnalysis.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "correspondence",
+     "analysis"
+    ]
    },
    {
     "text": "Distances",
     "doc": "visual-programming/source/widgets/unsupervised/distances.md",
     "icon": "../Orange/widgets/unsupervised/icons/Distance.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "distances"
+    ]
    },
    {
     "text": "Distance Transformation",
     "doc": "visual-programming/source/widgets/unsupervised/distancetransformation.md",
     "icon": "../Orange/widgets/unsupervised/icons/DistancesTransformation.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "distance",
+     "transformation"
+    ]
    },
    {
     "text": "MDS",
@@ -867,6 +1008,7 @@
     "icon": "../Orange/widgets/unsupervised/icons/MDS.svg",
     "background": "#CAE1EF",
     "keywords": [
+     "mds",
      "multidimensional scaling",
      "multi dimensional scaling"
     ]
@@ -877,6 +1019,7 @@
     "icon": "../Orange/widgets/unsupervised/icons/SaveDistances.svg",
     "background": "#CAE1EF",
     "keywords": [
+     "save distance matrix",
      "distance matrix",
      "save"
     ]
@@ -887,7 +1030,8 @@
     "icon": "../Orange/widgets/unsupervised/icons/SOM.svg",
     "background": "#CAE1EF",
     "keywords": [
-     "SOM"
+     "self-organizing map",
+     "som"
     ]
    }
   ]
