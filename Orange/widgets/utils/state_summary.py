@@ -1,10 +1,11 @@
 from datetime import date
 from html import escape
+from typing import Union
 
 from AnyQt.QtCore import Qt
 
 from Orange.widgets.utils.localization import pl
-from orangewidget.utils.signals import summarize, PartialSummary
+from orangewidget.utils.signals import summarize, PartialSummary, LazyValue
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.tableview import TableView
 from Orange.widgets.utils.distmatrixmodel import \
@@ -12,7 +13,7 @@ from Orange.widgets.utils.distmatrixmodel import \
 
 from Orange.data import (
     StringVariable, DiscreteVariable, ContinuousVariable, TimeVariable,
-    Table
+    Table, Domain
 )
 
 from Orange.evaluation import Results
@@ -62,64 +63,65 @@ def format_variables_string(variables):
 
 
 # `format` is a good name for the argument, pylint: disable=redefined-builtin
-def format_summary_details(data, format=Qt.PlainText):
+def format_summary_details(data: Union[Table, Domain],
+                           format=Qt.PlainText, missing=None):
     """
     A function that forms the entire descriptive part of the input/output
     summary.
 
     :param data: A dataset
-    :type data: Orange.data.Table
+    :type data: Orange.data.Table or Orange.data.Domain
     :return: A formatted string
     """
     if data is None:
         return ""
 
-    if format == Qt.PlainText:
-        def b(s):
-            return s
-    else:
-        def b(s):
-            return f"<b>{s}</b>"
-
-    features_missing = ""
-    if len(data) * len(data.domain.attributes) < COMPUTE_NANS_LIMIT:
-        features_missing = missing_values(data.get_nan_frequency_attribute())
-    n_features = len(data.domain.variables) + len(data.domain.metas)
-    name = getattr(data, "name", None)
-    if name == "untitled":
+    features_missing = "" if missing is None else missing_values(missing)
+    if isinstance(data, Domain):
+        domain = data
         name = None
+        basic = ""
+    else:
+        assert isinstance(data, Table)
+        domain = data.domain
+        if not features_missing and \
+                len(data) * len(domain.attributes) < COMPUTE_NANS_LIMIT:
+            features_missing \
+                = missing_values(data.get_nan_frequency_attribute())
+        name = getattr(data, "name", None)
+        if name == "untitled":
+            name = None
+        basic = f'{len(data):n} {pl(len(data), "instance")}, '
 
-    basic = f'{len(data):n} {pl(len(data), "instance")}, ' \
-            f'{n_features} {pl(n_features, "variable")}'
+    n_features = len(domain.variables) + len(domain.metas)
+    basic += f'{n_features} {pl(n_features, "variable")}'
 
-    features = format_variables_string(data.domain.attributes)
-    features = f'Features: {features} {features_missing}'
+    features = format_variables_string(domain.attributes)
+    features = f'Features: {features}{features_missing}'
 
-    targets = format_variables_string(data.domain.class_vars)
+    targets = format_variables_string(domain.class_vars)
     targets = f'Target: {targets}'
 
-    metas = format_variables_string(data.domain.metas)
+    metas = format_variables_string(domain.metas)
     metas = f'Metas: {metas}'
 
     if format == Qt.PlainText:
-        details = ""
-        if name:
-            details += f"{name}: "
+        details = f"{name}: " if name else "Table with "
         details += f"{basic}\n{features}\n{targets}"
-        if data.domain.metas:
+        if domain.metas:
             details += f"\n{metas}"
     else:
         descs = []
         if name:
             descs.append(_nobr(f"<b><u>{escape(name)}</u></b>: {basic}"))
         else:
-            descs.append(_nobr(basic))
+            descs.append(_nobr(f"Table with {basic}"))
 
-        if data.domain.variables:
+        if domain.variables:
             descs.append(_nobr(features))
-        if data.domain.class_vars:
+        if domain.class_vars:
             descs.append(_nobr(targets))
-        if data.domain.metas:
+        if domain.metas:
             descs.append(_nobr(metas))
 
         details = '<br/>'.join(descs)
@@ -129,11 +131,11 @@ def format_summary_details(data, format=Qt.PlainText):
 
 def missing_values(value):
     if value:
-        return f'({value*100:.1f}% missing values)'
+        return f' ({value*100:.1f}% missing values)'
     elif value is None:
         return ''
     else:
-        return '(no missing values)'
+        return ' (no missing values)'
 
 
 def format_multiple_summaries(data_list, type_io='input'):
@@ -176,15 +178,31 @@ def _nobr(s):
 
 @summarize.register
 def summarize_table(data: Table):  # pylint: disable=function-redefined
-    def previewer():
-        view = TableView(selectionMode=TableView.NoSelection)
-        view.setModel(TableModel(data))
-        return view
-
     return PartialSummary(
         data.approx_len(),
         format_summary_details(data, format=Qt.RichText),
-        previewer)
+        lambda: _table_previewer(data))
+
+
+@summarize.register
+def summarize_table(data: LazyValue[Table]):
+    if data.is_cached:
+        return summarize(data.get_value())
+
+    length = getattr(data, "length", "?")
+    details = format_summary_details(data.domain, format=Qt.RichText,
+                                     missing=getattr(data, "missing", None)) \
+        if hasattr(data, "domain") else "data available, but not prepared yet"
+    return PartialSummary(
+        length,
+        details,
+        lambda: _table_previewer(data.get_value()))
+
+
+def _table_previewer(data):
+    view = TableView(selectionMode=TableView.NoSelection)
+    view.setModel(TableModel(data))
+    return view
 
 
 @summarize.register
