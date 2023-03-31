@@ -54,7 +54,6 @@ jobs:
             tox_env: pyqt6
             name: PyQt6
 
-
     services:
       postgres:
         image: orangedm/postgres:11
@@ -91,6 +90,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --upgrade tox
 
+      - name: Skip testing workflows at coverage
+        if: |
+          matrix.python-version == '3.8' && matrix.tox_env == 'orange-released'
+        run: |
+          echo 'SKIP_EXAMPLE_WORKFLOWS=1' >> $GITHUB_ENV
+
       - name: Run Tox
         run: catchsegv xvfb-run -a -s "$XVFBARGS" tox -e ${{ matrix.tox_env }}
         env:
@@ -99,8 +104,7 @@ jobs:
 
       - name: Upload code coverage
         if: |
-          matrix.python-version == '3.8' &&  
-          matrix.tox_env == 'orange-released'
+          matrix.python-version == '3.8' && matrix.tox_env == 'orange-released'
         run: |
           pip install codecov
           codecov
