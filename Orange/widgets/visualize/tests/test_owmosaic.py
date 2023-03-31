@@ -200,6 +200,7 @@ class MosaicVizRankTests(WidgetTest):
 
     def setUp(self):
         self.widget = self.create_widget(OWMosaicDisplay)
+        self.widget.vizrank.max_attrs = 0
         self.vizrank = self.widget.vizrank
 
     def tearDown(self):
@@ -343,6 +344,7 @@ class MosaicVizRankTests(WidgetTest):
 
     def test_pause_continue(self):
         data = Table("housing.tab")
+        self.widget.vizrank.max_attrs = 6
         self.send_signal(self.widget.Inputs.data, data)
         self.vizrank.toggle()  # start
         self.process_events(until=lambda: self.vizrank.saved_progress > 5)
@@ -511,9 +513,13 @@ class MosaicVizRankTests(WidgetTest):
 
     def test_on_manual_change(self):
         data = Table("iris.tab")
+        self.widget.vizrank.max_attrs = 1
         self.send_signal(self.widget.Inputs.data, data)
         self.vizrank.toggle()
-        self.process_events(until=lambda: not self.vizrank.keep_running)
+        # This takes 0.5 s on my M1 Mac (2022), but let us tolerate 20x longer
+        # on CI
+        self.process_events(until=lambda: not self.vizrank.keep_running,
+                            timeout=10000)
 
         model = self.vizrank.rank_model
         attrs = model.data(model.index(3, 0), self.vizrank._AttrRole)
