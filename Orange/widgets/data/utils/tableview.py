@@ -62,6 +62,10 @@ class DataTableView(TableView):
         self.__cornerButton = btn = self.findChild(QAbstractButton)
         self.__cornerButtonFilter = DataTableView.__CornerPainter(self)
         btn.installEventFilter(self.__cornerButtonFilter)
+        # Remove default connection for corner button.
+        # Sometimes no signal is connected, so we first add a dummy connection
+        # to prevent disconnect from failing.
+        btn.clicked.connect(lambda _: None)
         btn.disconnect()
         btn.clicked.connect(self.cornerButtonClicked)
         if sys.platform == "darwin":
