@@ -838,29 +838,34 @@ class TestOWMergeData(WidgetTest):
 
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
 
         widget.attr_boxes.set_state([(INSTANCEID, INSTANCEID)])
         widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.attr_boxes.set_state([(INDEX, INDEX)])
         widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.attr_boxes.set_state([(x, x)])
         widget.commit.now()
         self.assertTrue(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.LeftJoin
         widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.InnerJoin
@@ -868,30 +873,80 @@ class TestOWMergeData(WidgetTest):
         widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.attr_boxes.set_state([(d, d)])
         widget.commit.now()
         self.assertTrue(widget.Error.nonunique_left.is_shown())
         self.assertTrue(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.LeftJoin
         widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertTrue(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.InnerJoin
         widget.commit.now()
         self.assertTrue(widget.Error.nonunique_left.is_shown())
         self.assertTrue(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         self.send_signal(widget.Inputs.data, None)
         self.send_signal(widget.Inputs.extra_data, None)
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
+        self.assertIsNone(self.get_output(widget.Outputs.data))
+
+    def test_nonunique_warning(self):
+        widget = self.widget
+        x = ContinuousVariable("x")
+        d = DiscreteVariable("d", values=tuple("abc"))
+        domain = Domain([x, d], [])
+        dataA = Table.from_numpy(
+            domain, np.array([[1.0, 0], [2, 1]]))
+        dataB = Table.from_numpy(
+            domain, np.array([[1.0, 0], [2, 1], [3, 1], [3, 1]]))
+        dataB.ids = dataA.ids
+
+
+        self.send_signal(widget.Inputs.data, dataA)
+        self.send_signal(widget.Inputs.extra_data, dataB)
+        widget.attr_boxes.set_state([(x, x)])
+
+        widget.merging = widget.LeftJoin
+        widget.commit.now()
+        self.assertFalse(widget.Error.nonunique_left.is_shown())
+        self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertTrue(widget.Warning.nonunique_right.is_shown())
+        self.assertIsNotNone(self.get_output(widget.Outputs.data))
+
+        widget.merging = widget.InnerJoin
+        widget.commit.now()
+        self.assertFalse(widget.Error.nonunique_left.is_shown())
+        self.assertTrue(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
+        self.assertIsNone(self.get_output(widget.Outputs.data))
+
+        widget.merging = widget.OuterJoin
+        widget.attr_boxes.set_state([(x, x), (d, d)])
+        widget.commit.now()
+        self.assertFalse(widget.Error.nonunique_left.is_shown())
+        self.assertTrue(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
+        self.assertIsNone(self.get_output(widget.Outputs.data))
+
+        self.send_signal(widget.Inputs.data, None)
+        self.send_signal(widget.Inputs.extra_data, None)
+        self.assertFalse(widget.Error.nonunique_left.is_shown())
+        self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
     def test_invalide_pairs(self):

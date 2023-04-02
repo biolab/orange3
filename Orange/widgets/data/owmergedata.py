@@ -294,6 +294,11 @@ class OWMergeData(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         renamed_vars = Msg("Some variables have been renamed "
                            "to avoid duplicates.\n{}")
+        nonunique_right = Msg(
+            "Some combinations of values on the right appear in multiple rows."
+            "\n"
+            "Merge is possible, though, because these combinations do not "
+            "appear on the left.")
 
     class Error(widget.OWWidget.Error):
         matching_numeric_with_nonnum = Msg(
@@ -443,13 +448,32 @@ class OWMergeData(widget.OWWidget):
     def _check_uniqueness(self, left, left_mask, right, right_mask):
         ok = True
         masked_right = right[right_mask]
-        if len(set(map(tuple, masked_right))) != len(masked_right):
-            self.Error.nonunique_right()
-            ok = False
-        if self.merging != self.LeftJoin:
+        right_set = set(map(tuple, masked_right))
+        if self.merging == self.LeftJoin:
+            # Left join requires that used elements on the right are unique
+            # It also detect non-unique unused elements and warns about them
+            # to alert the user about the possible future problems when using
+            # this table in merge
+            if len(right_set) != len(masked_right):
+                # In the sum, repeated elements from masked_right are counted
+                # multiple time; in intersection, they're counted once
+                masked_left = left[left_mask]
+                left_set = set(map(tuple, masked_left))
+                if sum(tuple(mr) in left_set for mr in masked_right) \
+                        == len(right_set & left_set):
+                    self.Warning.nonunique_right()
+                else:
+                    self.Error.nonunique_right()
+                    ok = False
+        else:
+            # Other two joins require unique elements on left and right
             masked_left = left[left_mask]
-            if len(set(map(tuple, masked_left))) != len(masked_left):
+            left_set = set(map(tuple, masked_left))
+            if len(left_set) != len(masked_left):
                 self.Error.nonunique_left()
+                ok = False
+            if len(right_set) != len(masked_right):
+                self.Error.nonunique_right()
                 ok = False
         return ok
 
