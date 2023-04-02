@@ -856,7 +856,7 @@ class TestOWMergeData(WidgetTest):
 
         widget.attr_boxes.set_state([(x, x)])
         widget.commit.now()
-        self.assertTrue(widget.Error.nonunique_left.is_shown())
+        self.assertTrue(widget.Error.nonunique_left_matched.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
         self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
@@ -878,22 +878,22 @@ class TestOWMergeData(WidgetTest):
 
         widget.attr_boxes.set_state([(d, d)])
         widget.commit.now()
-        self.assertTrue(widget.Error.nonunique_left.is_shown())
-        self.assertTrue(widget.Error.nonunique_right.is_shown())
+        self.assertTrue(widget.Error.nonunique_left_matched.is_shown())
+        self.assertTrue(widget.Error.nonunique_right_matched.is_shown())
         self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.LeftJoin
         widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
-        self.assertTrue(widget.Error.nonunique_right.is_shown())
+        self.assertTrue(widget.Error.nonunique_right_matched.is_shown())
         self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.InnerJoin
         widget.commit.now()
-        self.assertTrue(widget.Error.nonunique_left.is_shown())
-        self.assertTrue(widget.Error.nonunique_right.is_shown())
+        self.assertTrue(widget.Error.nonunique_left_matched.is_shown())
+        self.assertTrue(widget.Error.nonunique_right_matched.is_shown())
         self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
@@ -924,21 +924,30 @@ class TestOWMergeData(WidgetTest):
         widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Error.nonunique_left_matched.is_shown())
+        self.assertFalse(widget.Error.nonunique_right_matched.is_shown())
+        self.assertFalse(widget.Warning.nonunique_left.is_shown())
         self.assertTrue(widget.Warning.nonunique_right.is_shown())
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.InnerJoin
         widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
-        self.assertTrue(widget.Error.nonunique_right.is_shown())
-        self.assertFalse(widget.Warning.nonunique_right.is_shown())
-        self.assertIsNone(self.get_output(widget.Outputs.data))
+        self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Error.nonunique_left_matched.is_shown())
+        self.assertFalse(widget.Error.nonunique_right_matched.is_shown())
+        self.assertFalse(widget.Warning.nonunique_left.is_shown())
+        self.assertTrue(widget.Warning.nonunique_right.is_shown())
+        self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
         widget.merging = widget.OuterJoin
         widget.attr_boxes.set_state([(x, x), (d, d)])
         widget.commit.now()
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertTrue(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Error.nonunique_left_matched.is_shown())
+        self.assertFalse(widget.Error.nonunique_right_matched.is_shown())
+        self.assertFalse(widget.Warning.nonunique_left.is_shown())
         self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
 
@@ -946,8 +955,64 @@ class TestOWMergeData(WidgetTest):
         self.send_signal(widget.Inputs.extra_data, None)
         self.assertFalse(widget.Error.nonunique_left.is_shown())
         self.assertFalse(widget.Error.nonunique_right.is_shown())
+        self.assertFalse(widget.Error.nonunique_left_matched.is_shown())
+        self.assertFalse(widget.Error.nonunique_right_matched.is_shown())
+        self.assertFalse(widget.Warning.nonunique_left.is_shown())
         self.assertFalse(widget.Warning.nonunique_right.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
+
+    def test_check_uniqueness(self):
+        # Above test_nonunique and test_nonunique_warning tests a larger
+        # flow within the widget; this one tests the particular function,
+        # check_uniqueneess, which performs the check
+
+        def test(left, right, indicators):
+            aleft = np.vstack((left, np.zeros(len(left)))).T
+            aright = np.vstack((right, np.zeros(len(right)))).T
+            for w.merging, indi, msg in zip(
+                    (w.LeftJoin, w.InnerJoin, w.OuterJoin),
+                    indicators,
+                    ("left", "inner", "outer")):
+                if isinstance(indi, int):
+                    indi = (indi, )
+                w.Error.clear()
+                w.Warning.clear()
+                w._check_uniqueness(np.array(aleft), mask[:len(left)],
+                                    np.array(aright), mask[:len(right)])
+                self.assertIs(w.Error.nonunique_left_matched.is_shown(), elm in indi, msg)
+                self.assertIs(w.Error.nonunique_right_matched.is_shown(), erm in indi, msg)
+                self.assertIs(w.Error.nonunique_left.is_shown(), el in indi, msg)
+                self.assertIs(w.Error.nonunique_right.is_shown(), er in indi, msg)
+                self.assertIs(w.Warning.nonunique_left.is_shown(), wl in indi, msg)
+                self.assertIs(w.Warning.nonunique_right.is_shown(), wr in indi, msg)
+
+        mask = np.array([False, False, True, True, True, True])
+        seq1234 = (0, 0, 1, 2, 3, 4)
+        seq567 = (0, 0, 5, 6, 7)
+        seq1233 = (0, 0, 1, 2, 3, 3)
+        seq1255 = (0, 0, 1, 2, 5, 5)
+        wl, wr, elm, erm, el, er = range(6)
+        w = self.widget
+
+        # no duplicates
+        test(seq1234, seq567, [()] * 3)
+        test(seq1234, seq1234, [()] * 3)
+
+        # used duplicates on right: always error
+        test(seq1234, seq1233, [erm, erm, er])
+
+        # unused duplicates on right: error on outer, warning elsewhere
+        test(seq1234, seq1255, [wr, wr, er])
+
+        # (unused) duplicates on left: left is ok, inner warns, outer errors
+        test(seq1255, seq1234, [(), wl, el])
+
+        # duplicates on both sides: always error
+        test(seq1255, seq1255, [erm, (elm, erm), (el, er)])
+
+        # unused duplicates on both sides:
+        # left warns about right, inner warns both, outer errors both
+        test(seq1233, seq1255, [wr, (wl, wr), (el, er)])
 
     def test_invalide_pairs(self):
         widget = self.widget
