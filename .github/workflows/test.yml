@@ -45,7 +45,7 @@ jobs:
             python-version: '3.10'
             tox_env: orange-latest
             name: Latest
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             python-version: 3.8
             tox_env: orange-oldest
             name: Oldest dependencies
