@@ -568,7 +568,7 @@ class OWMosaicDisplay(OWWidget):
             create_annotated_table(self.data, sel_idx))
 
     def send_report(self):
-        self.report_plot(self.canvas)
+        self.report_plot()
 
     def update_graph(self):
         spacing = self.SPACING

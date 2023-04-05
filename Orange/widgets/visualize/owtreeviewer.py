@@ -392,7 +392,7 @@ class OWTreeGraph(OWTreeViewer2D):
         elif self.regression_colors != self.COL_DEFAULT:
             items.append(("Color by", self.COL_OPTIONS[self.regression_colors]))
         self.report_items(items)
-        self.report_plot(self.scene)
+        self.report_plot()
 
     def update_node_info(self, node):
         if self.tree_adapter.has_children(node.node_inst) and not self.show_intermediate:
