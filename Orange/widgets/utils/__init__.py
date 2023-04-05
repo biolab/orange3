@@ -167,7 +167,7 @@ def instance_tooltip(domain, row, skip_attrs=()):
             return ""
         n_vars = len(_vars)
         if n_vars > max_shown:
-            cols[-1] = "... and {} others".format(n_vars - max_shown + 1)
+            cols[-1] = f'... and {n_vars - max_shown + 1} others'
         return \
             "<b>{}</b>:<br/>".format(singular if n_vars < 2 else plural) \
             + "<br/>".join(cols)

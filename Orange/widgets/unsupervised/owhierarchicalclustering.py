@@ -17,6 +17,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
+from Orange.widgets.utils.localization import pl
 from orangewidget.utils.itemmodels import PyListModel
 
 import Orange.data
@@ -1044,7 +1045,7 @@ class OWHierarchicalClustering(widget.OWWidget):
         elif self.selection_method == 1:
             sel = "at {:.1f} of height".format(self.cut_ratio)
         else:
-            sel = f"top {self.top_n} clusters"
+            sel = f"top {self.top_n} {pl(self.top_n, 'cluster')}"
         self.report_items((
             ("Linkage", LINKAGE[self.linkage]),
             ("Annotation", annot),
