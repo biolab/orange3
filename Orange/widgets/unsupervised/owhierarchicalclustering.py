@@ -217,7 +217,7 @@ class OWHierarchicalClustering(widget.OWWidget):
 
     autocommit = settings.Setting(True)
 
-    graph_name = "scene"
+    graph_name = "scene"  # QGraphicsScene
 
     basic_annotations = [None, "Enumeration"]
 

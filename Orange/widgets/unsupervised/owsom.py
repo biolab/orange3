@@ -199,7 +199,7 @@ class OWSOM(OWWidget):
     pie_charts = Setting(False)
     selection = Setting(None, schema_only=True)
 
-    graph_name = "view"
+    graph_name = "view"  # QGraphicsView
 
     _grid_pen = QPen(QBrush(QColor(224, 224, 224)), 2)
     _grid_pen.setCosmetic(True)

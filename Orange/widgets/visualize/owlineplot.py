@@ -735,7 +735,7 @@ class OWLinePlot(OWWidget):
     selection = Setting(None, schema_only=True)
     visual_settings = Setting({}, schema_only=True)
 
-    graph_name = "graph.plotItem"
+    graph_name = "graph.plotItem"  # QGraphicsScene (pg.PlotWidget -> LinePlotGraph)
 
     class Error(OWWidget.Error):
         not_enough_attrs = Msg("Need at least one numeric feature.")

@@ -296,7 +296,7 @@ class OWDistanceMap(widget.OWWidget):
 
     autocommit = settings.Setting(True)
 
-    graph_name = "grid_widget"
+    graph_name = "grid_widget" # pg.GraphicsItem (pg.GraphicsWidget)
 
     # Disable clustering for inputs bigger than this
     _MaxClustering = 25000

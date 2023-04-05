@@ -158,7 +158,7 @@ class OWLiftCurve(widget.OWWidget):
     auto_commit = settings.Setting(True)
     visual_settings = settings.Setting({}, schema_only=True)
 
-    graph_name = "plot"
+    graph_name = "plot"  # pg.GraphicsItem (pg.PlotItem)
 
     XLabels = ("P Rate", "P Rate", "Recall")
     YLabels = ("Lift", "TP Rate", "Precision")

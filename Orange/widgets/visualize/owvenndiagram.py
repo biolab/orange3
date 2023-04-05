@@ -97,7 +97,7 @@ class OWVennDiagram(widget.OWWidget):
     selected_feature = ContextSetting(IDENTITY_STR)
 
     want_main_area = False
-    graph_name = "scene"
+    graph_name = "scene"  # QGraphicsScene
     atr_types = ['attributes', 'metas', 'class_vars']
     atr_vals = {'metas': 'metas', 'attributes': 'X', 'class_vars': 'Y'}
     row_vals = {'attributes': 'x', 'class_vars': 'y', 'metas': 'metas'}

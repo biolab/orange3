@@ -321,7 +321,7 @@ class OWMosaicDisplay(OWWidget):
                    QColor(110, 110, 255), QColor(0, 0, 255)]
     RED_COLORS = [QColor(255, 255, 255), QColor(255, 200, 200),
                   QColor(255, 100, 100), QColor(255, 0, 0)]
-    graph_name = "canvas"
+    graph_name = "canvas"  # QGraphicsScene
 
     attrs_changed_manually = Signal(list)
 

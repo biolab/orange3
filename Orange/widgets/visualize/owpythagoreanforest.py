@@ -219,9 +219,6 @@ class OWPythagoreanForest(OWWidget):
     class Outputs:
         tree = Output("Tree", TreeModel)
 
-    # Enable the save as feature
-    graph_name = 'scene'
-
     # Settings
     settingsHandler = settings.ClassValuesContextHandler()
 

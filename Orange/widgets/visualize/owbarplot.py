@@ -391,7 +391,7 @@ class OWBarPlot(OWWidget):
     visual_settings = Setting({}, schema_only=True)
 
     graph = SettingProvider(BarPlotGraph)
-    graph_name = "graph.plotItem"
+    graph_name = "graph.plotItem"  # QGraphicsView (pg.PlotWidget -> BarPlotGraph)
 
     class Error(OWWidget.Error):
         no_cont_features = Msg("Plotting requires a numeric feature.")

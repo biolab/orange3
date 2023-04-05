@@ -387,7 +387,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
 
     GRAPH_CLASS = OWScatterPlotBase
     graph = SettingProvider(OWScatterPlotBase)
-    graph_name = "graph.plot_widget.plotItem"
+    graph_name = "graph.plot_widget.plotItem"  # pg.GraphicsItem  (pg.PlotItem)
     embedding_variables_names = ("proj-x", "proj-y")
     buttons_area_orientation = Qt.Vertical
 

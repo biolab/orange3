@@ -48,7 +48,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
     selected_var_indices = settings.ContextSetting([])
     auto_commit = Setting(True)
 
-    graph_name = "plot.plotItem"
+    graph_name = "plot.plotItem"  # QGraphicsView (pg.PlotWidget)
 
     class Error(widget.OWWidget.Error):
         empty_data = widget.Msg("Empty dataset")

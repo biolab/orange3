@@ -54,7 +54,7 @@ class OWPythagorasTree(OWWidget):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     # Enable the save as feature
-    graph_name = 'scene'
+    graph_name = 'scene'  # QGraphicsScene (TreeGraphicsScene)
 
     # Settings
     settingsHandler = settings.ClassValuesContextHandler()

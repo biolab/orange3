@@ -287,7 +287,7 @@ class OWDistributions(OWWidget):
 
     auto_apply = settings.Setting(True)
 
-    graph_name = "plot"
+    graph_name = "plot"  # pg.GraphicsItem (pg.ViewBox)
 
     Fitters = (
         ("None", None, (), ()),

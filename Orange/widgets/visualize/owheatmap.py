@@ -187,7 +187,7 @@ class OWHeatMap(widget.OWWidget):
 
     auto_commit = settings.Setting(True)
 
-    graph_name = "scene"
+    graph_name = "scene"  # QGraphicsScene (HeatmapScene)
 
     class Information(widget.OWWidget.Information):
         sampled = Msg("Data has been sampled")
