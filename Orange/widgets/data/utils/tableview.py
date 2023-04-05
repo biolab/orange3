@@ -62,7 +62,7 @@ class DataTableView(TableView):
         self.__cornerButton = btn = self.findChild(QAbstractButton)
         self.__cornerButtonFilter = DataTableView.__CornerPainter(self)
         btn.installEventFilter(self.__cornerButtonFilter)
-        btn.disconnect()
+        btn.clicked.disconnect(self.selectAll)
         btn.clicked.connect(self.cornerButtonClicked)
         if sys.platform == "darwin":
             btn.setAttribute(Qt.WA_MacSmallSize)
