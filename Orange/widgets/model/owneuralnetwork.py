@@ -20,6 +20,7 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 from Orange.widgets.utils.concurrent import ThreadExecutor, FutureWatcher
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from orangewidget.report import bool_str
 
 
 class Task(QObject):
@@ -187,7 +188,7 @@ class OWNNLearner(OWBaseLearner):
                 ("Solver", self.solv_lbl[self.solver_index]),
                 ("Alpha", self.alpha),
                 ("Max iterations", self.max_iterations),
-                ("Replicable training", self.replicable))
+                ("Replicable training", bool_str(self.replicable)))
 
     def get_hidden_layers(self):
         self.Warning.no_layers.clear()
