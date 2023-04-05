@@ -11,6 +11,8 @@ from AnyQt.QtWidgets import QFormLayout, QLabel
 from AnyQt.QtCore import Qt, QThread, QObject
 from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
+from orangewidget.report import bool_str
+
 from Orange.data import Table
 from Orange.modelling import NNLearner
 from Orange.widgets import gui
@@ -20,7 +22,6 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 
 from Orange.widgets.utils.concurrent import ThreadExecutor, FutureWatcher
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from orangewidget.report import bool_str
 
 
 class Task(QObject):

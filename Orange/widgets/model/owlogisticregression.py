@@ -2,6 +2,8 @@ from itertools import chain
 import numpy as np
 from AnyQt.QtCore import Qt
 
+from orangewidget.report import bool_str
+
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.classification.logistic_regression import LogisticRegressionLearner
 from Orange.widgets import settings, gui
@@ -9,7 +11,6 @@ from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.signals import Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg
-from orangewidget.report import bool_str
 
 
 class OWLogisticRegression(OWBaseLearner):
