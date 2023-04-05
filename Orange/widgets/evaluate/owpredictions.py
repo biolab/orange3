@@ -917,15 +917,15 @@ class OWPredictions(OWWidget):
             if self.is_discrete_class and self.shown_probs != self.NO_PROBS:
                 text += '<br>Showing probabilities for '
                 if self.shown_probs == self.MODEL_PROBS:
-                    text += "all classes known to the model"
+                    text += "all classes known to the model."
                 elif self.shown_probs == self.DATA_PROBS:
-                    text += "all classes that appear in the data"
+                    text += "all classes that appear in the data."
                 elif self.shown_probs == self.BOTH_PROBS:
                     text += "all classes that appear in the data " \
-                            "and are known to the model"
+                            "and are known to the model."
                 else:
                     class_idx = self.shown_probs - len(self.PROB_OPTS)
-                    text += f"'{self.class_var.values[class_idx]}'"
+                    text += f"'{self.class_var.values[class_idx]}.'"
             self.report_paragraph('Info', text)
             self.report_table("Data & Predictions", merge_data_with_predictions(),
                               header_rows=1, header_columns=1)
