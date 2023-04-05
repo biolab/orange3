@@ -8,6 +8,7 @@ from Orange.data import Table
 from Orange.modelling.tree import TreeLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 
@@ -91,11 +92,14 @@ class OWTreeLearner(OWBaseLearner):
         from Orange.widgets.report import plural_w
         items = OrderedDict()
         items["Pruning"] = ", ".join(s for s, c in (
-            (plural_w("at least {number} instance{s} in leaves",
-                      self.min_leaf), self.limit_min_leaf),
-            (plural_w("at least {number} instance{s} in internal nodes",
-                      self.min_internal), self.limit_min_internal),
-            ("maximum depth {}".format(self.max_depth), self.limit_depth)
+            (f'at least {self.min_leaf} '
+             f'{pl(self.min_leaf, "instance")} in leaves',
+             self.limit_min_leaf),
+            (f'at least {self.min_internal} '
+             f'{pl(self.min_internal, "instance")} in internal nodes',
+             self.limit_min_internal),
+            (f'maximum depth {self.max_depth}',
+             self.limit_depth)
         ) if c) or "None"
         if self.limit_majority:
             items["Splitting"] = "Stop splitting when majority reaches %d%% " \
