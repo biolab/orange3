@@ -11,6 +11,8 @@ from AnyQt.QtWidgets import QFormLayout, QLabel
 from AnyQt.QtCore import Qt, QThread, QObject
 from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 
+from orangewidget.report import bool_str
+
 from Orange.data import Table
 from Orange.modelling import NNLearner
 from Orange.widgets import gui
@@ -187,7 +189,7 @@ class OWNNLearner(OWBaseLearner):
                 ("Solver", self.solv_lbl[self.solver_index]),
                 ("Alpha", self.alpha),
                 ("Max iterations", self.max_iterations),
-                ("Replicable training", self.replicable))
+                ("Replicable training", bool_str(self.replicable)))
 
     def get_hidden_layers(self):
         self.Warning.no_layers.clear()

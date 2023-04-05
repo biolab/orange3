@@ -2,6 +2,8 @@ from itertools import chain
 import numpy as np
 from AnyQt.QtCore import Qt
 
+from orangewidget.report import bool_str
+
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.classification.logistic_regression import LogisticRegressionLearner
 from Orange.widgets import settings, gui
@@ -133,9 +135,9 @@ class OWLogisticRegression(OWBaseLearner):
         self.Outputs.coefficients.send(coef_table)
 
     def get_learner_parameters(self):
-        return (("Regularization", "{}, C={}, class weights={}".format(
+        return (("Regularization", "{}, C={}, class weights: {}".format(
             self.penalty_types[self.penalty_type], self.C_s[self.C_index],
-            self.class_weight)),)
+            bool_str(self.class_weight))),)
 
 
 def create_coef_table(classifier):
