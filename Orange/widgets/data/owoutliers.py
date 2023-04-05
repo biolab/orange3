@@ -6,6 +6,7 @@ import numpy as np
 from AnyQt.QtCore import Signal, Qt
 from AnyQt.QtWidgets import QWidget, QVBoxLayout
 
+from orangewidget.report import bool_str
 from orangewidget.settings import SettingProvider
 
 from Orange.base import Learner
@@ -95,6 +96,11 @@ class SVMEditor(ParametersEditor):
         return {"nu": self.nu / 100,
                 "gamma": self.gamma}
 
+    def get_report_parameters(self):
+        return {"Detection method": "One class SVM with non-linear kernel (RBF)",
+                 "Regularization (nu)": f"{self.nu/100:.0%}",
+                 "Kernel coefficient": self.gamma}
+
 
 class CovarianceEditor(ParametersEditor):
     cont = Setting(10)
@@ -120,10 +126,17 @@ class CovarianceEditor(ParametersEditor):
         return {"contamination": self.cont / 100,
                 "support_fraction": fraction}
 
+    def get_report_parameters(self):
+        fraction = self.support_fraction if self.empirical_covariance else None
+        return {"Detection method": "Covariance estimator",
+                "Contamination": f"{self.cont/100:.0%}",
+                 "Support fraction": fraction}
+
 
 class LocalOutlierFactorEditor(ParametersEditor):
     METRICS = ("euclidean", "manhattan", "cosine", "jaccard",
                "hamming", "minkowski")
+    METRICS_NAMES = ["Euclidean", "Manhattan", "Cosine", "Jaccard", "Hamming", "Minkowski"]
 
     n_neighbors = Setting(20)
     cont = Setting(10)
@@ -140,14 +153,22 @@ class LocalOutlierFactorEditor(ParametersEditor):
                  minv=1, maxv=100000, callback=self.parameter_changed)
         gui.comboBox(self.param_box, self, "metric_index", label="Metric:",
                      orientation=Qt.Horizontal,
-                     items=[m.capitalize() for m in self.METRICS],
+                     items=self.METRICS_NAMES,
                      callback=self.parameter_changed)
 
     def get_parameters(self):
         return {"n_neighbors": self.n_neighbors,
                 "contamination": self.cont / 100,
                 "algorithm": "brute",  # works faster for big datasets
+                # pylint: disable=invalid-sequence-index
                 "metric": self.METRICS[self.metric_index]}
+
+    def get_report_parameters(self):
+        return {"Detection method": "Local Outlier Factor",
+                 "Contamination": f"{self.cont/100:.0%}",
+                 "Number of neighbors": self.n_neighbors,
+                 # pylint: disable=invalid-sequence-index
+                 "Metric": self.METRICS_NAMES[self.metric_index]}
 
 
 class IsolationForestEditor(ParametersEditor):
@@ -168,6 +189,10 @@ class IsolationForestEditor(ParametersEditor):
         return {"contamination": self.cont / 100,
                 "random_state": 42 if self.replicable else None}
 
+    def get_report_parameters(self):
+        return {"Detection method": "Isolation Forest",
+                "Contamination": f"{self.cont/100:.0%}",
+                "Replicable training": bool_str(self.replicable)}
 
 class OWOutliers(OWWidget, ConcurrentWidgetMixin):
     name = "Outliers"
@@ -310,41 +335,15 @@ class OWOutliers(OWWidget, ConcurrentWidgetMixin):
         super().onDeleteWidget()
 
     def send_report(self):
-        if self.n_outliers is None or self.n_inliers is None:
-            return
-        self.report_items("Data",
-                          (("Input instances", len(self.data)),
-                           ("Inliers", self.n_inliers),
-                           ("Outliers", self.n_outliers)))
-
-        params = self.current_editor.get_parameters()
-        if self.outlier_method == self.OneClassSVM:
-            self.report_items(
-                "Detection",
-                (("Detection method",
-                  "One class SVM with non-linear kernel (RBF)"),
-                 ("Regularization (nu)", params["nu"]),
-                 ("Kernel coefficient", params["gamma"])))
-        elif self.outlier_method == self.Covariance:
-            self.report_items(
-                "Detection",
-                (("Detection method", "Covariance estimator"),
-                 ("Contamination", params["contamination"]),
-                 ("Support fraction", params["support_fraction"])))
-        elif self.outlier_method == self.LOF:
-            self.report_items(
-                "Detection",
-                (("Detection method", "Local Outlier Factor"),
-                 ("Contamination", params["contamination"]),
-                 ("Number of neighbors", params["n_neighbors"]),
-                 ("Metric", params["metric"])))
-        elif self.outlier_method == self.IsolationForest:
-            self.report_items(
-                "Detection",
-                (("Detection method", "Isolation Forest"),
-                 ("Contamination", params["contamination"])))
-        else:
-            raise NotImplementedError
+        if self.data is not None:
+            if self.n_outliers is None or self.n_inliers is None:
+                return
+            self.report_items("Data",
+                              (("Input instances", len(self.data)),
+                               ("Inliers", self.n_inliers),
+                               ("Outliers", self.n_outliers)))
+        self.report_items("Detection",
+                          self.current_editor.get_report_parameters())
 
     @classmethod
     def migrate_settings(cls, settings: Dict, version: int):
