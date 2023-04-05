@@ -35,7 +35,7 @@ class OWSaveDistances(OWSaveBase):
 
     def send_report(self):
         self.report_items((
-            ("Input:", "none" if self.data is None else self._description()),
+            ("Input", "none" if self.data is None else self._description()),
             ("File name", self.filename or "not set")))
 
     def _description(self):

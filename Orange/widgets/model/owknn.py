@@ -57,8 +57,8 @@ class OWKNNLearner(OWBaseLearner):
 
     def get_learner_parameters(self):
         return (("Number of neighbours", self.n_neighbors),
-                ("Metric", self.metrics[self.metric_index].capitalize()),
-                ("Weight", self.weights[self.weight_index].capitalize()))
+                ("Metric", self.metrics_options[self.metric_index]),
+                ("Weight", self.weights_options[self.weight_index]))
 
 
 if __name__ == "__main__":  # pragma: no cover

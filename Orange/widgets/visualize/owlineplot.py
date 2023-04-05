@@ -713,6 +713,7 @@ class OWLinePlot(OWWidget):
     description = "Visualization of data profiles (e.g., time series)."
     icon = "icons/LinePlot.svg"
     priority = 180
+    keywords = "line plot"
 
     buttons_area_orientation = Qt.Vertical
     enable_selection = Signal(bool)
