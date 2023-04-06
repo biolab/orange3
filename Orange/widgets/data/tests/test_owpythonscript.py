@@ -1,30 +1,25 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, unused-wildcard-import
 # pylint: disable=wildcard-import, protected-access
+import os
 import sys
 import unittest
 from unittest.mock import patch
 
-from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
+from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent
 
-from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
+from Orange.data import Table
 from Orange.tests import named_file
-from Orange.widgets.data.owpythonscript import OWPythonScript, \
-    read_file_content, Script, OWPythonScriptDropHandler
+from Orange.widgets.data.owpythonscript import (
+    OWPythonScript,
+    OWPythonScriptDropHandler,
+    Script,
+    read_file_content,
+)
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.widget import OWWidget, Input
-
-# import tests for python editor
-from Orange.widgets.data.utils.pythoneditor.tests.test_api import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_bracket_highlighter import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_draw_whitespace import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_edit import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_indent import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_indenter.test_python import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_rectangular_selection import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_vim import *
+from Orange.widgets.widget import Input, OWWidget
 
 
 class TestOWPythonScript(WidgetTest):
