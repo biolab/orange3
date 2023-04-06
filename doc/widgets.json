@@ -446,7 +446,10 @@
     "doc": "visual-programming/source/widgets/visualize/lineplot.md",
     "icon": "../Orange/widgets/visualize/icons/LinePlot.svg",
     "background": "#FFB7B1",
-    "keywords": []
+    "keywords": [
+     "line",
+     "plot"
+    ]
    },
    {
     "text": "Bar Plot",
