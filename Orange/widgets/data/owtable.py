@@ -115,6 +115,7 @@ class OWTable(OWWidget):
         )
         view.setSortingEnabled(True)
         view.setItemDelegate(TableDataDelegate(view))
+        view.selectionFinished.connect(self.update_selection)
 
         if self.select_rows:
             view.setSelectionBehavior(QTableView.SelectRows)
@@ -225,7 +226,6 @@ class OWTable(OWWidget):
 
         # update the header (attribute names)
         self._update_variable_labels()
-        view.selectionFinished.connect(self.update_selection)
 
     def _update_input_summary(self):
         def format_summary(summary):
