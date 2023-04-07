@@ -159,11 +159,12 @@ class TestOWOutliers(WidgetTest):
         self.wait_until_finished()
         self.widget.send_report()
         mocked_report.assert_called()
+        self.assertEqual(mocked_report.call_count, 2)
         mocked_report.reset_mock()
 
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.send_report()
-        mocked_report.assert_not_called()
+        mocked_report.assert_called_once()
 
     def test_migrate_settings(self):
         settings = {"cont": 20, "empirical_covariance": True,
