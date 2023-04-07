@@ -763,7 +763,7 @@ class OWViolinPlot(OWWidget):
     selection_ranges = Setting([], schema_only=True)
     visual_settings = Setting({}, schema_only=True)
 
-    graph_name = "graph.plotItem"
+    graph_name = "graph.plotItem"  # QGraphicsView (pg.PlotWidget -> ViolinPlot)
     buttons_area_orientation = None
 
     def __init__(self):

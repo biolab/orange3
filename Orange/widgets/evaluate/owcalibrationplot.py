@@ -137,7 +137,7 @@ class OWCalibrationPlot(widget.OWWidget):
     visual_settings = settings.Setting({}, schema_only=True)
     auto_commit = settings.Setting(True)
 
-    graph_name = "plot"
+    graph_name = "plot"  # pg.GraphicsItem (pg.PlotItem)
 
     def __init__(self):
         super().__init__()

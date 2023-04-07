@@ -44,7 +44,7 @@ class OWPCA(widget.OWWidget):
     maxp = settings.Setting(20)
     axis_labels = settings.Setting(10)
 
-    graph_name = "plot.plotItem"
+    graph_name = "plot.plotItem"  # QGraphicsView (pg.PlotWidget -> SliderGraph)
 
     class Warning(widget.OWWidget.Warning):
         trivial_components = widget.Msg(

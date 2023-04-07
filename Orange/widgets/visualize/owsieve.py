@@ -85,7 +85,7 @@ class OWSieveDiagram(OWWidget):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
-    graph_name = "canvas"
+    graph_name = "canvas"  # QGraphicsScene
 
     want_control_area = False
 

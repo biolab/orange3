@@ -321,7 +321,7 @@ class OWMosaicDisplay(OWWidget):
                    QColor(110, 110, 255), QColor(0, 0, 255)]
     RED_COLORS = [QColor(255, 255, 255), QColor(255, 200, 200),
                   QColor(255, 100, 100), QColor(255, 0, 0)]
-    graph_name = "canvas"
+    graph_name = "canvas"  # QGraphicsScene
 
     attrs_changed_manually = Signal(list)
 
@@ -568,7 +568,7 @@ class OWMosaicDisplay(OWWidget):
             create_annotated_table(self.data, sel_idx))
 
     def send_report(self):
-        self.report_plot(self.canvas)
+        self.report_plot()
 
     def update_graph(self):
         spacing = self.SPACING

@@ -765,7 +765,7 @@ class OWPaintData(OWWidget):
     labels = Setting(["C1", "C2"], schema_only=True)
 
     buttons_area_orientation = Qt.Vertical
-    graph_name = "plot"
+    graph_name = "plot"  # pg.GraphicsItem (pg.PlotItem)
 
     class Warning(OWWidget.Warning):
         no_input_variables = Msg("Input data has no variables")

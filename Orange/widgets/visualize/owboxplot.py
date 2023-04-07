@@ -200,7 +200,7 @@ class OWBoxPlot(widget.OWWidget):
     _box_brush = QBrush(QColor(0x33, 0x88, 0xff, 0xc0))
     _attr_brush = QBrush(QColor(0x33, 0x00, 0xff))
 
-    graph_name = "box_scene"
+    graph_name = "box_scene"  # QGraphicsScene
 
     def __init__(self):
         super().__init__()
