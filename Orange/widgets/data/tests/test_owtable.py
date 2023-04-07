@@ -88,6 +88,41 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output(widget.Outputs.selected_data)
         self.assertEqual(5, len(output))
 
+    def test_pending_sorted_selection(self):
+        rows = [5, 6, 7, 8, 9, 55, 56, 57, 58, 59]
+        widget = self.create_widget(OWTable, stored_settings={
+            "stored_selection": {
+                "rows": rows,
+                "columns": list(range(len(self.data.domain.variables)))
+            },
+            "stored_sort": [("sepal length", 1), ("sepal width", -1)]
+        })
+        self.send_signal(widget.Inputs.data, None)
+        self.send_signal(widget.Inputs.data, self.data)
+        self.assertEqual(widget.view.horizontalHeader().sortIndicatorOrder(),
+                         Qt.DescendingOrder)
+        self.assertEqual(widget.view.horizontalHeader().sortIndicatorSection(), 2)
+        output = self.get_output(widget.Outputs.selected_data)
+        self.assertEqual(len(rows), len(output))
+        sepal_width = output.get_column("sepal width").tolist()
+        sepal_length = output.get_column("sepal length").tolist()
+        self.assertSequenceEqual(sepal_width, sorted(sepal_width, reverse=True))
+        dd = list(zip(sepal_length, sepal_width))
+        dd_sorted = sorted(dd, key=lambda t: t[0])
+        dd_sorted = sorted(dd_sorted, key=lambda t: t[1], reverse=True)
+        self.assertSequenceEqual(dd, dd_sorted)
+        ids = self.data[rows].ids
+        self.assertSetEqual(set(output.ids), set(ids))
+
+    def test_missing_sort_column_shows_warning(self):
+        widget = self.create_widget(OWTable, stored_settings={
+            "stored_sort": [("sepal length", 1), ("no such column", -1)]
+        })
+        self.send_signal(widget.Inputs.data, self.data)
+        self.assertTrue(widget.Warning.missing_sort_columns.is_shown())
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(widget.Warning.missing_sort_columns.is_shown())
+
     def test_sorting(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.set_selection(
@@ -99,7 +134,7 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         output_original = output.tolist()
 
         self.widget.view.sortByColumn(1, Qt.AscendingOrder)
-
+        self.assertEqual(self.widget.stored_sort, [('sepal length', 1)])
         output = self.get_output(self.widget.Outputs.selected_data)
         output = output.get_column(0)
         output_sorted = output.tolist()
@@ -114,6 +149,11 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         self.widget.restore_order()
         output = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(output.get_column(0).tolist(), output_original)
+
+        # Check that output is the same with no sorting and cleared selection.
+        self.widget.set_selection([], [])
+        output = self.get_output(self.widget.Outputs.selected_data)
+        self.assertIs(output, self.data)
 
     def test_info(self):
         info_text = self.widget.info_text
