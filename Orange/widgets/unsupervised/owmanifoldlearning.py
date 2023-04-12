@@ -23,6 +23,7 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         QWidget.__init__(self, parent)
         gui.OWComponent.__init__(self, parent)
         self.parameters = {}
+        self.parameters_name = {}
         self.parent_callback = parent.settings_changed
 
         layout = QFormLayout()
@@ -65,6 +66,7 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         index = getattr(self, name + "_index")
         values = getattr(self, name + "_values")
         self.parameters[name] = values[index][0]
+        self.parameters_name[name] = values[index][1]
 
     def _create_radio_parameter(self, name, label):
         self.__radio_parameter_update(name)
@@ -85,12 +87,14 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         index = getattr(self, name + "_index")
         values = getattr(self, name + "_values")
         self.parameters[name] = values[index][0]
+        self.parameters_name[name] = values[index][1]
 
 
 class TSNEParametersEditor(ManifoldParametersEditor):
     _metrics = ("euclidean", "manhattan", "chebyshev", "jaccard")
     metric_index = Setting(0)
-    metric_values = [(x, x.capitalize()) for x in _metrics]
+    metric_values = [("euclidean", "Euclidean"), ("manhattan", "Manhattan"),
+                     ("chebyshev", "Chebyshev"), ("jaccard", "Jaccard")]
 
     perplexity = Setting(30)
     early_exaggeration = Setting(12)
@@ -110,6 +114,13 @@ class TSNEParametersEditor(ManifoldParametersEditor):
         self._create_spin_parameter("n_iter", 250, 10000, "Max iterations:")
         self._create_radio_parameter("initialization", "Initialization:")
 
+    def get_report_parameters(self):
+        return {"Metric": self.parameters_name["metric"],
+                "Perplexity": self.parameters["perplexity"],
+                "Early exaggeration": self.parameters["early_exaggeration"],
+                "Learning rate": self.parameters["learning_rate"],
+                "Max iterations": self.parameters["n_iter"],
+                "Initialization": self.parameters_name["initialization"]}
 
 class MDSParametersEditor(ManifoldParametersEditor):
     max_iter = Setting(300)
@@ -128,6 +139,10 @@ class MDSParametersEditor(ManifoldParametersEditor):
             par = {"n_init": 1, **par}
         return par
 
+    def get_report_parameters(self):
+        return {"Max iterations": self.parameters["max_iter"],
+                "Initialization": self.parameters_name["init_type"]}
+
 class IsomapParametersEditor(ManifoldParametersEditor):
     n_neighbors = Setting(5)
 
@@ -135,6 +150,8 @@ class IsomapParametersEditor(ManifoldParametersEditor):
         super().__init__(parent)
         self._create_spin_parameter("n_neighbors", 1, 10 ** 2, "Neighbors:")
 
+    def get_report_parameters(self):
+        return {"Neighbors": self.parameters["n_neighbors"]}
 
 class LocallyLinearEmbeddingParametersEditor(ManifoldParametersEditor):
     n_neighbors = Setting(5)
@@ -151,6 +168,10 @@ class LocallyLinearEmbeddingParametersEditor(ManifoldParametersEditor):
         self._create_spin_parameter("n_neighbors", 1, 10 ** 2, "Neighbors:")
         self._create_spin_parameter("max_iter", 10, 10 ** 4, "Max iterations:")
 
+    def get_report_parameters(self):
+        return {"Method": self.parameters_name["method"],
+                "Neighbors": self.parameters["n_neighbors"],
+                "Max iterations": self.parameters["max_iter"]}
 
 class SpectralEmbeddingParametersEditor(ManifoldParametersEditor):
     affinity_index = Setting(0)
@@ -161,6 +182,8 @@ class SpectralEmbeddingParametersEditor(ManifoldParametersEditor):
         super().__init__(parent)
         self._create_combo_parameter("affinity", "Affinity:")
 
+    def get_report_parameters(self):
+        return {"Affinity": self.parameters_name["affinity"]}
 
 class OWManifoldLearning(OWWidget):
     name = "Manifold Learning"
@@ -331,8 +354,9 @@ class OWManifoldLearning(OWWidget):
     def send_report(self):
         method = self.MANIFOLD_METHODS[self.manifold_method_index]
         self.report_items((("Method", method.name),))
-        parameters = self.get_method_parameters(self.data, method)
-        self.report_items("Method parameters", tuple(parameters.items()))
+        parameters = {"Number of components": self.n_components}
+        parameters.update(self.params_widget.get_report_parameters())
+        self.report_items("Method parameters", parameters)
         if self.data:
             self.report_data("Data", self.data)
 
