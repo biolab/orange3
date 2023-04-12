@@ -161,3 +161,19 @@ class TestOWManifoldLearning(WidgetTest):
             apply.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.iris)
             apply.assert_called()
+
+    @patch("Orange.widgets.unsupervised.owmanifoldlearning.OWManifoldLearning.report_items")
+    def test_report(self, mocked_report: Mock):
+        for i in range(len(self.widget.MANIFOLD_METHODS)):
+            self.send_signal(self.widget.Inputs.data, self.iris)
+            self.widget.manifold_methods_combo.activated.emit(i)
+            self.wait_until_finished()
+            self.widget.send_report()
+            mocked_report.assert_called()
+            self.assertEqual(mocked_report.call_count, 3)
+            mocked_report.reset_mock()
+
+            self.send_signal(self.widget.Inputs.data, None)
+            self.widget.send_report()
+            self.assertEqual(mocked_report.call_count, 2)
+            mocked_report.reset_mock()
