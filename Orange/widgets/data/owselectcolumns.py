@@ -1,12 +1,12 @@
 from functools import partial
 from typing import Optional, Dict, Tuple
 
-from AnyQt.QtWidgets import QWidget, QGridLayout
-from AnyQt.QtWidgets import QListView
 from AnyQt.QtCore import (
     Qt, QTimer, QSortFilterProxyModel, QItemSelection, QItemSelectionModel,
     QMimeData, QAbstractItemModel
 )
+from AnyQt.QtGui import QDrag, QDropEvent
+from AnyQt.QtWidgets import QWidget, QGridLayout, QListView
 
 from Orange.data import Domain, Variable
 from Orange.widgets import gui, widget
@@ -50,6 +50,10 @@ class VariablesListItemModel(VariableListModel):
     """
     MIME_TYPE = "application/x-Orange-VariableListModelData"
 
+    def __init__(self, *args, primitive=False, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.primitive = primitive
+
     def flags(self, index):
         flags = super().flags(index)
         if index.isValid():
@@ -88,16 +92,88 @@ class VariablesListItemModel(VariableListModel):
         Reimplemented.
         """
         if action == Qt.IgnoreAction:
-            return True  # pragma: no cover
+            return True
         if not mime.hasFormat(self.MIME_TYPE):
-            return False  # pragma: no cover
+            return False
         variables = mime.property("_items")
         if variables is None:
-            return False  # pragma: no cover
+            return False
         if row < 0:
             row = self.rowCount()
 
+        if self.primitive and not all(var.is_primitive() for var in variables):
+            variables = [var for var in variables if var.is_primitive()]
+            self[row:row] = variables
+            mime.setProperty("_moved", variables)
+            return bool(variables)
+
         self[row:row] = variables
+        mime.setProperty("_moved", True)
+        return True
+
+
+class SelectedVarsView(VariablesListItemView):
+    """
+    VariableListItemView that supports partially accepted drags.
+
+    Upon finish, the mime data contains a list of variables accepted by the
+    destination, and removes only those variables from the model.
+    """
+    def startDrag(self, supported_actions):
+        indexes = self.selectedIndexes()
+        if len(indexes) == 0:
+            return
+        data = self.model().mimeData(indexes)
+        if not data:
+            return
+        drag = QDrag(self)
+        drag.setMimeData(data)
+        res = drag.exec(supported_actions, Qt.DropAction.MoveAction)
+
+        moved = data.property("_moved")
+        if moved is None:
+            return
+
+        if moved is True:
+            # A quicker path if everything is moved.
+            # When removing rows, private method QAbstractItemView::clearOrRemove
+            # iterates over ranges and removes them, apparently assuming their
+            # reverse order. I haven't found any guarantee for this order in
+            # documentation (nor, actually, in the code that maintains their
+            # order, so let's sort them.
+            to_remove = sorted(
+                ((index.top(), index.bottom() + 1)
+                 for index in self.selectionModel().selection()),
+                reverse=True)
+        else:
+            moved = set(moved)
+            to_remove = reversed(list(slices(
+                index.row() for index in self.selectionModel().selectedIndexes()
+                if index.data(gui.TableVariable) in moved)))
+
+        for start, end in to_remove:
+            self.model().removeRows(start, end - start)
+
+        self.dragDropActionDidComplete.emit(res)
+
+
+class PrimitivesView(SelectedVarsView):
+    """
+    A SelectedVarsView that accepts drops events if it contains *any*
+    primitive variables. This overrides the inherited behaviour that accepts
+    the event only if *all* variables are primitive.
+    """
+    def acceptsDropEvent(self, event: QDropEvent) -> bool:
+        if event.source() is not None and \
+                event.source().window() is not self.window():
+            return False  # pragma: nocover
+
+        mime = event.mimeData()
+        items = mime.property('_items')
+        if items is None or not any(var.is_primitive() for var in items):
+            return False
+
+        event.accept()
         return True
 
 
@@ -217,7 +293,9 @@ class OWSelectAttributes(widget.OWWidget):
 
         self.available_attrs = VariablesListItemModel()
         filter_edit, self.available_attrs_view = variables_filter(
-            parent=self, model=self.available_attrs)
+            parent=self, model=self.available_attrs,
+            view_type=SelectedVarsView
+        )
         box.layout().addWidget(filter_edit)
         self.view_boxes.append((name, box, self.available_attrs_view))
         filter_edit.textChanged.connect(self.__var_counts_update_timer.start)
@@ -236,11 +314,12 @@ class OWSelectAttributes(widget.OWWidget):
         # 3rd column
         name = "Features"
         box = gui.vBox(self.controlArea, name, addToLayout=False)
-        self.used_attrs = VariablesListItemModel()
+        self.used_attrs = VariablesListItemModel(primitive=True)
         filter_edit, self.used_attrs_view = variables_filter(
             parent=self, model=self.used_attrs,
             accepted_type=(Orange.data.DiscreteVariable,
-                           Orange.data.ContinuousVariable))
+                           Orange.data.ContinuousVariable),
+            view_type=PrimitivesView)
         self.used_attrs.rowsInserted.connect(self.__used_attrs_changed)
         self.used_attrs.rowsRemoved.connect(self.__used_attrs_changed)
         self.used_attrs_view.selectionModel().selectionChanged.connect(
@@ -262,10 +341,10 @@ class OWSelectAttributes(widget.OWWidget):
 
         name = "Target"
         box = gui.vBox(self.controlArea, name, addToLayout=False)
-        self.class_attrs = VariablesListItemModel()
-        self.class_attrs_view = VariablesListItemView(
+        self.class_attrs = VariablesListItemModel(primitive=True)
+        self.class_attrs_view = PrimitivesView(
             acceptedType=(Orange.data.DiscreteVariable,
-                          Orange.data.ContinuousVariable)
+                          Orange.data.ContinuousVariable),
         )
         self.class_attrs_view.setModel(self.class_attrs)
         self.class_attrs_view.selectionModel().selectionChanged.connect(
@@ -279,7 +358,7 @@ class OWSelectAttributes(widget.OWWidget):
         name = "Metas"
         box = gui.vBox(self.controlArea, name, addToLayout=False)
         self.meta_attrs = VariablesListItemModel()
-        self.meta_attrs_view = VariablesListItemView(
+        self.meta_attrs_view = SelectedVarsView(
             acceptedType=Orange.data.Variable)
         self.meta_attrs_view.setModel(self.meta_attrs)
         self.meta_attrs_view.selectionModel().selectionChanged.connect(
@@ -294,7 +373,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.move_attr_button = gui.button(
             bbox, self, ">",
             callback=partial(self.move_selected,
-                             self.used_attrs_view)
+                             self.used_attrs_view, primitive=True)
         )
         layout.addWidget(bbox, 0, 1, 1, 1)
 
@@ -302,7 +381,7 @@ class OWSelectAttributes(widget.OWWidget):
         self.move_class_button = gui.button(
             bbox, self, ">",
             callback=partial(self.move_selected,
-                             self.class_attrs_view)
+                             self.class_attrs_view, primitive=True)
         )
         layout.addWidget(bbox, 1, 1, 1, 1)
 
@@ -532,14 +611,19 @@ class OWSelectAttributes(widget.OWWidget):
     def move_down(self, view: QListView):
         self.move_rows(view, 1)
 
-    def move_selected(self, view):
+    def move_selected(self, view, *, primitive=False):
         if self.selected_rows(view):
             self.move_selected_from_to(view, self.available_attrs_view)
         elif self.selected_rows(self.available_attrs_view):
-            self.move_selected_from_to(self.available_attrs_view, view)
+            self.move_selected_from_to(self.available_attrs_view, view,
+                                       primitive)
 
-    def move_selected_from_to(self, src, dst):
-        self.move_from_to(src, dst, self.selected_rows(src))
+    def move_selected_from_to(self, src, dst, primitive=False):
+        rows = self.selected_rows(src)
+        if primitive:
+            model = src.model().sourceModel()
+            rows = [row for row in rows if model[row].is_primitive()]
+        self.move_from_to(src, dst, rows)
 
     def move_from_to(self, src, dst, rows):
         src_model = source_model(src)
@@ -589,18 +673,18 @@ class OWSelectAttributes(widget.OWWidget):
         meta_selected = selected_vars(self.meta_attrs_view)
 
         available_types = set(map(type, available_selected))
-        all_primitive = all(var.is_primitive()
+        any_primitive = any(var.is_primitive()
                             for var in available_types)
 
         move_attr_enabled = \
-            ((available_selected and all_primitive) or attrs_selected) and \
+            ((available_selected and any_primitive) or attrs_selected) and \
             self.used_attrs_view.isEnabled()
 
         self.move_attr_button.setEnabled(bool(move_attr_enabled))
         if move_attr_enabled:
             self.move_attr_button.setText(">" if available_selected else "<")
 
-        move_class_enabled = bool(all_primitive and available_selected) or class_selected
+        move_class_enabled = bool(any_primitive and available_selected) or class_selected
 
         self.move_class_button.setEnabled(bool(move_class_enabled))
         if move_class_enabled:
