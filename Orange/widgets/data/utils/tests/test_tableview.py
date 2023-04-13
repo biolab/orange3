@@ -58,3 +58,12 @@ class TableViewTest(GuiTest):
         sel = [(idx.row(), idx.column()) for idx in view.selectedIndexes()]
         self.assertEqual(sorted(sel), [(0, 2), (0, 3), (1, 2), (1, 3)])
         self.assertEqual(view.blockSelection(), ([1, 2], [2, 3]))
+
+    def test_basket_column(self):
+        model = RichTableModel(self.data.to_sparse())
+        view = RichTableView()
+        view.setModel(model)
+        self.assertFalse(view.isSortingEnabled())
+        view.grab()
+        model.setRichHeaderFlags(RichTableModel.Name | RichTableModel.Labels)
+        view.grab()
