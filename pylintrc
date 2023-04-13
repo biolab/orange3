@@ -228,7 +228,7 @@ max-nested-blocks=5
 
 # Tells whether missing members accessed in mixin class should be ignored. A
 # mixin class is detected if its name ends with "mixin" (case insensitive).
-ignore-mixin-members=yes
+ignored-checks-for-mixins=no-member
 
 # List of module names for which member attributes should not be checked
 # (useful for modules/projects where namespaces are manipulated during runtime
@@ -328,7 +328,7 @@ int-import-graph=
 
 # Exceptions that will emit a warning when being caught. Defaults to
 # "Exception"
-overgeneral-exceptions=Exception
+overgeneral-exceptions=builtins.Exception
 
 [isort]
 known-standard-library=pkg_resources

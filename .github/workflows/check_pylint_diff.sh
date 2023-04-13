@@ -15,7 +15,7 @@ UNCOMMITED_PATCH="$TMP_REPO/uncommited.patch"
 SCRIPT=$(basename "$0")
 PYLINT="$(command -v pylint 2>/dev/null || true)"
 RADON="$(command -v radon 2>/dev/null || true)"
-PYLINT_ARGS="--output-format=parseable"
+PYLINT_ARGS="--msg-template={path}:{line}: [{msg_id}({symbol}), {obj}] {msg}"
 RADON_ARGS='cc --min C --no-assert --show-closures --show-complexity --average'
 
 trap "status=\$?; cd '$GIT_REPO'; rm -rf '$TMP_REPO'; exit \$status" EXIT
