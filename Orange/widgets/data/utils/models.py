@@ -72,7 +72,7 @@ class RichTableModel(TableModel):
             var = super().headerData(
                 section, orientation, TableModel.VariableRole)
             if var is None:
-                return super().headerData(section, orientation, Qt.DisplayRole)
+                return []
             return [(label, var.attributes.get(label))
                     for label in self._labels]
         elif orientation == Qt.Horizontal and role == Qt.DecorationRole and \
