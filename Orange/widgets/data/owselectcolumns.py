@@ -63,7 +63,7 @@ class VariablesListItemModel(VariableListModel):
         return flags
 
     @staticmethod
-    def supportedDropActions():
+    def supportedDropActions():  # pylint: disable=arguments-differ
         return Qt.MoveAction  # pragma: no cover
 
     @staticmethod
@@ -177,7 +177,10 @@ class PrimitivesView(SelectedVarsView):
         return True
 
 
+# It is, what it is (and should be), pylint: disable=invalid-name
 class SelectAttributesDomainContextHandler(DomainContextHandler):
+    # Context handler's methods have variable arguments,
+    # pylint: disable=arguments-differ,keyword-arg-before-vararg
     def encode_setting(self, context, setting, value):
         if setting.name == 'domain_role_hints':
             value = {(var.name, vartype(var)): role_i

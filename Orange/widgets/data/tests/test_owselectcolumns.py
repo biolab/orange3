@@ -26,6 +26,7 @@ Continuous = vartype(ContinuousVariable("c"))
 Discrete = vartype(DiscreteVariable("d"))
 
 
+# It is, what it is (and should be), pylint: disable=invalid-name
 class TestSelectAttributesDomainContextHandler(TestCase):
     def setUp(self):
         self.domain = Domain(
@@ -45,6 +46,7 @@ class TestSelectAttributesDomainContextHandler(TestCase):
         self.handler.read_defaults = lambda: None
 
     def test_open_context(self):
+        # Why not? pylint: disable=use-dict-literal
         self.handler.bind(SimpleWidget)
         context = Mock(
             attributes=self.args[1], metas=self.args[2], values=dict(
@@ -72,6 +74,7 @@ class TestSelectAttributesDomainContextHandler(TestCase):
                           domain['c2']: ('class', 0)})
 
     def test_open_context_with_imperfect_match(self):
+        # Why not? pylint: disable=use-dict-literal
         self.handler.bind(SimpleWidget)
         context1 = Mock(values=dict(
             domain_role_hints=({('d1', Discrete): ('attribute', 0),
