@@ -294,21 +294,30 @@ class OWMergeData(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         renamed_vars = Msg("Some variables have been renamed "
                            "to avoid duplicates.\n{}")
+        nonunique_left = Msg(
+            "Some (unused) combinations of values in Data appear in "
+            "multiple rows.")
+        nonunique_right = Msg(
+            "Some (unused) combinations of values in Extra Data appear in "
+            "multiple rows.")
 
     class Error(widget.OWWidget.Error):
         matching_numeric_with_nonnum = Msg(
             "Numeric and non-numeric columns ({} and {}) cannot be matched.")
         matching_index_with_sth = Msg("Row index cannot be matched with {}.")
         matching_id_with_sth = Msg("Instance cannot be matched with {}.")
+        nonunique_left_matched = Msg(
+            "Some combinations of values in Data appear in multiple rows."
+            "\nEvery matched combination may appear at most once.")
         nonunique_left = Msg(
-            "Some combinations of values on the left appear in multiple rows.\n"
-            "For this type of merging, every possible combination of values "
-            "on the left should appear at most once.")
+            "Some combinations of values in Data appear in multiple rows."
+            "\nEvery combination may appear at most once.")
+        nonunique_right_matched = Msg(
+            "Some combinations of values in Extra Data appear in multiple rows."
+            "\nEvery matched combination may appear at most once.")
         nonunique_right = Msg(
-            "Some combinations of values on the right appear in multiple rows."
-            "\n"
-            "Every possible combination of values on the right should appear "
-            "at most once.")
+            "Some combinations of values in Extra Data appear in multiple rows."
+            "\nEvery combination may appear at most once.")
 
     def __init__(self):
         super().__init__()
@@ -441,16 +450,47 @@ class OWMergeData(widget.OWWidget):
         return f"'{obj.name}'" if isinstance(obj, Variable) else obj.lower()
 
     def _check_uniqueness(self, left, left_mask, right, right_mask):
-        ok = True
+        # Right table is always checked
         masked_right = right[right_mask]
-        if len(set(map(tuple, masked_right))) != len(masked_right):
-            self.Error.nonunique_right()
-            ok = False
-        if self.merging != self.LeftJoin:
+        right_set = set(map(tuple, masked_right))
+        right_duplicates = len(right_set) != len(masked_right)
+
+        # Left table is checked on non-left join; on left join it is needed
+        # only to check whether right duplicates are critical
+        left_duplicates = None
+        if self.merging != self.LeftJoin or right_duplicates:
             masked_left = left[left_mask]
-            if len(set(map(tuple, masked_left))) != len(masked_left):
-                self.Error.nonunique_left()
+            left_set = set(map(tuple, masked_left))
+            left_duplicates = len(left_set) != len(masked_left)
+
+        # Handle outer join and exit
+        if self.merging == self.OuterJoin:
+            self.Error.nonunique_left(shown=left_duplicates)
+            self.Error.nonunique_right(shown=right_duplicates)
+            return not (left_duplicates or right_duplicates)
+
+        # Intersection is needed to check whether duplicates are critical;
+        if left_duplicates or right_duplicates:
+            n_inter = len(left_set & right_set)
+
+        ok = True
+
+        if right_duplicates:
+            # `sum` counts the number of times that masked_right items are used.
+            # If this equals the intersection, each is used just once.
+            if sum(tuple(mr) in left_set for mr in masked_right) == n_inter:
+                self.Warning.nonunique_right()
+            else:
+                self.Error.nonunique_right_matched()
                 ok = False
+
+        if self.merging == self.InnerJoin and left_duplicates:
+            if sum(tuple(ml) in right_set for ml in masked_left) == n_inter:
+                self.Warning.nonunique_left()
+            else:
+                self.Error.nonunique_left_matched()
+                ok = False
+
         return ok
 
     def _compute_reduced_extra_data(self,
