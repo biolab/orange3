@@ -112,9 +112,7 @@ def is_table_sortable(table):
     if isinstance(table, Orange.data.sql.table.SqlTable):
         return False
     elif isinstance(table, Orange.data.Table):
-        # Dense only (due to sparse basket column).
-        return all(d == Orange.data.Table.DENSE for d in
-                   (table.X_density(), table.Y_density(), table.metas_density()))
+        return True
     else:
         return False
 

@@ -63,7 +63,5 @@ class TableViewTest(GuiTest):
         model = RichTableModel(self.data.to_sparse())
         view = RichTableView()
         view.setModel(model)
-        self.assertFalse(view.isSortingEnabled())
-        view.grab()
         model.setRichHeaderFlags(RichTableModel.Name | RichTableModel.Labels)
         view.grab()
