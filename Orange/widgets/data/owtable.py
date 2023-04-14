@@ -1,6 +1,6 @@
 import concurrent.futures
 from dataclasses import dataclass
-from typing import Optional, Union, Sequence, List, TypedDict, Tuple, Dict
+from typing import Optional, Union, Sequence, List, TypedDict, Tuple
 
 from scipy.sparse import issparse
 
@@ -10,7 +10,6 @@ from AnyQt.QtCore import Qt, QSize, QMetaObject, QItemSelectionModel
 from AnyQt.QtCore import Slot
 
 import Orange.data
-from Orange.data import Variable
 from Orange.data.table import Table
 from Orange.data.sql.table import SqlTable
 
@@ -333,12 +332,13 @@ class OWTable(OWWidget):
             self.stored_sort = []
         elif self.input is not None:
             model = self.input.model
-            var = model.headerData(index, Qt.Horizontal, TableModel.VariableRole)
+            coldesc = model.columns[index]
+            colid = self.__encode_column_id(coldesc)
             order = -1 if order == Qt.DescendingOrder else 1
             # Drop any previously applied sort on this column
             self.stored_sort = [(n, d) for n, d in self.stored_sort
-                                if n != var.name]
-            self.stored_sort.append((var.name, order))
+                                if n != colid]
+            self.stored_sort.append((colid, order))
         self.update_selection()
         self.Warning.missing_sort_columns.clear()
 
@@ -356,19 +356,18 @@ class OWTable(OWWidget):
         if self.input is None:
             return  # pragma: no cover
         self.stored_sort = []
-        # Map header names/titles to column indices
-        columns = {var.name: i for
-                   var, i in self.__header_variable_indices().items()}
+        # Map header ids (names) to column indices
+        columns = {id_: i for i, id_ in enumerate(self.__header_ids())}
         # Suppress the _on_sort_indicator_changed -> commit calls
         with disconnected(self.view.horizontalHeader().sortIndicatorChanged,
                           self._on_sort_indicator_changed, Qt.UniqueConnection):
-            for name, order in sorting:
-                if name in columns:
+            for colid, order in sorting:
+                if colid in columns:
                     self.view.sortByColumn(
-                        columns[name],
+                        columns[colid],
                         Qt.AscendingOrder if order == 1 else Qt.DescendingOrder
                     )
-                self.stored_sort.append((name, order))
+                self.stored_sort.append((colid, order))
 
     def __restore_sort(self) -> None:
         assert self.input is not None
@@ -380,27 +379,43 @@ class OWTable(OWWidget):
             self.Warning.non_sortable_input()
             self.Warning.missing_sort_columns.clear()
             return
-        # Map header names/titles to column indices
-        vars_ = self.__header_variable_indices()
-        columns = {var.name: i for var, i in vars_.items()}
+        # Map header ids (names) to column indices
+        columns = {id_: i for i, id_ in enumerate(self.__header_ids())}
         missing_columns = []
         sort_ = []
-        for name, order in sort:
-            if name in columns:
-                sort_.append((name, order))
+        for colid, order in sort:
+            if colid in columns:
+                sort_.append((colid, order))
             else:
-                missing_columns.append(name)
+                missing_columns.append(self.__decode_column_id(colid))
         self.set_sort_columns(sort_)
         if missing_columns:
             self.Warning.missing_sort_columns(", ".join(missing_columns))
 
-    def __header_variable_indices(self) -> Dict[Variable, int]:
-        model = self.view.model()
-        if model is None:
-            return {}  # pragma: no cover
-        vars_ = [model.headerData(i, Qt.Horizontal, TableModel.VariableRole)
-                 for i in range(model.columnCount())]
-        return {v: i for i, v in enumerate(vars_) if isinstance(v, Variable)}
+    @staticmethod
+    def __encode_column_id(
+            coldesc: Union[TableModel.Column, TableModel.Basket]
+    ) -> str:
+        def escape(s: str) -> str:  # escape possible leading slash
+            if s.startswith("\\"):
+                return "\\" + s
+            return s
+        if isinstance(coldesc, TableModel.Column):
+            return escape(coldesc.var.name)
+        else:
+            lookup = ("TARGET", "META", "FEATURES",)
+            return f"\\BASKET({lookup[coldesc.role]})"
+
+    @staticmethod
+    def __decode_column_id(cid: str) -> str:
+        if cid.startswith("\\"):
+            return cid[1:]
+        return cid
+
+    def __header_ids(self) -> List[str]:
+        if self.input is None:
+            return []
+        return [self.__encode_column_id(c) for c in self.input.model.columns]
 
     def update_selection(self, *_):
         self.commit.deferred()

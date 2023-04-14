@@ -155,6 +155,24 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output(self.widget.Outputs.selected_data)
         self.assertIs(output, self.data)
 
+    def test_sort_basket_column(self):
+        data = self.data.to_sparse()
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.view.sortByColumn(0, Qt.AscendingOrder)
+        self.assertEqual(self.widget.stored_sort, [("iris", 1)])
+        self.widget.view.sortByColumn(1, Qt.AscendingOrder)
+        self.assertEqual(self.widget.stored_sort,
+                         [("iris", 1), ("\\BASKET(FEATURES)", 1)])
+        # test restore
+        w = self.create_widget(OWTable, stored_settings={
+            "stored_sort": self.widget.stored_sort
+        })
+        self.send_signal(w.Inputs.data, data)
+        self.assertEqual(w.stored_sort, self.widget.stored_sort)
+        output_a = self.get_output(self.widget.Outputs.selected_data)
+        output_b = self.get_output(w.Outputs.selected_data)
+        self.assertEqual(output_a.ids.tolist(), output_b.ids.tolist())
+
     def test_info(self):
         info_text = self.widget.info_text
         no_input = "No data."
