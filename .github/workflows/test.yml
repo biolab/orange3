@@ -103,11 +103,10 @@ jobs:
           ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
 
       - name: Upload code coverage
-        if: |
-          matrix.python-version == '3.8' && matrix.tox_env == 'orange-released'
-        run: |
-          pip install codecov
-          codecov
+        if: matrix.python-version == '3.8' && matrix.tox_env == 'orange-released'
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
 
   test_on_macos_and_windows:
     runs-on: ${{ matrix.os }}
