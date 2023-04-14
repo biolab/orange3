@@ -219,6 +219,8 @@ class OWTable(OWWidget):
         self._subset_ids: Optional[set] = None
         self.__pending_selection: Optional[_Selection] = self.stored_selection
         self.__pending_sort: Optional[_Sorting] = self.stored_sort
+        self.__have_new_data = False
+        self.__have_new_subset = False
         self.dist_color = QColor(220, 220, 220, 255)
 
         info_box = gui.vBox(self.controlArea, "Info")
@@ -296,6 +298,7 @@ class OWTable(OWWidget):
                 summary.len.add_done_callback(update)
         else:
             self.input = None
+        self.__have_new_data = True
 
     @Inputs.data_subset
     def set_subset_dataset(self, subset: Optional[Table]):
@@ -305,25 +308,38 @@ class OWTable(OWWidget):
         else:
             ids = None
         self._subset_ids = ids
+        self.__have_new_subset = True
 
     def handleNewSignals(self):
         super().handleNewSignals()
         self.Warning.non_sortable_input.clear()
         self.Warning.missing_sort_columns.clear()
         data: Optional[Table] = self.input.table if self.input else None
-        self._setup_table_view()
-        self._update_input_summary()
+        model = self.input.model if self.input else None
 
-        if data is not None and self.__pending_sort is not None:
-            self.__restore_sort()
+        if self.__have_new_data:
+            self._setup_table_view()
+            self._update_input_summary()
 
-        if data is not None and self.__pending_selection is not None:
-            selection = self.__pending_selection
-            self.__pending_selection = None
-            rows = selection["rows"]
-            columns = selection["columns"]
-            self.set_selection(rows, columns)
-        self.commit.now()
+            if data is not None and self.__pending_sort is not None:
+                self.__restore_sort()
+
+            if data is not None and self.__pending_selection is not None:
+                selection = self.__pending_selection
+                self.__pending_selection = None
+                rows = selection["rows"]
+                columns = selection["columns"]
+                self.set_selection(rows, columns)
+
+        if self.__have_new_subset and model is not None:
+            model.setSubsetRowIds(self._subset_ids or set())
+            self.__have_new_subset = False
+
+        self._setup_view_delegate()
+
+        if self.__have_new_data:
+            self.commit.now()
+            self.__have_new_data = False
 
     def _setup_table_view(self):
         """Setup the view with current input data."""
@@ -408,7 +424,8 @@ class OWTable(OWWidget):
         self._setup_view_delegate()
 
     def _setup_view_delegate(self):
-        assert self.input is not None
+        if self.input is None:
+            return
         model = self.input.model
         data = model.source
         class_var = data.domain.class_var

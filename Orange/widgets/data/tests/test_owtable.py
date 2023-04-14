@@ -220,7 +220,9 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
     def test_subset_input(self):
         w = self.widget
         self.send_signal(w.Inputs.data, self.data)
-        self.send_signal(w.Inputs.data_subset, self.data[[0, 1, 5]])
+        with patch.object(w.signalManager, "send") as m:
+            self.send_signal(w.Inputs.data_subset, self.data[[0, 1, 5]])
+            m.assert_not_called()
         w.view.grab()  # cover delegate painting methods
 
         model = w.view.model()
@@ -229,7 +231,10 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(model.headerData(0, Qt.Vertical, model.SubsetRole))
         self.assertFalse(model.headerData(2, Qt.Vertical, model.SubsetRole))
 
-        self.send_signal(w.Inputs.data_subset, None)
+        with patch.object(w.signalManager, "send") as m:
+            self.send_signal(w.Inputs.data_subset, None)
+            m.assert_not_called()
+
         w.view.grab()
 
         model = w.view.model()
