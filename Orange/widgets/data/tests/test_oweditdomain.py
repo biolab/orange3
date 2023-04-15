@@ -325,7 +325,7 @@ class TestOWEditDomain(WidgetTest):
         w = self.widget
 
         def restore(state):
-            w._domain_change_store = state
+            w._domain_change_hints = state
             w._restore()
 
         model = w.variables_model
@@ -337,6 +337,76 @@ class TestOWEditDomain(WidgetTest):
         restore({viris: [("AsString", ()), ("Rename", ("Z",))]})
         tr = model.data(model.index(4), TransformRole)
         self.assertEqual(tr, [AsString(), Rename("Z")])
+
+    def test_hint_keeping(self):
+        editor: ContinuousVariableEditor = self.widget.findChild(ContinuousVariableEditor)
+        name_edit = editor.name_edit
+        model = self.widget.domain_view.model()
+
+        def rename(fr, to):
+            for idx in range(fr, to):
+                self.widget.domain_view.setCurrentIndex(model.index(idx))
+                cur_text = name_edit.text()
+                if cur_text[0] != "x":
+                    name_edit.setText("x" + cur_text)
+                editor.on_name_changed()
+
+        def data(fr, to):
+            return Table.from_numpy(Domain(vars[fr:to]),
+                                    np.zeros((1, to - fr)))
+
+
+        vars = [ContinuousVariable(f"v{i}") for i in range(1020)]
+        self.send_signal(data(0, 5))
+        rename(2, 4)
+
+        self.send_signal(None)
+        self.assertIsNone(self.get_output())
+
+        self.send_signal(data(3, 7))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes],
+                         ["xv3", "v4", "v5", "v6"])
+
+        self.send_signal(data(0, 5))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes],
+                         ["v0", "v1", "xv2", "xv3", "v4"])
+
+        self.send_signal(data(3, 7))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes],
+                         ["xv3", "v4", "v5", "v6"])
+
+        # This is too large: widget should retain just hints related to
+        # the current data
+        self.send_signal(data(3, 1020))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes[:4]],
+                         ["xv3", "v4", "v5", "v6"])
+        rename(5, 1017)
+        self.widget.commit()
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes[-3:]],
+                         ["xv1017", "xv1018", "xv1019"])
+
+        self.send_signal(None)
+        self.assertIsNone(self.get_output())
+
+        # Tests that hints for the current data are kept
+        # - including the earliest (v3) and latest (v1019)
+        self.send_signal(data(3, 1020))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes[:4]],
+                         ["xv3", "v4", "v5", "v6"])
+        self.assertEqual([var.name for var in outp.domain.attributes[-3:]],
+                         ["xv1017", "xv1018", "xv1019"])
+
+        # Tests that older hints are dropped: v2 should be lost
+        self.send_signal(data(0, 5))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes],
+                         ["v0", "v1", "v2", "xv3", "v4"])
 
 
 class TestEditors(GuiTest):

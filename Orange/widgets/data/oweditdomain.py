@@ -56,6 +56,8 @@ DType = Union[np.dtype, type]
 V = TypeVar("V", bound=Orange.data.Variable)  # pylint: disable=invalid-name
 H = TypeVar("H", bound=Hashable)  # pylint: disable=invalid-name
 
+MAX_HINTS = 1000
+
 
 def unique(sequence: Iterable[H]) -> Iterable[H]:
     """
@@ -1888,13 +1890,11 @@ class OWEditDomain(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         duplicate_var_name = widget.Msg("A variable name is duplicated.")
 
-    settingsHandler = settings.DomainContextHandler()
-    settings_version = 2
+    settings_version = 3
 
-    _domain_change_store = settings.ContextSetting({})
-    _selected_item = settings.ContextSetting(None)  # type: Optional[Tuple[str, int]]
-    _merge_dialog_settings = settings.ContextSetting({})
-    output_table_name = settings.ContextSetting("")
+    _domain_change_hints = settings.Setting({}, schema_only=True)
+    _merge_dialog_settings = settings.Setting({}, schema_only=True)
+    output_table_name = settings.Setting("", schema_only=True)
 
     want_main_area = False
 
@@ -1903,6 +1903,7 @@ class OWEditDomain(widget.OWWidget):
         self.data = None  # type: Optional[Orange.data.Table]
         #: The current selected variable index
         self.selected_index = -1
+        self._selected_item = None
         self._invalidated = False
         self.typeindex = 0
 
@@ -1960,14 +1961,12 @@ class OWEditDomain(widget.OWWidget):
     @Inputs.data
     def set_data(self, data):
         """Set input dataset."""
-        self.closeContext()
         self.clear()
         self.data = data
 
         if self.data is not None:
             self.setup_model(data)
             self.le_output_name.setPlaceholderText(data.name)
-            self.openContext(self.data)
             self._editor.set_merge_context(self._merge_dialog_settings)
             self._restore()
         else:
@@ -1983,8 +1982,6 @@ class OWEditDomain(widget.OWWidget):
         assert self.selected_index == -1
         self.selected_index = -1
 
-        self._selected_item = None
-        self._domain_change_store = {}
         self._merge_dialog_settings = {}
 
     def reset_selected(self):
@@ -2006,7 +2003,6 @@ class OWEditDomain(widget.OWWidget):
 
     def reset_all(self):
         """Reset all variables to their original state."""
-        self._domain_change_store = {}
         if self.data is not None:
             model = self.variables_model
             for i in range(model.rowCount()):
@@ -2049,12 +2045,21 @@ class OWEditDomain(widget.OWWidget):
         Restore the edit transform from saved state.
         """
         model = self.variables_model
+        hints = self._domain_change_hints
+        first_key = None
         for i in range(model.rowCount()):
             midx = model.index(i, 0)
             coldesc = model.data(midx, Qt.EditRole)  # type: DataVector
-            tr = self._restore_transform(coldesc.vtype)
+            tr, key = self._restore_transform(coldesc.vtype)
             if tr:
                 model.setData(midx, tr, TransformRole)
+                if first_key is None:
+                    first_key = key
+        # Reduce the number of hints to MAX_HINTS, but keep all current hints
+        # Current hints start with `first_key`.
+        while len(hints) > MAX_HINTS and \
+                (key := next(iter(hints))) is not first_key:
+            del hints[key]  # pylint: disable=unsupported-delete-operation
 
         # Restore the current variable selection
         i = -1
@@ -2062,6 +2067,8 @@ class OWEditDomain(widget.OWWidget):
             for i, vec in enumerate(model):
                 if vec.vtype.name_type() == self._selected_item:
                     break
+            else:
+                self._selected_item = None
         if i == -1 and model.rowCount():
             i = 0
 
@@ -2114,13 +2121,20 @@ class OWEditDomain(widget.OWWidget):
         self._store_transform(var, transform)
         self._invalidate()
 
-    def _store_transform(self, var, transform):
+    def _store_transform(self, var, transform, deconvar=None):
         # type: (Variable, List[Transform]) -> None
-        self._domain_change_store[deconstruct(var)] = [deconstruct(t) for t in transform]
+        deconvar = deconvar or deconstruct(var)
+        # Remove the existing key (if any) to put the new one at the end,
+        # to make sure it comes after the sentinel
+        self._domain_change_hints.pop(deconvar, None)
+        # pylint: disable=unsupported-assignment-operation
+        self._domain_change_hints[deconvar] = \
+            [deconstruct(t) for t in transform]
 
     def _restore_transform(self, var):
         # type: (Variable) -> List[Transform]
-        tr_ = self._domain_change_store.get(deconstruct(var), [])
+        key = deconstruct(var)
+        tr_ = self._domain_change_hints.get(key, [])
         tr = []
 
         for t in tr_:
@@ -2131,7 +2145,11 @@ class OWEditDomain(widget.OWWidget):
                     "Failed to restore transform: {}, {!r}".format(t, err),
                     UserWarning, stacklevel=2
                 )
-        return tr
+        if tr:
+            self._store_transform(var, tr, key)
+        else:
+            key = None
+        return tr, key
 
     def _invalidate(self):
         self._set_modified(True)
@@ -2293,6 +2311,7 @@ class OWEditDomain(widget.OWWidget):
                         trs.append(CategoriesMapping(
                             list(zip(src.categories, dst.categories))))
                 store.append((deconstruct(src), [deconstruct(tr) for tr in trs]))
+            # TODO: migrate directly to non-context hints
             context.values["_domain_change_store"] = (dict(store), -2)
 
 
