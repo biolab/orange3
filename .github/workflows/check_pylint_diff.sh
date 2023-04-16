@@ -127,7 +127,7 @@ Number_of_issues ()
     cached="$1"
     {   cat "$cached" 2>/dev/null ||
         echo "$CHANGED_FILES" |
-            xargs "$PYLINT" $PYLINT_ARGS |
+            xargs "$PYLINT" "$PYLINT_ARGS" |
             tee "$cached"
     } | awk -F'[\\. ]' '/^Your code has been rated at /{ print $7 }' || true
 }
