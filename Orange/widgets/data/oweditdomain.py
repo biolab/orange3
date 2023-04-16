@@ -42,7 +42,8 @@ from Orange.preprocess.transformation import (
 )
 from Orange.misc.collections import DictMissingConst
 from Orange.util import frompyfunc
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import widget, gui
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, ftry, disconnected
 from Orange.widgets.utils.buttons import FixedSizeButton
 from Orange.widgets.utils.itemmodels import signal_blocking
@@ -1892,9 +1893,9 @@ class OWEditDomain(widget.OWWidget):
 
     settings_version = 3
 
-    _domain_change_hints = settings.Setting({}, schema_only=True)
-    _merge_dialog_settings = settings.Setting({}, schema_only=True)
-    output_table_name = settings.Setting("", schema_only=True)
+    _domain_change_hints = Setting({}, schema_only=True)
+    _merge_dialog_settings = Setting({}, schema_only=True)
+    output_table_name = Setting("", schema_only=True)
 
     want_main_area = False
 
@@ -2311,9 +2312,31 @@ class OWEditDomain(widget.OWWidget):
                         trs.append(CategoriesMapping(
                             list(zip(src.categories, dst.categories))))
                 store.append((deconstruct(src), [deconstruct(tr) for tr in trs]))
-            # TODO: migrate directly to non-context hints
             context.values["_domain_change_store"] = (dict(store), -2)
 
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version == 2 and "context_settings" in settings:
+            contexts = settings["context_settings"]
+            valuess = []
+            for context in contexts:
+                cls.migrate_context(context, context.values["__version__"])
+                valuess.append(context.values)
+            # Fix the order of keys
+            hints = dict.fromkeys(
+                chain(*(values["_domain_change_store"][0]
+                        for values in reversed(valuess)))
+            )
+            settings["output_table_name"] = ""
+            for values in valuess:
+                hints.update(values["_domain_change_store"][0])
+                new_name, _ = values.pop("output_table_name", ("", -2))
+                if new_name:
+                    settings["output_table_name"] = new_name
+            while len(hints) > MAX_HINTS:
+                del hints[next(iter(hints))]
+            settings["_domain_change_hints"] = hints
+            del settings["context_settings"]
 
 def enumerate_columns(
         table: Orange.data.Table

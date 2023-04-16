@@ -16,6 +16,7 @@ from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, \
     QStyleOptionViewItem, QDialog, QMenu, QToolTip, QListView
 from AnyQt.QtTest import QTest, QSignalSpy
 
+from orangewidget.settings import Context
 from orangewidget.tests.utils import simulate
 
 from Orange.data import (
@@ -407,6 +408,107 @@ class TestOWEditDomain(WidgetTest):
         outp = self.get_output()
         self.assertEqual([var.name for var in outp.domain.attributes],
                          ["v0", "v1", "v2", "xv3", "v4"])
+
+    def test_migrate_settings_hints_2_to_3(self):
+        settings = {
+            '__version__': 2,
+            'context_settings':
+                [Context(values={
+                    '_domain_change_store': (
+                        {('Categorical', ('a', ('mir1', 'mir4', 'mir2'), (), False)):
+                            [('Rename', ('disease mir',))],
+                         ('Categorical', ('b', ('mir4', 'mir1', 'mir2'), (), False)):
+                             [('Rename', ('disease mirs',))]
+                         },
+                        -2),
+                    '_merge_dialog_settings': ({}, -4),
+                    '_selected_item': (('1', 0), -2),
+                    'output_table_name': ('boo', -2),
+                    '__version__': 2}),
+                 Context(values={
+                     '_domain_change_store': (
+                         {('Categorical', ('b', ('mir4', 'mir1', 'mir2'), (), False)):
+                             [('Rename', ('disease bmir',))],
+                          ('Categorical', ('c', ('mir4', 'mir1', 'mir2'), (), False)):
+                              [('Rename', ('disease mirs',))]
+                         },
+                         -2),
+                      '_merge_dialog_settings': ({}, -4),
+                      '_selected_item': (('1', 0), -2),
+                      'output_table_name': ('far', -2),
+                      '__version__': 2}),
+                ]}
+        migrated_hints = {
+            ('Categorical', ('b', ('mir4', 'mir1', 'mir2'), (), False)):
+                [('Rename', ('disease bmir',))],
+            ('Categorical', ('c', ('mir4', 'mir1', 'mir2'), (), False)):
+                [('Rename', ('disease mirs',))],
+            ('Categorical', ('a', ('mir1', 'mir4', 'mir2'), (), False)):
+                 [('Rename', ('disease mir',))],
+        }
+        widget = self.create_widget(OWEditDomain, stored_settings=settings)
+        self.assertEqual(widget._domain_change_hints, migrated_hints)
+        # order matters
+        self.assertEqual(list(widget._domain_change_hints), list(migrated_hints))
+        self.assertEqual(widget.output_table_name, "far")
+
+    def test_migrate_settings_2_to_3_realworld(self):
+        settings = {
+            'controlAreaVisible': True,
+            '__version__': 2,
+            'context_settings': [Context(
+                values={
+                    '_domain_change_store':
+                        ({('Real', ('sepal length', (1, 'f'), (), False)):
+                              [('AsString', ())],
+                          ('Real', ('sepal width', (1, 'f'), (), False)):
+                              [('AsTime', ()), ('StrpTime', ('Detect automatically', None, 1, 1))],
+                          ('Real', ('petal width', (1, 'f'), (), False)):
+                              [('Annotate', ((('a', 'b'),),))]}, -2),
+                    '_merge_dialog_settings': ({}, -4),
+                    '_selected_item': (('petal width', 2), -2),
+                    'output_table_name': ('', -2),
+                    '__version__': 2},
+                attributes={'sepal length': 2, 'sepal width': 2,
+                            'petal length': 2, 'petal width': 2, 'iris': 1},
+                metas={}
+            )]
+        }
+        widget = self.create_widget(OWEditDomain, stored_settings=settings)
+        self.assertEqual(
+            widget._domain_change_hints,
+            {('Real', ('sepal length', (1, 'f'), (), False)):
+                 [('AsString', ())],
+             ('Real', ('sepal width', (1, 'f'), (), False)):
+                 [('AsTime', ()),
+                  ('StrpTime', ('Detect automatically', None, 1, 1))],
+             ('Real', ('petal width', (1, 'f'), (), False)):
+                 [('Annotate', ((('a', 'b'),),))]}
+        )
+
+    def test_migrate_settings_name_2_to_3(self):
+        settings = {
+            '__version__': 2,
+            'context_settings':
+                [Context(values={
+                    '_domain_change_store': ({}, -2),
+                     'output_table_name': ('boo', -2),
+                     '__version__': 2}),
+                 Context(values={
+                     '_domain_change_store': ({}, -2),
+                     'output_table_name': ('far', -2),
+                     '__version__': 2}),
+                 Context(values={
+                     '_domain_change_store': ({}, -2),
+                     'output_table_name': ('', -2),
+                     '__version__': 2}),
+                 Context(values={
+                     '_domain_change_store': ({}, -2),
+                     '__version__': 2})
+                ]
+        }
+        widget = self.create_widget(OWEditDomain, stored_settings=settings)
+        self.assertEqual(widget.output_table_name, "far")
 
 
 class TestEditors(GuiTest):
