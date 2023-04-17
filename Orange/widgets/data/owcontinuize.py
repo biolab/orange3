@@ -296,7 +296,7 @@ class OWContinuize(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         unsupported_sparse = \
-            widget.Msg("Some chosen methods do support sparse data: {}")
+            widget.Msg("Some chosen methods do not support sparse data: {}")
 
     want_control_area = False
 
