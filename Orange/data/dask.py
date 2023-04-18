@@ -32,7 +32,7 @@ class _ArrayConversionDask(_ArrayConversion):
     def join_partial_results(self, parts):
         if self.is_dask:
             return dask.array.vstack(parts)
-        return super().join_partial_results(self)
+        return super().join_partial_results(parts)
 
     def prepare_column(self, col_array):
         if self.is_dask:
