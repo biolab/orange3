@@ -296,7 +296,8 @@ class OWSql(OWBaseSql):
                     confirm = QMessageBox(self)
                     confirm.setIcon(QMessageBox.Warning)
                     confirm.setText("Data appears to be big. Do you really "
-                                    "want to download it to local memory?")
+                                    "want to download it to local memory?\n"
+                                    "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT))
 
                     if table.approx_len() <= MAX_DL_LIMIT:
                         confirm.addButton("Yes", QMessageBox.YesRole)
