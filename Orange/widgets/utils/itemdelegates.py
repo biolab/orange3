@@ -1,5 +1,5 @@
 import math
-from typing import Optional, Tuple
+from typing import Optional, Tuple, ClassVar
 
 from AnyQt.QtCore import QModelIndex, QSize, Qt
 from AnyQt.QtWidgets import QStyle, QStyleOptionViewItem, QApplication
@@ -101,7 +101,7 @@ class TableDataDelegate(DataDelegate):
     :class:`Orange.widgets.utils.itemmodels.TableModel`
     """
     #: Roles supplied by TableModel we want DataDelegate to use.
-    DefaultRoles = (
+    DefaultRoles: ClassVar[Tuple[int, ...]] = (
         Qt.DisplayRole, Qt.TextAlignmentRole, Qt.BackgroundRole,
         Qt.ForegroundRole
     )

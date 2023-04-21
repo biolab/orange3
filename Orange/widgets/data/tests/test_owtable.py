@@ -217,6 +217,30 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
             w.controls.show_attribute_labels.toggle()
         self.assertFalse(w.show_attribute_labels)
 
+    def test_subset_input(self):
+        w = self.widget
+        self.send_signal(w.Inputs.data, self.data)
+        with patch.object(w.signalManager, "send") as m:
+            self.send_signal(w.Inputs.data_subset, self.data[[0, 1, 5]])
+            m.assert_not_called()
+        w.view.grab()  # cover delegate painting methods
+
+        model = w.view.model()
+        self.assertTrue(model.index(0, 0).data(model.SubsetRole))
+        self.assertFalse(model.index(2, 0).data(model.SubsetRole))
+        self.assertTrue(model.headerData(0, Qt.Vertical, model.SubsetRole))
+        self.assertFalse(model.headerData(2, Qt.Vertical, model.SubsetRole))
+
+        with patch.object(w.signalManager, "send") as m:
+            self.send_signal(w.Inputs.data_subset, None)
+            m.assert_not_called()
+
+        w.view.grab()
+
+        model = w.view.model()
+        self.assertFalse(model.index(0, 0).data(model.SubsetRole))
+        self.assertFalse(model.headerData(0, Qt.Vertical, model.SubsetRole))
+
 
 class TestOWTableSQL(TestOWTable, dbt):
     def setUpDB(self):

@@ -1,13 +1,22 @@
 import concurrent.futures
 from dataclasses import dataclass
-from typing import Optional, Union, Sequence, List, TypedDict, Tuple
+from typing import (
+    Optional, Union, Sequence, List, TypedDict, Tuple, Any, Container
+)
 
 from scipy.sparse import issparse
 
-from AnyQt.QtWidgets import QTableView, QHeaderView, QApplication, QStyle
-from AnyQt.QtGui import QColor, QClipboard
-from AnyQt.QtCore import Qt, QSize, QMetaObject, QItemSelectionModel
+from AnyQt.QtWidgets import (
+    QTableView, QHeaderView, QApplication, QStyle, QStyleOptionHeader,
+    QStyleOptionViewItem
+)
+from AnyQt.QtGui import QColor, QClipboard, QPainter
+from AnyQt.QtCore import (
+    Qt, QSize, QMetaObject, QItemSelectionModel, QModelIndex, QRect
+)
 from AnyQt.QtCore import Slot
+
+from orangewidget.gui import OrangeUserRole
 
 import Orange.data
 from Orange.data.table import Table
@@ -25,16 +34,128 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils import disconnected
+from Orange.widgets.utils.headerview import HeaderView
 from Orange.widgets.data.utils.tableview import RichTableView
 from Orange.widgets.data.utils import tablesummary as tsummary
 
 
+SubsetRole = next(OrangeUserRole)
+
+
+class HeaderViewWithSubsetIndicator(HeaderView):
+    _IndicatorChar = "\N{BULLET}"
+
+    def paintSection(
+            self, painter: QPainter, rect: QRect, logicalIndex: int
+    ) -> None:
+        opt = QStyleOptionHeader()
+        self.initStyleOption(opt)
+        self.initStyleOptionForIndex(opt, logicalIndex)
+        model = self.model()
+        if model is None:
+            return  # pragma: no cover
+        opt.rect = rect
+        issubset = model.headerData(logicalIndex, Qt.Vertical, SubsetRole)
+        style = self.style()
+        # draw background
+        style.drawControl(QStyle.CE_HeaderSection, opt, painter, self)
+        indicator_rect = QRect(rect)
+        text_rect = QRect(rect)
+        indicator_width = opt.fontMetrics.horizontalAdvance(
+            self._IndicatorChar + " "
+        )
+        indicator_rect.setWidth(indicator_width)
+        text_rect.setLeft(indicator_width)
+        if issubset:
+            optindicator = QStyleOptionHeader(opt)
+            optindicator.rect = indicator_rect
+            optindicator.textAlignment = Qt.AlignCenter
+            optindicator.text = self._IndicatorChar
+            # draw subset indicator
+            style.drawControl(QStyle.CE_HeaderLabel, optindicator, painter, self)
+        opt.rect = text_rect
+        # draw section label
+        style.drawControl(QStyle.CE_HeaderLabel, opt, painter, self)
+
+    def sectionSizeFromContents(self, logicalIndex: int) -> QSize:
+        opt = QStyleOptionHeader()
+        self.initStyleOption(opt)
+        super().initStyleOptionForIndex(opt, logicalIndex)
+        opt.text = self._IndicatorChar + " " + opt.text
+        return self.style().sizeFromContents(QStyle.CT_HeaderSection, opt, QSize(), self)
+
+
 class DataTableView(gui.HScrollStepMixin, RichTableView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        vheader = HeaderViewWithSubsetIndicator(
+            Qt.Vertical, self, highlightSections=True
+        )
+        vheader.setSectionsClickable(True)
+        self.setVerticalHeader(vheader)
+
+
+class _TableDataDelegate(TableDataDelegate):
+    DefaultRoles = TableDataDelegate.DefaultRoles + (SubsetRole,)
+
+
+class SubsetTableDataDelegate(_TableDataDelegate):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.subset_opacity = 0.5
+
+    def paint(
+            self, painter: QPainter, option: QStyleOptionViewItem,
+            index: QModelIndex
+    ) -> None:
+        issubset = self.cachedData(index, SubsetRole)
+        opacity = painter.opacity()
+        if not issubset:
+            painter.setOpacity(self.subset_opacity)
+        super().paint(painter, option, index)
+        if not issubset:
+            painter.setOpacity(opacity)
+
+
+class TableBarItemDelegate(SubsetTableDataDelegate, gui.TableBarItem,
+                           _TableDataDelegate):
     pass
 
 
-class TableBarItemDelegate(gui.TableBarItem, TableDataDelegate):
-    pass
+class _TableModel(RichTableModel):
+    SubsetRole = SubsetRole
+
+    def __init__(self, *args, subsets=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._subset = subsets or set()
+
+    def setSubsetRowIds(self, subsetids: Container[int]):
+        self._subset = subsetids
+        if self.rowCount():
+            self.headerDataChanged.emit(Qt.Vertical, 0, self.rowCount() - 1)
+            self.dataChanged.emit(
+                self.index(0, 0),
+                self.index(self.rowCount() - 1, self.columnCount() - 1),
+                [SubsetRole],
+            )
+
+    def _is_subset(self, row):
+        row = self.mapToSourceRows(row)
+        try:
+            id_ = self.source.ids[row]
+        except (IndexError, AttributeError):  # pragma: no cover
+            return False
+        return int(id_) in self._subset
+
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Any:
+        if role == _TableModel.SubsetRole:
+            return self._is_subset(index.row())
+        return super().data(index, role)
+
+    def headerData(self, section, orientation, role):
+        if orientation == Qt.Vertical and role == _TableModel.SubsetRole:
+            return self._is_subset(section)
+        return super().headerData(section, orientation, role)
 
 
 @dataclass
@@ -60,7 +181,8 @@ class OWTable(OWWidget):
     keywords = "data table, view"
 
     class Inputs:
-        data = Input("Data", Table)
+        data = Input("Data", Table, default=True)
+        data_subset = Input("Data Subset", Table)
 
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
@@ -94,8 +216,11 @@ class OWTable(OWWidget):
     def __init__(self):
         super().__init__()
         self.input: Optional[InputData] = None
+        self._subset_ids: Optional[set] = None
         self.__pending_selection: Optional[_Selection] = self.stored_selection
         self.__pending_sort: Optional[_Sorting] = self.stored_sort
+        self.__have_new_data = False
+        self.__have_new_subset = False
         self.dist_color = QColor(220, 220, 220, 255)
 
         info_box = gui.vBox(self.controlArea, "Info")
@@ -127,11 +252,8 @@ class OWTable(OWWidget):
                    attribute=Qt.WA_LayoutUsesWidgetRect)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
-        view = DataTableView(
-            sortingEnabled=True
-        )
-        view.setSortingEnabled(True)
-        view.setItemDelegate(TableDataDelegate(view))
+        view = DataTableView(sortingEnabled=True)
+        view.setItemDelegate(SubsetTableDataDelegate(view))
         view.selectionFinished.connect(self.update_selection)
 
         if self.select_rows:
@@ -163,39 +285,61 @@ class OWTable(OWWidget):
         self.view.setModel(None)
         self.view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
         if data is not None:
+            summary = tsummary.table_summary(data)
             self.input = InputData(
                 table=data,
-                summary=tsummary.table_summary(data),
-                model=RichTableModel(data)
+                summary=summary,
+                model=_TableModel(data)
             )
-            self._setup_table_view()
+            if isinstance(summary.len, concurrent.futures.Future):
+                def update(_):
+                    QMetaObject.invokeMethod(
+                        self, "_update_info", Qt.QueuedConnection)
+                summary.len.add_done_callback(update)
         else:
             self.input = None
+        self.__have_new_data = True
+
+    @Inputs.data_subset
+    def set_subset_dataset(self, subset: Optional[Table]):
+        """Set the data subset"""
+        if subset is not None and not isinstance(subset, SqlTable):
+            ids = set(subset.ids)
+        else:
+            ids = None
+        self._subset_ids = ids
+        self.__have_new_subset = True
 
     def handleNewSignals(self):
         super().handleNewSignals()
         self.Warning.non_sortable_input.clear()
         self.Warning.missing_sort_columns.clear()
         data: Optional[Table] = self.input.table if self.input else None
-        slot = self.input
-        if slot is not None and isinstance(slot.summary.len, concurrent.futures.Future):
-            def update(_):
-                QMetaObject.invokeMethod(
-                    self, "_update_info", Qt.QueuedConnection)
-            slot.summary.len.add_done_callback(update)
+        model = self.input.model if self.input else None
 
-        self._update_input_summary()
+        if self.__have_new_data:
+            self._setup_table_view()
+            self._update_input_summary()
 
-        if data is not None and self.__pending_sort is not None:
-            self.__restore_sort()
+            if data is not None and self.__pending_sort is not None:
+                self.__restore_sort()
 
-        if data is not None and self.__pending_selection is not None:
-            selection = self.__pending_selection
-            self.__pending_selection = None
-            rows = selection["rows"]
-            columns = selection["columns"]
-            self.set_selection(rows, columns)
-        self.commit.now()
+            if data is not None and self.__pending_selection is not None:
+                selection = self.__pending_selection
+                self.__pending_selection = None
+                rows = selection["rows"]
+                columns = selection["columns"]
+                self.set_selection(rows, columns)
+
+        if self.__have_new_subset and model is not None:
+            model.setSubsetRowIds(self._subset_ids or set())
+            self.__have_new_subset = False
+
+        self._setup_view_delegate()
+
+        if self.__have_new_data:
+            self.commit.now()
+            self.__have_new_data = False
 
     def _setup_table_view(self):
         """Setup the view with current input data."""
@@ -204,22 +348,11 @@ class OWTable(OWWidget):
             return
 
         datamodel = self.input.model
+        datamodel.setSubsetRowIds(self._subset_ids or set())
+
         view = self.view
         data = self.input.table
         rowcount = data.approx_len()
-
-        if self.color_by_class and data.domain.has_discrete_class:
-            color_schema = [
-                QColor(*c) for c in data.domain.class_var.colors]
-        else:
-            color_schema = None
-        if self.show_distributions:
-            view.setItemDelegate(
-                TableBarItemDelegate(
-                    view, color=self.dist_color, color_schema=color_schema)
-            )
-        else:
-            view.setItemDelegate(TableDataDelegate(view))
 
         view.setModel(datamodel)
 
@@ -248,6 +381,7 @@ class OWTable(OWWidget):
         assert view.model().rowCount() <= maxrows
         assert vheader.sectionSize(0) > 1 or datamodel.rowCount() == 0
 
+        self._setup_view_delegate()
         # update the header (attribute names)
         self._update_variable_labels()
 
@@ -286,8 +420,12 @@ class OWTable(OWWidget):
 
     def _on_distribution_color_changed(self):
         if self.input is None:
+            return  # pragma: no cover
+        self._setup_view_delegate()
+
+    def _setup_view_delegate(self):
+        if self.input is None:
             return
-        widget = self.view
         model = self.input.model
         data = model.source
         class_var = data.domain.class_var
@@ -296,11 +434,13 @@ class OWTable(OWWidget):
         else:
             color_schema = None
         if self.show_distributions:
-            delegate = TableBarItemDelegate(widget, color=self.dist_color,
-                                            color_schema=color_schema)
+            delegate = TableBarItemDelegate(
+                self.view, color=self.dist_color, color_schema=color_schema
+            )
         else:
-            delegate = TableDataDelegate(widget)
-        widget.setItemDelegate(delegate)
+            delegate = SubsetTableDataDelegate(self.view)
+        delegate.subset_opacity = 0.5 if self._subset_ids is not None else 1.0
+        self.view.setItemDelegate(delegate)
 
     def _on_select_rows_changed(self):
         if self.input is None:
