@@ -99,12 +99,12 @@ class ImprovedPCA(skl_decomposition.PCA):
     # pylint: disable=too-many-branches
     def _fit(self, X):
         """Dispatch to the right submethod depending on the chosen solver."""
-        X = check_array(
+        X = self._validate_data(
             X,
-            accept_sparse=["csr", "csc"],
             dtype=[np.float64, np.float32],
-            ensure_2d=True,
-            copy=self.copy,
+            reset=False,
+            accept_sparse=["csr", "csc"],
+            copy=self.copy
         )
 
         # Handle n_components==None
@@ -201,7 +201,7 @@ class ImprovedPCA(skl_decomposition.PCA):
                 random_state=random_state,
             )
 
-        self.n_samples_, self.n_features_ = n_samples, n_features
+        self.n_samples_ = n_samples
         self.components_ = V
         self.n_components_ = n_components
 
@@ -221,12 +221,12 @@ class ImprovedPCA(skl_decomposition.PCA):
     def transform(self, X):
         check_is_fitted(self, ["mean_", "components_"], all_or_any=all)
 
-        X = check_array(
+        X = self._validate_data(
             X,
             accept_sparse=["csr", "csc"],
             dtype=[np.float64, np.float32],
-            ensure_2d=True,
-            copy=self.copy,
+            reset=False,
+            copy=self.copy
         )
 
         if self.mean_ is not None:
