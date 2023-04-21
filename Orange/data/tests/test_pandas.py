@@ -199,7 +199,6 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(table.domain.variables[0].have_time, 0)
         self.assertEqual(table.domain.variables[0].have_date, 1)
 
-    @unittest.skipIf(pd.__version__ == "2.0.0", "Because ms are gone.")
     def test_table_from_frame_time(self):
         df = pd.DataFrame(
             [[pd.Timestamp("00:00:00.25")], [pd.Timestamp("20:20:20.30")], [np.nan]]
@@ -228,20 +227,6 @@ class TestPandasCompat(unittest.TestCase):
         )
         self.assertEqual(table.domain.variables[0].have_time, 1)
         self.assertEqual(table.domain.variables[0].have_date, 0)
-
-    def test_version(self):
-        """
-        When this test starts to fail, a new pandas version has been released.
-        - check if the issue has been fixed:
-            - pd.DataFrame([[pd.Timestamp("01:02:03.5")]])
-            - # this should output:
-                                    0
-            0 2023-04-04 01:02:03.500
-
-        - if it has, remove line 202 in this file and uncomment lines 660
-        and 661 in test_variable
-        """
-        self.assertTrue(pd.__version__ <= "2.0.0")
 
     def test_table_from_frame_datetime(self):
         df = pd.DataFrame(
