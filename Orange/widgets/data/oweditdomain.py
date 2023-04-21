@@ -2843,8 +2843,8 @@ class ReparseTimeTransform(Transformation):
 
     def transform(self, c):
         # if self.formats is none guess format option is selected
-        formats = self.tr.formats if self.tr.formats is not None else [None]
-        for f in formats:
+        formats = list(self.tr.formats) if self.tr.formats is not None else []
+        for f in formats + [None]:
             d = pd.to_datetime(c, errors="coerce", format=f)
             if pd.notnull(d).any():
                 return datetime_to_epoch(d, only_time=not self.tr.have_date)

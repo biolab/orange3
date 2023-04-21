@@ -1,28 +1,21 @@
 # pylint: disable=import-outside-toplevel
 import unittest
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 
 import numpy as np
+import pandas as pd
 import pytz
 from scipy.sparse import csr_matrix
 import scipy.sparse as sp
 
 from Orange.data import ContinuousVariable, DiscreteVariable, TimeVariable, Table, Domain, \
     StringVariable
-from Orange.data.pandas_compat import OrangeDataFrame
+from Orange.data.pandas_compat import OrangeDataFrame, table_from_frame
 from Orange.data.tests.test_variable import TestTimeVariable
 
-try:
-    import pandas as pd
-except ImportError:
-    pd = None
 
-
-@unittest.skipIf(pd is None, "Missing package 'pandas'")
 class TestPandasCompat(unittest.TestCase):
     def test_table_from_frame(self):
-        from Orange.data.pandas_compat import table_from_frame
-
         nan = np.nan
         df = pd.DataFrame([['a', 1, pd.Timestamp('2017-12-19')],
                            ['b', 0, pd.Timestamp('1724-12-20')],
@@ -72,7 +65,6 @@ class TestPandasCompat(unittest.TestCase):
 
     def test_table_from_frame_keep_ids(self):
         """ Test if indices are correctly transferred to Table"""
-        from Orange.data.pandas_compat import table_from_frame
         df = OrangeDataFrame(Table('iris')[:6])
         df.index = [1, "_oa", "_o", "1", "_o20", "_o30"]
         table = table_from_frame(df)
@@ -166,8 +158,6 @@ class TestPandasCompat(unittest.TestCase):
             self.assertEqual(type(v1), type(v2))
 
     def test_table_from_frame_date(self):
-        from Orange.data.pandas_compat import table_from_frame
-
         df = pd.DataFrame(
             [[pd.Timestamp("2017-12-19")], [pd.Timestamp("1724-12-20")], [np.nan]]
         )
@@ -210,8 +200,6 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(table.domain.variables[0].have_date, 1)
 
     def test_table_from_frame_time(self):
-        from Orange.data.pandas_compat import table_from_frame
-
         df = pd.DataFrame(
             [[pd.Timestamp("00:00:00.25")], [pd.Timestamp("20:20:20.30")], [np.nan]]
         )
@@ -241,8 +229,6 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(table.domain.variables[0].have_date, 0)
 
     def test_table_from_frame_datetime(self):
-        from Orange.data.pandas_compat import table_from_frame
-
         df = pd.DataFrame(
             [
                 [pd.Timestamp("2017-12-19 00:00:00.50")],
@@ -297,8 +283,6 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(table.domain.variables[0].have_date, 1)
 
     def test_table_from_frame_timezones(self):
-        from Orange.data.pandas_compat import table_from_frame
-
         df = pd.DataFrame(
             [
                 [pd.Timestamp("2017-12-19 00:00:00")],
@@ -317,7 +301,8 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        self.assertEqual(pytz.utc, table.domain.variables[0].timezone)
+        tz = pytz.utc if pd.__version__ < "2" else timezone.utc
+        self.assertEqual(tz, table.domain.variables[0].timezone)
         np.testing.assert_equal(
             table.X,
             [
@@ -335,7 +320,9 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        self.assertEqual(pytz.FixedOffset(60), table.domain.variables[0].timezone)
+        tz = pytz.FixedOffset(60) if pd.__version__ < "2" else \
+            timezone(timedelta(seconds=3600))
+        self.assertEqual(tz, table.domain.variables[0].timezone)
         np.testing.assert_equal(
             table.X,
             [
@@ -371,7 +358,8 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        self.assertEqual(pytz.utc, table.domain.variables[0].timezone)
+        tz = pytz.utc if pd.__version__ < "2" else timezone.utc
+        self.assertEqual(tz, table.domain.variables[0].timezone)
         np.testing.assert_equal(
             table.X,
             [
@@ -388,8 +376,6 @@ class TestPandasCompat(unittest.TestCase):
         numbers as datetime. That column must be result either in StringVariable
         or DiscreteVariable since it's dtype is object.
         """
-        from Orange.data.pandas_compat import table_from_frame
-
         df = pd.DataFrame([[1], [2], [3]], dtype="object")
         table = table_from_frame(df)
         # check if exactly ContinuousVariable and not subtype TimeVariable
@@ -405,8 +391,6 @@ class TestPandasCompat(unittest.TestCase):
         Test if string-like variables are handled correctly and nans are replaced
         with String.Unknown
         """
-        from Orange.data.pandas_compat import table_from_frame
-
         # s1 contains nan and s2 contains pd.Na
         df = pd.DataFrame(
             [["a", "b"], ["c", "d"], ["e", "f"], [5, "c"], [np.nan, np.nan]],
@@ -429,8 +413,6 @@ class TestPandasCompat(unittest.TestCase):
         self.assertTrue(all(isinstance(v, StringVariable) for v in table.domain.metas))
 
     def test_time_variable_compatible(self):
-        from Orange.data.pandas_compat import table_from_frame
-
         def to_df(val):
             return pd.DataFrame([[pd.Timestamp(val)]])
 
@@ -664,7 +646,7 @@ class TestTablePandas(unittest.TestCase):
                  [1, 23]])
         )
 
-        df = self.table.X_df
+        df = self.table.X_df.astype(float)
         df2 = table2.X_df
         df3 = pd.merge(df, df2, on='c2')
         table2 = df.to_orange_table()
@@ -776,8 +758,6 @@ class TestDenseTablePandas(TestTablePandas):
         self.assertTrue(np.shares_memory(df.values, table.Y))
         self.assertTrue(np.shares_memory(df.values, table2.Y))
 
-    @unittest.skipUnless(pd.__version__ >= '1.4.0',
-                         'pandas-dev/pandas#39263')
     def test_contiguous_metas(self):
         table = self.table
         df = table.metas_df
@@ -808,7 +788,7 @@ class TestDenseTablePandas(TestTablePandas):
 
     def test_amend_dimension_mismatch(self):
         df = self.table.X_df
-        df = df.append([0, 1])
+        df = pd.concat([df, df.iloc[:2]])
         try:
             self.table.X_df = df
         except ValueError as e:
