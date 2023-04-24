@@ -543,24 +543,29 @@ class TestOWSOM(WidgetTest):
         m = selm((0, 0)).astype(int)
         widget.on_selection_change(selm((0, 0)))
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
         widget.redraw_selection.assert_called_once()
         widget.update_output.assert_called_once()
 
         m = selm((0, 1)).astype(int)
         widget.on_selection_change(selm((0, 1)))
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
 
         m[0, 0] = 1
         widget.on_selection_change(selm((0, 0)), SomView.SelectionAddToGroup)
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
 
         m[0, 0] = 0
         widget.on_selection_change(selm((0, 0)), SomView.SelectionRemove)
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
 
         m[0, 0] = 2
         widget.on_selection_change(selm((0, 0)), SomView.SelectionNewGroup)
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
 
     @_patch_recompute_som
     def test_on_selection_change_on_empty(self):

@@ -422,15 +422,18 @@ class OWSOM(OWWidget):
             return
         if self.selection is None:
             self.selection = np.zeros(self.grid_cells.T.shape, dtype=np.int16)
+
+        selection_np = np.array(self.selection)
         if action == SomView.SelectionSet:
-            self.selection[:] = 0
-            self.selection[selection] = 1
+            selection_np[:] = 0
+            selection_np[selection] = 1
         elif action == SomView.SelectionAddToGroup:
-            self.selection[selection] = max(1, np.max(self.selection))
+            selection_np[selection] = max(1, np.max(selection_np))
         elif action == SomView.SelectionNewGroup:
-            self.selection[selection] = 1 + np.max(self.selection)
+            selection_np[selection] = 1 + np.max(selection_np)
         elif action & SomView.SelectionRemove:
-            self.selection[selection] = 0
+            selection_np[selection] = 0
+        self.selection = selection_np.tolist()
         self.redraw_selection()
         self.update_output()
 
@@ -445,6 +448,7 @@ class OWSOM(OWWidget):
             x, y = np.nonzero(self.selection)
             if len(x) > 1:
                 return
+            x, y = x[0], y[0]
             if event.key() == Qt.Key_Up and y > 0:
                 y -= 1
             if event.key() == Qt.Key_Down and y < self.size_y - 1:
@@ -455,11 +459,11 @@ class OWSOM(OWWidget):
                 x += 1
             x -= self.hexagonal and x == self.size_x - 1 and y % 2
 
-        if self.selection is not None and self.selection[x, y]:
+        if self.selection is not None and self.selection[x][y]:
             return
         selection = np.zeros(self.grid_cells.shape, dtype=bool)
         selection[x, y] = True
-        self.on_selection_change(selection)
+        self.on_selection_change(selection.tolist())
 
     def on_selection_mark_change(self, marks):
         self.redraw_selection(marks=marks)
@@ -484,7 +488,7 @@ class OWSOM(OWWidget):
             for x in range(self.size_x - (y % 2) * self.hexagonal):
                 cell = self.grid_cells[y, x]
                 marked = marks is not None and marks[x, y]
-                sel_group = self.selection is not None and self.selection[x, y]
+                sel_group = self.selection is not None and self.selection[x][y]
                 if marked:
                     cell.setBrush(mark_brush)
                     cell.setPen(mark_pen)
@@ -821,7 +825,7 @@ class OWSOM(OWWidget):
             for y in range(self.size_y):
                 for x in range(self.size_x):
                     rows = self.get_member_indices(x, y)
-                    indices[rows] = self.selection[x, y]
+                    indices[rows] = self.selection[x][y]
 
         if np.any(indices):
             sel_data = create_groups_table(self.data, indices, False, "Group")
@@ -929,6 +933,14 @@ class OWSOM(OWWidget):
         if self.colors:
             self.report_caption(
                 f"Self-organizing map colored by '{self.attr_color.name}'")
+
+    @classmethod
+    def migrate_settings(cls, settings, _):
+        # previously selection was saved as np.ndarray which is not supported
+        # by widget-base, change selection to list
+        selection = settings.get('selection')
+        if selection is not None and isinstance(selection, np.ndarray):
+            settings['selection'] = selection.tolist()
 
 
 def _draw_hexagon():
