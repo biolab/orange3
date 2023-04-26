@@ -1936,6 +1936,9 @@ class Table(Sequence, Storage):
         if filter.oper == filter.Contains:
             return np.fromiter((fmin in e for e in col),
                                dtype=bool)
+        if filter.oper == filter.NotContain:
+            return np.fromiter((fmin not in e for e in col),
+                               dtype=bool)
         if filter.oper == filter.StartsWith:
             return np.fromiter((e.startswith(fmin) for e in col),
                                dtype=bool)

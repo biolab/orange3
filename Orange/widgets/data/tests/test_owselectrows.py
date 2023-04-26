@@ -47,6 +47,7 @@ SFValues = {
     FilterString.Between: ["aardwark", "cat"],
     FilterString.Outside: ["aardwark"],
     FilterString.Contains: ["aa"],
+    FilterString.NotContain: ["bb"],
     FilterString.StartsWith: ["aa"],
     FilterString.EndsWith: ["ark"],
     FilterString.IsDefined: []
