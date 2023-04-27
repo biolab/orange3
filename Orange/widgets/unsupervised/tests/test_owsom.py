@@ -5,6 +5,8 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import scipy.sparse as sp
+from AnyQt.QtWidgets import QComboBox, QPushButton, QCheckBox
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain
 from Orange.widgets.tests.base import WidgetTest
@@ -645,6 +647,42 @@ class TestOWSOM(WidgetTest):
         self.widget._recompute_som.reset_mock()
         self.send_signal(self.widget.Inputs.data, heart_with_less_features)
         self.widget._recompute_som.assert_called_once()
+
+    def test_modified_info(self):
+        w = self.widget
+        self.assertFalse(w.Information.modified.is_shown())
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertFalse(w.Information.modified.is_shown())
+        restart_button = w.controlArea.findChild(QPushButton)
+
+        # modify grid
+        simulate.combobox_activate_index(w.controlArea.findChild(QComboBox), 1)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
+
+        # modify set dimensions automatically
+        w.controlArea.findChild(QCheckBox).setCheckState(Qt.Unchecked)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
+
+        # modify dimension spins
+        w.spin_x.setValue(7)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
+
+        w.spin_y.setValue(7)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
+
+        # modify initialization
+        simulate.combobox_activate_index(w.controlArea.findChildren(QComboBox)[1], 1)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
 
 
 if __name__ == "__main__":
