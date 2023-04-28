@@ -153,7 +153,12 @@ class OWNeighbors(OWWidget):
         up_to = len(dist) - np.sum(inrefs)
         if self.limit_neighbors and self.n_neighbors < up_to:
             up_to = self.n_neighbors
-        return np.argpartition(dist, up_to - 1)[:up_to]
+        # get indexes of N neighbours in unsorted order - faster than argsort
+        idx = np.argpartition(dist, up_to - 1)[:up_to]
+        # sort selected N neighbours according to distances
+        sorted_subset_idx = np.argsort(dist[idx])
+        # map sorted indexes back to original index space
+        return idx[sorted_subset_idx]
 
     def _data_with_similarity(self, indices):
         domain = self.data.domain
