@@ -378,8 +378,8 @@ def reconstruct(tname, args):
     """
     try:
         constructor = globals()[tname]
-    except KeyError:
-        raise NameError(tname)
+    except KeyError as exc:
+        raise NameError(tname) from exc
     return constructor(*args)
 
 
@@ -1327,7 +1327,7 @@ class DiscreteVariableEditor(VariableEditor):
                         SourceNameRole: ci
                     }
                 else:
-                    assert False, "invalid mapping: {!r}".format(tr.mapping)
+                    assert False, f"invalid mapping: {tr.mapping}"
                 items.append(item)
         elif var is not None:
             items = [
@@ -1457,8 +1457,7 @@ class DiscreteVariableEditor(VariableEditor):
                 # new level -> remove it
                 model.removeRow(index.row())
             else:
-                assert False, "invalid state '{}' for {}" \
-                    .format(state, index.row())
+                assert False, f"invalid state '{state}' for {index.row()}"
 
     def _add_category(self):
         """
@@ -1633,8 +1632,7 @@ class VariableEditDelegate(QStyledItemDelegate):
             text = var.name
             for tr in transform:
                 if isinstance(tr, Rename):
-                    text = ("{} \N{RIGHTWARDS ARROW} {}"
-                            .format(var.name, tr.name))
+                    text = f"{var.name} \N{RIGHTWARDS ARROW} {tr.name}"
             for tr in transform:
                 if isinstance(tr, ReinterpretTransformTypes):
                     text += f" (reinterpreted as " \
@@ -2075,21 +2073,21 @@ class OWEditDomain(widget.OWWidget):
         gui.rubber(self.buttonsArea)
 
         bbox = gui.hBox(self.buttonsArea)
-        breset_all = gui.button(
+        gui.button(
             bbox, self, "Reset All",
             objectName="button-reset-all",
             toolTip="Reset all variables to their input state.",
             autoDefault=False,
             callback=self.reset_all
         )
-        breset = gui.button(
+        gui.button(
             bbox, self, "Reset Selected",
             objectName="button-reset",
             toolTip="Rest selected variable to its input state.",
             autoDefault=False,
             callback=self.reset_selected
         )
-        bapply = gui.button(
+        gui.button(
             bbox, self, "Apply",
             objectName="button-apply",
             toolTip="Apply changes and commit data on output.",
@@ -2282,7 +2280,7 @@ class OWEditDomain(widget.OWWidget):
                 tr.append(reconstruct(*t))
             except (NameError, TypeError) as err:
                 warnings.warn(
-                    "Failed to restore transform: {}, {!r}".format(t, err),
+                    f"Failed to restore transform: {t}, {err}",
                     UserWarning, stacklevel=2
                 )
         if tr:
@@ -2401,7 +2399,7 @@ class OWEditDomain(widget.OWWidget):
                     parts.append(report_transform(vector.vtype, trs))
             if parts:
                 html = ("<ul>" +
-                        "".join(map("<li>{}</li>".format, parts)) +
+                        "".join(f"<li>{part}</li>" for part in parts) +
                         "</ul>")
             else:
                 html = "No changes"
@@ -2411,7 +2409,6 @@ class OWEditDomain(widget.OWWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
-        # pylint: disable=bad-continuation
         if version is None or version <= 1:
             hints_ = context.values.get("domain_change_hints", ({}, -2))[0]
             store = []
@@ -2553,13 +2550,13 @@ def report_transform(var, trs):
         return ReinterpretTypeCode.get(type(value), "?")
 
     def strike(text):
-        return "<s>{}</s>".format(escape(text))
+        return f"<s>{escape(text)}</s>"
 
     def i(text):
-        return "<i>{}</i>".format(escape(text))
+        return f"<i>{escape(text)}</i>"
 
     def text(text):
-        return "<span>{}</span>".format(escape(text))
+        return f"<span>{escape(text)}</span>"
     assert trs
     rename = annotate = catmap = unlink = None
     reinterpret = None
@@ -2577,12 +2574,10 @@ def report_transform(var, trs):
             reinterpret = tr
 
     if reinterpret is not None:
-        header = "{} → ({}) {}".format(
-            var.name, type_char(reinterpret),
-            rename.name if rename is not None else var.name
-        )
+        header = f"{var.name} → ({type_char(reinterpret)}) " \
+                 f"{rename.name if rename is not None else var.name}"
     elif rename is not None:
-        header = "{} → {}".format(var.name, rename.name)
+        header = f"{var.name} → {rename.name}"
     else:
         header = var.name
     if unlink is not None:
@@ -2622,9 +2617,9 @@ def report_transform(var, trs):
                     i(name) + " : " + text(old[name]) + " → " + text(new[name])
                 )
 
-    html = ["<div style='font-weight: bold;'>{}</div>".format(header)]
+    html = [f"<div style='font-weight: bold;'>{header}</div>"]
     for title, contents in filter(None, [values_section, annotate_section]):
-        section_header = "<div>{}:</div>".format(title)
+        section_header = f"<div>{title}:</div>"
         section_contents = "<br/>\n".join(contents)
         html.append(section_header)
         html.append(
@@ -2670,7 +2665,7 @@ def _parse_attributes(mapping):
     # Use the same functionality that parses attributes
     # when reading text files
     return Orange.data.Flags([
-        "{}={}".format(*item) for item in mapping
+        f"{item[0]}={item[1]}" for item in mapping
     ]).attributes
 
 
