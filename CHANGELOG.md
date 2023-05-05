@@ -4,6 +4,54 @@ Change Log
 [next] - TBA
 ------------
 
+[3.35.0] - 2023-05-05
+---------------------                                                                                       
+##### Enhancements
+* Neighbours - Sort resulting instances in order according to distance ([#6425](../../pull/6425))
+* SOM - Warn user to restart optimization after parameter change ([#6438](../../pull/6438))
+* Update requirements-core.txt
+* TimeVariable - add formats with UTC offset
+* Skip pandas==2.0.0
+* Data Table: Subset input ([#6405](../../pull/6405))
+* Data Table: Restore applied sorting ([#6370](../../pull/6370))
+* widgets.data.utils.tableview: Disconnect specific slot
+* Select Rows: Better label for purging unused values/features ([#6383](../../pull/6383))
+* Single input data table widget ([#6346](../../pull/6346))
+* Continuize: Specific options for variables ([#6181](../../pull/6181))
+* Datasets: Add language selection ([#6358](../../pull/6358))
+* MDS: Show Kruskal stress ([#6309](../../pull/6309))
+* Group By - add quantile aggregations ([#6304](../../pull/6304))
+* MCC: Add Matthews correlation coefficient score ([#6264](../../pull/6264))
+* Improve scorer selection in Test and Score and predictions ([#6282](../../pull/6282))
+* Feature Constructor: Enable comprehensions and lambdas in expressions ([#6272](../../pull/6272))
+
+##### Bugfixes
+* Edit Domain no longer forgets its settings ([#6415](../../pull/6415))
+* SOM: Store selection Settings in list instead of np.ndarray ([#6423](../../pull/6423))
+* pca: n_features_ attribute of decomposition.PCA is deprecated in favor of n_features_in_ ([#6249](../../pull/6249))
+* Update requirements-core.txt
+* TimeVariable - add formats with UTC offset
+* Skip pandas==2.0.0
+* tableview: Fix errors with sparse basket columns ([#6409](../../pull/6409))
+* owtable: Remove multiple connections to 'selectionFinished' ([#6404](../../pull/6404))
+* widgets.data.utils.tableview: Disconnect specific slot
+* Drop table after testing ([#6351](../../pull/6351))
+* MDS: Remove repeated updates at the end of optimization ([#6337](../../pull/6337))
+* Select Rows - Fix checked groups not considered in PyQt6 ([#6336](../../pull/6336))
+* Edit Domain - set have_time and have_date to time variables ([#6324](../../pull/6324))
+* Rank - make sorting setting PyQt6 compatible ([#6301](../../pull/6301))
+* Concatenate - preserve table names when compute value ignored ([#6331](../../pull/6331))
+* Fix unpickling domains: do not pickle indices (which can cause problems) ([#6317](../../pull/6317))
+* stats.utils: Don't count zeros as nans ([#6314](../../pull/6314))
+* File Widget: Fix recent urls save/restore ([#6259](../../pull/6259))
+* Fix Color for python 3.10 ([#6293](../../pull/6293))
+* listfilter: Fix dragDropActionDidComplete signal type ([#6292](../../pull/6292))
+* Table.from_table works correctly with boolean indices ([#6278](../../pull/6278))
+* Pythagorean Forest: Fix report ([#6276](../../pull/6276))
+* Implement predict() in simple tree and simple RF models ([#6258](../../pull/6258))
+* Bar Plot: Fix annotation by enumeration ([#6270](../../pull/6270))
+* Color: fix coloring of computed (processed) variables ([#6261](../../pull/6261))
+
 
 [3.34.1] - 2022-12-13
 --------------------
@@ -1735,7 +1783,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.34.1..HEAD
+[next]: https://github.com/biolab/orange3/compare/3.35.0..HEAD
+[3.34.1]: https://github.com/biolab/orange3/compare/3.34.1...3.35.0
 [3.34.1]: https://github.com/biolab/orange3/compare/3.34.0...3.34.1
 [3.34.0]: https://github.com/biolab/orange3/compare/3.33.0...3.34.0
 [3.33.0]: https://github.com/biolab/orange3/compare/3.32.0...3.33.0
