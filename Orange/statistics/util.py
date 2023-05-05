@@ -344,31 +344,22 @@ def stats(X, weights=None, compute_variance=False):
 
     if X.size and is_numeric:
         if is_sparse:
+            nans = countnans(X, axis=0)
             X = X.tocsc()
+        else:
+            nans = np.isnan(X).sum(axis=0)
         if compute_variance:
             means, vars = nan_mean_var(X, axis=0, weights=weights)
         else:
             means = nanmean(X, axis=0, weights=weights)
             vars = np.zeros(X.shape[1] if X.ndim == 2 else 1)
-
-    if X.size and is_numeric and not is_sparse:
-        nans = np.isnan(X).sum(axis=0)
-        return np.column_stack((
-            np.nanmin(X, axis=0),
-            np.nanmax(X, axis=0),
-            means,
-            vars,
-            nans,
-            X.shape[0] - nans))
-    elif is_sparse and X.size:
-        non_zero = np.bincount(X.nonzero()[1], minlength=X.shape[1])
         return np.column_stack((
             nanmin(X, axis=0),
             nanmax(X, axis=0),
             means,
             vars,
-            X.shape[0] - non_zero,
-            non_zero))
+            nans,
+            X.shape[0] - nans))
     else:
         if X.ndim == 1:
             X = X[:, None]

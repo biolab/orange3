@@ -25,7 +25,7 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWLinearProjection.Inputs.data
         cls.signal_data = cls.data
         cls.same_input_output_domain = False
 
@@ -90,6 +90,19 @@ class TestOWLinearProjection(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, Table("housing"))
         self.assertFalse(buttons[Placement.LDA].isEnabled())
         self.send_signal(self.widget.Inputs.data, None)
+        self.assertTrue(buttons[Placement.LDA].isEnabled())
+
+    def test_lda_not_enough_distinct(self):
+        buttons = self.widget.radio_placement.buttons
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertTrue(buttons[Placement.LDA].isEnabled())
+        self.send_signal(self.widget.Inputs.data, self.data[:10])
+        self.assertFalse(buttons[Placement.LDA].isEnabled())
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertTrue(buttons[Placement.LDA].isEnabled())
+        self.send_signal(self.widget.Inputs.data, self.data[40:60])
+        self.assertFalse(buttons[Placement.LDA].isEnabled())
+        self.send_signal(self.widget.Inputs.data, self.data[40:110])
         self.assertTrue(buttons[Placement.LDA].isEnabled())
 
     def test_data_no_cont_features(self):

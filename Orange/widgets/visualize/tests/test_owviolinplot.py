@@ -31,7 +31,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWViolinPlot.Inputs.data
         cls.signal_data = cls.data
         cls.housing = Table("housing")
 
@@ -318,6 +318,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
                                     widget=widget)
         self.assert_table_equal(selected2, selected3)
 
+    @WidgetTest.skipNonEnglish
     def test_visual_settings(self):
         graph = self.widget.graph
 

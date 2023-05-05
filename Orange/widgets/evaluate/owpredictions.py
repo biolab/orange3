@@ -16,7 +16,7 @@ from AnyQt.QtCore import (
     QModelIndex, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
-from orangewidget.report import plural
+from orangecanvas.utils.localization import pl
 from orangewidget.utils.itemmodels import AbstractSortTableModel
 
 import Orange
@@ -61,7 +61,9 @@ class OWPredictions(OWWidget):
     icon = "icons/Predictions.svg"
     priority = 200
     description = "Display predictions of models for an input dataset."
-    keywords = []
+    keywords = "predictions"
+
+    settings_version = 2
 
     want_control_area = False
 
@@ -515,7 +517,7 @@ class OWPredictions(OWWidget):
         n_predictors = len(self.predictors)
         if n_predictors:
             n_valid = len(self._non_errored_predictors())
-            details += plural("Model: {number} model{s}", n_predictors)
+            details += f"Model: {n_predictors} {pl(n_predictors, 'model')}"
             if n_valid != n_predictors:
                 details += f" ({n_predictors - n_valid} failed)"
             details += "<ul>"
@@ -915,15 +917,15 @@ class OWPredictions(OWWidget):
             if self.is_discrete_class and self.shown_probs != self.NO_PROBS:
                 text += '<br>Showing probabilities for '
                 if self.shown_probs == self.MODEL_PROBS:
-                    text += "all classes known to the model"
+                    text += "all classes known to the model."
                 elif self.shown_probs == self.DATA_PROBS:
-                    text += "all classes that appear in the data"
+                    text += "all classes that appear in the data."
                 elif self.shown_probs == self.BOTH_PROBS:
                     text += "all classes that appear in the data " \
-                            "and are known to the model"
+                            "and are known to the model."
                 else:
                     class_idx = self.shown_probs - len(self.PROB_OPTS)
-                    text += f"'{self.class_var.values[class_idx]}'"
+                    text += f"'{self.class_var.values[class_idx]}.'"
             self.report_paragraph('Info', text)
             self.report_table("Data & Predictions", merge_data_with_predictions(),
                               header_rows=1, header_columns=1)
@@ -940,6 +942,12 @@ class OWPredictions(OWWidget):
     def showEvent(self, event):
         super().showEvent(event)
         QTimer.singleShot(0, self._update_splitter)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            if "score_table" in settings:
+                ScoreTable.migrate_to_show_scores_hints(settings["score_table"])
 
 
 class ItemDelegate(TableDataDelegate):

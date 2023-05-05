@@ -265,7 +265,7 @@ class OWDistanceMap(widget.OWWidget):
     description = "Visualize a distance matrix."
     icon = "icons/DistanceMap.svg"
     priority = 1200
-    keywords = []
+    keywords = "distance map"
 
     class Inputs:
         distances = Input("Distances", Orange.misc.DistMatrix)
@@ -274,6 +274,10 @@ class OWDistanceMap(widget.OWWidget):
         selected_data = Output("Selected Data", Orange.data.Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Orange.data.Table)
         features = Output("Features", widget.AttributeList, dynamic=False)
+
+    class Error(widget.OWWidget.Error):
+        empty_matrix = widget.Msg("Empty distance matrix")
+        not_symmetric = widget.Msg("Distance matrix is not symmetric.")
 
     settingsHandler = settings.PerfectDomainContextHandler()
 
@@ -292,7 +296,7 @@ class OWDistanceMap(widget.OWWidget):
 
     autocommit = settings.Setting(True)
 
-    graph_name = "grid_widget"
+    graph_name = "grid_widget" # pg.GraphicsItem (pg.GraphicsWidget)
 
     # Disable clustering for inputs bigger than this
     _MaxClustering = 25000
@@ -416,11 +420,13 @@ class OWDistanceMap(widget.OWWidget):
     def set_distances(self, matrix):
         self.closeContext()
         self.clear()
-        self.error()
+        self.Error.clear()
         if matrix is not None:
-            N, _ = matrix.shape
-            if N < 2:
-                self.error("Empty distance matrix.")
+            if matrix.shape[1] < 2:
+                self.Error.empty_matrix()
+                matrix = None
+            elif not matrix.is_symmetric():
+                self.Error.not_symmetric()
                 matrix = None
 
         self.matrix = matrix

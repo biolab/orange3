@@ -38,7 +38,7 @@ The widget cannot output a model if the input data contains models obtained from
 Examples
 --------
 
-At the moment, the only widget which gives the right type of signal needed by the **Calibration Plot** is [Test and Score](../evaluate/testandscore.md). The Calibration Plot will hence always follow Test and Score.
+At the moment, only two widgets give the signal of the correct type for **Calibration Plot**: [Test and Score](../evaluate/testandscore.md) and [Predictions](../evaluate/predictions.md). The Calibration Plot will always follow one of them.
 
 Here is a typical example on the iris data, where we compare two classifiers (namely [Logistic Regression](../model/logisticregression.md) and [Random Forest](../model/randomforest.md)) and input them into [Test and Score](../evaluate/testandscore.md). Test and Score displays evaluation results for each classifier. Then we draw **Calibration Plot** to further analyze the performance of the classifiers. **Calibration Plot** enables you to see prediction accuracy of class probabilities in a plot.
 

@@ -525,7 +525,7 @@ class OWPythonScript(OWWidget):
     category = "Transform"
     icon = "icons/PythonScript.svg"
     priority = 3150
-    keywords = ["program", "function"]
+    keywords = "program, function"
 
     class Inputs:
         data = MultiInput(

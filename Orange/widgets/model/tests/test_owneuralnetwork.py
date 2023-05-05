@@ -30,9 +30,9 @@ class TestOWNeuralNetwork(WidgetTest, WidgetLearnerTestMixin):
         self.assertFalse(self.widget.Warning.no_layers.is_shown())
 
         self.widget.hidden_layers_input = ""
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertTrue(self.widget.Warning.no_layers.is_shown())
 
         self.widget.hidden_layers_input = "10,"
-        self.widget.apply_button.button.click()
+        self.click_apply()
         self.assertFalse(self.widget.Warning.no_layers.is_shown())

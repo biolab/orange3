@@ -10,9 +10,6 @@ from Orange.preprocess import SklImpute
 from Orange.statistics import util
 
 
-# TODO: When we upgrade to numpy 1.13, change use argument copy=False in
-# nan_to_num instead of assignment
-
 # TODO this *private* function is called from several widgets to prepare
 # data for calling the below classes. After we (mostly) stopped relying
 # on sklearn.metrics, this is (mostly) unnecessary
@@ -125,6 +122,9 @@ class Distance:
             are replaced with zeros, and infs with very large numbers.
         callback (callable or None):
             callback function
+        similarity (bool):
+            if `True` (default is `False`) the class will compute similarities
+            instead of distances
 
     Attributes:
         axis (int):
@@ -160,11 +160,15 @@ class Distance:
     sparse data. Currently, all classes that do handle it rely on fallbacks to
     SKL metrics. These, however, do not support discrete data and missing
     values, and will fail silently.
+
+    Class attribute `supports_similarity` indicates whether the class can also
+    compute similarities.
     """
     supports_sparse = False
     supports_discrete = False
     supports_normalization = False
     supports_missing = True
+    supports_similarity = False
 
     # Predefined here to silence pylint, which doesn't look into __new__
     normalize = False
@@ -172,10 +176,15 @@ class Distance:
     impute = False
 
     def __new__(cls, e1=None, e2=None, axis=1, impute=False,
-                callback=None, **kwargs):
+                callback=None, *, similarity=False, **kwargs):
+
+        if similarity and not cls.supports_similarity:
+            raise ValueError(f"{cls.__name__} does not compute similarity")
+
         self = super().__new__(cls)
         self.axis = axis
         self.impute = impute
+        self.similarity = similarity
         self.callback = callback
         # Ugly, but needed to allow allow setting subclass-specific parameters
         # (such as normalize) when `e1` is not `None` and the `__new__` in the
@@ -192,7 +201,11 @@ class Distance:
             fallback = getattr(self, "fallback", None)
             if fallback is not None:
                 # pylint: disable=not-callable
-                return fallback(e1, e2, axis, impute)
+                dist = fallback(e1, e2, axis, impute)
+                if self.similarity:
+                    assert fallback.metric == "cosine"
+                    return 1 - dist
+                return dist
 
         # Magic constructor
         model = self.fit(e1)
@@ -240,10 +253,11 @@ class DistanceModel:
             callback function
 
     """
-    def __init__(self, axis, impute=False, callback=None):
+    def __init__(self, axis, impute=False, callback=None, *, similarity=False):
         self._axis = axis
         self.impute = impute
         self.callback = callback
+        self.similarity = similarity
 
     @property
     def axis(self):
@@ -307,8 +321,8 @@ class FittedDistanceModel(DistanceModel):
             if `True` (default is `False`) continuous columns are normalized
         callback (callable or None): callback function
     """
-    def __init__(self, attributes, axis=1, impute=False, callback=None):
-        super().__init__(axis, impute, callback)
+    def __init__(self, attributes, axis=1, impute=False, callback=None, **kwargs):
+        super().__init__(axis, impute, callback, **kwargs)
         self.attributes = attributes
         self.discrete = None
         self.continuous = None

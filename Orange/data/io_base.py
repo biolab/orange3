@@ -604,9 +604,9 @@ class _FileWriter:
     @staticmethod
     def header_names(data):
         return ['weights'] * data.has_weights() + \
-               [v.name for v in chain(data.domain.attributes,
-                                      data.domain.class_vars,
-                                      data.domain.metas)]
+               [v.name for v in chain(data.domain.class_vars,
+                                      data.domain.metas,
+                                      data.domain.attributes)]
 
     @staticmethod
     def header_types(data):
@@ -623,9 +623,9 @@ class _FileWriter:
             raise NotImplementedError
 
         return ['continuous'] * data.has_weights() + \
-               [_vartype(v) for v in chain(data.domain.attributes,
-                                           data.domain.class_vars,
-                                           data.domain.metas)]
+               [_vartype(v) for v in chain(data.domain.class_vars,
+                                           data.domain.metas,
+                                           data.domain.attributes)]
 
     @staticmethod
     def header_flags(data):
@@ -633,10 +633,10 @@ class _FileWriter:
             ['weight'] * data.has_weights(),
             (Flags.join([flag], *('{}={}'.format(*a) for a in
                                   sorted(var.attributes.items())))
-             for flag, var in chain(zip(repeat(''), data.domain.attributes),
-                                    zip(repeat('class'),
+             for flag, var in chain(zip(repeat('class'),
                                         data.domain.class_vars),
-                                    zip(repeat('meta'), data.domain.metas)))))
+                                    zip(repeat('meta'), data.domain.metas),
+                                    zip(repeat(''), data.domain.attributes)))))
 
     @classmethod
     def write_headers(cls, write, data, with_annotations=True):
@@ -667,15 +667,15 @@ class _FileWriter:
         """`write` is a callback that accepts an iterable"""
         vars_ = list(
             chain((ContinuousVariable('_w'),) if data.has_weights() else (),
-                  data.domain.attributes,
                   data.domain.class_vars,
-                  data.domain.metas))
+                  data.domain.metas,
+                  data.domain.attributes))
 
         formatters = [cls.formatter(v) for v in vars_]
         for row in zip(data.W if data.W.ndim > 1 else data.W[:, np.newaxis],
-                       data.X,
                        data.Y if data.Y.ndim > 1 else data.Y[:, np.newaxis],
-                       data.metas):
+                       data.metas,
+                       data.X):
             write([fmt(v) for fmt, v in zip(formatters, flatten(row))])
 
 

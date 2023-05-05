@@ -8,9 +8,9 @@ class OWSaveDistances(OWSaveBase):
     name = "Save Distance Matrix"
     description = "Save distance matrix to an output file."
     icon = "icons/SaveDistances.svg"
-    keywords = ["distance matrix", "save"]
+    keywords = "save distance matrix, distance matrix, save"
 
-    filters = ["Distance File (*.dst)"]
+    filters = ["Excel File (*.xlsx)", "Distance File (*.dst)"]
 
     class Warning(OWSaveBase.Warning):
         table_not_saved = Msg("Associated data was not saved.")
@@ -35,7 +35,7 @@ class OWSaveDistances(OWSaveBase):
 
     def send_report(self):
         self.report_items((
-            ("Input:", "none" if self.data is None else self._description()),
+            ("Input", "none" if self.data is None else self._description()),
             ("File name", self.filename or "not set")))
 
     def _description(self):

@@ -24,7 +24,7 @@ Consider, for a start, a projection of the *Iris* dataset shown below. Notice th
 1. Axes in the projection that are displayed and other available axes. Optimize your projection by using **Suggest Features**. This feature scores attributes and returns the top scoring attributes with a simultaneous visualization update. Feature scoring computes the classification accuracy (for classification) or MSE (regression) of k-nearest neighbors classifier on the projected, two-dimensional data. The score reflects how well the classes in the projection are separated.
 2. Choose the type of projection:
    - Circular Placement
-   - [Linear Discriminant Analysis](https://en.wikipedia.org/wiki/Linear_discriminant_analysis)
+   - [Linear Discriminant Analysis](https://en.wikipedia.org/wiki/Linear_discriminant_analysis); available only for categorical target variable with at least three distinct values in the data.
    - [Principal Component Analysis](https://en.wikipedia.org/wiki/Principal_component_analysis)
 3. Set the color of the displayed points. Set shape, size, and label to differentiate between points.
    *Label only selected points* labels only selected data instances.

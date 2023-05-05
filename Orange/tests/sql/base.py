@@ -6,6 +6,7 @@ import random
 import inspect
 
 import numpy as np
+import pandas as pd
 
 from Orange.data import Table
 
@@ -204,7 +205,7 @@ class PostgresTestConnection(DBTestConnection):
 
         insert_values = ", ".join(
             "({})".format(
-                ", ".join("NULL" if v is None else "'{}'".format(v)
+                ", ".join("NULL" if pd.isna(v) else "'{}'".format(v)
                           for v, t in zip(row, sql_column_types))
             ) for row in data
         )
@@ -277,7 +278,7 @@ class MicrosoftTestConnection(DBTestConnection):
 
         insert_values = ", ".join(
             "({})".format(
-                ", ".join("NULL" if v is None else "'{}'".format(v)
+                ", ".join("NULL" if pd.isna(v) else "'{}'".format(v)
                           for v, t in zip(row, sql_column_types))
             ) for row in data
         )

@@ -160,12 +160,11 @@ class RowInstance(Instance):
                 self._metas[-1 - key] = value
 
     def _str(self, limit):
-        def sp_values(matrix, variables):
-            if not sp.issparse(matrix):
-                if matrix.ndim == 1:
-                    matrix = matrix[:, np.newaxis]
-                return Instance.str_values(matrix[row], variables, limit)
+        def sp_values(row, variables, sparsity=None):
+            if sparsity is None:
+                return Instance.str_values(row, variables, limit)
 
+            # row is sparse
             row_entries, idx = [], 0
             while idx < len(variables):
                 # Make sure to stop printing variables if we limit the output
@@ -173,8 +172,8 @@ class RowInstance(Instance):
                     break
 
                 var = variables[idx]
-                if var.is_discrete or matrix[row, idx]:
-                    row_entries.append("%s=%s" % (var.name, var.str_val(matrix[row, idx])))
+                if var.is_discrete or row[idx]:
+                    row_entries.append("%s=%s" % (var.name, var.str_val(row[idx])))
 
                 idx += 1
 
@@ -185,15 +184,13 @@ class RowInstance(Instance):
 
             return s
 
-        table = self.table
-        domain = table.domain
-        row = self.row_index
-        s = "[" + sp_values(table.X, domain.attributes)
+        domain = self._domain
+        s = "[" + sp_values(self._x, domain.attributes, self.sparse_x)
         if domain.class_vars:
-            s += " | " + sp_values(table.Y, domain.class_vars)
+            s += " | " + sp_values(self._y, domain.class_vars, self.sparse_y)
         s += "]"
-        if self._domain.metas:
-            s += " {" + sp_values(table.metas, domain.metas) + "}"
+        if domain.metas:
+            s += " {" + sp_values(self._metas, domain.metas, self.sparse_metas) + "}"
         return s
 
     def __str__(self):
@@ -226,6 +223,7 @@ class _ArrayConversion:
         self.target = target
         self.src_cols = src_cols
         self.is_sparse = is_sparse
+        self.results_inplace = not is_sparse
         self.subarray_from = self._can_copy_all(src_cols, source_domain)
         self.variables = variables
         dtype = np.float64
@@ -246,7 +244,8 @@ class _ArrayConversion:
                for x in src_cols):
             return "Y"
 
-    def get_subarray(self, source, row_indices, n_rows):
+    def get_subarray(self, source, row_indices):
+        n_rows = _selection_length(row_indices, len(source))
         if not len(self.src_cols):
             if self.is_sparse:
                 return sp.csr_matrix((n_rows, 0), dtype=source.X.dtype)
@@ -272,12 +271,11 @@ class _ArrayConversion:
         assert arr.ndim == 2 or self.subarray_from == "Y" and arr.ndim == 1
         return arr
 
-    def get_columns(self, source, row_indices, n_rows, out=None, target_indices=None):
+    def get_columns(self, source, row_indices, out=None, target_indices=None):
+        n_rows = _selection_length(row_indices, len(source))
         n_src_attrs = len(source.domain.attributes)
 
         data = []
-        sp_col = []
-        sp_row = []
         match_density = (
             assure_column_sparse if self.is_sparse else assure_column_dense
         )
@@ -326,29 +324,59 @@ class _ArrayConversion:
                     Y[row_indices, col - n_src_attrs]
                 )
 
-            if self.is_sparse:
-                # col_array should be coo matrix
-                data.append(col_array.data)
-                sp_col.append(np.full(len(col_array.data), i))
-                sp_row.append(col_array.indices)  # row indices should be same
-            else:
+            if self.results_inplace:
                 out[target_indices, i] = col_array
+            else:
+                data.append(col_array)
 
+        if self.results_inplace:
+            return out
+        else:
+            return self.join_columns(data)
+
+    def join_columns(self, data):
         if self.is_sparse:
             # creating csr directly would need plenty of manual work which
             # would probably slow down the process - conversion coo to csr
             # is fast
+            coo_data = []
+            coo_col = []
+            coo_row = []
+            for i, col_array in enumerate(data):
+                coo_data.append(col_array.data)
+                coo_col.append(np.full(len(col_array.data), i))
+                coo_row.append(col_array.indices)  # row indices should be same
+            n_rows = col_array.shape[0]  # pylint: disable=undefined-loop-variable
             out = sp.coo_matrix(
-                (np.hstack(data), (np.hstack(sp_row), np.hstack(sp_col))),
+                (np.hstack(coo_data), (np.hstack(coo_row), np.hstack(coo_col))),
                 shape=(n_rows, len(self.src_cols)),
                 dtype=self.dtype
             )
-            out = out.tocsr()
+            return out.tocsr()
 
-        return out
+    def join_partial_results(self, parts):
+        if self.is_sparse:
+            return sp.vstack(parts)
+        else:
+            return parts
+
+    def init_partial_results(self, n_rows):
+        if not self.results_inplace:
+            return []  # list to store partial results
+        else:  # a dense numpy array
+            # F-order enables faster writing to the array while accessing and
+            # matrix operations work with same speed (e.g. dot)
+            return np.zeros((n_rows, len(self.src_cols)),
+                            order="F", dtype=self.dtype)
+
+    def add_partial_result(self, parts, part):
+        if not self.results_inplace:
+            parts.append(part)
 
 
 class _FromTableConversion:
+
+    max_rows_at_once = 5000
 
     def __init__(self, source, destination):
         conversion = DomainConversion(source, destination)
@@ -371,6 +399,53 @@ class _FromTableConversion:
                 self.columnwise.append(part)
             else:
                 self.subarray.append(part)
+
+    def convert(self, source, row_indices, clear_cache_after_part):
+        n_rows = _selection_length(row_indices, len(source))
+
+        res = {}
+
+        for array_conv in self.subarray:
+            out = array_conv.get_subarray(source, row_indices)
+            res[array_conv.target] = out
+
+        parts = {}
+
+        for array_conv in self.columnwise:
+            parts[array_conv.target] = array_conv.init_partial_results(n_rows)
+
+        if n_rows <= self.max_rows_at_once:
+            for array_conv in self.columnwise:
+                out = array_conv.get_columns(source, row_indices,
+                                             parts[array_conv.target],
+                                             ...)
+                res[array_conv.target] = out
+        else:
+            i_done = 0
+
+            while i_done < n_rows:
+                target_indices = slice(i_done, min(n_rows, i_done + self.max_rows_at_once))
+                source_indices = _select_from_selection(row_indices, target_indices,
+                                                       len(source))
+
+                for array_conv in self.columnwise:
+                    # dense arrays are populated in-place
+                    out = array_conv.get_columns(source, source_indices,
+                                                 parts[array_conv.target],
+                                                 target_indices)
+                    array_conv.add_partial_result(parts[array_conv.target], out)
+
+                i_done += self.max_rows_at_once
+
+                # clear cache after a part is done
+                if clear_cache_after_part:
+                    _thread_local.conversion_cache = {}
+
+            for array_conv in self.columnwise:
+                res[array_conv.target] = \
+                    array_conv.join_partial_results(parts[array_conv.target])
+
+        return res["X"], res["Y"], res["metas"]
 
 
 # noinspection PyPep8Naming
@@ -715,9 +790,6 @@ class Table(Sequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
-
-        PART = 5000
-
         new_cache = _thread_local.conversion_cache is None
         try:
             if new_cache:
@@ -737,13 +809,8 @@ class Table(Sequence, Storage):
                     table = assure_domain_conversion_sparsity(table, source)
                 return table
 
-            if row_indices is ...:
-                n_rows = len(source)
-            elif isinstance(row_indices, slice):
-                row_indices_range = range(*row_indices.indices(source.X.shape[0]))
-                n_rows = len(row_indices_range)
-            else:
-                n_rows = len(row_indices)
+            # avoid boolean indices; also convert to slices if possible
+            row_indices = _optimize_indices(row_indices, len(source))
 
             self = cls()
             self.domain = domain
@@ -759,69 +826,12 @@ class Table(Sequence, Storage):
             # on the whole table, because this avoids needless copies of contents
 
             with self.unlocked_reference():
-                for array_conv in table_conversion.subarray:
-                    out = array_conv.get_subarray(source, row_indices, n_rows)
-                    setattr(self, array_conv.target, out)
-
-                parts = {}
-
-                for array_conv in table_conversion.columnwise:
-                    if array_conv.is_sparse:
-                        parts[array_conv.target] = []
-                    else:
-                        # F-order enables faster writing to the array while accessing and
-                        # matrix operations work with same speed (e.g. dot)
-                        parts[array_conv.target] = \
-                            np.zeros((n_rows, len(array_conv.src_cols)),
-                                     order="F", dtype=array_conv.dtype)
-
-                if n_rows <= PART:
-                    for array_conv in table_conversion.columnwise:
-                        out = array_conv.get_columns(source, row_indices, n_rows,
-                                                     parts[array_conv.target],
-                                                     ...)
-                        setattr(self, array_conv.target, out)
-                else:
-                    i_done = 0
-
-                    while i_done < n_rows:
-                        target_indices = slice(i_done, min(n_rows, i_done + PART))
-                        if row_indices is ...:
-                            source_indices = target_indices
-                        elif isinstance(row_indices, slice):
-                            r = row_indices_range[target_indices]
-                            source_indices = slice(r.start, r.stop, r.step)
-                        else:
-                            source_indices = row_indices[target_indices]
-                        part_rows = min(n_rows, i_done+PART) - i_done
-
-                        for array_conv in table_conversion.columnwise:
-                            out = array_conv.get_columns(source, source_indices, part_rows,
-                                                         parts[array_conv.target],
-                                                         target_indices)
-                            if array_conv.is_sparse:  # dense arrays are populated in-place
-                                parts[array_conv.target].append(out)
-
-                        i_done += PART
-
-                        # clear cache after a part is done
-                        if new_cache:
-                            _thread_local.conversion_cache = {}
-
-                    for array_conv in table_conversion.columnwise:
-                        cparts = parts[array_conv.target]
-                        out = cparts if not array_conv.is_sparse else sp.vstack(cparts)
-                        setattr(self, array_conv.target, out)
-
-                if source.has_weights():
-                    self.W = source.W[row_indices]
-                else:
-                    self.W = np.empty((n_rows, 0))
+                self.X, self.Y, self.metas = \
+                    table_conversion.convert(source, row_indices,
+                                             clear_cache_after_part=new_cache)
+                self.W = source.W[row_indices]
                 self.name = getattr(source, 'name', '')
-                if hasattr(source, 'ids'):
-                    self.ids = source.ids[row_indices]
-                else:
-                    cls._init_ids(self)
+                self.ids = source.ids[row_indices]
                 self.attributes = deepcopy(getattr(source, 'attributes', {}))
                 _idcache_save(_thread_local.conversion_cache, (domain, source), self)
             return self
@@ -879,7 +889,7 @@ class Table(Sequence, Storage):
                 self.metas = self.metas.reshape(-1, len(self.domain.metas))
             self.W = source.W[row_indices]
             self.name = getattr(source, 'name', '')
-            self.ids = np.array(source.ids[row_indices])
+            self.ids = source.ids[row_indices]
             self.attributes = deepcopy(getattr(source, 'attributes', {}))
         return self
 
@@ -1465,6 +1475,8 @@ class Table(Sequence, Storage):
             self._metas = self._metas.copy()
         if is_view(self._W):
             self._W = self._W.copy()
+        if is_view(self.ids):
+            self.ids = self.ids.copy()
 
     def copy(self):
         """
@@ -2294,6 +2306,7 @@ class Table(Sequence, Storage):
             cls._init_ids(self)
             self.attributes = deepcopy(table.attributes)
             self.attributes["old_domain"] = table.domain
+            self.name = table.name
             progress_callback(1)
             return self
 
@@ -2423,12 +2436,16 @@ def _subarray(arr, rows, cols):
         # so they need to be reshaped to produce an open mesh
         return arr[np.ix_(rows, cols)]
 
-def _optimize_indices(indices, maxlen):
+
+def _optimize_indices(indices, size):
     """
-    Convert integer indices to slice if possible. It only converts increasing
-    integer ranges with positive steps and valid starts and ends.
-    Only convert valid ends so that invalid ranges will still raise
-    an exception.
+    Convert boolean indices to integer indices and convert these to a slice
+    if possible.
+
+    A slice is created from only from indices with positive steps and
+    valid starts and ends (so that invalid ranges will still raise an
+    exception. An IndexError is raised if boolean indices do not conform
+    to input size.
 
     Allows numpy to reuse the data array, because it defaults to copying
     if given indices.
@@ -2436,6 +2453,7 @@ def _optimize_indices(indices, maxlen):
     Parameters
     ----------
     indices : 1D sequence, slice or Ellipsis
+    size : int
     """
     if isinstance(indices, slice):
         return indices
@@ -2452,17 +2470,65 @@ def _optimize_indices(indices, maxlen):
 
     if len(indices) >= 1:
         indices = np.asarray(indices)
-        if indices.dtype != bool:
-            begin = indices[0]
-            end = indices[-1]
-            steps = np.diff(indices) if len(indices) > 1 else np.array([1])
-            step = steps[0]
+        if indices.dtype == bool:
+            if len(indices) == size:
+                indices = np.nonzero(indices)[0]
+            else:
+                # raise an exception that numpy would if boolean indices were used
+                raise IndexError("boolean indices did not match dimension")
 
-            # continuous ranges with constant step and valid start and stop index can be slices
-            if np.all(steps == step) and step > 0 and begin >= 0 and end < maxlen:
-                return slice(begin, end + step, step)
+    if len(indices) >= 1:  # conversion from boolean indices could result in an empty array
+        begin = indices[0]
+        end = indices[-1]
+        steps = np.diff(indices) if len(indices) > 1 else np.array([1])
+        step = steps[0]
+
+        # continuous ranges with constant step and valid start and stop index can be slices
+        if np.all(steps == step) and step > 0 and begin >= 0 and end < size:
+            return slice(begin, end + step, step)
 
     return indices
+
+
+def _selection_length(indices, maxlen):
+    """ Return the selection length.
+    Args:
+        indices: 1D sequence, slice or Ellipsis
+        maxlen: maximum length of the sequence
+    """
+    if indices is ...:
+        return maxlen
+    elif isinstance(indices, slice):
+        return len(range(*indices.indices(maxlen)))
+    else:
+        return len(indices)
+
+
+def _select_from_selection(source_indices, selection_indices, maxlen):
+    """
+    Create efficient selection indices from a previous selection.
+    Try to keep slices as slices.
+    Args:
+        source_indices: 1D sequence, slice or Ellipsis
+        selection_indices: slice
+        maxlen: maximum length of the sequence
+    """
+    if source_indices is ...:
+        return selection_indices
+    elif isinstance(source_indices, slice):
+        assert isinstance(selection_indices, slice)
+        r = range(*source_indices.indices(maxlen))[selection_indices]
+        assert min(list(r)) >= 0
+        # .indices always returns valid non-negative integers
+        # when the reversed order is used r.stop can be negative, for example,
+        # range(1, -1, -1)), which is [1, 0], but this negative indexing
+        # is problematic with slices
+        stop = r.stop
+        if stop < 0:
+            stop = None
+        return slice(r.start, stop, r.step)
+    else:
+        return source_indices[selection_indices]
 
 
 def assure_domain_conversion_sparsity(target, source):

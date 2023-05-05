@@ -1,13 +1,14 @@
-import enum
 import inspect
 import sys
 from collections import deque
+from contextlib import contextmanager
+from enum import Enum, IntEnum
 from typing import (
     TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union, Tuple
 )
 from xml.sax.saxutils import escape
 
-from AnyQt.QtCore import QObject
+from AnyQt.QtCore import QObject, Qt
 
 from Orange.data.variable import TimeVariable
 from Orange.util import deepgetattr
@@ -91,7 +92,7 @@ def qname(type_: type) -> str:
 
 
 _T1 = TypeVar("_T1")  # pylint: disable=invalid-name
-_E = TypeVar("_E", bound=enum.Enum)  # pylint: disable=invalid-name
+_E = TypeVar("_E", bound=Enum)  # pylint: disable=invalid-name
 _A = TypeVar("_A")  # pylint: disable=invalid-name
 _B = TypeVar("_B")  # pylint: disable=invalid-name
 
@@ -167,7 +168,7 @@ def instance_tooltip(domain, row, skip_attrs=()):
             return ""
         n_vars = len(_vars)
         if n_vars > max_shown:
-            cols[-1] = "... and {} others".format(n_vars - max_shown + 1)
+            cols[-1] = f'... and {n_vars - max_shown + 1} others'
         return \
             "<b>{}</b>:<br/>".format(singular if n_vars < 2 else plural) \
             + "<br/>".join(cols)
@@ -176,3 +177,30 @@ def instance_tooltip(domain, row, skip_attrs=()):
              ("Meta", "Metas", 4, domain.metas),
              ("Feature", "Features", 10, domain.attributes))
     return "<br/>".join(show_part(row, *columns) for columns in parts)
+
+
+def enum2int(enum: Union[Enum, IntEnum]) -> int:
+    """
+    PyQt5 uses IntEnum like object for settings, for example SortOrder while
+    PyQt6 uses Enum. PyQt5's IntEnum also does not support value attribute.
+    This function transform both settings objects to int.
+
+    Parameters
+    ----------
+    enum
+        IntEnum like object or Enum object with Qt's settings
+
+    Returns
+    -------
+    Settings transformed to int
+    """
+    return int(enum) if isinstance(enum, int) else enum.value
+
+
+@contextmanager
+def disconnected(signal, slot, connection_type=Qt.AutoConnection):
+    signal.disconnect(slot)
+    try:
+        yield
+    finally:
+        signal.connect(slot, connection_type)

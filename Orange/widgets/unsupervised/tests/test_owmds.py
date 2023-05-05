@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 import os
 from itertools import chain
 import unittest
@@ -26,7 +26,7 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Distances"
+        cls.signal_name = OWMDS.Inputs.distances
         cls.signal_data = Euclidean(cls.data)
         cls.same_input_output_domain = False
 
@@ -114,6 +114,21 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
             hook.assert_not_called()
             self.assertTrue(self.widget.Error.optimization_error.is_shown())
 
+    def test_matrix_not_symmetric(self):
+        widget = self.widget
+        self.send_signal(self.widget.Inputs.distances,
+                         DistMatrix([[1, 2, 3], [4, 5, 6]]))
+        self.assertTrue(widget.Error.matrix_not_symmetric.is_shown())
+        self.send_signal(self.widget.Inputs.distances, None)
+        self.assertFalse(widget.Error.matrix_not_symmetric.is_shown())
+
+    def test_matrix_too_small(self):
+        widget = self.widget
+        self.send_signal(self.widget.Inputs.distances, DistMatrix([[1]]))
+        self.assertTrue(widget.Error.matrix_too_small.is_shown())
+        self.send_signal(self.widget.Inputs.distances, None)
+        self.assertFalse(widget.Error.matrix_too_small.is_shown())
+
     def test_distances_without_data_0(self):
         """
         Only distances and no data.
@@ -121,7 +136,7 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         """
         signal_data = Euclidean(self.data, axis=0)
         signal_data.row_items = None
-        self.send_signal("Distances", signal_data)
+        self.send_signal(self.widget.Inputs.distances, signal_data)
 
     def test_distances_without_data_1(self):
         """
@@ -130,7 +145,7 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         """
         signal_data = Euclidean(self.data, axis=1)
         signal_data.row_items = None
-        self.send_signal("Distances", signal_data)
+        self.send_signal(self.widget.Inputs.distances, signal_data)
 
     def test_small_data(self):
         data = self.data[:1]
@@ -144,6 +159,7 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.initialization = 0
         self.widget._OWMDS__invalidate_embedding()  # pylint: disable=protected-access
 
+    @WidgetTest.skipNonEnglish
     def test_migrate_settings_from_version_1(self):
         context_settings = [
             Context(attributes={'iris': 1,
@@ -304,6 +320,27 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.distances, dist)
         label_text = self.widget.controls.attr_label.currentText()
         self.assertEqual(label_text, "labels")
+
+    def test_update_stress(self):
+        w = self.widget
+        w.effective_matrix = np.array([[0, 4, 1],
+                                       [4, 0, 1],
+                                       [1, 1, 0]])  # sum of squares is 36
+        w.embedding = np.array([[0, 0],
+                                [0, 3],
+                                [4, 3]])
+        # dists [[0, 3, 5], diff [[0, 1, 4],  sqr  [[0, 1, 16],  sum = 52
+        #        [3, 0, 4],       [1, 0, 3],        [1, 0, 9],
+        #        [5, 4, 0]]       [4, 3, 0]]        [16, 9, 0]]
+        w.update_stress()
+        expected = np.sqrt(52 / 36)
+        self.assertAlmostEqual(w._compute_stress(), expected)
+        self.assertIn(f"{expected:.3f}", w.stress_label.text())
+
+        w.embedding = None
+        w.update_stress()
+        self.assertIsNone(w._compute_stress())
+        self.assertIn("-", w.stress_label.text())
 
 
 class TestOWMDSRunner(unittest.TestCase):

@@ -21,7 +21,7 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWBarPlot.Inputs.data
         cls.signal_data = cls.data
         cls.titanic = Table("titanic")
         cls.housing = Table("housing")
@@ -136,6 +136,21 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(group_axis.isVisible())
         self.assertFalse(annot_axis.isVisible())
+
+    def test_annotate_by_enumeration(self):
+        widget = self.widget
+
+        self.send_signal(widget.Inputs.data, self.data)
+        combo = widget.controls.annot_var
+        for i in range(combo.count()):
+            try:
+                simulate.combobox_activate_index(combo, i)
+            except AssertionError:  # skip disabled items
+                pass
+            else:
+                labels = widget.get_labels()
+                self.assertTrue(not labels
+                                or all(isinstance(x, str) for x in labels))
 
     def test_datasets(self):
         controls = self.widget.controls
@@ -293,6 +308,7 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.data, None)
         self.widget.report_button.click()
 
+    @WidgetTest.skipNonEnglish
     def test_visual_settings(self):
         graph = self.widget.graph
         font = QFont()

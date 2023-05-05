@@ -1,5 +1,5 @@
 # pylint: disable=missing-docstring,protected-access
-
+import unittest
 from unittest.mock import Mock
 
 from AnyQt.QtCore import Qt, QItemSelection, QItemSelectionModel
@@ -238,3 +238,15 @@ class TestOWPythagoreanForest(WidgetTest):
 
         self.send_signal(self.widget.Inputs.random_forest, iris_tree)
         self.assertEqual(2, self.widget.target_class_index)
+
+    def test_report(self):
+        self.widget.send_report()
+
+        self.widget.report_raw = Mock()
+        self.send_signal(self.widget.Inputs.random_forest, self.titanic)
+        self.widget.send_report()
+        self.widget.report_raw.assert_called_once()
+
+
+if __name__ == "__main__":
+    unittest.main()

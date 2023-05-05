@@ -300,7 +300,7 @@ class OWROCAnalysis(widget.OWWidget):
                   "based on the evaluation of classifiers."
     icon = "icons/ROCAnalysis.svg"
     priority = 1010
-    keywords = []
+    keywords = "roc analysis, analyse"
 
     class Inputs:
         evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)
@@ -324,7 +324,7 @@ class OWROCAnalysis(widget.OWWidget):
     display_convex_hull = settings.Setting(False)
     display_convex_curve = settings.Setting(False)
 
-    graph_name = "plot"
+    graph_name = "plot"  # pg.GraphicsItem (pg.PlotItem)
 
     def __init__(self):
         super().__init__()

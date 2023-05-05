@@ -2,6 +2,7 @@
 import time
 import warnings
 import unittest
+from enum import Enum
 from itertools import count
 from unittest.mock import patch
 
@@ -139,12 +140,12 @@ class TestOWRank(WidgetTest):
             with self.subTest(fitter=fitter),\
                     warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*", ConvergenceWarning)
-                self.send_signal("Scorer", fitter, 1)
+                self.send_signal(self.widget.Inputs.scorer, fitter, 1)
 
                 for data in (self.housing,
                              heart_disease):
                     with self.subTest(data=data.name):
-                        self.send_signal('Data', data)
+                        self.send_signal(self.widget.Inputs.data, data)
                         self.wait_until_finished()
                         scores = [model.data(model.index(row, model.columnCount() - 1))
                                   for row in range(model.rowCount())]
@@ -155,7 +156,7 @@ class TestOWRank(WidgetTest):
                             model.columnCount() - 1, Qt.Horizontal).lower()
                         self.assertIn(name, last_column)
 
-                self.send_signal("Scorer", None, 1)
+                self.send_signal(self.widget.Inputs.scorer, None, 1)
                 self.assertEqual(self.widget.scorers, [])
 
     def test_input_scorer_disconnect(self):
@@ -374,6 +375,41 @@ class TestOWRank(WidgetTest):
         order2 = self.widget.ranksModel.mapToSourceRows(...).tolist()
         self.assertNotEqual(order1, order2)
 
+    def test_score_sorting_int(self):
+        """
+        Order setting was previously set to Qt.SortOrder which is in PyQt5
+        int-like PyQt object. Since in PyQt6 it is Enum (non int) object, and it
+        is not nice to have objects in settings we changed it to int. This test
+        cover current case and also case with int-like object before.
+        """
+        self.widget.sorting = (1, 1)  # Gini col, descending order
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
+        order = self.widget.ranksModel.mapToSourceRows(...).tolist()
+        self.assertListEqual([2, 3, 0, 1], order)
+
+        self.widget.sorting = (1, 0)  # Gini col, descending order
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.wait_until_finished()
+        order = self.widget.ranksModel.mapToSourceRows(...).tolist()
+        self.assertListEqual([1, 0, 3, 2], order)
+
+        # change old setting to int
+        # since test can run in both pyqt5 or 6 we create SortOrder like object
+        class SortOrderE(Enum):  # pyqt6 like
+            ASCENDING = 0
+
+        settings = {"sorting": (1, SortOrderE.ASCENDING), "__version__": 2}
+        w = self.create_widget(OWRank, stored_settings=settings)
+        self.assertEqual(0, w.sorting[1])
+
+        class SortOrderI:  # pyqt5 like
+            ASCENDING = 0
+
+        settings = {"sorting": (1, SortOrderI.ASCENDING), "__version__": 2}
+        w = self.create_widget(OWRank, stored_settings=settings)
+        self.assertEqual(0, w.sorting[1])
+
     def test_scores_nan_sorting(self):
         """Check NaNs are sorted last"""
         data = self.iris.copy()
@@ -383,8 +419,7 @@ class TestOWRank(WidgetTest):
         self.wait_until_finished()
 
         # Assert last row is all nan
-        for order in (Qt.AscendingOrder,
-                      Qt.DescendingOrder):
+        for order in (Qt.AscendingOrder, Qt.DescendingOrder):
             self.widget.ranksView.horizontalHeader().setSortIndicator(2, order)
             last_row = self.widget.ranksModel[self.widget.ranksModel.mapToSourceRows(...)[-1]]
             np.testing.assert_array_equal(last_row[1:], np.repeat(np.nan, 3))

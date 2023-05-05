@@ -2,7 +2,6 @@
 from unittest.mock import patch
 
 import numpy as np
-from pandas.core.dtypes.common import is_string_dtype
 from scipy import sparse as sp
 from scipy.sparse import csr_matrix
 import pandas as pd
@@ -151,14 +150,14 @@ def _reset_index(df: pd.DataFrame) -> pd.DataFrame:
     if (
         # not range-like index - test first to skip slow startswith(_o) check
         not (
-            df.index.is_integer()
+            is_integer_dtype(df.index)
             and (df.index.is_monotonic_increasing or df.index.is_monotonic_decreasing)
         )
         # check that it does not contain Orange index
         and (
             # startswith is slow (for long dfs) - firs check if col has strings
             isinstance(df.index, pd.MultiIndex)
-            or not is_string_dtype(df.index)
+            or not is_object_dtype(df.index)
             or not any(str(i).startswith("_o") for i in df.index)
         )
     ):
@@ -177,10 +176,10 @@ def _is_datetime(s):
         return True
     try:
         if is_object_dtype(s):
-            # pd.to_datetime would sucessfuly parse column of numbers to datetime
+            # pd.to_datetime would successfully parse column of numbers to datetime
             # but for column of object dtype with numbers we want to be either
-            # discret or string - following code try to parse column to numeric
-            # if connversion to numeric is sucessful return False
+            # discrete or string - following code try to parse column to numeric
+            # if conversion to numeric is successful return False
             try:
                 pd.to_numeric(s)
                 return False
@@ -188,7 +187,7 @@ def _is_datetime(s):
                 pass
 
             # utc=True - to allow different timezones in a series object
-            pd.to_datetime(s, infer_datetime_format=True, utc=True)
+            pd.to_datetime(s, utc=True)
             return True
     except Exception:  # pylint: disable=broad-except
         pass
@@ -327,7 +326,7 @@ def table_from_frame(df, *, force_nominal=False):
         if len(W) != len(df.index):
             W = None
         attributes = df.orange_attributes
-        if isinstance(df.index, pd.MultiIndex) or not is_string_dtype(df.index):
+        if isinstance(df.index, pd.MultiIndex) or not is_object_dtype(df.index):
             # we can skip checking for Orange indices when MultiIndex an when
             # not string dtype and so speedup the conversion
             ids = None

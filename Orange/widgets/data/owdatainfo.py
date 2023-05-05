@@ -21,7 +21,7 @@ class OWDataInfo(widget.OWWidget):
     icon = "icons/DataInfo.svg"
     priority = 80
     category = "Data"
-    keywords = ["information", "inspect"]
+    keywords = "data info, information, inspect"
 
     class Inputs:
         data = Input("Data", Table)

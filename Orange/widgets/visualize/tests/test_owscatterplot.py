@@ -30,7 +30,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         WidgetOutputsTestMixin.init(cls)
         cls.same_input_output_domain = False
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWScatterPlot.Inputs.data
         cls.signal_data = cls.data
 
     def setUp(self):

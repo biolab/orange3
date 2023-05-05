@@ -11,7 +11,7 @@ class LearnerRegression(Learner):
         if len(domain.class_vars) > 1 and not self.supports_multiclass:
             reason = "Too many target variables."
         elif not domain.has_continuous_class:
-            reason = "Numeric class variable expected."
+            reason = "Numeric target variable expected."
         return reason
 
 

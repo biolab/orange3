@@ -1,12 +1,11 @@
 # pylint: disable=unsubscriptable-object
 import unittest
 from unittest import TestCase
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
-from AnyQt.QtCore import QMimeData, QPoint, Qt
-from AnyQt.QtGui import QDragEnterEvent
-
+from AnyQt.QtCore import QMimeData, QPoint, QPointF, Qt
+from AnyQt.QtGui import QDragEnterEvent, QDropEvent, QDrag
 
 from Orange.data import Table, ContinuousVariable, DiscreteVariable, Domain
 from Orange.widgets.settings import ContextSetting
@@ -16,6 +15,7 @@ from Orange.widgets.data.owselectcolumns \
     import OWSelectAttributes, VariablesListItemModel, \
     SelectAttributesDomainContextHandler
 from Orange.widgets.data.owrank import OWRank
+from Orange.widgets.utils.itemmodels import select_rows
 from Orange.widgets.widget import AttributeList
 
 Continuous = vartype(ContinuousVariable("c"))
@@ -380,6 +380,33 @@ class TestOWSelectAttributes(WidgetTest):
             d1.domain.attributes,
             data.domain.attributes
         )
+
+    def test_drag_drop_move_rows(self):
+        data = Table("iris")[:5]
+        w = self.widget
+        self.send_signal(w.Inputs.data, data)
+        used = w.used_attrs_view
+        unused = w.available_attrs_view
+        model = used.model()
+        select_rows(used, [0, 1])
+
+        def drag_exec(self, supported, default):
+            mime = self.mimeData()
+            drop = QDropEvent(QPointF(20, 20), supported, mime,
+                              Qt.NoButton, Qt.NoModifier)
+            drop.setDropAction(default)
+            drop.setAccepted(False)
+            unused.dropEvent(drop)
+            assert drop.isAccepted()
+            return drop.dropAction()
+
+        with patch.object(QDrag, "exec", drag_exec):
+            used.startDrag(Qt.MoveAction)
+
+        self.assertEqual(model.rowCount(), 2)
+        self.assertEqual(unused.model().rowCount(), 2)
+        out = self.get_output(w.Outputs.data, w)
+        self.assertEqual(out.domain.attributes, data.domain.attributes[2:])
 
     def test_domain_new_feature(self):
         """ Test scenario when new attribute is added at position 0 """

@@ -4,6 +4,7 @@ import random
 import unittest
 
 from Orange.distance import Euclidean
+from Orange.misc import DistMatrix
 from Orange.widgets.unsupervised.owdistancemap import OWDistanceMap
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.tests.utils import simulate
@@ -15,7 +16,7 @@ class TestOWDistanceMap(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Distances"
+        cls.signal_name = OWDistanceMap.Inputs.distances
         cls.signal_data = Euclidean(cls.data)
 
     def setUp(self):
@@ -50,6 +51,20 @@ class TestOWDistanceMap(WidgetTest, WidgetOutputsTestMixin):
             simulate.combobox_activate_index(w.annot_combo, i)
         w.grab()
         self.send_signal(w.Inputs.distances, None)
+
+    def test_not_symmetric(self):
+        w = self.widget
+        self.send_signal(w.Inputs.distances, DistMatrix([[1, 2, 3], [4, 5, 6]]))
+        self.assertTrue(w.Error.not_symmetric.is_shown())
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.Error.not_symmetric.is_shown())
+
+    def test_empty_matrix(self):
+        w = self.widget
+        self.send_signal(w.Inputs.distances, DistMatrix([[]]))
+        self.assertTrue(w.Error.empty_matrix.is_shown())
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.Error.empty_matrix.is_shown())
 
 
 if __name__ == "__main__":

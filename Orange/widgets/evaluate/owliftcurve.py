@@ -128,7 +128,7 @@ class OWLiftCurve(widget.OWWidget):
                   "from the evaluation of classifiers."
     icon = "icons/LiftCurve.svg"
     priority = 1020
-    keywords = ["lift", "cumulative gain", "precision", "recall", "curve"]
+    keywords = "performance curve, lift, cumulative gain, precision, recall, curve"
 
     class Inputs:
         evaluation_results = Input(
@@ -158,7 +158,7 @@ class OWLiftCurve(widget.OWWidget):
     auto_commit = settings.Setting(True)
     visual_settings = settings.Setting({}, schema_only=True)
 
-    graph_name = "plot"
+    graph_name = "plot"  # pg.GraphicsItem (pg.PlotItem)
 
     XLabels = ("P Rate", "P Rate", "Recall")
     YLabels = ("Lift", "TP Rate", "Precision")

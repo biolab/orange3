@@ -34,8 +34,16 @@ def widget_discovery(discovery):
             package=__package__,
         )
     )
+    discovery.handle_category(
+        CategoryDescription(
+            name="Orange Obsolete",
+            package=__package__,
+            hidden=True,
+        )
+    )
     for pkg in pkgs:
         discovery.process_category_package(pkg, distribution=dist)
+    discovery.process_widget_module("Orange.widgets.obsolete.owtable")
 
 
 WIDGET_HELP_PATH = (

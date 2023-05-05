@@ -31,7 +31,7 @@ class OWConcatenate(widget.OWWidget):
     category = "Transform"
     priority = 1111
     icon = "icons/Concatenate.svg"
-    keywords = ["append", "join", "extend"]
+    keywords = "concatenate, append, join, extend"
 
     class Inputs:
         primary_data = Input("Primary Data", Orange.data.Table)
@@ -263,6 +263,7 @@ class OWConcatenate(widget.OWWidget):
                 dumb_domain,
                 table.X, table.Y, table.metas, table.W,
                 table.attributes, table.ids)
+            dumb_table.name = table.name
             dumb_tables.append(dumb_table)
         return dumb_tables
 

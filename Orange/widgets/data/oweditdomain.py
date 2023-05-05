@@ -8,7 +8,6 @@ A widget for manual editing of a domain's attributes.
 import warnings
 from xml.sax.saxutils import escape
 from itertools import zip_longest, repeat, chain
-from contextlib import contextmanager
 from collections import namedtuple, Counter
 from functools import singledispatch, partial
 from typing import (
@@ -23,7 +22,7 @@ from AnyQt.QtWidgets import (
     QLineEdit, QAction, QActionGroup, QGroupBox,
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
-    QDialog, QRadioButton, QGridLayout, QLabel, QSpinBox, QDoubleSpinBox,
+    QDialog, QRadioButton, QLabel, QSpinBox, QDoubleSpinBox,
     QAbstractItemView, QMenu, QToolTip
 )
 from AnyQt.QtGui import (
@@ -43,8 +42,9 @@ from Orange.preprocess.transformation import (
 )
 from Orange.misc.collections import DictMissingConst
 from Orange.util import frompyfunc
-from Orange.widgets import widget, gui, settings
-from Orange.widgets.utils import itemmodels, ftry
+from Orange.widgets import widget, gui
+from Orange.widgets.settings import Setting
+from Orange.widgets.utils import itemmodels, ftry, disconnected
 from Orange.widgets.utils.buttons import FixedSizeButton
 from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -56,6 +56,8 @@ DType = Union[np.dtype, type]
 
 V = TypeVar("V", bound=Orange.data.Variable)  # pylint: disable=invalid-name
 H = TypeVar("H", bound=Hashable)  # pylint: disable=invalid-name
+
+MAX_HINTS = 1000
 
 
 def unique(sequence: Iterable[H]) -> Iterable[H]:
@@ -703,7 +705,7 @@ class GroupItemsDialog(QDialog):
         label3 = QLabel("occurrences")
         label4 = QLabel("most frequent values")
 
-        self.frequent_abs_spin = spin2 = QSpinBox()
+        self.frequent_abs_spin = spin2 = QSpinBox(alignment=Qt.AlignRight)
         max_val = len(data)
         spin2.setMinimum(1)
         spin2.setMaximum(max_val)
@@ -713,7 +715,7 @@ class GroupItemsDialog(QDialog):
         )
         spin2.valueChanged.connect(self._frequent_abs_spin_changed)
 
-        self.frequent_rel_spin = spin3 = QDoubleSpinBox()
+        self.frequent_rel_spin = spin3 = QDoubleSpinBox(alignment=Qt.AlignRight)
         spin3.setMinimum(0)
         spin3.setDecimals(1)
         spin3.setSingleStep(0.1)
@@ -723,7 +725,7 @@ class GroupItemsDialog(QDialog):
         spin3.setSuffix(" %")
         spin3.valueChanged.connect(self._frequent_rel_spin_changed)
 
-        self.n_values_spin = spin4 = QSpinBox()
+        self.n_values_spin = spin4 = QSpinBox(alignment=Qt.AlignRight)
         spin4.setMinimum(0)
         spin4.setMaximum(len(variable.categories))
         spin4.setValue(
@@ -736,21 +738,29 @@ class GroupItemsDialog(QDialog):
         )
         spin4.valueChanged.connect(self._n_values_spin_spin_changed)
 
-        grid_layout = QGridLayout()
+        grid_layout = QVBoxLayout()
         # first row
-        grid_layout.addWidget(radio1, 0, 0, 1, 2)
+        row = QHBoxLayout()
+        row.addWidget(radio1)
+        grid_layout.addLayout(row)
         # second row
-        grid_layout.addWidget(radio2, 1, 0, 1, 2)
-        grid_layout.addWidget(spin2, 1, 2)
-        grid_layout.addWidget(label2, 1, 3)
+        row = QHBoxLayout()
+        row.addWidget(radio2)
+        row.addWidget(spin2)
+        row.addWidget(label2)
+        grid_layout.addLayout(row)
         # third row
-        grid_layout.addWidget(radio3, 2, 0, 1, 2)
-        grid_layout.addWidget(spin3, 2, 2)
-        grid_layout.addWidget(label3, 2, 3)
+        row = QHBoxLayout()
+        row.addWidget(radio3)
+        row.addWidget(spin3)
+        row.addWidget(label3)
+        grid_layout.addLayout(row)
         # fourth row
-        grid_layout.addWidget(radio4, 3, 0)
-        grid_layout.addWidget(spin4, 3, 1)
-        grid_layout.addWidget(label4, 3, 2, 1, 2)
+        row = QHBoxLayout()
+        row.addWidget(radio4)
+        row.addWidget(spin4)
+        row.addWidget(label4)
+        grid_layout.addLayout(row)
 
         group_box = QGroupBox()
         group_box.setLayout(grid_layout)
@@ -860,15 +870,6 @@ class GroupItemsDialog(QDialog):
         if checked:
             settings_dict["selected_radio"] = checked[0]
         return settings_dict
-
-
-@contextmanager
-def disconnected(signal, slot, connection_type=Qt.AutoConnection):
-    signal.disconnect(slot)
-    try:
-        yield
-    finally:
-        signal.connect(slot, connection_type)
 
 
 #: In 'reordable' models holds the original position of the item
@@ -1539,7 +1540,7 @@ class TimeVariableEditor(VariableEditor):
 
     def set_data(self, var, transform=()):
         super().set_data(var, transform)
-        if self.parent() is not None and isinstance(self.parent().var, Time):
+        if self.parent() is not None and isinstance(self.parent().var, (Time, Real)):
             # when transforming from time to time disable format selection combo
             self.format_cb.setEnabled(False)
         else:
@@ -1879,7 +1880,7 @@ class OWEditDomain(widget.OWWidget):
     description = "Rename variables, edit categories and variable annotations."
     icon = "icons/EditDomain.svg"
     priority = 3125
-    keywords = ["rename", "drop", "reorder", "order"]
+    keywords = "edit domain, rename, drop, reorder, order"
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -1890,13 +1891,11 @@ class OWEditDomain(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         duplicate_var_name = widget.Msg("A variable name is duplicated.")
 
-    settingsHandler = settings.DomainContextHandler()
-    settings_version = 2
+    settings_version = 3
 
-    _domain_change_store = settings.ContextSetting({})
-    _selected_item = settings.ContextSetting(None)  # type: Optional[Tuple[str, int]]
-    _merge_dialog_settings = settings.ContextSetting({})
-    output_table_name = settings.ContextSetting("")
+    _domain_change_hints = Setting({}, schema_only=True)
+    _merge_dialog_settings = Setting({}, schema_only=True)
+    output_table_name = Setting("", schema_only=True)
 
     want_main_area = False
 
@@ -1905,6 +1904,7 @@ class OWEditDomain(widget.OWWidget):
         self.data = None  # type: Optional[Orange.data.Table]
         #: The current selected variable index
         self.selected_index = -1
+        self._selected_item = None
         self._invalidated = False
         self.typeindex = 0
 
@@ -1962,14 +1962,12 @@ class OWEditDomain(widget.OWWidget):
     @Inputs.data
     def set_data(self, data):
         """Set input dataset."""
-        self.closeContext()
         self.clear()
         self.data = data
 
         if self.data is not None:
             self.setup_model(data)
             self.le_output_name.setPlaceholderText(data.name)
-            self.openContext(self.data)
             self._editor.set_merge_context(self._merge_dialog_settings)
             self._restore()
         else:
@@ -1985,8 +1983,6 @@ class OWEditDomain(widget.OWWidget):
         assert self.selected_index == -1
         self.selected_index = -1
 
-        self._selected_item = None
-        self._domain_change_store = {}
         self._merge_dialog_settings = {}
 
     def reset_selected(self):
@@ -2008,7 +2004,6 @@ class OWEditDomain(widget.OWWidget):
 
     def reset_all(self):
         """Reset all variables to their original state."""
-        self._domain_change_store = {}
         if self.data is not None:
             model = self.variables_model
             for i in range(model.rowCount()):
@@ -2051,12 +2046,21 @@ class OWEditDomain(widget.OWWidget):
         Restore the edit transform from saved state.
         """
         model = self.variables_model
+        hints = self._domain_change_hints
+        first_key = None
         for i in range(model.rowCount()):
             midx = model.index(i, 0)
             coldesc = model.data(midx, Qt.EditRole)  # type: DataVector
-            tr = self._restore_transform(coldesc.vtype)
+            tr, key = self._restore_transform(coldesc.vtype)
             if tr:
                 model.setData(midx, tr, TransformRole)
+                if first_key is None:
+                    first_key = key
+        # Reduce the number of hints to MAX_HINTS, but keep all current hints
+        # Current hints start with `first_key`.
+        while len(hints) > MAX_HINTS and \
+                (key := next(iter(hints))) is not first_key:
+            del hints[key]  # pylint: disable=unsupported-delete-operation
 
         # Restore the current variable selection
         i = -1
@@ -2064,6 +2068,8 @@ class OWEditDomain(widget.OWWidget):
             for i, vec in enumerate(model):
                 if vec.vtype.name_type() == self._selected_item:
                     break
+            else:
+                self._selected_item = None
         if i == -1 and model.rowCount():
             i = 0
 
@@ -2116,13 +2122,20 @@ class OWEditDomain(widget.OWWidget):
         self._store_transform(var, transform)
         self._invalidate()
 
-    def _store_transform(self, var, transform):
+    def _store_transform(self, var, transform, deconvar=None):
         # type: (Variable, List[Transform]) -> None
-        self._domain_change_store[deconstruct(var)] = [deconstruct(t) for t in transform]
+        deconvar = deconvar or deconstruct(var)
+        # Remove the existing key (if any) to put the new one at the end,
+        # to make sure it comes after the sentinel
+        self._domain_change_hints.pop(deconvar, None)
+        # pylint: disable=unsupported-assignment-operation
+        self._domain_change_hints[deconvar] = \
+            [deconstruct(t) for t in transform]
 
     def _restore_transform(self, var):
         # type: (Variable) -> List[Transform]
-        tr_ = self._domain_change_store.get(deconstruct(var), [])
+        key = deconstruct(var)
+        tr_ = self._domain_change_hints.get(key, [])
         tr = []
 
         for t in tr_:
@@ -2133,7 +2146,11 @@ class OWEditDomain(widget.OWWidget):
                     "Failed to restore transform: {}, {!r}".format(t, err),
                     UserWarning, stacklevel=2
                 )
-        return tr
+        if tr:
+            self._store_transform(var, tr, key)
+        else:
+            key = None
+        return tr, key
 
     def _invalidate(self):
         self._set_modified(True)
@@ -2297,6 +2314,29 @@ class OWEditDomain(widget.OWWidget):
                 store.append((deconstruct(src), [deconstruct(tr) for tr in trs]))
             context.values["_domain_change_store"] = (dict(store), -2)
 
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version == 2 and "context_settings" in settings:
+            contexts = settings["context_settings"]
+            valuess = []
+            for context in contexts:
+                cls.migrate_context(context, context.values["__version__"])
+                valuess.append(context.values)
+            # Fix the order of keys
+            hints = dict.fromkeys(
+                chain(*(values["_domain_change_store"][0]
+                        for values in reversed(valuess)))
+            )
+            settings["output_table_name"] = ""
+            for values in valuess:
+                hints.update(values["_domain_change_store"][0])
+                new_name, _ = values.pop("output_table_name", ("", -2))
+                if new_name:
+                    settings["output_table_name"] = new_name
+            while len(hints) > MAX_HINTS:
+                del hints[next(iter(hints))]
+            settings["_domain_change_hints"] = hints
+            del settings["context_settings"]
 
 def enumerate_columns(
         table: Orange.data.Table
@@ -2722,11 +2762,13 @@ def apply_reinterpret_c(var, tr, data: MArray):
     elif isinstance(tr, AsContinuous):
         return var
     elif isinstance(tr, AsString):
-        # TimeVar will be interpreted by StrpTime later
         tstr = ToStringTransform(var)
         rvar = Orange.data.StringVariable(name=var.name, compute_value=tstr)
     elif isinstance(tr, AsTime):
-        rvar = Orange.data.TimeVariable(name=var.name, compute_value=Identity(var))
+        # continuous variable is always transformed to time as UNIX epoch
+        rvar = Orange.data.TimeVariable(
+            name=var.name, compute_value=Identity(var), have_time=1, have_date=1
+        )
     else:
         assert False
     return copy_attributes(rvar, var)
@@ -2829,11 +2871,6 @@ def datetime_to_epoch(dti: pd.DatetimeIndex, only_time) -> np.ndarray:
     # when dti has timezone info also the subtracted timestamp must have it
     # otherwise subtracting fails
     initial_ts = pd.Timestamp("1970-01-01", tz=None if dti.tz is None else "UTC")
-    # pandas in versions before 1.4 don't support subtracting different timezones
-    # remove next two lines when read-the-docs start supporting config files
-    # for subprojects, or they change default python version to 3.8
-    if dti.tz is not None:
-        dti = dti.tz_convert("UTC")
     delta = dti - (dti.normalize() if only_time else initial_ts)
     return (delta / pd.Timedelta("1s")).values
 
@@ -2848,8 +2885,8 @@ class ReparseTimeTransform(Transformation):
 
     def transform(self, c):
         # if self.formats is none guess format option is selected
-        formats = self.tr.formats if self.tr.formats is not None else [None]
-        for f in formats:
+        formats = list(self.tr.formats) if self.tr.formats is not None else []
+        for f in formats + [None]:
             d = pd.to_datetime(c, errors="coerce", format=f)
             if pd.notnull(d).any():
                 return datetime_to_epoch(d, only_time=not self.tr.have_date)

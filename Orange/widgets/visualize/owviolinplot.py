@@ -730,7 +730,7 @@ class OWViolinPlot(OWWidget):
                   " values in a violin plot."
     icon = "icons/ViolinPlot.svg"
     priority = 110
-    keywords = ["kernel", "density"]
+    keywords = "violin plot, kernel, density"
 
     class Inputs:
         data = Input("Data", Table)
@@ -763,7 +763,7 @@ class OWViolinPlot(OWWidget):
     selection_ranges = Setting([], schema_only=True)
     visual_settings = Setting({}, schema_only=True)
 
-    graph_name = "graph.plotItem"
+    graph_name = "graph.plotItem"  # QGraphicsView (pg.PlotWidget -> ViolinPlot)
     buttons_area_orientation = None
 
     def __init__(self):
@@ -850,9 +850,9 @@ class OWViolinPlot(OWWidget):
                        sizePolicy=(QSizePolicy.Minimum, QSizePolicy.Maximum))
         gui.checkBox(box, self, "show_box_plot", "Box plot",
                      callback=self.__show_box_plot_changed)
-        gui.checkBox(box, self, "show_strip_plot", "Strip plot",
+        gui.checkBox(box, self, "show_strip_plot", "Density dots",
                      callback=self.__show_strip_plot_changed)
-        gui.checkBox(box, self, "show_rug_plot", "Rug plot",
+        gui.checkBox(box, self, "show_rug_plot", "Density lines",
                      callback=self.__show_rug_plot_changed)
         self._order_violins_cb = gui.checkBox(
             box, self, "order_violins", "Order subgroups",

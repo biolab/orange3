@@ -190,3 +190,7 @@ class FeatureScoringTest(unittest.TestCase):
         scores2 = learner.score_data(data)
 
         np.testing.assert_equal(scores1[0][:-1], scores2[0])
+
+
+if __name__ == "__main__":
+    unittest.main()

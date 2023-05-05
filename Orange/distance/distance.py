@@ -393,6 +393,7 @@ class Manhattan(FittedDistance):
 class Cosine(FittedDistance):
     supports_sparse = True  # via fallback
     supports_discrete = False
+    supports_similarity = True
     fallback = SklDistance('cosine')
 
     @staticmethod
@@ -413,7 +414,8 @@ class Cosine(FittedDistance):
         means = util.nanmean(x, axis=0)
         means = np.nan_to_num(means)
         return self.CosineModel(attributes, self.axis, self.impute,
-                                discrete, means, self.callback)
+                                discrete, means, self.callback,
+                                similarity=self.similarity)
 
     fit_cols = fit_rows
 
@@ -424,8 +426,10 @@ class Cosine(FittedDistance):
     class CosineModel(FittedDistanceModel):
         """Model for computation of cosine distances across rows and columns.
         All non-zero discrete values are treated as 1."""
-        def __init__(self, attributes, axis, impute, discrete, means, callback):
-            super().__init__(attributes, axis, impute, callback)
+        def __init__(self, attributes, axis, impute, discrete, means, callback,
+                     *, similarity=False):
+            super().__init__(attributes, axis, impute, callback,
+                             similarity=similarity)
             self.discrete = discrete
             self.means = means
 
@@ -457,7 +461,7 @@ class Cosine(FittedDistance):
             if x2 is None:
                 diag = np.diag_indices_from(dist)
                 dist[diag] = np.where(np.isnan(dist[diag]), np.nan, 1.0)
-            return 1 - dist
+            return dist if self.similarity else 1 - dist
 
 
 class JaccardModel(FittedDistanceModel):
@@ -465,15 +469,18 @@ class JaccardModel(FittedDistanceModel):
     Model for computation of cosine distances across rows and columns.
     All non-zero values are treated as 1.
     """
-    def __init__(self, attributes, axis, impute, ps, callback):
-        super().__init__(attributes, axis, impute, callback)
+    def __init__(self, attributes, axis, impute, ps, callback,
+                 *, similarity=False):
+        super().__init__(attributes, axis, impute, callback,
+                         similarity=similarity)
         self.ps = ps
 
     def compute_distances(self, x1, x2):
         if sp.issparse(x1):
-            return self._compute_sparse(x1, x2)
+            dist = self._compute_sparse(x1, x2)
         else:
-            return self._compute_dense(x1, x2)
+            dist = self._compute_dense(x1, x2)
+        return 1 - dist if self.similarity else dist
 
     def _compute_dense(self, x1, x2):
         """
@@ -498,7 +505,7 @@ class JaccardModel(FittedDistanceModel):
             else:
                 nonzeros2 = np.not_equal(x2, 0).view(np.int8)
                 nans2 = _distance.any_nan_row(x2, callbacks.next())
-            return _distance.jaccard_rows(
+            dist = _distance.jaccard_rows(
                 nonzeros1, nonzeros2,
                 x1, x1 if x2 is None else x2,
                 nans1, nans2,
@@ -508,8 +515,9 @@ class JaccardModel(FittedDistanceModel):
         else:
             callbacks = StepwiseCallbacks(self.callback, [10, 90])
             nans1 = _distance.any_nan_row(x1.T, callbacks.next())
-            return _distance.jaccard_cols(
+            dist = _distance.jaccard_cols(
                 nonzeros1, x1, nans1, self.ps, callbacks.next())
+        return np.array(dist)
 
     def _compute_sparse(self, x1, x2=None):
         callback = self.callback or (lambda x: x)
@@ -540,6 +548,7 @@ class JaccardModel(FittedDistanceModel):
 class Jaccard(FittedDistance):
     supports_sparse = True
     supports_discrete = True
+    supports_similarity = True
     ModelType = JaccardModel
 
     def fit_rows(self, attributes, x, n_vals):
@@ -554,7 +563,7 @@ class Jaccard(FittedDistance):
                 (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
                 dtype=np.double, count=len(n_vals))
         return JaccardModel(attributes, self.axis, self.impute,
-                            ps, self.callback)
+                            ps, self.callback, similarity=self.similarity)
 
     fit_cols = fit_rows
 
@@ -565,16 +574,22 @@ class Jaccard(FittedDistance):
 
 class CorrelationDistanceModel(DistanceModel):
     """Helper class for normal and absolute Pearson and Spearman correlation"""
-    def __init__(self, absolute, axis=1, impute=False):
-        super().__init__(axis, impute)
+    def __init__(self, absolute, axis=1, impute=False, *, similarity=False):
+        super().__init__(axis, impute, similarity=similarity)
         self.absolute = absolute
 
     def compute_distances(self, x1, x2):
         rho = self.compute_correlation(x1, x2)
-        if self.absolute:
-            return (1. - np.abs(rho)) / 2.
+        if self.similarity:
+            if self.absolute:
+                return np.abs(rho)
+            else:
+                return rho
         else:
-            return (1. - rho) / 2.
+            if self.absolute:
+                return 1. - np.abs(rho)
+            else:
+                return 0.5 - rho / 2
 
     def compute_correlation(self, x1, x2):
         raise NotImplementedError()
@@ -699,16 +714,19 @@ def _corrcoef2(a, b, axis=0):
 class CorrelationDistance(Distance):
     # pylint: disable=abstract-method
     supports_missing = False
+    supports_similarity = True
 
 
 class SpearmanR(CorrelationDistance):
     def fit(self, _):
-        return SpearmanModel(False, self.axis, self.impute)
+        return SpearmanModel(False, self.axis, self.impute,
+                             similarity=self.similarity)
 
 
 class SpearmanRAbsolute(CorrelationDistance):
     def fit(self, _):
-        return SpearmanModel(True, self.axis, self.impute)
+        return SpearmanModel(True, self.axis, self.impute,
+                             similarity=self.similarity)
 
 
 class PearsonModel(CorrelationDistanceModel):
@@ -722,12 +740,14 @@ class PearsonModel(CorrelationDistanceModel):
 
 class PearsonR(CorrelationDistance):
     def fit(self, _):
-        return PearsonModel(False, self.axis, self.impute)
+        return PearsonModel(False, self.axis, self.impute,
+                            similarity=self.similarity)
 
 
 class PearsonRAbsolute(CorrelationDistance):
     def fit(self, _):
-        return PearsonModel(True, self.axis, self.impute)
+        return PearsonModel(True, self.axis, self.impute,
+                            similarity=self.similarity)
 
 
 def _prob_dist(a):

@@ -12,19 +12,19 @@ jobs:
   lint:
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: '2'
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: 3.8
 
       - name: Install Tox
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --upgrade tox tox-pip-version
+          python -m pip install --upgrade tox
 
       - name: Run Pylint
         run:  tox -e pylint-ci
@@ -45,7 +45,7 @@ jobs:
             python-version: '3.10'
             tox_env: orange-latest
             name: Latest
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             python-version: 3.8
             tox_env: orange-oldest
             name: Oldest dependencies
@@ -53,7 +53,6 @@ jobs:
             python-version: 3.9
             tox_env: pyqt6
             name: PyQt6
-
 
     services:
       postgres:
@@ -75,21 +74,27 @@ jobs:
           - 1433:1433
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0 libxcb-cursor0
 
       - name: Install Tox
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --upgrade tox tox-pip-version
+          python -m pip install --upgrade tox
+
+      - name: Skip testing workflows at coverage
+        if: |
+          matrix.python-version == '3.8' && matrix.tox_env == 'orange-released'
+        run: |
+          echo 'SKIP_EXAMPLE_WORKFLOWS=1' >> $GITHUB_ENV
 
       - name: Run Tox
         run: catchsegv xvfb-run -a -s "$XVFBARGS" tox -e ${{ matrix.tox_env }}
@@ -98,12 +103,10 @@ jobs:
           ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
 
       - name: Upload code coverage
-        if: |
-          matrix.python-version == '3.8' &&  
-          matrix.tox_env == 'orange-released'
-        run: |
-          pip install codecov
-          codecov
+        if: matrix.python-version == '3.8' && matrix.tox_env == 'orange-released'
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
 
   test_on_macos_and_windows:
     runs-on: ${{ matrix.os }}
@@ -112,7 +115,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-11, windows-2019]
+        os: [macos-latest, windows-latest]
         python-version: [3.8, 3.9, '3.10']
         tox_env: [orange-released]
         name: [Released]
@@ -121,7 +124,7 @@ jobs:
             python-version: '3.10'
             tox_env: orange-latest
             name: Latest
-          - os: macos-11
+          - os: macos-latest
             python-version: '3.10'
             tox_env: orange-latest
             name: Latest
@@ -129,26 +132,26 @@ jobs:
             python-version: '3.10'
             tox_env: pyqt6
             name: PyQt6
-          - os: macos-11
+          - os: macos-latest
             python-version: 3.9
             tox_env: pyqt6
             name: PyQt6
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Install system dependencies on MacOS
         run: brew install libomp
-        if: matrix.os == 'macos-10.15' || matrix.os == 'macos-11'
+        if: runner.os == 'macOS'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install --upgrade tox tox-pip-version
+          python -m pip install --upgrade tox
 
       - name: Test with Tox
         run: |

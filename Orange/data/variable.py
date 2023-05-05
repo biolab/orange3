@@ -160,6 +160,8 @@ class Value(float):
         :param value: value
         """
         if variable.is_primitive():
+            if isinstance(variable, DiscreteVariable) and isinstance(value, str):
+                value = variable.to_val(value)
             self = super().__new__(cls, value)
             self.variable = variable
             self._value = None
@@ -989,6 +991,10 @@ class TimeVariable(ContinuousVariable):
                 "%Y-%m-%d %H:%M",
                 "%Y-%m-%d %H:%M:%S",
                 "%Y-%m-%d %H:%M:%S.%f",
+                # times with timezone offsets
+                "%Y-%m-%d %H:%M%z",
+                "%Y-%m-%d %H:%M:%S%z",
+                "%Y-%m-%d %H:%M:%S.%f%z",
             ),
             1,
             1,

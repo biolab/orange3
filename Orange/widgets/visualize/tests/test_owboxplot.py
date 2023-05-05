@@ -26,7 +26,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         cls.titanic = Table("titanic")
         cls.heart = Table("heart_disease")
         cls.data = cls.iris
-        cls.signal_name = "Data"
+        cls.signal_name = OWBoxPlot.Inputs.data
         cls.signal_data = cls.data
 
     def setUp(self):
@@ -86,7 +86,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         # This is a test and does it at its own risk:
         # pylint: disable=protected-access
         data.domain.attributes[1]._values = []
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         self.widget.controls.order_by_importance.setChecked(True)
         self._select_list_items(self.widget.attr_list)
         self._select_list_items(self.widget.group_list)
@@ -100,7 +100,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         # This is a test and does it at its own risk:
         # pylint: disable=protected-access
         data.domain.attributes[1]._values = []
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         self._select_list_items(self.widget.attr_list)
         self._select_list_items(self.widget.group_list)
 
@@ -131,7 +131,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
 
 
         data = self.titanic
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
         select_group(2)  # First attribute
 
@@ -149,7 +149,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
                          ['sex', 'status', 'age', 'survived'])
 
         data = self.heart
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         select_group(1)  # Class
         order_check.setChecked(True)
         self.assertEqual(self.model_order(model),
@@ -182,7 +182,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
                 attr_selection.ClearAndSelect)
 
         data = self.titanic
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
 
         select_attr(1)  # First attribute
 
@@ -202,7 +202,7 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
                          ['None', 'sex', 'status', 'age', 'survived'])
 
         data = self.heart
-        self.send_signal("Data", data)
+        self.send_signal(self.widget.Inputs.data, data)
         select_attr(0)  # Class
         self.assertIsNone(groups[0])
         self.assertEqual(self.model_order(model),

@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,unsubscriptable-object
-import time
+import unittest
 from unittest.mock import patch
 import numpy as np
 
@@ -356,9 +356,10 @@ class TestOWSelectRows(WidgetTest):
 
         self.enterFilter(data.domain["c2"], "is defined")
         self.assertFalse(self.widget.Error.parsing_error.is_shown())
-        self.assertEqual(len(self.get_output("Matching Data")), 3)
-        self.assertEqual(len(self.get_output("Unmatched Data")), 1)
-        self.assertEqual(len(self.get_output("Data")), len(data))
+        outputs = self.widget.Outputs
+        self.assertEqual(len(self.get_output(outputs.matching_data)), 3)
+        self.assertEqual(len(self.get_output(outputs.unmatched_data)), 1)
+        self.assertEqual(len(self.get_output(outputs.annotated_data)), len(data))
 
         # Test saving of settings
         self.widget.settingsHandler.pack_data(self.widget)
@@ -373,14 +374,15 @@ class TestOWSelectRows(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
 
         self.enterFilter(data.domain[0], "is below", "-1")
-        self.assertIsNone(self.get_output("Matching Data"))
-        self.assertEqual(len(self.get_output("Unmatched Data")), len_data)
-        self.assertEqual(len(self.get_output("Data")), len_data)
+        outputs = self.widget.Outputs
+        self.assertIsNone(self.get_output(outputs.matching_data))
+        self.assertEqual(len(self.get_output(outputs.unmatched_data)), len_data)
+        self.assertEqual(len(self.get_output(outputs.annotated_data)), len_data)
         self.widget.remove_all_button.click()
         self.enterFilter(data.domain[0], "is below", "10")
-        self.assertIsNone(self.get_output("Unmatched Data"))
-        self.assertEqual(len(self.get_output("Matching Data")), len_data)
-        self.assertEqual(len(self.get_output("Data")), len_data)
+        self.assertIsNone(self.get_output(outputs.unmatched_data))
+        self.assertEqual(len(self.get_output(outputs.matching_data)), len_data)
+        self.assertEqual(len(self.get_output(outputs.annotated_data)), len_data)
 
     def test_annotated_data(self):
         iris = Table("iris")
@@ -441,14 +443,15 @@ class TestOWSelectRows(WidgetTest):
 
         # first displayed date is min date
         self.assertEqual(value_combo.date(), QDate(2014, 1, 23))
-        self.assertEqual(len(self.get_output("Matching Data")), 691)
+        outputs = self.widget.Outputs
+        self.assertEqual(len(self.get_output(outputs.matching_data)), 691)
         self.widget.remove_all_button.click()
         self.enterFilter("Date_Posted_or_Updated", "is below",
                          QDate(2014, 4, 17))
-        self.assertEqual(len(self.get_output("Matching Data")), 840)
+        self.assertEqual(len(self.get_output(outputs.matching_data)), 840)
         self.enterFilter("Date_Posted_or_Updated", "is greater than",
                          QDate(2014, 6, 30))
-        self.assertIsNone(self.get_output("Matching Data"))
+        self.assertIsNone(self.get_output(outputs.matching_data))
         self.widget.remove_all_button.click()
         # date is in range min-max date
         self.enterFilter("Date_Posted_or_Updated", "equals", QDate(2013, 1, 1))
@@ -464,7 +467,7 @@ class TestOWSelectRows(WidgetTest):
         self.widget.remove_all_button.click()
         self.enterFilter("Date_Posted_or_Updated", "is between",
                          QDate(2014, 4, 17), QDate(2014, 4, 30))
-        self.assertEqual(len(self.get_output("Matching Data")), 58)
+        self.assertEqual(len(self.get_output(outputs.matching_data)), 58)
 
     @patch.object(owselectrows.QMessageBox, "question",
                   return_value=owselectrows.QMessageBox.Ok)
@@ -558,6 +561,32 @@ class TestOWSelectRows(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.assertListEqual([c[0] for c in self.widget.conditions], vars_)
 
+    def test_one_of_click(self):
+        """Test items checked in is one of dropdown"""
+        zoo = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, zoo)
+        self.widget.remove_all_button.click()
+        self.enterFilter(zoo.domain[1], "is one of")
+        model = self.widget.cond_list.cellWidget(0, 2).popup.list_view.model()
+
+        output = self.get_output(self.widget.Outputs.matching_data)
+        self.assertEqual(len(zoo), len(output))
+
+        # check second item (group 1) - only 20 elements in this group
+        model.item(1).setCheckState(Qt.Checked)
+        output = self.get_output(self.widget.Outputs.matching_data)
+        self.assertEqual(20, len(output))
+
+        # check first item (group 0) - now all elements should be at the output
+        model.item(0).setCheckState(Qt.Checked)
+        output = self.get_output(self.widget.Outputs.matching_data)
+        self.assertEqual(len(zoo), len(output))
+
+        # uncheck second element (group 1) - only elements fo group 0 at output
+        model.item(1).setCheckState(Qt.Unchecked)
+        output = self.get_output(self.widget.Outputs.matching_data)
+        self.assertEqual(81, len(output))
+
     def widget_with_context(self, domain, conditions):
         ch = SelectRowsContextHandler()
         context = ch.new_context(domain, *ch.encode_domain(domain))
@@ -612,3 +641,7 @@ class TestOWSelectRows(WidgetTest):
             widget.setDate(value)
         else:
             raise ValueError("Unsupported widget {}".format(widget))
+
+
+if __name__ == "__main__":
+    unittest.main()

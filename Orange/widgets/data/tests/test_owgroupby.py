@@ -100,6 +100,21 @@ class TestOWGroupBy(WidgetTest):
             table.selectionModel().select(i, mode)
 
     def test_attr_table_row_selection(self):
+        # fmt: off
+        continuous_aggs = {
+            "Mean", "Median", "Q1", "Q3", "Min. value", "Max. value", "Mode", "Sum",
+            "Standard deviation", "Variance", "Count defined", "Count", "Concatenate",
+            "Span", "First value", "Last value", "Random value", "Proportion defined",
+        }
+        discrete_aggs = {
+            "Mode", "Count defined", "Count", "Concatenate", "First value",
+            "Last value", "Random value", "Proportion defined"
+        }
+        string_aggs = {
+            "Count defined", "Count", "Concatenate", "First value",
+            "Last value", "Random value", "Proportion defined"
+        }
+        # fmt: on
         self.send_signal(self.widget.Inputs.data, self.data)
 
         model = self.widget.agg_table_model
@@ -111,127 +126,19 @@ class TestOWGroupBy(WidgetTest):
         )
 
         self.select_table_rows(table, [0])
-        self.assert_enabled_cbs(
-            {
-                "Mean",
-                "Median",
-                "Mode",
-                "Standard deviation",
-                "Variance",
-                "Sum",
-                "Min. value",
-                "Max. value",
-                "Count defined",
-                "Count",
-                "Concatenate",
-                "Span",
-                "First value",
-                "Last value",
-                "Random value",
-                "Proportion defined",
-            }
-        )
+        self.assert_enabled_cbs(continuous_aggs)
         self.select_table_rows(table, [0, 1])
-        self.assert_enabled_cbs(
-            {
-                "Mean",
-                "Median",
-                "Mode",
-                "Standard deviation",
-                "Variance",
-                "Sum",
-                "Min. value",
-                "Max. value",
-                "Count defined",
-                "Count",
-                "Concatenate",
-                "Span",
-                "First value",
-                "Last value",
-                "Random value",
-                "Proportion defined",
-            }
-        )
+        self.assert_enabled_cbs(continuous_aggs)
         self.select_table_rows(table, [2])
-        self.assert_enabled_cbs(
-            {
-                "Mean",
-                "Median",
-                "Mode",
-                "Standard deviation",
-                "Variance",
-                "Sum",
-                "Min. value",
-                "Max. value",
-                "Count defined",
-                "Count",
-                "Concatenate",
-                "Span",
-                "First value",
-                "Last value",
-                "Random value",
-                "Proportion defined",
-            }
-        )
+        self.assert_enabled_cbs(continuous_aggs)
         self.select_table_rows(table, [3])  # discrete variable
-        self.assert_enabled_cbs(
-            {
-                "Mode",
-                "Count defined",
-                "Count",
-                "Concatenate",
-                "First value",
-                "Last value",
-                "Random value",
-                "Proportion defined",
-            }
-        )
+        self.assert_enabled_cbs(discrete_aggs)
         self.select_table_rows(table, [4])  # string variable
-        self.assert_enabled_cbs(
-            {
-                "Count defined",
-                "Count",
-                "Concatenate",
-                "First value",
-                "Last value",
-                "Random value",
-                "Proportion defined",
-            }
-        )
-        self.select_table_rows(table, [3, 4])  # string variable
-        self.assert_enabled_cbs(
-            {
-                "Mode",
-                "Count defined",
-                "Count",
-                "Concatenate",
-                "First value",
-                "Last value",
-                "Random value",
-                "Proportion defined",
-            }
-        )
-        self.select_table_rows(table, [2, 3, 4])  # string variable
-        self.assert_enabled_cbs(
-            {
-                "Mean",
-                "Median",
-                "Mode",
-                "Standard deviation",
-                "Variance",
-                "Sum",
-                "Min. value",
-                "Max. value",
-                "Count defined",
-                "Count",
-                "Concatenate",
-                "Span",
-                "First value",
-                "Last value",
-                "Random value",
-                "Proportion defined",
-            }
-        )
+        self.assert_enabled_cbs(string_aggs)
+        self.select_table_rows(table, [3, 4])  # discrete + string variable
+        self.assert_enabled_cbs(string_aggs | discrete_aggs)
+        self.select_table_rows(table, [2, 3, 4])  # cont + disc + str variable
+        self.assert_enabled_cbs(string_aggs | discrete_aggs | continuous_aggs)
 
     def assert_aggregations_equal(self, expected_text):
         model = self.widget.agg_table_model
@@ -532,12 +439,14 @@ class TestOWGroupBy(WidgetTest):
         expected_columns = [
             "cvar - Mean",
             "cvar - Median",
+            "cvar - Q1",
+            "cvar - Q3",
+            "cvar - Min. value",
+            "cvar - Max. value",
             "cvar - Mode",
             "cvar - Standard deviation",
             "cvar - Variance",
             "cvar - Sum",
-            "cvar - Min. value",
-            "cvar - Max. value",
             "cvar - Span",
             "cvar - First value",
             "cvar - Last value",
@@ -564,32 +473,32 @@ class TestOWGroupBy(WidgetTest):
 
         # fmt: off
         expected_df = pd.DataFrame([
-            [.15, .15, .1, .07, .005, .3, .1, .2, .1, 0.1, 0.2, 2, 2, 1,
+            [.15, .15, .125, .175, .1, .2, .1, .07, .005, .3, .1, 0.1, 0.2, 2, 2, 1,
              "val1", "val1", "val2", 2, 2, 1,
              "sval1", "sval2", 2, 2, 1,
              "0.1 0.2", "val1 val2", "sval1 sval2",
              1, 1],
-            [.3, .3, .3, np.nan, np.nan, .3, .3, .3, 0, .3, .3, 1, 2, 0.5,
+            [.3, .3, .3, .3, .3, .3, .3, np.nan, np.nan, .3, 0, .3, .3, 1, 2, 0.5,
              "val2", "val2", "val2", 1, 2, 0.5,
              "", "sval2", 2, 2, 1,
              "0.3", "val2", "sval2",
              1, 2],
-            [.433, .4, .3, 0.153, 0.023, 1.3, .3, .6, .3, .3, .6, 3, 3, 1,
+            [.433, .4, .35, .5, .3, .6, .3, 0.153, 0.023, 1.3, .3, .3, .6, 3, 3, 1,
              "val1", "val1", "val1", 3, 3, 1,
              "sval1", "sval1", 3, 3, 1,
              "0.3 0.4 0.6", "val1 val2 val1", "sval1 sval2 sval1",
              1, 3],
-            [1.5, 1.5, 1, 0.707, 0.5, 3, 1, 2, 1, 1, 2, 2, 2, 1,
+            [1.5, 1.5, 1.25, 1.75, 1, 2, 1, 0.707, 0.5, 3, 1, 1, 2, 2, 2, 1,
              "val1", "val2", "val1", 2, 2, 1,
              "sval2", "sval1", 2, 2, 1,
              "1.0 2.0", "val2 val1", "sval2 sval1",
              2, 1],
-            [-0.5, -0.5, -4, 4.95, 24.5, -1, -4, 3, 7, 3, -4, 2, 2, 1,
+            [-0.5, -0.5, -2.25, 1.25, -4, 3, -4, 4.95, 24.5, -1, 7, 3, -4, 2, 2, 1,
              "val1", "val2", "val1", 2, 2, 1,
              "sval2", "sval1", 2, 2, 1,
              "3.0 -4.0", "val2 val1", "sval2 sval1",
              2, 2],
-            [5, 5, 5, 0, 0, 10, 5, 5, 0, 5, 5, 2, 2, 1,
+            [5, 5, 5, 5, 5, 5, 5, 0, 0, 10, 0, 5, 5, 2, 2, 1,
              "val1", "val2", "val1", 2, 2, 1,
              "sval2", "sval1", 2, 2, 1,
              "5.0 5.0", "val2 val1", "sval2 sval1",
@@ -729,7 +638,7 @@ class TestOWGroupBy(WidgetTest):
         for cb in self.widget.agg_checkboxes.values():
             if cb.text() != "Mean":
                 cb.click()
-        self.assert_aggregations_equal(["Mean, Median, Mode and 12 more", "Mode"])
+        self.assert_aggregations_equal(["Mean, Median, Q1 and 14 more", "Mode"])
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(2, len(output))
 
@@ -753,7 +662,7 @@ class TestOWGroupBy(WidgetTest):
         for cb in self.widget.agg_checkboxes.values():
             if cb.text() != "Mean":
                 cb.click()
-        self.assert_aggregations_equal(["", "Mean, Median, Mode and 12 more"])
+        self.assert_aggregations_equal(["", "Mean, Median, Q1 and 14 more"])
 
         expected_df = pd.DataFrame(
             {
@@ -767,13 +676,16 @@ class TestOWGroupBy(WidgetTest):
                     "1970-01-01 00:12:30",
                     "1970-01-01 00:00:01",
                 ],
-                "T - Mode": [
-                    "1970-01-01 00:00:00",
-                    "1970-01-01 00:08:20",
+                "T - Q1": [
+                    "1970-01-01 00:00:05",
+                    "1970-01-01 00:10:25",
                     "1970-01-01 00:00:01",
                 ],
-                "T - Standard deviation": [10, 353.5533905932738, np.nan],
-                "T - Variance": [100, 125000, np.nan],
+                "T - Q3": [
+                    "1970-01-01 00:00:15",
+                    "1970-01-01 00:14:35",
+                    "1970-01-01 00:00:01",
+                ],
                 "T - Min. value": [
                     "1970-01-01 00:00:00",
                     "1970-01-01 00:08:20",
@@ -784,6 +696,13 @@ class TestOWGroupBy(WidgetTest):
                     "1970-01-01 00:16:40",
                     "1970-01-01 00:00:01",
                 ],
+                "T - Mode": [
+                    "1970-01-01 00:00:00",
+                    "1970-01-01 00:08:20",
+                    "1970-01-01 00:00:01",
+                ],
+                "T - Standard deviation": [10, 353.5533905932738, np.nan],
+                "T - Variance": [100, 125000, np.nan],
                 "T - Span": [20, 500, 0],
                 "T - First value": [
                     "1970-01-01 00:00:00",
@@ -809,6 +728,8 @@ class TestOWGroupBy(WidgetTest):
         df_col = [
             "T - Mean",
             "T - Median",
+            "T - Q1",
+            "T - Q3",
             "T - Mode",
             "T - Min. value",
             "T - Max. value",
@@ -832,11 +753,13 @@ class TestOWGroupBy(WidgetTest):
         expected_attributes = (
             TimeVariable("T - Mean", have_date=1, have_time=1),
             TimeVariable("T - Median", have_date=1, have_time=1),
+            TimeVariable("T - Q1", have_date=1, have_time=1),
+            TimeVariable("T - Q3", have_date=1, have_time=1),
+            TimeVariable("T - Min. value", have_date=1, have_time=1),
+            TimeVariable("T - Max. value", have_date=1, have_time=1),
             TimeVariable("T - Mode", have_date=1, have_time=1),
             ContinuousVariable(name="T - Standard deviation"),
             ContinuousVariable(name="T - Variance"),
-            TimeVariable("T - Min. value", have_date=1, have_time=1),
-            TimeVariable("T - Max. value", have_date=1, have_time=1),
             ContinuousVariable(name="T - Span"),
             TimeVariable("T - First value", have_date=1, have_time=1),
             TimeVariable("T - Last value", have_date=1, have_time=1),
@@ -872,17 +795,19 @@ class TestOWGroupBy(WidgetTest):
         for cb in self.widget.agg_checkboxes.values():
             if cb.text() != "Mean":
                 cb.click()
-        self.assert_aggregations_equal(["", "Mean, Median, Mode and 12 more"])
+        self.assert_aggregations_equal(["", "Mean, Median, Q1 and 14 more"])
 
         expected_df = pd.DataFrame(
             {
                 "T - Mean": ["1970-01-01 00:00:10"],
                 "T - Median": ["1970-01-01 00:00:10"],
+                "T - Q1": ["1970-01-01 00:00:05"],
+                "T - Q3": ["1970-01-01 00:00:15"],
+                "T - Min. value": ["1970-01-01 00:00:00"],
+                "T - Max. value": ["1970-01-01 00:00:20"],
                 "T - Mode": ["1970-01-01 00:00:00"],
                 "T - Standard deviation": [10],
                 "T - Variance": [100],
-                "T - Min. value": ["1970-01-01 00:00:00"],
-                "T - Max. value": ["1970-01-01 00:00:20"],
                 "T - Span": [20, ],
                 "T - First value": ["1970-01-01 00:00:00"],
                 "T - Last value": ["1970-01-01 00:00:20"],
@@ -898,9 +823,11 @@ class TestOWGroupBy(WidgetTest):
         df_col = [
             "T - Mean",
             "T - Median",
-            "T - Mode",
+            "T - Q1",
+            "T - Q3",
             "T - Min. value",
             "T - Max. value",
+            "T - Mode",
             "T - First value",
             "T - Last value",
         ]
@@ -944,12 +871,14 @@ class TestOWGroupBy(WidgetTest):
         expected_columns = [
             "B - Mean",
             "B - Median",
+            "B - Q1",
+            "B - Q3",
+            "B - Min. value",
+            "B - Max. value",
             "B - Mode",
             "B - Standard deviation",
             "B - Variance",
             "B - Sum",
-            "B - Min. value",
-            "B - Max. value",
             "B - Span",
             "B - First value",
             "B - Last value",
@@ -963,8 +892,8 @@ class TestOWGroupBy(WidgetTest):
         n = np.nan
         expected_df = pd.DataFrame(
             [
-                [n, n, n, n, n, 0, n, n, n, n, n, n, 0, 2, 0, "", 1],
-                [1, 1, 1, 0, 0, 2, 1, 1, 0, 1, 1, 1, 2, 2, 1, "1.0 1.0", 2],
+                [n, n, n, n, n, n, n, n, n, 0, n, n, n, n, 0, 2, 0, "", 1],
+                [1, 1, 1, 1, 1, 1, 1, 0, 0, 2, 0, 1, 1, 1, 2, 2, 1, "1.0 1.0", 2],
             ],
             columns=expected_columns,
         )

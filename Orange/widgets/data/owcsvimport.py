@@ -615,7 +615,7 @@ class OWCSVFileImport(widget.OWWidget):
     icon = "icons/CSVFile.svg"
     priority = 11
     category = "Data"
-    keywords = ["file", "load", "read", "open", "csv"]
+    keywords = "csv file import, file, load, read, open, csv"
 
     class Outputs:
         data = widget.Output(
@@ -1837,7 +1837,7 @@ def pandas_to_table(df):
     if cols_x:
         X = np.column_stack([a for _, a in cols_x])
     else:
-        X = np.empty((df.shape[0], 0), dtype=np.float)
+        X = np.empty((df.shape[0], 0), dtype=np.float64)
     metas = [v for v, _ in cols_m]
     if cols_m:
         M = np.column_stack([a for _, a in cols_m])

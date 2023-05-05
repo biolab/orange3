@@ -49,8 +49,6 @@ conda config --set channel_priority strict
 conda create python=3 --yes --name orange3
 conda activate orange3
 
-# Install PyQt and PyQtWebEngine
-conda install pyqt
 # Install Orange
 conda install orange3
 ```

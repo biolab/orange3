@@ -1,4 +1,5 @@
 from collections import defaultdict, namedtuple
+from contextlib import contextmanager
 from typing import Optional
 from xml.sax.saxutils import escape
 
@@ -20,6 +21,7 @@ from Orange.preprocess import decimal_binnings, time_binnings
 from Orange.projection.som import SOM
 
 from Orange.widgets import gui
+from Orange.widgets.utils.localization import pl
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.settings import \
     DomainContextHandler, ContextSetting, Setting
@@ -170,6 +172,15 @@ class ColoredCircle(QGraphicsItem):
         painter.restore()
 
 
+@contextmanager
+def disconnected_spin(spin):
+    spin.blockSignals(True)
+    try:
+        yield
+    finally:
+        spin.blockSignals(False)
+
+
 N_ITERATIONS = 200
 
 
@@ -177,7 +188,7 @@ class OWSOM(OWWidget):
     name = "Self-Organizing Map"
     description = "Computation of self-organizing map."
     icon = "icons/SOM.svg"
-    keywords = ["SOM"]
+    keywords = "self-organizing map, som"
 
     class Inputs:
         data = Input("Data", Table)
@@ -198,7 +209,7 @@ class OWSOM(OWWidget):
     pie_charts = Setting(False)
     selection = Setting(None, schema_only=True)
 
-    graph_name = "view"
+    graph_name = "view"  # QGraphicsView
 
     _grid_pen = QPen(QBrush(QColor(224, 224, 224)), 2)
     _grid_pen.setCosmetic(True)
@@ -208,19 +219,24 @@ class OWSOM(OWWidget):
         ("shape", "auto_dim", "spin_x", "spin_y", "initialization", "start")
     )
 
+    class Information(OWWidget.Information):
+        modified = Msg(
+            'The parameter settings have been changed. Press "Start" to '
+            "rerun with the new settings."
+        )
+
     class Warning(OWWidget.Warning):
         ignoring_disc_variables = Msg("SOM ignores categorical variables.")
         missing_colors = \
             Msg("Some data instances have undefined value of '{}'.")
         no_defined_colors = \
             Msg("'{}' has no defined values.")
-        missing_values = \
-            Msg("{} data instance{} with undefined value(s) {} not shown.")
+        missing_values = Msg("{}")
         single_attribute = Msg("Data contains a single numeric column.")
 
     class Error(OWWidget.Error):
         no_numeric_variables = Msg("Data contains no numeric columns.")
-        no_defined_rows = Msg("All rows contain at least one undefined value.")
+        not_enough_data = Msg("SOM needs at least two data rows without missing values.")
 
     def __init__(self):
         super().__init__()
@@ -243,6 +259,7 @@ class OWSOM(OWWidget):
         shape = gui.comboBox(
             box, self, "", items=("Hexagonal grid", "Square grid"))
         shape.setCurrentIndex(1 - self.hexagonal)
+        shape.currentIndexChanged.connect(self.on_parameter_change)
 
         box2 = gui.indentedBox(box, 10)
         auto_dim = gui.checkBox(
@@ -250,27 +267,40 @@ class OWSOM(OWWidget):
             callback=self.on_auto_dimension_changed)
         self.manual_box = box3 = gui.hBox(box2)
         spinargs = dict(
-            value="", widget=box3, master=self, minv=5, maxv=100, step=5,
-            alignment=Qt.AlignRight)
-        spin_x = gui.spin(**spinargs)
-        spin_x.setValue(self.size_x)
+            value="",
+            widget=box3,
+            master=self,
+            minv=5,
+            maxv=100,
+            step=5,
+            alignment=Qt.AlignRight,
+            callback=self.on_parameter_change,
+        )
+        self.spin_x = gui.spin(**spinargs)
+        with disconnected_spin(self.spin_x):
+            self.spin_x.setValue(self.size_x)
         gui.widgetLabel(box3, "×")
-        spin_y = gui.spin(**spinargs)
-        spin_y.setValue(self.size_y)
+        self.spin_y = gui.spin(**spinargs)
+        with disconnected_spin(self.spin_y):
+            self.spin_y.setValue(self.size_y)
         gui.rubber(box3)
         self.manual_box.setEnabled(not self.auto_dimension)
 
         initialization = gui.comboBox(
-            box, self, "initialization",
-            items=("Initialize with PCA", "Random initialization",
-                   "Replicable random"))
+            box,
+            self,
+            "initialization",
+            items=("Initialize with PCA", "Random initialization", "Replicable random"),
+            callback=self.on_parameter_change,
+        )
 
         start = gui.button(
             box, self, "Restart", callback=self.restart_som_pressed,
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
 
         self.opt_controls = self.OptControls(
-            shape, auto_dim, spin_x, spin_y, initialization, start)
+            shape, auto_dim, self.spin_x, self.spin_y, initialization, start
+        )
 
         box = gui.vBox(self.controlArea, "Color")
         gui.comboBox(
@@ -318,8 +348,8 @@ class OWSOM(OWWidget):
                 self.cont_x = x.tocsr()
             else:
                 mask = np.all(np.isfinite(x), axis=1)
-                if not np.any(mask):
-                    self.Error.no_defined_rows()
+                if np.sum(mask) <= 1:
+                    self.Error.not_enough_data()
                 else:
                     if np.all(mask):
                         self.data = data
@@ -334,10 +364,9 @@ class OWSOM(OWWidget):
 
         def set_warnings():
             missing = len(data) - len(self.data)
-            if missing == 1:
-                self.Warning.missing_values(1, "", "is")
-            elif missing > 1:
-                self.Warning.missing_values(missing, "s", "are")
+            if missing:
+                self.Warning.missing_values(
+                    f'{missing} data {pl(missing, "instance")} with undefined value(s) {pl(missing, "is|are")} not shown.')
 
         cont_x = self.cont_x.copy() if self.cont_x is not None else None
         self.data = self.cont_x = None
@@ -367,7 +396,8 @@ class OWSOM(OWWidget):
         self.set_color_bins()
         self.create_legend()
         if invalidated:
-            self.recompute_dimensions()
+            with disconnected_spin(self.spin_x), disconnected_spin(self.spin_y):
+                self.recompute_dimensions()
             self.start_som()
         else:
             self._redraw()
@@ -400,6 +430,7 @@ class OWSOM(OWWidget):
             dimy = int(5 * np.round(spin_y.value() / 5))
             spin_x.setValue(dimx)
             spin_y.setValue(dimy)
+        self.on_parameter_change()
 
     def on_attr_color_change(self):
         self.controls.pie_charts.setEnabled(self.attr_color is not None)
@@ -414,6 +445,9 @@ class OWSOM(OWWidget):
     def on_pie_chart_change(self):
         self._redraw()
 
+    def on_parameter_change(self):
+        self.Information.modified()
+
     def clear_selection(self):
         self.selection = None
         self.redraw_selection()
@@ -423,15 +457,18 @@ class OWSOM(OWWidget):
             return
         if self.selection is None:
             self.selection = np.zeros(self.grid_cells.T.shape, dtype=np.int16)
+
+        selection_np = np.array(self.selection)
         if action == SomView.SelectionSet:
-            self.selection[:] = 0
-            self.selection[selection] = 1
+            selection_np[:] = 0
+            selection_np[selection] = 1
         elif action == SomView.SelectionAddToGroup:
-            self.selection[selection] = max(1, np.max(self.selection))
+            selection_np[selection] = max(1, np.max(selection_np))
         elif action == SomView.SelectionNewGroup:
-            self.selection[selection] = 1 + np.max(self.selection)
+            selection_np[selection] = 1 + np.max(selection_np)
         elif action & SomView.SelectionRemove:
-            self.selection[selection] = 0
+            selection_np[selection] = 0
+        self.selection = selection_np.tolist()
         self.redraw_selection()
         self.update_output()
 
@@ -446,6 +483,7 @@ class OWSOM(OWWidget):
             x, y = np.nonzero(self.selection)
             if len(x) > 1:
                 return
+            x, y = x[0], y[0]
             if event.key() == Qt.Key_Up and y > 0:
                 y -= 1
             if event.key() == Qt.Key_Down and y < self.size_y - 1:
@@ -456,11 +494,11 @@ class OWSOM(OWWidget):
                 x += 1
             x -= self.hexagonal and x == self.size_x - 1 and y % 2
 
-        if self.selection is not None and self.selection[x, y]:
+        if self.selection is not None and self.selection[x][y]:
             return
         selection = np.zeros(self.grid_cells.shape, dtype=bool)
         selection[x, y] = True
-        self.on_selection_change(selection)
+        self.on_selection_change(selection.tolist())
 
     def on_selection_mark_change(self, marks):
         self.redraw_selection(marks=marks)
@@ -485,7 +523,7 @@ class OWSOM(OWWidget):
             for x in range(self.size_x - (y % 2) * self.hexagonal):
                 cell = self.grid_cells[y, x]
                 marked = marks is not None and marks[x, y]
-                sel_group = self.selection is not None and self.selection[x, y]
+                sel_group = self.selection is not None and self.selection[x][y]
                 if marked:
                     cell.setBrush(mark_brush)
                     cell.setPen(mark_pen)
@@ -495,6 +533,7 @@ class OWSOM(OWWidget):
                 cell.setZValue(marked or sel_group)
 
     def restart_som_pressed(self):
+        self.Information.modified.clear()
         if self._optimizer_thread is not None:
             self.stop_optimization = True
             self._optimizer.stop_optimization = True
@@ -822,7 +861,7 @@ class OWSOM(OWWidget):
             for y in range(self.size_y):
                 for x in range(self.size_x):
                     rows = self.get_member_indices(x, y)
-                    indices[rows] = self.selection[x, y]
+                    indices[rows] = self.selection[x][y]
 
         if np.any(indices):
             sel_data = create_groups_table(self.data, indices, False, "Group")
@@ -930,6 +969,14 @@ class OWSOM(OWWidget):
         if self.colors:
             self.report_caption(
                 f"Self-organizing map colored by '{self.attr_color.name}'")
+
+    @classmethod
+    def migrate_settings(cls, settings, _):
+        # previously selection was saved as np.ndarray which is not supported
+        # by widget-base, change selection to list
+        selection = settings.get('selection')
+        if selection is not None and isinstance(selection, np.ndarray):
+            settings['selection'] = selection.tolist()
 
 
 def _draw_hexagon():

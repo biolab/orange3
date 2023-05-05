@@ -38,7 +38,7 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
     category = "Transform"
     icon = "icons/Transpose.svg"
     priority = 110
-    keywords = []
+    keywords = "transpose"
 
     class Inputs:
         data = Input("Data", Table)

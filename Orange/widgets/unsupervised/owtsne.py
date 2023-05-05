@@ -254,7 +254,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     description = "Two-dimensional data projection with t-SNE."
     icon = "icons/TSNE.svg"
     priority = 920
-    keywords = ["tsne"]
+    keywords = "t-sne, tsne"
 
     settings_version = 4
     perplexity = ContextSetting(30)

@@ -12,7 +12,8 @@ from collections import namedtuple
 
 from AnyQt.QtWidgets import (
     QLabel, QLineEdit, QTextBrowser, QSplitter, QTreeView,
-    QStyleOptionViewItem, QStyledItemDelegate, QStyle, QApplication
+    QStyleOptionViewItem, QStyledItemDelegate, QStyle, QApplication,
+    QHBoxLayout, QComboBox
 )
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, QBrush, QColor
 from AnyQt.QtCore import (
@@ -119,6 +120,7 @@ class Namespace(SimpleNamespace):
         self.references = []
         self.seealso = []
         self.tags = []
+        self.language = "English"
 
         super(Namespace, self).__init__(**kwargs)
 
@@ -137,13 +139,33 @@ class TreeViewWithReturn(QTreeView):
             super().keyPressEvent(e)
 
 
+class SortFilterProxyWithLanguage(QSortFilterProxyModel):
+    def __init__(self):
+        super().__init__()
+        self.__language = None
+
+    def setLanguage(self, language):
+        self.__language = language
+        self.invalidateFilter()
+
+    def language(self):
+        return self.__language
+
+    def filterAcceptsRow(self, row, parent):
+        source = self.sourceModel()
+        return super().filterAcceptsRow(row, parent) and (
+            self.__language is None
+            or source.index(row, 0).data(Qt.UserRole).language == self.__language
+        )
+
+
 class OWDataSets(OWWidget):
     name = "Datasets"
     description = "Load a dataset from an online repository"
     icon = "icons/DataSets.svg"
     priority = 20
     replaces = ["orangecontrib.prototypes.widgets.owdatasets.OWDataSets"]
-    keywords = ["online", "data sets"]
+    keywords = "datasets, online, data, sets"
 
     want_control_area = False
 
@@ -152,6 +174,8 @@ class OWDataSets(OWWidget):
     # Take care when refactoring! (used in e.g. single-cell)
     INDEX_URL = "https://datasets.biolab.si/"
     DATASET_DIR = "datasets"
+    DEFAULT_LANG = "English"
+    ALL_LANGUAGES = "All Languages"
 
     # override HEADER_SCHEMA to define new columns
     # if schema is changed override methods: self.assign_delegates and
@@ -204,10 +228,18 @@ class OWDataSets(OWWidget):
 
         self.__awaiting_state = None  # type: Optional[_FetchState]
 
+        layout = QHBoxLayout()
         self.filterLineEdit = QLineEdit(
             textChanged=self.filter, placeholderText="Search for data set ..."
         )
-        self.mainArea.layout().addWidget(self.filterLineEdit)
+        layout.addWidget(self.filterLineEdit)
+        layout.addSpacing(20)
+        layout.addWidget(QLabel("Show data sets in "))
+        lang_combo = self.language_combo = QComboBox()
+        lang_combo.addItems([self.DEFAULT_LANG, self.ALL_LANGUAGES])
+        lang_combo.activated.connect(self._on_language_changed)
+        layout.addWidget(lang_combo)
+        self.mainArea.layout().addLayout(layout)
 
         self.splitter = QSplitter(orientation=Qt.Vertical)
 
@@ -248,7 +280,7 @@ class OWDataSets(OWWidget):
         )
         self.mainArea.layout().addWidget(self.splitter)
 
-        proxy = QSortFilterProxyModel()
+        proxy = SortFilterProxyWithLanguage()
         proxy.setFilterKeyColumn(-1)
         proxy.setFilterCaseSensitivity(Qt.CaseInsensitive)
         self.view.setModel(proxy)
@@ -266,6 +298,8 @@ class OWDataSets(OWWidget):
         w = FutureWatcher(f, parent=self)
         w.done.connect(self.__set_index)
 
+        self._on_language_changed()
+
     def assign_delegates(self):
         # NOTE: All columns must have size hinting delegates.
         # QTreeView queries only the columns displayed in the viewport so
@@ -274,7 +308,7 @@ class OWDataSets(OWWidget):
         self.view.setItemDelegate(UniformHeightDelegate(self))
         self.view.setItemDelegateForColumn(
             self.Header.islocal,
-            UniformHeightIndicatorDelegate(self, role=Qt.DisplayRole, indicatorSize=4)
+            UniformHeightIndicatorDelegate(self, indicatorSize=4)
         )
         self.view.setItemDelegateForColumn(
             self.Header.size,
@@ -312,6 +346,26 @@ class OWDataSets(OWWidget):
                          islocal=islocal, outdated=outdated, **info)
 
     def create_model(self):
+        self.update_language_combo()
+        return self.update_model()
+
+    def update_language_combo(self):
+        combo = self.language_combo
+        current_language = combo.currentText()
+        allkeys = set(self.allinfo_local) | set(self.allinfo_remote)
+        languages = sorted({self._parse_info(key).language for key in allkeys})
+        combo.clear()
+        if self.DEFAULT_LANG not in languages:
+            combo.addItem(self.DEFAULT_LANG)
+        combo.addItems(languages + [self.ALL_LANGUAGES])
+        if current_language in languages:
+            combo.setCurrentText(current_language)
+        elif self.DEFAULT_LANG in languages:
+            combo.setCurrentText(self.DEFAULT_LANG)
+        else:
+            combo.setCurrentText(self.ALL_LANGUAGES)
+
+    def update_model(self):
         allkeys = set(self.allinfo_local) | set(self.allinfo_remote)
         allkeys = sorted(allkeys)
 
@@ -319,10 +373,14 @@ class OWDataSets(OWWidget):
         model.setHorizontalHeaderLabels(self._header_labels)
 
         current_index = -1
+        localinfo = list_local(self.local_cache_path)
         for i, file_path in enumerate(allkeys):
             datainfo = self._parse_info(file_path)
             item1 = QStandardItem()
-            item1.setData(" " if datainfo.islocal else "", Qt.DisplayRole)
+            # this elegant and spotless trick is used for sorting
+            state = self.indicator_state_for_info(datainfo, localinfo)
+            item1.setData({None: "", False: " ", True: "  "}[state], Qt.DisplayRole)
+            item1.setData(state, UniformHeightIndicatorDelegate.IndicatorRole)
             item1.setData(self.IndicatorBrushes[0], Qt.ForegroundRole)
             item1.setData(datainfo, Qt.UserRole)
             item2 = QStandardItem(datainfo.title)
@@ -347,6 +405,14 @@ class OWDataSets(OWWidget):
 
         return model, current_index
 
+    def _on_language_changed(self):
+        combo = self.language_combo
+        if combo.currentIndex() == combo.count() - 1:
+            language = None
+        else:
+            language = combo.currentText()
+        self.view.model().setLanguage(language)
+
     @Slot(object)
     def __set_index(self, f):
         # type: (Future) -> None
@@ -368,7 +434,9 @@ class OWDataSets(OWWidget):
             self.allinfo_remote = {}
 
         model, current_index = self.create_model()
+        self.set_model(model, current_index)
 
+    def set_model(self, model, current_index):
         self.view.model().setSourceModel(model)
         self.view.selectionModel().selectionChanged.connect(
             self.__on_selection
@@ -392,20 +460,26 @@ class OWDataSets(OWWidget):
                 QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows)
             self.commit()
 
+    def indicator_state_for_info(self, info, localinfo):
+        if not info.file_path in localinfo:
+            return None
+        return (
+            os.path.join(self.local_cache_path, *info.file_path)
+            == self.current_output)
+
     def __update_cached_state(self):
         model = self.view.model().sourceModel()
-        localinfo = list_local(self.local_cache_path)
         assert isinstance(model, QStandardItemModel)
         allinfo = []
+        localinfo = list_local(self.local_cache_path)
         for i in range(model.rowCount()):
             item = model.item(i, 0)
             info = item.data(Qt.UserRole)
-            is_local = info.file_path in localinfo
-            is_current = (is_local and
-                          os.path.join(self.local_cache_path, *info.file_path)
-                          == self.current_output)
-            item.setData(" " * (is_local + is_current), Qt.DisplayRole)
-            item.setData(self.IndicatorBrushes[is_current], Qt.ForegroundRole)
+            state = self.indicator_state_for_info(info, localinfo)
+            # this elegant and spotless trick is used for sorting
+            item.setData({None: "", False: " ", True: "  "}[state], Qt.DisplayRole)
+            item.setData(state, UniformHeightIndicatorDelegate.IndicatorRole)
+            item.setData(self.IndicatorBrushes[bool(state)], Qt.ForegroundRole)
             allinfo.append(info)
 
     def selected_dataset(self):

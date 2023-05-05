@@ -12,7 +12,7 @@ If the file is saved to the same directory as the workflow or in the subtree of 
 ![](images/SaveDistanceMatrix-stamped.png)
 
 1. By clicking *Save*, you choose from previously saved distance matrices. Alternatively, tick the box on the left side of the *Save* button and changes will be communicated automatically.
-2. By clicking *Save as*, you save the distance matrix to your computer, you only need to enter the name of the file and click *Save*. The distance matrix will be saved as type *.dst*.
+2. By clicking *Save as*, you save the distance matrix to your computer, you only need to enter the name of the file and click *Save*.
 
 Example
 -------

@@ -519,7 +519,7 @@ class TestModels(WidgetTest, DataMixin):
         model = w.varview.model()
         display = model.index(0).data()
         self.assertIn("x", display)
-        self.assertIn("equal", display)
+        self.assertIn("freq", display)
         self.assertIn("3", display)
         self.assertIn(
             str(w.discretized_vars[("x", False)].compute_value.points[0])[:3],
@@ -542,7 +542,7 @@ class TestModels(WidgetTest, DataMixin):
         w._update_discretizations()
         display = model.index(0).data()
         self.assertIn("x", display)
-        self.assertIn("equal", display)
+        self.assertIn("width", display)
         self.assertIn("3", display)
         self.assertIn(
             str(w.discretized_vars[("x", False)].compute_value.points[0])[:3],

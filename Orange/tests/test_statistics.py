@@ -107,26 +107,26 @@ class TestUtil(unittest.TestCase):
 
     def test_stats_sparse(self):
         X = csr_matrix(np.identity(5))
-        np.testing.assert_equal(stats(X), [[0, 1, .2, 0, 4, 1],
-                                           [0, 1, .2, 0, 4, 1],
-                                           [0, 1, .2, 0, 4, 1],
-                                           [0, 1, .2, 0, 4, 1],
-                                           [0, 1, .2, 0, 4, 1]])
+        np.testing.assert_equal(stats(X), [[0, 1, .2, 0, 0, 5],
+                                           [0, 1, .2, 0, 0, 5],
+                                           [0, 1, .2, 0, 0, 5],
+                                           [0, 1, .2, 0, 0, 5],
+                                           [0, 1, .2, 0, 0, 5]])
 
         # assure last two columns have just zero elements
         X = X[:3]
-        np.testing.assert_equal(stats(X), [[0, 1, 1/3, 0, 2, 1],
-                                           [0, 1, 1/3, 0, 2, 1],
-                                           [0, 1, 1/3, 0, 2, 1],
-                                           [0, 0, 0, 0, 3, 0],
-                                           [0, 0, 0, 0, 3, 0]])
+        np.testing.assert_equal(stats(X), [[0, 1, 1/3, 0, 0, 3],
+                                           [0, 1, 1/3, 0, 0, 3],
+                                           [0, 1, 1/3, 0, 0, 3],
+                                           [0, 0, 0, 0, 0, 3],
+                                           [0, 0, 0, 0, 0, 3]])
 
         r = stats(X, compute_variance=True)
-        np.testing.assert_almost_equal(r, [[0, 1, 1/3, 2/9, 2, 1],
-                                           [0, 1, 1/3, 2/9, 2, 1],
-                                           [0, 1, 1/3, 2/9, 2, 1],
-                                           [0, 0, 0, 0, 3, 0],
-                                           [0, 0, 0, 0, 3, 0]])
+        np.testing.assert_almost_equal(r, [[0, 1, 1/3, 2/9, 0, 3],
+                                           [0, 1, 1/3, 2/9, 0, 3],
+                                           [0, 1, 1/3, 2/9, 0, 3],
+                                           [0, 0, 0, 0, 0, 3],
+                                           [0, 0, 0, 0, 0, 3]])
 
     def test_stats_weights(self):
         X = np.arange(4).reshape(2, 2).astype(float)
@@ -152,11 +152,11 @@ class TestUtil(unittest.TestCase):
         X = np.arange(4).reshape(2, 2).astype(float)
         X = csr_matrix(X)
         weights = np.array([1, 3])
-        np.testing.assert_equal(stats(X, weights), [[0, 2, 1.5, 0, 1, 1],
+        np.testing.assert_equal(stats(X, weights), [[0, 2, 1.5, 0, 0, 2],
                                                     [1, 3, 2.5, 0, 0, 2]])
 
         np.testing.assert_equal(stats(X, weights, compute_variance=True),
-                                [[0, 2, 1.5, 0.75, 1, 1],
+                                [[0, 2, 1.5, 0.75, 0, 2],
                                  [1, 3, 2.5, 0.75, 0, 2]])
 
     def test_stats_non_numeric(self):
@@ -169,6 +169,42 @@ class TestUtil(unittest.TestCase):
                                            [np.inf, -np.inf, 0, 0, 1, 2],
                                            [np.inf, -np.inf, 0, 0, 2, 1],
                                            [np.inf, -np.inf, 0, 0, 0, 3]])
+
+    def test_stats_nancounts(self):
+        arr = np.array([[1, 4, 9],
+                        [-2, 10, 0],
+                        [0, np.nan, np.nan],
+                        [0, np.nan, 0]])
+
+        expected = [[-2, 1, -0.25, (1.25 ** 2 + 1.75 ** 2 + .25 ** 2 + .25 ** 2) / 4, 0, 4],
+                    [4, 10, 7, 3 ** 2, 2, 2],
+                    [0, 9, 3, (6 ** 2 + 3 ** 2 + 3 ** 2) / 3, 1, 3]]
+        np.testing.assert_almost_equal(stats(arr, compute_variance=True), expected)
+
+        sparr = csc_matrix(arr)
+        np.testing.assert_almost_equal(stats(sparr, compute_variance=True), expected)
+
+        sparr = sparr.tocsr()
+        np.testing.assert_almost_equal(stats(sparr, compute_variance=True), expected)
+
+        weights = np.array([1, 2, 0, 3])
+        e0 = (1 * 1 - 2 * 2 + 0 * 0 + 3 * 0) / (1 + 2 + 0 + 3)
+        e1 = (1 * 4 + 2 * 10) / 3
+        e2 = (1 * 9 + 2 * 0 + 3 * 0) / 6
+        expected = [[-2, 1, e0, ((e0 - 1) ** 2 + 2 * (e0 + 2) ** 2 + 3 * e0 ** 2) / 6, 0, 4],
+                    [4, 10, e1, ((e1 - 4) ** 2 + 2 * (e1 - 10) ** 2) / 3, 2, 2],
+                    [0, 9, e2, ((e2 - 9) ** 2 + 2 * e2 ** 2 + 3 * e2 ** 2) / 6, 1, 3]]
+
+        np.testing.assert_almost_equal(
+            stats(arr, weights=weights, compute_variance=True), expected)
+
+        sparr = csc_matrix(arr)
+        np.testing.assert_almost_equal(
+            stats(sparr, weights=weights, compute_variance=True), expected)
+
+        sparr = sparr.tocsr()
+        np.testing.assert_almost_equal(
+            stats(sparr, weights=weights, compute_variance=True), expected)
 
     def test_stats_empty(self):
         X = np.array([])

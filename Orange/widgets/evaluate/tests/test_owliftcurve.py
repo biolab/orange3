@@ -167,6 +167,7 @@ class TestOWLiftCurve(WidgetTest, EvaluateTest):
         self.assertEqual(model.threshold, 0.6)
         self.assertFalse(self.widget.Information.no_output.is_shown())
 
+    @WidgetTest.skipNonEnglish
     def test_visual_settings(self):
         graph = self.widget.plot
 

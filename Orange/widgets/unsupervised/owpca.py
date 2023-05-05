@@ -4,6 +4,8 @@ import numpy
 from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
+from orangewidget.report import bool_str
+
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
 from Orange.data.util import get_unique_names
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
@@ -13,7 +15,6 @@ from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
-
 
 # Maximum number of PCA components that we can set in the widget
 MAX_COMPONENTS = 100
@@ -25,7 +26,7 @@ class OWPCA(widget.OWWidget):
     description = "Principal component analysis with a scree-diagram."
     icon = "icons/PCA.svg"
     priority = 3050
-    keywords = ["principal component analysis", "linear transformation"]
+    keywords = "pca, principal component analysis, linear transformation"
 
     class Inputs:
         data = Input("Data", Table)
@@ -43,7 +44,7 @@ class OWPCA(widget.OWWidget):
     maxp = settings.Setting(20)
     axis_labels = settings.Setting(10)
 
-    graph_name = "plot.plotItem"
+    graph_name = "plot.plotItem"  # QGraphicsView (pg.PlotWidget -> SliderGraph)
 
     class Warning(widget.OWWidget.Warning):
         trivial_components = widget.Msg(
@@ -347,7 +348,7 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             return
         self.report_items((
-            ("Normalize data", str(self.normalize)),
+            ("Normalize data", bool_str(self.normalize)),
             ("Selected components", self.ncomponents),
             ("Explained variance", "{:.3f} %".format(self.variance_covered))
         ))

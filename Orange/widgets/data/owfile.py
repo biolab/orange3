@@ -28,6 +28,9 @@ from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
     open_filename_dialog, stored_recent_paths_prepend
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
+from Orange.widgets.utils.combobox import TextEditCombo
+from Orange.widgets.utils.state_summary import missing_values
+
 
 # Backward compatibility: class RecentPath used to be defined in this module,
 # and it is used in saved (pickled) settings. It must be imported into the
@@ -87,7 +90,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
     icon = "icons/File.svg"
     priority = 10
     category = "Data"
-    keywords = ["file", "load", "read", "open"]
+    keywords = "file, load, read, open"
 
     class Outputs:
         data = Output("Data", Table,
@@ -232,13 +235,12 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
         rb_button = gui.appendRadioButton(vbox, "URL:", addToLayout=False)
         layout.addWidget(rb_button, 3, 0, Qt.AlignVCenter)
 
-        self.url_combo = url_combo = QComboBox()
+        self.url_combo = url_combo = TextEditCombo()
         url_model = NamedURLModel(self.sheet_names)
         url_model.wrap(self.recent_urls)
         url_combo.setLineEdit(LineEditSelectOnFocus())
         url_combo.setModel(url_model)
         url_combo.setSizePolicy(Policy.Ignored, Policy.Fixed)
-        url_combo.setEditable(True)
         url_combo.setInsertPolicy(url_combo.InsertAtTop)
         url_edit = url_combo.lineEdit()
         margins = url_edit.textMargins()
@@ -343,14 +345,19 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
                 self.load_data()
 
     def _url_set(self):
+        index = self.url_combo.currentIndex()
         url = self.url_combo.currentText()
-        pos = self.recent_urls.index(url)
         url = url.strip()
 
         if not urlparse(url).scheme:
             url = 'http://' + url
-            self.url_combo.setItemText(pos, url)
-            self.recent_urls[pos] = url
+            self.url_combo.setItemText(index, url)
+
+        if index != 0:
+            model = self.url_combo.model()
+            root = self.url_combo.rootModelIndex()
+            model.moveRow(root, index, root, 0)
+            assert self.url_combo.currentIndex() == 0
 
         self.source = self.URL
         self.load_data()
@@ -506,12 +513,6 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
     @staticmethod
     def _describe(table):
-        def missing_prop(prop):
-            if prop:
-                return f"({prop * 100:.1f}% missing values)"
-            else:
-                return "(no missing values)"
-
         domain = table.domain
         text = ""
 
@@ -527,8 +528,8 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         missing_in_attr = missing_in_class = ""
         if table.X.size < OWFile.SIZE_LIMIT:
-            missing_in_attr = missing_prop(table.get_nan_frequency_attribute())
-            missing_in_class = missing_prop(table.get_nan_frequency_class())
+            missing_in_attr = missing_values(table.get_nan_frequency_attribute())
+            missing_in_class = missing_values(table.get_nan_frequency_class())
         nattrs = len(domain.attributes)
         text += f"<br/>{nattrs} {pl(nattrs, 'feature')} {missing_in_attr}"
         if domain.has_continuous_class:

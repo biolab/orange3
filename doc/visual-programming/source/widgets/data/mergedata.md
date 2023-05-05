@@ -14,7 +14,9 @@ Merges two datasets, based on values of selected attributes.
 
 The **Merge Data** widget is used to horizontally merge two datasets, based on the values of selected attributes (columns). In the input, two datasets are required, data and extra data. Rows from the two data sets are matched by the values of pairs of attributes, chosen by the user. The widget produces one output. It corresponds to the instances from the input data to which attributes (columns) from input extra data are appended.
 
-If the selected attribute pair does not contain unique values (in other words, the attributes have duplicate values), the widget will give a warning. Instead, one can match by more than one attribute. Click on the plus icon to add the attribute to merge on. The final result has to be a unique combination for each individual row.
+To match by a combination of features click on the plus icon to add the features to merge on.
+
+Depending upon the merge types, selected features may be required to have unique values (that is, no duplicates) in the data. When merging by multiple features, this pertains to a combinations of their values.
 
 ![](images/Merge-Data-stamped.png)
 
@@ -39,13 +41,17 @@ For example, the first table may contain city names and the second would be a li
 
 In our example, the first Data input contained 6 cities, but the Extra Data did not provide Lat and Lon values for Bratislava, so the fields will be empty.
 
+For this type of merge, the values on the left (e.g. cities) may repeat (e.g. the same city appear multiple times), while the *used* value on the right must not. For example, let the right-hand table contain multiple Springfields. If Springfield does not appear on the left, the widget will show a warning but still merge the data. If Springfield does appear on the left as well, the widget will show an error. This can be resolved if the both table also include the data on the state (e.g. Illinois, Missouri, Oregon, Ohio) and this feature is added to the combination being matched.
+
 ![](images/MergeData_Append.png)
 
 #####Find matching pairs of rows (inner join)
 
 Only those rows that are matched will be present on the output, with the Extra Data columns appended. Rows without matches are removed.
 
-In our example, Bratislava from the Data input did not have Lat and Lon values, while Belgrade from the Extra Data could not be found in the City column we were merging on. Hence both instances are remove - only the intersection of instances is sent to the output.
+In our example, Bratislava from the Data input did not have Lat and Lon values, while Belgrade from the Extra Data could not be found in the City column we were merging on. Hence both instances are removed - only the intersection of instances is sent to the output.
+
+For this type of merge, combinations of features on the left and on the right must be unique.
 
 ![](images/MergeData_Intersection.png)
 
@@ -54,6 +60,8 @@ In our example, Bratislava from the Data input did not have Lat and Lon values, 
 The rows from both the Data and the Extra Data will be present on the output. Where rows cannot be matched, missing values will appear.
 
 In our example, both Bratislava and Belgrade are now present. Bratislava will have missing Lat and Lon values, while Belgrade will have a missing Population value.
+
+For this type of merge, combinations of features on the left and on the right must be unique.
 
 ![](images/MergeData_Concatenate.png)
 

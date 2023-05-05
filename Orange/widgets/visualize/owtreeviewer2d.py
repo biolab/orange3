@@ -369,7 +369,7 @@ class OWTreeViewer2D(OWWidget, openclass=True):
     _DEF_NODE_WIDTH = 24
     _DEF_NODE_HEIGHT = 20
 
-    graph_name = "scene"
+    graph_name = "scene"  # QGraphicsScene (TreeGraphicsScene)
 
     def __init__(self):
         super().__init__()
@@ -403,7 +403,7 @@ class OWTreeViewer2D(OWWidget, openclass=True):
             "Depth: ",
             gui.comboBox(box, self, 'max_tree_depth',
                          items=["Unlimited"] + [
-                             "{} levels".format(x) for x in range(2, 10)],
+                             f"{x} levels" for x in range(2, 10)],
                          addToLayout=False, sendSelectedValue=False,
                          callback=self.toggle_tree_depth, sizePolicy=policy))
         layout.addRow(

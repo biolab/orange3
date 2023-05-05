@@ -135,7 +135,7 @@ class OWImpute(OWWidget):
     description = "Impute missing values in the data table."
     icon = "icons/Impute.svg"
     priority = 2110
-    keywords = ["substitute", "missing"]
+    keywords = "impute, substitute, missing"
     category = "Transform"
 
     class Inputs:

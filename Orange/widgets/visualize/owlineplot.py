@@ -713,6 +713,7 @@ class OWLinePlot(OWWidget):
     description = "Visualization of data profiles (e.g., time series)."
     icon = "icons/LinePlot.svg"
     priority = 180
+    keywords = "line plot"
 
     buttons_area_orientation = Qt.Vertical
     enable_selection = Signal(bool)
@@ -735,7 +736,7 @@ class OWLinePlot(OWWidget):
     selection = Setting(None, schema_only=True)
     visual_settings = Setting({}, schema_only=True)
 
-    graph_name = "graph.plotItem"
+    graph_name = "graph.plotItem"  # QGraphicsScene (pg.PlotWidget -> LinePlotGraph)
 
     class Error(OWWidget.Error):
         not_enough_attrs = Msg("Need at least one numeric feature.")
