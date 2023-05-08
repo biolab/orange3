@@ -14,6 +14,7 @@ from Orange.projection import PCA
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.widget import Input, Output
 
 # Maximum number of PCA components that we can set in the widget
@@ -329,14 +330,8 @@ class OWPCA(widget.OWWidget):
                                metas=metas)
             components.name = 'components'
 
-            data_dom = Domain(
-                self.data.domain.attributes,
-                self.data.domain.class_vars,
-                self.data.domain.metas + domain.attributes)
-            data = Table.from_numpy(
-                data_dom, self.data.X, self.data.Y,
-                numpy.hstack((self.data.metas, transformed.X)),
-                ids=self.data.ids)
+            data = self.data.transform(add_columns(self.data.domain,
+                                                   metas=domain.attributes))
 
         self._pca_projector.component = self.ncomponents
         self.Outputs.transformed_data.send(transformed)
