@@ -1,3 +1,4 @@
+import unittest
 from unittest.mock import patch
 
 import numpy as np
@@ -54,6 +55,10 @@ class TestListModel(GuiTest):
         sel_model.clear()
         view.setCurrentIndex(self.attrs.index(1, 0))
         self.assertEqual(widget.foo, [b])
+
+        # unselect all
+        sel_model.clear()
+        self.assertEqual(widget.foo, [])
 
     def test_select_callfront(self):
         widget = self.widget
@@ -129,3 +134,7 @@ class TestRankModel(GuiTest):
         test_array = np.array(["Bertha", "daniela", "ann", "Cecilia"])
         assert_equal(func(test_array, Qt.AscendingOrder), [2, 0, 3, 1])
         assert_equal(func(test_array, Qt.DescendingOrder), [1, 3, 0, 2])
+
+
+if __name__ == "__main__":
+    unittest.main()
