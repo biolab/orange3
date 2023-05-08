@@ -1,5 +1,7 @@
+import warnings
 import numpy as np
 import scipy.sparse as sp
+import dask.array as da
 from sklearn import decomposition as skl_decomposition
 
 import Orange.data
@@ -36,21 +38,48 @@ class PCA(SklProjector, _FeatureScorerMixin):
         self.params = vars()
 
     def fit(self, X, Y=None):
-        params = self.params.copy()
-        if params["n_components"] is not None:
-            params["n_components"] = min(min(X.shape), params["n_components"])
+        proj = self._initialize_wrapped(X, Y)
 
         # scikit-learn doesn't support requesting the same number of PCs as
         # there are columns when the data is sparse. In this case, densify the
         # data. Since we're essentially requesting back a PC matrix of the same
         # size as the original data, we will assume the matrix is small enough
         # to densify as well
-        if sp.issparse(X) and params["n_components"] == min(X.shape):
+        if sp.issparse(X) and proj.n_components == min(X.shape):
             X = X.toarray()
 
-        proj = self.__wraps__(**params)
-        proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain, len(proj.components_))
+        if isinstance(X, da.Array):
+            X = X.rechunk({0: "auto", 1: -1})
+        return proj.fit(X, Y)
+
+    def _initialize_wrapped(self, X=None, Y=None):
+        params = self.params.copy()
+        if params["n_components"] is not None:
+            params["n_components"] = min(*X.shape, params["n_components"])
+
+        if isinstance(X, da.Array) or isinstance(Y, da.Array):
+            try:
+                import dask_ml.decomposition as dask_decomposition
+
+                if params["iterated_power"] == "auto":
+                    params["iterated_power"] = 0
+                del params["tol"]
+
+                # use IPCA instead of PCA due to memory issues
+                return dask_decomposition.IncrementalPCA(**params)
+
+            except ImportError:
+                warnings.warn("dask_ml is not installed. Using sklearn instead.")
+
+        return self.__wraps__(**params)
+
+    def __call__(self, data):
+        data = self.preprocess(data)
+        proj = self.fit(data.X, data.Y)
+        model = PCAModel(proj, data.domain, len(proj.components_))
+        model.pre_domain = data.domain
+        model.name = self.name
+        return model
 
 
 class SparsePCA(SklProjector):
