@@ -1,11 +1,13 @@
+import warnings
 import numbers
 import six
 import numpy as np
 import scipy.sparse as sp
+import dask.array as da
 from scipy.linalg import lu, qr, svd
 
 from sklearn import decomposition as skl_decomposition
-from sklearn.utils import check_array, check_random_state
+from sklearn.utils import check_random_state
 from sklearn.utils.extmath import svd_flip, safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
 
@@ -261,12 +263,39 @@ class PCA(SklProjector, _FeatureScorerMixin):
         self.params = vars()
 
     def fit(self, X, Y=None):
+        proj = self._initialize_wrapped(X, Y)
+        if isinstance(X, da.Array):
+            X = X.rechunk({0: "auto", 1: -1})
+        return proj.fit(X, Y)
+
+    def _initialize_wrapped(self, X=None, Y=None):
         params = self.params.copy()
         if params["n_components"] is not None:
-            params["n_components"] = min(min(X.shape), params["n_components"])
-        proj = self.__wraps__(**params)
-        proj = proj.fit(X, Y)
-        return PCAModel(proj, self.domain, len(proj.components_))
+            params["n_components"] = min(*X.shape, params["n_components"])
+
+        if isinstance(X, da.Array) or isinstance(Y, da.Array):
+            try:
+                import dask_ml.decomposition as dask_decomposition
+
+                if params["iterated_power"] == "auto":
+                    params["iterated_power"] = 0
+                del params["tol"]
+
+                # use IPCA instead of PCA due to memory issues
+                return dask_decomposition.IncrementalPCA(**params)
+
+            except ImportError:
+                warnings.warn("dask_ml is not installed. Using sklearn instead.")
+
+        return self.__wraps__(**params)
+
+    def __call__(self, data):
+        data = self.preprocess(data)
+        proj = self.fit(data.X, data.Y)
+        model = PCAModel(proj, data.domain, len(proj.components_))
+        model.pre_domain = data.domain
+        model.name = self.name
+        return model
 
 
 class SparsePCA(SklProjector):
