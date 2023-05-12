@@ -13,6 +13,7 @@ from sklearn.metrics import silhouette_samples, silhouette_score
 from Orange.clustering import KMeans
 from Orange.clustering.kmeans import KMeansModel
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
+from Orange.data.dask import DaskTable
 from Orange.data.util import get_unique_names, array_equal
 from Orange.preprocess import Normalize
 from Orange.preprocess.impute import ReplaceUnknowns
@@ -135,6 +136,7 @@ class OWKMeans(widget.OWWidget):
 
     INIT_METHODS = (("Initialize with KMeans++", "k-means++"),
                     ("Random initialization", "random"))
+    DASK_METHODS = (("Initialize with KMeans||", "k-means||"),)
 
     resizing_enabled = False
 
@@ -170,7 +172,7 @@ class OWKMeans(widget.OWWidget):
         self.__task = None  # type: Optional[Task]
 
         layout = QGridLayout()
-        bg = gui.radioButtonsInBox(
+        self.radiobox = bg = gui.radioButtonsInBox(
             self.controlArea, self, "optimize_k", orientation=layout,
             box="Number of Clusters", callback=self.update_method,
         )
@@ -186,7 +188,7 @@ class OWKMeans(widget.OWWidget):
 
         layout.addWidget(
             gui.appendRadioButton(bg, "From", addToLayout=False), 2, 1)
-        ftobox = gui.hBox(None)
+        self.ftobox = ftobox = gui.hBox(None)
         ftobox.layout().setContentsMargins(0, 0, 0, 0)
         layout.addWidget(ftobox, 2, 2)
         gui.spin(
@@ -292,6 +294,12 @@ class OWKMeans(widget.OWWidget):
             n_clusters=k, init=init, n_init=n_init, max_iter=max_iter,
             random_state=random_state, preprocessors=[]
         ).get_model(data)
+
+        if isinstance(data, DaskTable):
+            # just skip silhouettes for now
+            model.silhouette_samples = None
+            model.silhouette = np.nan
+            return model
 
         if data.X.shape[0] <= SILHOUETTE_MAX_SAMPLES:
             model.silhouette_samples = silhouette_samples(data.X, model.labels)
@@ -501,9 +509,7 @@ class OWKMeans(widget.OWWidget):
                 self.Warning.no_sparse_normalization()
             else:
                 data = Normalize()(data)
-        for preprocessor in KMeans.preprocessors:  # use same preprocessors than
-            data = preprocessor(data)
-        return data
+        return KMeans().preprocess(data)  # why?
 
     def send_data(self):
         if self.optimize_k:
@@ -584,12 +590,26 @@ class OWKMeans(widget.OWWidget):
         self.controls.normalize.setDisabled(
             bool(self.data) and sp.issparse(self.data.X))
 
+        if type(data) is not type(old_data):
+            self.setup_controls(isinstance(self.data, DaskTable))
+
         # Do not needlessly recluster the data if X hasn't changed
         if old_data and self.data and array_equal(self.data.X, old_data.X):
             if self.auto_commit:
                 self.send_data()
         else:
             self.invalidate(unconditional=True)
+
+    def setup_controls(self, is_dask):
+        self.ftobox.setDisabled(is_dask)
+        self.radiobox.buttons[1].setDisabled(is_dask)
+        self.optimize_k = not is_dask and self.optimize_k
+        self.INIT_METHODS = OWKMeans.DASK_METHODS \
+                            if is_dask else OWKMeans.INIT_METHODS
+        self.controls.smart_init.clear()
+        self.controls.smart_init.addItems([t[0] for t in self.INIT_METHODS])
+        self.smart_init = 0
+        self.controls.n_init.setDisabled(is_dask)
 
     def send_report(self):
         # False positives (Setting is not recognized as int)
