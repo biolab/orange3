@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-
+import sys
 import unittest
 from tempfile import NamedTemporaryFile
 import os
@@ -86,15 +86,19 @@ class TestTabReader(unittest.TestCase):
         self.assertIsInstance(f1, ContinuousVariable)
         self.assertIsInstance(f2, DiscreteVariable)
 
-    def test_read_nonutf8_encoding(self):
+    @unittest.skipIf(
+        sys.version_info >= (3, 11), 'csv supports null bytes in 3.11'
+    )
+    def test_read_binary_blob(self):
         with self.assertRaises(ValueError) as cm:
-            data = Table(test_filename('datasets/binary-blob.tab'))
+            Table(test_filename('datasets/binary-blob.tab'))
         self.assertIn('NUL', cm.exception.args[0])
 
+    def test_read_nonutf8_encoding(self):
         with self.assertRaises(ValueError):
             with warnings.catch_warnings():
                 warnings.filterwarnings('error')
-                data = Table(test_filename('datasets/invalid_characters.tab'))
+                Table(test_filename('datasets/invalid_characters.tab'))
 
     def test_noncontinous_marked_continuous(self):
         file = NamedTemporaryFile("wt", delete=False)
