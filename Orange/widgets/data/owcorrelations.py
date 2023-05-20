@@ -393,18 +393,24 @@ class OWCorrelations(OWWidget):
             self.Outputs.correlations.send(None)
             return
 
-        attrs = [ContinuousVariable("Correlation"), ContinuousVariable("FDR")]
+        attrs = [ContinuousVariable("Correlation"),
+                 ContinuousVariable("uncorrected p"),
+                 ContinuousVariable("FDR")]
         metas = [StringVariable("Feature 1"), StringVariable("Feature 2")]
         domain = Domain(attrs, metas=metas)
         model = self.vizrank.rank_model
-        x = np.array([[float(model.data(model.index(row, 0), role))
-                       for role in (Qt.DisplayRole, CorrelationRank.PValRole)]
-                      for row in range(model.rowCount())])
-        x[:, 1] = FDR(list(x[:, 1]))
+        count = model.rowCount()
+        index = model.index
+        corr = np.array([float(index(row, 0).data())
+                         for row in range(count)])
+        p = np.array([index(row, 0).data(CorrelationRank.PValRole)
+                      for row in range(count)])
+        fdr = FDR(p)
+        x = np.vstack((corr, p, fdr)).T
         # pylint: disable=protected-access
-        m = np.array([[a.name for a in model.data(model.index(row, 0),
-                                                  CorrelationRank._AttrRole)]
-                      for row in range(model.rowCount())], dtype=object)
+        m = np.array([[a.name
+                       for a in index(row, 0).data(CorrelationRank._AttrRole)]
+                      for row in range(count)], dtype=object)
         corr_table = Table(domain, x, metas=m)
         corr_table.name = "Correlations"
 

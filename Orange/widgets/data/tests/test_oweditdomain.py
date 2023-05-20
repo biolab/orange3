@@ -16,6 +16,7 @@ from AnyQt.QtWidgets import QAction, QComboBox, QLineEdit, \
     QStyleOptionViewItem, QDialog, QMenu, QToolTip, QListView
 from AnyQt.QtTest import QTest, QSignalSpy
 
+from orangewidget.settings import Context
 from orangewidget.tests.utils import simulate
 
 from Orange.data import (
@@ -325,7 +326,7 @@ class TestOWEditDomain(WidgetTest):
         w = self.widget
 
         def restore(state):
-            w._domain_change_store = state
+            w._domain_change_hints = state
             w._restore()
 
         model = w.variables_model
@@ -337,6 +338,177 @@ class TestOWEditDomain(WidgetTest):
         restore({viris: [("AsString", ()), ("Rename", ("Z",))]})
         tr = model.data(model.index(4), TransformRole)
         self.assertEqual(tr, [AsString(), Rename("Z")])
+
+    def test_hint_keeping(self):
+        editor: ContinuousVariableEditor = self.widget.findChild(ContinuousVariableEditor)
+        name_edit = editor.name_edit
+        model = self.widget.domain_view.model()
+
+        def rename(fr, to):
+            for idx in range(fr, to):
+                self.widget.domain_view.setCurrentIndex(model.index(idx))
+                cur_text = name_edit.text()
+                if cur_text[0] != "x":
+                    name_edit.setText("x" + cur_text)
+                editor.on_name_changed()
+
+        def data(fr, to):
+            return Table.from_numpy(Domain(vars[fr:to]),
+                                    np.zeros((1, to - fr)))
+
+
+        vars = [ContinuousVariable(f"v{i}") for i in range(1020)]
+        self.send_signal(data(0, 5))
+        rename(2, 4)
+
+        self.send_signal(None)
+        self.assertIsNone(self.get_output())
+
+        self.send_signal(data(3, 7))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes],
+                         ["xv3", "v4", "v5", "v6"])
+
+        self.send_signal(data(0, 5))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes],
+                         ["v0", "v1", "xv2", "xv3", "v4"])
+
+        self.send_signal(data(3, 7))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes],
+                         ["xv3", "v4", "v5", "v6"])
+
+        # This is too large: widget should retain just hints related to
+        # the current data
+        self.send_signal(data(3, 1020))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes[:4]],
+                         ["xv3", "v4", "v5", "v6"])
+        rename(5, 1017)
+        self.widget.commit()
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes[-3:]],
+                         ["xv1017", "xv1018", "xv1019"])
+
+        self.send_signal(None)
+        self.assertIsNone(self.get_output())
+
+        # Tests that hints for the current data are kept
+        # - including the earliest (v3) and latest (v1019)
+        self.send_signal(data(3, 1020))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes[:4]],
+                         ["xv3", "v4", "v5", "v6"])
+        self.assertEqual([var.name for var in outp.domain.attributes[-3:]],
+                         ["xv1017", "xv1018", "xv1019"])
+
+        # Tests that older hints are dropped: v2 should be lost
+        self.send_signal(data(0, 5))
+        outp = self.get_output()
+        self.assertEqual([var.name for var in outp.domain.attributes],
+                         ["v0", "v1", "v2", "xv3", "v4"])
+
+    def test_migrate_settings_hints_2_to_3(self):
+        settings = {
+            '__version__': 2,
+            'context_settings':
+                [Context(values={
+                    '_domain_change_store': (
+                        {('Categorical', ('a', ('mir1', 'mir4', 'mir2'), (), False)):
+                            [('Rename', ('disease mir',))],
+                         ('Categorical', ('b', ('mir4', 'mir1', 'mir2'), (), False)):
+                             [('Rename', ('disease mirs',))]
+                         },
+                        -2),
+                    '_merge_dialog_settings': ({}, -4),
+                    '_selected_item': (('1', 0), -2),
+                    'output_table_name': ('boo', -2),
+                    '__version__': 2}),
+                 Context(values={
+                     '_domain_change_store': (
+                         {('Categorical', ('b', ('mir4', 'mir1', 'mir2'), (), False)):
+                             [('Rename', ('disease bmir',))],
+                          ('Categorical', ('c', ('mir4', 'mir1', 'mir2'), (), False)):
+                              [('Rename', ('disease mirs',))]
+                         },
+                         -2),
+                      '_merge_dialog_settings': ({}, -4),
+                      '_selected_item': (('1', 0), -2),
+                      'output_table_name': ('far', -2),
+                      '__version__': 2}),
+                ]}
+        migrated_hints = {
+            ('Categorical', ('b', ('mir4', 'mir1', 'mir2'), (), False)):
+                [('Rename', ('disease bmir',))],
+            ('Categorical', ('c', ('mir4', 'mir1', 'mir2'), (), False)):
+                [('Rename', ('disease mirs',))],
+            ('Categorical', ('a', ('mir1', 'mir4', 'mir2'), (), False)):
+                 [('Rename', ('disease mir',))],
+        }
+        widget = self.create_widget(OWEditDomain, stored_settings=settings)
+        self.assertEqual(widget._domain_change_hints, migrated_hints)
+        # order matters
+        self.assertEqual(list(widget._domain_change_hints), list(migrated_hints))
+        self.assertEqual(widget.output_table_name, "far")
+
+    def test_migrate_settings_2_to_3_realworld(self):
+        settings = {
+            'controlAreaVisible': True,
+            '__version__': 2,
+            'context_settings': [Context(
+                values={
+                    '_domain_change_store':
+                        ({('Real', ('sepal length', (1, 'f'), (), False)):
+                              [('AsString', ())],
+                          ('Real', ('sepal width', (1, 'f'), (), False)):
+                              [('AsTime', ()), ('StrpTime', ('Detect automatically', None, 1, 1))],
+                          ('Real', ('petal width', (1, 'f'), (), False)):
+                              [('Annotate', ((('a', 'b'),),))]}, -2),
+                    '_merge_dialog_settings': ({}, -4),
+                    '_selected_item': (('petal width', 2), -2),
+                    'output_table_name': ('', -2),
+                    '__version__': 2},
+                attributes={'sepal length': 2, 'sepal width': 2,
+                            'petal length': 2, 'petal width': 2, 'iris': 1},
+                metas={}
+            )]
+        }
+        widget = self.create_widget(OWEditDomain, stored_settings=settings)
+        self.assertEqual(
+            widget._domain_change_hints,
+            {('Real', ('sepal length', (1, 'f'), (), False)):
+                 [('AsString', ())],
+             ('Real', ('sepal width', (1, 'f'), (), False)):
+                 [('AsTime', ()),
+                  ('StrpTime', ('Detect automatically', None, 1, 1))],
+             ('Real', ('petal width', (1, 'f'), (), False)):
+                 [('Annotate', ((('a', 'b'),),))]}
+        )
+
+    def test_migrate_settings_name_2_to_3(self):
+        settings = {
+            '__version__': 2,
+            'context_settings':
+                [Context(values={
+                    '_domain_change_store': ({}, -2),
+                     'output_table_name': ('boo', -2),
+                     '__version__': 2}),
+                 Context(values={
+                     '_domain_change_store': ({}, -2),
+                     'output_table_name': ('far', -2),
+                     '__version__': 2}),
+                 Context(values={
+                     '_domain_change_store': ({}, -2),
+                     'output_table_name': ('', -2),
+                     '__version__': 2}),
+                 Context(values={
+                     '_domain_change_store': ({}, -2),
+                     '__version__': 2})
+                ]
+        }
+        widget = self.create_widget(OWEditDomain, stored_settings=settings)
+        self.assertEqual(widget.output_table_name, "far")
 
 
 class TestEditors(GuiTest):

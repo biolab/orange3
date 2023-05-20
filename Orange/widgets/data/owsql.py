@@ -313,7 +313,10 @@ class OWSql(OWBaseSql):
                 else:
                     if table.approx_len() > MAX_DL_LIMIT:
                         QMessageBox.warning(
-                            self, 'Warning', "Data is too big to download.\n")
+                            self, 'Warning',
+                            "Data is too big to download.\n"
+                            "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT)
+                        )
                         return None
                     else:
                         confirm = QMessageBox.question(

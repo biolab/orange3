@@ -1,4 +1,5 @@
 from collections import defaultdict, namedtuple
+from contextlib import contextmanager
 from typing import Optional
 from xml.sax.saxutils import escape
 
@@ -171,6 +172,15 @@ class ColoredCircle(QGraphicsItem):
         painter.restore()
 
 
+@contextmanager
+def disconnected_spin(spin):
+    spin.blockSignals(True)
+    try:
+        yield
+    finally:
+        spin.blockSignals(False)
+
+
 N_ITERATIONS = 200
 
 
@@ -209,6 +219,12 @@ class OWSOM(OWWidget):
         ("shape", "auto_dim", "spin_x", "spin_y", "initialization", "start")
     )
 
+    class Information(OWWidget.Information):
+        modified = Msg(
+            'The parameter settings have been changed. Press "Start" to '
+            "rerun with the new settings."
+        )
+
     class Warning(OWWidget.Warning):
         ignoring_disc_variables = Msg("SOM ignores categorical variables.")
         missing_colors = \
@@ -243,6 +259,7 @@ class OWSOM(OWWidget):
         shape = gui.comboBox(
             box, self, "", items=("Hexagonal grid", "Square grid"))
         shape.setCurrentIndex(1 - self.hexagonal)
+        shape.currentIndexChanged.connect(self.on_parameter_change)
 
         box2 = gui.indentedBox(box, 10)
         auto_dim = gui.checkBox(
@@ -250,27 +267,40 @@ class OWSOM(OWWidget):
             callback=self.on_auto_dimension_changed)
         self.manual_box = box3 = gui.hBox(box2)
         spinargs = dict(
-            value="", widget=box3, master=self, minv=5, maxv=100, step=5,
-            alignment=Qt.AlignRight)
-        spin_x = gui.spin(**spinargs)
-        spin_x.setValue(self.size_x)
+            value="",
+            widget=box3,
+            master=self,
+            minv=5,
+            maxv=100,
+            step=5,
+            alignment=Qt.AlignRight,
+            callback=self.on_parameter_change,
+        )
+        self.spin_x = gui.spin(**spinargs)
+        with disconnected_spin(self.spin_x):
+            self.spin_x.setValue(self.size_x)
         gui.widgetLabel(box3, "×")
-        spin_y = gui.spin(**spinargs)
-        spin_y.setValue(self.size_y)
+        self.spin_y = gui.spin(**spinargs)
+        with disconnected_spin(self.spin_y):
+            self.spin_y.setValue(self.size_y)
         gui.rubber(box3)
         self.manual_box.setEnabled(not self.auto_dimension)
 
         initialization = gui.comboBox(
-            box, self, "initialization",
-            items=("Initialize with PCA", "Random initialization",
-                   "Replicable random"))
+            box,
+            self,
+            "initialization",
+            items=("Initialize with PCA", "Random initialization", "Replicable random"),
+            callback=self.on_parameter_change,
+        )
 
         start = gui.button(
             box, self, "Restart", callback=self.restart_som_pressed,
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed))
 
         self.opt_controls = self.OptControls(
-            shape, auto_dim, spin_x, spin_y, initialization, start)
+            shape, auto_dim, self.spin_x, self.spin_y, initialization, start
+        )
 
         box = gui.vBox(self.controlArea, "Color")
         gui.comboBox(
@@ -366,7 +396,8 @@ class OWSOM(OWWidget):
         self.set_color_bins()
         self.create_legend()
         if invalidated:
-            self.recompute_dimensions()
+            with disconnected_spin(self.spin_x), disconnected_spin(self.spin_y):
+                self.recompute_dimensions()
             self.start_som()
         else:
             self._redraw()
@@ -399,6 +430,7 @@ class OWSOM(OWWidget):
             dimy = int(5 * np.round(spin_y.value() / 5))
             spin_x.setValue(dimx)
             spin_y.setValue(dimy)
+        self.on_parameter_change()
 
     def on_attr_color_change(self):
         self.controls.pie_charts.setEnabled(self.attr_color is not None)
@@ -412,6 +444,9 @@ class OWSOM(OWWidget):
 
     def on_pie_chart_change(self):
         self._redraw()
+
+    def on_parameter_change(self):
+        self.Information.modified()
 
     def clear_selection(self):
         self.selection = None
@@ -498,6 +533,7 @@ class OWSOM(OWWidget):
                 cell.setZValue(marked or sel_group)
 
     def restart_som_pressed(self):
+        self.Information.modified.clear()
         if self._optimizer_thread is not None:
             self.stop_optimization = True
             self._optimizer.stop_optimization = True

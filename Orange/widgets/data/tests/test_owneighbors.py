@@ -452,6 +452,25 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(self.widget.Inputs.reference, data[0:1])
         self.assertIsInstance(self.get_output(self.widget.Outputs.data), Table2)
 
+    def test_order_by_distance(self):
+        domain = Domain([ContinuousVariable(x) for x in "ab"])
+        reference = Table.from_numpy(domain, [[1, 0]])
+        data = Table.from_numpy(domain, [[1, 0.1], [2, 0], [1, 0], [0, 0.1], [0.1, 0]])
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.reference, reference)
+
+        output = self.get_output(self.widget.Outputs.data)
+        expected = [[1, 0], [1, 0.1], [0.1, 0], [2, 0], [0, 0.1]]
+        np.testing.assert_array_equal(output.X, expected)
+        dst = output.get_column("distance").tolist()
+        self.assertTrue(dst == sorted(dst))  # check distance in ascending order
+
+        # test on bigger set
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.reference, self.iris[:1])
+        dst = self.get_output(self.widget.Outputs.data).get_column("distance").tolist()
+        self.assertTrue(dst == sorted(dst))  # check distance in ascending order
+
 
 if __name__ == "__main__":
     unittest.main()
