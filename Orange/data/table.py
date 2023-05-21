@@ -1942,9 +1942,15 @@ class Table(Sequence, Storage):
         if filter.oper == filter.StartsWith:
             return np.fromiter((e.startswith(fmin) for e in col),
                                dtype=bool)
+        if filter.oper == filter.NotStartsWith:
+            return np.fromiter((not e.startswith(fmin) for e in col),
+                               dtype=bool)        
         if filter.oper == filter.EndsWith:
             return np.fromiter((e.endswith(fmin) for e in col),
                                dtype=bool)
+        if filter.oper == filter.NotEndsWith:
+            return np.fromiter((not e.endswith(fmin) for e in col),
+                               dtype=bool)        
 
         return self._range_filter_to_indicator(filter, col, fmin, fmax)
 

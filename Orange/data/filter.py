@@ -419,7 +419,7 @@ class FilterString(ValueFilter):
 
         The operator; should be `FilterString.Equal`, `NotEqual`, `Less`,
         `LessEqual`, `Greater`, `GreaterEqual`, `Between`, `Outside`,
-        `Contains`, `NotContain`, `StartsWith`, `EndsWith` or `IsDefined`.
+        `Contains`, `NotContain`, `StartsWith`, `NotStartsWith`, `EndsWith`, `NotEndsWith`, `IsDefined` or `IsDefined`.
 
     .. attribute:: case_sensitive
 
@@ -428,9 +428,9 @@ class FilterString(ValueFilter):
     Type = Enum('FilterString',
                 'Equal, NotEqual, Less, LessEqual, Greater,'
                 'GreaterEqual, Between, Outside, Contains, NotContain,'
-                'StartsWith, EndsWith, IsDefined')
+                'StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsDefined')
     (Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual,
-     Between, Outside, Contains, NotContain, StartsWith, EndsWith, IsDefined) = Type
+     Between, Outside, Contains, NotContain, StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsDefined) = Type
 
     def __init__(self, position, oper, ref=None, max=None,
                  case_sensitive=True, **a):
@@ -484,8 +484,12 @@ class FilterString(ValueFilter):
             return refval not in value
         if self.oper == self.StartsWith:
             return value.startswith(refval)
+        if self.oper == self.NotStartsWith:
+            return not value.startswith(refval)
         if self.oper == self.EndsWith:
             return value.endswith(refval)
+        if self.oper == self.NotEndsWith:
+            return not value.endswith(refval)
         high = self.max if self.case_sensitive else self.max.lower()
         if self.oper == self.Between:
             return refval <= value <= high
