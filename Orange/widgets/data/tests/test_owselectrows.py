@@ -49,8 +49,11 @@ SFValues = {
     FilterString.Contains: ["aa"],
     FilterString.NotContain: ["bb"],
     FilterString.StartsWith: ["aa"],
+    FilterString.NotStartsWith: ["bb"],
     FilterString.EndsWith: ["ark"],
-    FilterString.IsDefined: []
+    FilterString.NotEndsWith: ["zz"],
+    FilterString.IsDefined: [],
+    FilterString.NotIsDefined: [], # TODO: needs test data
 }
 
 DFValues = {
