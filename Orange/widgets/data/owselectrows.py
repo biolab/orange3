@@ -190,6 +190,7 @@ class OWSelectRows(widget.OWWidget):
             (FilterString.EndsWith, "ends with", "end with"),
             (FilterString.NotEndsWith, "does not end with", "do not end with"),
             (FilterString.IsDefined, "is defined", "are defined"),
+            (FilterString.NotIsDefined, "is not defined", "are not defined"),
         ]
     }
 

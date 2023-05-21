@@ -1922,6 +1922,8 @@ class Table(Sequence, Storage):
         """
         if filter.oper == filter.IsDefined:
             return col.astype(bool)
+        if filter.oper == filter.NotIsDefined:
+            return ~col.astype(bool)
 
         col = col.astype(str)
         fmin = filter.min or ""

@@ -419,7 +419,7 @@ class FilterString(ValueFilter):
 
         The operator; should be `FilterString.Equal`, `NotEqual`, `Less`,
         `LessEqual`, `Greater`, `GreaterEqual`, `Between`, `Outside`,
-        `Contains`, `NotContain`, `StartsWith`, `NotStartsWith`, `EndsWith`, `NotEndsWith`, `IsDefined` or `IsDefined`.
+        `Contains`, `NotContain`, `StartsWith`, `NotStartsWith`, `EndsWith`, `NotEndsWith`, `IsDefined` or `NotIsDefined`.
 
     .. attribute:: case_sensitive
 
@@ -428,9 +428,9 @@ class FilterString(ValueFilter):
     Type = Enum('FilterString',
                 'Equal, NotEqual, Less, LessEqual, Greater,'
                 'GreaterEqual, Between, Outside, Contains, NotContain,'
-                'StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsDefined')
+                'StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsDefined, NotIsDefined')
     (Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual,
-     Between, Outside, Contains, NotContain, StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsDefined) = Type
+     Between, Outside, Contains, NotContain, StartsWith, NotStartsWith, EndsWith, NotEndsWith, IsDefined, NotIsDefined) = Type
 
     def __init__(self, position, oper, ref=None, max=None,
                  case_sensitive=True, **a):
@@ -460,6 +460,8 @@ class FilterString(ValueFilter):
         value = inst[inst.domain.index(self.column)]
         if self.oper == self.IsDefined:
             return not np.isnan(value)
+        if self.oper == self.NotIsDefined:
+            return np.isnan(value)
         if self.case_sensitive:
             value = str(value)
             refval = str(self.ref)
