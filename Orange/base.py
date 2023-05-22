@@ -7,6 +7,7 @@ from typing import Callable, Optional, NamedTuple, Type
 
 import numpy as np
 import scipy
+import dask.array as da
 
 from Orange.data import Table, Storage, Instance, Value, Domain
 from Orange.data.filter import HasClass
@@ -518,7 +519,9 @@ class SklModel(Model, metaclass=WrapperMeta):
         self.skl_model = skl_model
 
     def predict(self, X):
-        value = self.skl_model.predict(X)
+        if isinstance(X, da.Array):
+            X = X.rechunk({0: "auto", 1: -1})
+        value = np.asarray(self.skl_model.predict(X))
         # SVM has probability attribute which defines if method compute probs
         has_prob_attr = hasattr(self.skl_model, "probability")
         if (has_prob_attr and self.skl_model.probability
@@ -592,13 +595,18 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         m.params = self.params
         return m
 
-    def _initialize_wrapped(self):
+    # pylint: disable=unused-argument
+    def _initialize_wrapped(self, X=None, Y=None):
+        # wrap sklearn/dask_ml according to type of X/Y
         # pylint: disable=not-callable
         return self.__wraps__(**self.params)
 
     def fit(self, X, Y, W=None):
-        clf = self._initialize_wrapped()
+        clf = self._initialize_wrapped(X, Y)
         Y = Y.reshape(-1)
+        if isinstance(X, da.Array) or isinstance(Y, da.Array):
+            X = X.rechunk({0: "auto", 1: -1})
+            Y = Y.rechunk({0: X.chunksize[0]})
         if W is None or not self.supports_weights:
             return self.__returns__(clf.fit(X, Y))
         return self.__returns__(clf.fit(X, Y, sample_weight=W.reshape(-1)))
