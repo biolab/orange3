@@ -1,4 +1,7 @@
+import warnings
+
 import numpy as np
+import dask.array as da
 
 import sklearn.linear_model as skl_linear_model
 import sklearn.preprocessing as skl_preprocessing
@@ -27,11 +30,35 @@ class _FeatureScorerMixin(LearnerScorer):
 
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LinearRegression
+    __penalty__ = None
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, preprocessors=None, fit_intercept=True):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
+
+    def _initialize_wrapped(self, X=None, Y=None):
+        if isinstance(X, da.Array) or isinstance(Y, da.Array):
+            try:
+                import dask_ml.linear_model
+
+                params = self.params.copy()
+                params["solver"] = "gradient_descent"
+                params["penalty"] = self.__penalty__
+                if self.__penalty__ is not None:
+                    params["solver"] = "admm"
+                    params["C"] = 1 / params.pop("alpha")
+                    params["max_iter"] = params["max_iter"] or 100
+                    for key in ["copy_X", "precompute", "positive"]:
+                        params.pop(key, None)
+                if self.__penalty__ == "elasticnet":
+                    from dask_glm.regularizers import ElasticNet
+                    params["penalty"] = ElasticNet(weight=params.pop("l1_ratio"))
+
+                return dask_ml.linear_model.LinearRegression(**params)
+            except ImportError:
+                warnings.warn("dask_ml is not installed, using sklearn instead.")
+        return self.__wraps__(**self.params)
 
     def fit(self, X, Y, W=None):
         model = super().fit(X, Y, W)
@@ -40,6 +67,7 @@ class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
 
 class RidgeRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Ridge
+    __penalty__ = "l2"
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, fit_intercept=True, copy_X=True,
@@ -50,6 +78,7 @@ class RidgeRegressionLearner(LinearRegressionLearner):
 
 class LassoRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Lasso
+    __penalty__ = "l1"
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, fit_intercept=True, precompute=False,
@@ -61,6 +90,7 @@ class LassoRegressionLearner(LinearRegressionLearner):
 
 class ElasticNetLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNet
+    __penalty__ = "elasticnet"
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, l1_ratio=0.5, fit_intercept=True,
