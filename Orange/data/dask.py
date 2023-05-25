@@ -7,6 +7,7 @@ import h5py
 import dask.array as da
 import numpy as np
 import pandas
+from os import path
 
 from Orange.data import Table, RowInstance
 from Orange.data.table import _FromTableConversion, _ArrayConversion
@@ -139,6 +140,8 @@ class DaskTable(Table):
 
         self = DaskTable(domain, X, Y, metas)
         self.__h5file = h5file
+        if isinstance(filename, str):
+            self.name = path.splitext(path.split(filename)[-1])[0]
 
         return self
 
