@@ -157,6 +157,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
             self.assertPathEqual(w.last_dir, "/home/u/orange/a/b")
             self.assertPathEqual(w.filename, "/home/u/orange/a/b/c.foo")
             self.assertTrue(w.auto_save)
+            self.assertFalse(w.Warning.auto_save_disabled.is_shown())
 
             w = self.create_widget(
                 self.OWSaveMockWriter,
@@ -166,6 +167,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
             self.assertPathEqual(w.last_dir, "/home/u/orange/a/b")
             self.assertPathEqual(w.filename, "/home/u/orange/a/b/c.foo")
             self.assertFalse(w.auto_save)
+            self.assertFalse(w.Warning.auto_save_disabled.is_shown())
 
             w = self.create_widget(
                 self.OWSaveMockWriter,
@@ -175,6 +177,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
             self.assertPathEqual(w.last_dir, "/home/u/orange/a/d")
             self.assertPathEqual(w.filename, "/home/u/orange/a/d/c.foo")
             self.assertTrue(w.auto_save)
+            self.assertFalse(w.Warning.auto_save_disabled.is_shown())
 
             w = self.create_widget(
                 self.OWSaveMockWriter,
@@ -184,6 +187,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
             self.assertPathEqual(w.last_dir, "/home/u/orange/")
             self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
             self.assertFalse(w.auto_save)
+            self.assertFalse(w.Warning.auto_save_disabled.is_shown())
 
             w = self.create_widget(
                 self.OWSaveMockWriter,
@@ -193,6 +197,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
             self.assertPathEqual(w.last_dir, "/home/u/orange/")
             self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
             self.assertTrue(w.auto_save)
+            self.assertFalse(w.Warning.auto_save_disabled.is_shown())
 
             w = self.create_widget(
                 self.OWSaveMockWriter,
@@ -202,6 +207,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
             self.assertPathEqual(w.last_dir, "/home/u/orange/")
             self.assertPathEqual(w.filename, "/home/u/orange/c.foo")
             self.assertTrue(w.auto_save)
+            self.assertFalse(w.Warning.auto_save_disabled.is_shown())
 
     def test_move_workflow(self):
         """Widget correctly stores relative paths"""
