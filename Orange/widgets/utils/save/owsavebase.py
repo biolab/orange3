@@ -41,6 +41,14 @@ class OWSaveBase(widget.OWWidget, openclass=True):
     class Information(widget.OWWidget.Information):
         empty_input = widget.Msg("Empty input; nothing was saved.")
 
+    class Warning(widget.OWWidget.Warning):
+        auto_save_disabled = widget.Msg(
+            "Auto save disabled.\n"
+            "Due to security reasons auto save is only restored for paths "
+            "that are in the same directory as the workflow file or in a "
+            "subtree of that directory."
+        )
+
     class Error(widget.OWWidget.Error):
         no_file_name = widget.Msg("File name is not set.")
         unsupported_format = widget.Msg("File format is unsupported.\n{}")
@@ -59,7 +67,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
     # workflow).
     stored_path = Setting("")
     stored_name = Setting("", schema_only=True)  # File name, without path
-    auto_save = Setting(False)
+    auto_save = Setting(False, schema_only=True)
 
     filters = []
 
@@ -77,6 +85,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         """
         super().__init__()
         self.data = None
+        self.__show_auto_save_disabled = False
         self._absolute_path = self._abs_path_from_setting()
 
         # This cannot be done outside because `filters` is defined by subclass
@@ -88,7 +97,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         grid.addWidget(
             gui.checkBox(
                 None, self, "auto_save", "Autosave when receiving new data",
-                callback=self.update_messages),
+                callback=self._on_auto_save_toggled),
             start_row, 0, 1, 2)
         self.bt_save = gui.button(
             self.buttonsArea, self,
@@ -129,7 +138,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         workflow_dir = self.workflowEnv().get("basedir")
         if os.path.isabs(self.stored_path):
             if os.path.exists(self.stored_path):
-                self.auto_save = False
+                self._disable_auto_save_and_warn()
                 return self.stored_path
         elif workflow_dir is not None:
             return os.path.normpath(
@@ -138,6 +147,15 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         self.stored_path = workflow_dir or _userhome
         self.auto_save = False
         return self.stored_path
+
+    def _disable_auto_save_and_warn(self):
+        if self.auto_save:
+            self.__show_auto_save_disabled = True
+        self.auto_save = False
+
+    def _on_auto_save_toggled(self):
+        self.__show_auto_save_disabled = False
+        self.update_messages()
 
     @property
     def filename(self):
@@ -264,6 +282,7 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         """
         self.Error.no_file_name(shown=not self.filename and self.auto_save)
         self.Information.empty_input(shown=self.filename and self.data is None)
+        self.Warning.auto_save_disabled(shown=self.__show_auto_save_disabled)
 
     def update_status(self):
         """
