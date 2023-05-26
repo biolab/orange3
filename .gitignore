@@ -42,6 +42,3 @@ htmlcov/*
 
 .tox
 pip-wheel-metadata/
-/.venv
-/.vscode
-/.gitignore
