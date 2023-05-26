@@ -654,7 +654,7 @@ class _FileWriter:
         if var.is_time:
             return var.repr_val
         elif var.is_continuous:
-            return lambda value: "" if isnan(value) else value
+            return lambda value: "" if isnan(value) else var.repr_val(value)
         elif var.is_discrete:
             return lambda value: "" if isnan(value) else var.values[int(value)]
         elif var.is_string:
