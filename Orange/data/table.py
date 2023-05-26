@@ -1922,6 +1922,8 @@ class Table(Sequence, Storage):
         """
         if filter.oper == filter.IsDefined:
             return col.astype(bool)
+        if filter.oper == filter.NotIsDefined:
+            return ~col.astype(bool)
 
         col = col.astype(str)
         fmin = filter.min or ""
@@ -1936,12 +1938,21 @@ class Table(Sequence, Storage):
         if filter.oper == filter.Contains:
             return np.fromiter((fmin in e for e in col),
                                dtype=bool)
+        if filter.oper == filter.NotContain:
+            return np.fromiter((fmin not in e for e in col),
+                               dtype=bool)
         if filter.oper == filter.StartsWith:
             return np.fromiter((e.startswith(fmin) for e in col),
                                dtype=bool)
+        if filter.oper == filter.NotStartsWith:
+            return np.fromiter((not e.startswith(fmin) for e in col),
+                               dtype=bool)        
         if filter.oper == filter.EndsWith:
             return np.fromiter((e.endswith(fmin) for e in col),
                                dtype=bool)
+        if filter.oper == filter.NotEndsWith:
+            return np.fromiter((not e.endswith(fmin) for e in col),
+                               dtype=bool)        
 
         return self._range_filter_to_indicator(filter, col, fmin, fmax)
 
