@@ -1,13 +1,20 @@
 import warnings
 
 import numpy as np
+import dask.array as da
 import sklearn.linear_model as skl_linear_model
+
+try:
+    import dask_ml.linear_model as dask_linear_model
+except ImportError:
+    dask_linear_model = skl_linear_model
 
 from Orange.classification import SklLearner, SklModel
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import LearnerScorer
 from Orange.data import Variable, DiscreteVariable
 from Orange.util import OrangeDeprecationWarning
+
 
 
 __all__ = ["LogisticRegressionLearner"]
@@ -26,11 +33,11 @@ class _FeatureScorerMixin(LearnerScorer):
 class LogisticRegressionClassifier(SklModel):
     @property
     def intercept(self):
-        return self.skl_model.intercept_
+        return np.atleast_1d(self.skl_model.intercept_)
 
     @property
     def coefficients(self):
-        return self.skl_model.coef_
+        return np.atleast_2d(self.skl_model.coef_)
 
 
 class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
@@ -59,9 +66,23 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
         if multi_class != "deprecated":
             params["multi_class"] = multi_class
 
+        solver = params.pop("solver")
+        penalty = params.get("penalty") or "none"
+
+        if isinstance(X, da.Array) or isinstance(Y, da.Array):
+            if dask_linear_model is skl_linear_model:
+                warnings.warn("dask_ml is not installed, using sklearn instead.")
+            else:
+                if solver == "auto":
+                    if penalty == "none":
+                        solver = "gradient_descent"
+                    else:
+                        solver = "admm"
+                params["solver"], params["penalty"] = solver, penalty
+                return dask_linear_model.LogisticRegression(**params)
+
         # The default scikit-learn solver `lbfgs` (v0.22) does not support the
         # l1 penalty.
-        solver, penalty = params.pop("solver"), params.get("penalty")
         if solver == "auto":
             if penalty == "l1":
                 solver = "saga"
