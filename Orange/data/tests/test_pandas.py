@@ -1,6 +1,7 @@
 # pylint: disable=import-outside-toplevel
 import unittest
 from datetime import date, datetime, timezone, timedelta
+from unittest import skipIf
 
 import numpy as np
 import pandas as pd
@@ -199,6 +200,11 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(table.domain.variables[0].have_time, 0)
         self.assertEqual(table.domain.variables[0].have_date, 1)
 
+    @skipIf(
+        datetime.today() < datetime(2023, 8, 1),
+        "Temporarily skipping because of pandas issue",
+    )
+    # https://github.com/pandas-dev/pandas/issues/53134#issuecomment-1546011517
     def test_table_from_frame_time(self):
         df = pd.DataFrame(
             [[pd.Timestamp("00:00:00.25")], [pd.Timestamp("20:20:20.30")], [np.nan]]
@@ -412,6 +418,11 @@ class TestPandasCompat(unittest.TestCase):
         )
         self.assertTrue(all(isinstance(v, StringVariable) for v in table.domain.metas))
 
+    @skipIf(
+        datetime.today() < datetime(2023, 8, 1),
+        "Temporarily skipping because of pandas issue",
+    )
+    # https://github.com/pandas-dev/pandas/issues/53134#issuecomment-1546011517
     def test_time_variable_compatible(self):
         def to_df(val):
             return pd.DataFrame([[pd.Timestamp(val)]])
