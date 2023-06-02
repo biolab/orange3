@@ -251,6 +251,11 @@ class DaskTable(Table):
         # table locking is currently disabled
         return contextlib.nullcontext()
 
+    def __len__(self):
+        if not isinstance(self.X.shape[0], int):
+            self.X.compute_chunk_sizes()
+        return self.X.shape[0]
+
 
 def dask_stats(X, compute_variance=False):
     is_numeric = np.issubdtype(X.dtype, np.number)
