@@ -63,6 +63,27 @@ class TestOWDataSets(WidgetTest):
         self.assertEqual(model.rowCount(), 2)
 
     @patch("Orange.widgets.data.owdatasets.list_remote",
+           Mock(return_value={('core', 'foo.tab'): {"language": "English"},
+                              ('core', 'bar.tab'): {"language": "Slovenščina"}}))
+    @patch("Orange.widgets.data.owdatasets.list_local",
+           Mock(return_value={}))
+    def test_remember_language(self):
+        w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
+        w.language_combo.setCurrentText("Slovenščina")
+        w.language_combo.activated.emit(w.language_combo.currentIndex())
+        settings = w.settingsHandler.pack_data(w)
+
+        w2 = self.create_widget(OWDataSets, stored_settings=settings)
+        self.wait_until_stop_blocking(w2)
+        self.assertEqual(w2.language_combo.currentText(), "Slovenščina")
+
+        settings["language"] = "Klingon"
+        w2 = self.create_widget(OWDataSets, stored_settings=settings)
+        self.wait_until_stop_blocking(w2)
+        self.assertEqual(w2.language_combo.currentText(), "Klingon")
+
+    @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(return_value={('core', 'iris.tab'): {}}))
     @patch("Orange.widgets.data.owdatasets.list_local",
            Mock(return_value={}))
