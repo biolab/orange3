@@ -5,7 +5,7 @@ Concatenate
 Concatenate (append) two or more datasets.
 
 """
-from collections import OrderedDict, namedtuple, defaultdict
+from collections import OrderedDict, namedtuple, defaultdict, Counter
 from functools import reduce
 from itertools import chain, count
 from typing import List, Optional, Sequence
@@ -48,6 +48,9 @@ class OWConcatenate(widget.OWWidget):
     class Warning(widget.OWWidget.Warning):
         renamed_variables = Msg(
             "Variables with duplicated names have been renamed.")
+        unmergeable_attributes = Msg(
+            "Some variables may not be concatenated correctly due "
+            "to attributes difference ({}).")
 
     merge_type: int
     append_source_column: bool
@@ -196,6 +199,7 @@ class OWConcatenate(widget.OWWidget):
     @gui.deferred
     def commit(self):
         self.Warning.renamed_variables.clear()
+        self.Warning.unmergeable_attributes.clear()
         tables, domain, source_var = [], None, None
         if self.primary_data is not None:
             tables = [self.primary_data] + list(self.more_data)
@@ -291,11 +295,41 @@ class OWConcatenate(widget.OWWidget):
         self.report_items(items)
 
     def merge_domains(self, domains):
+        variables = set(chain.from_iterable(
+            [d.variables + d.metas for d in domains]))
+
+        feature_attrs = defaultdict(list)
+        for var in variables:
+            for domain in domains:
+                if var not in domain:
+                    continue
+                for key, value in domain[var].attributes.items():
+                    feature_attrs[var].append((key, value))
+
         def fix_names(part):
             for i, attr, name in zip(count(), part, name_iter):
                 if attr.name != name:
                     part[i] = attr.renamed(name)
                     self.Warning.renamed_variables()
+
+        def fix_attrs(part):
+            fixed = []
+            for attr in part:
+                attrs = feature_attrs[attr]
+                if len(attrs) > 0:
+                    attr = attr.copy()
+                    attr.attributes = dict(attrs)
+                    # find duplicated keys with different values - can't use
+                    # set because values are not necessarily hashable
+                    counter = Counter(k for k, _ in attrs)
+                    for duplicate in [k for k, v in counter.items() if v > 1]:
+                        values = [v for k, v in feature_attrs[attr]
+                                  if k == duplicate]
+                        if len(values) > 1:
+                            if any(values[0] != v for v in values[1:]):
+                                self.Warning.unmergeable_attributes(attr.name)
+                fixed.append(attr)
+            return fixed
 
         oper = set.union if self.merge_type == OWConcatenate.MergeUnion \
             else set.intersection
@@ -305,6 +339,7 @@ class OWConcatenate(widget.OWWidget):
         name_iter = iter(get_unique_names_duplicates(all_names))
         for part in parts:
             fix_names(part)
+        parts = [fix_attrs(part) for part in parts]
         domain = Orange.data.Domain(*parts)
         return domain
 

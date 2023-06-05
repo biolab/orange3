@@ -533,6 +533,152 @@ class TestOWConcatenate(WidgetTest):
         self.send_signal(w.Inputs.additional_data, self.iris[1:2], 1)
         assert_output_equal(np.vstack((self.iris[:3:2].X, self.iris[1:2].X)))
 
+    def test_concatenate_feature_attributes(self):
+        attrs = {"foo": "bar"}
+
+        # case 1
+        iris1 = Table("iris")[:5]
+        iris2 = Table("iris")[5:10]
+        iris1.domain.attributes[0].attributes = attrs.copy()
+
+        self.send_signal(self.widget.Inputs.additional_data, iris1, 0)
+        self.send_signal(self.widget.Inputs.additional_data, iris2, 1)
+        self.assertFalse(self.widget.Warning.unmergeable_attributes.is_shown())
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output.domain.attributes[0].attributes, attrs)
+        self.assertEqual(iris1.domain.attributes[0].attributes, attrs)
+        self.assertEqual(iris2.domain.attributes[0].attributes, {})
+
+        # case 2
+        iris1 = Table("iris")[:5]
+        iris2 = Table("iris")[5:10]
+        iris2.domain.attributes[0].attributes = attrs.copy()
+
+        self.send_signal(self.widget.Inputs.additional_data, iris1, 0)
+        self.send_signal(self.widget.Inputs.additional_data, iris2, 1)
+        self.assertFalse(self.widget.Warning.unmergeable_attributes.is_shown())
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output.domain.attributes[0].attributes, attrs)
+        self.assertEqual(iris1.domain.attributes[0].attributes, {})
+        self.assertEqual(iris2.domain.attributes[0].attributes, attrs)
+
+        attrs = {"foo": "foo", "bar": "bar"}
+
+        # case 3
+        iris1 = Table("iris")[:5]
+        iris2 = Table("iris")[5:10]
+        iris1.domain.attributes[0].attributes = {"bar": "bar"}
+        iris2.domain.attributes[0].attributes = attrs.copy()
+
+        self.send_signal(self.widget.Inputs.additional_data, iris1, 0)
+        self.send_signal(self.widget.Inputs.additional_data, iris2, 1)
+        self.assertFalse(self.widget.Warning.unmergeable_attributes.is_shown())
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output.domain.attributes[0].attributes, attrs)
+        self.assertEqual(iris1.domain.attributes[0].attributes, {"bar": "bar"})
+        self.assertEqual(iris2.domain.attributes[0].attributes, attrs)
+
+        # case 4
+        iris1 = Table("iris")[:5]
+        iris2 = Table("iris")[5:10]
+        iris1.domain.attributes[0].attributes = attrs.copy()
+        iris2.domain.attributes[0].attributes = {"bar": "bar"}
+
+        self.send_signal(self.widget.Inputs.additional_data, iris1, 0)
+        self.send_signal(self.widget.Inputs.additional_data, iris2, 1)
+        self.assertFalse(self.widget.Warning.unmergeable_attributes.is_shown())
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output.domain.attributes[0].attributes, attrs)
+        self.assertEqual(iris1.domain.attributes[0].attributes, attrs)
+        self.assertEqual(iris2.domain.attributes[0].attributes, {"bar": "bar"})
+
+        # case 5
+        iris1 = Table("iris")[:5]
+        iris2 = Table("iris")[5:10]
+        iris1.domain.attributes[0].attributes = {"foo": "foo"}
+        iris2.domain.attributes[0].attributes = {"bar": "bar"}
+
+        self.send_signal(self.widget.Inputs.additional_data, iris1, 0)
+        self.send_signal(self.widget.Inputs.additional_data, iris2, 1)
+        self.assertFalse(self.widget.Warning.unmergeable_attributes.is_shown())
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output.domain.attributes[0].attributes, attrs)
+        self.assertEqual(iris1.domain.attributes[0].attributes, {"foo": "foo"})
+        self.assertEqual(iris2.domain.attributes[0].attributes, {"bar": "bar"})
+
+        # case 6
+        iris1 = Table("iris")[:5, :3]
+        iris2 = Table("iris")[5:10, 2:]
+        iris1.domain.attributes[0].attributes = {"foo": "bar"}
+        iris2.domain.attributes[0].attributes = {"foo": "baz"}
+        self.send_signal(self.widget.Inputs.additional_data, iris1, 0)
+        self.send_signal(self.widget.Inputs.additional_data, iris2, 1)
+        self.assertFalse(self.widget.Warning.unmergeable_attributes.is_shown())
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output.domain.attributes[0].attributes, {"foo": "bar"})
+        self.assertEqual(output.domain.attributes[2].attributes, {"foo": "baz"})
+        self.assertEqual(iris1.domain.attributes[0].attributes, {"foo": "bar"})
+        self.assertEqual(iris2.domain.attributes[0].attributes, {"foo": "baz"})
+
+    def test_concatenate_feature_attributes_warn(self):
+        iris1 = Table("iris")[:5]
+        iris2 = Table("iris")[5:10]
+        iris3 = Table("iris")[10:15]
+        iris4 = Table("iris")[15:20]
+        iris1.domain.attributes[0].attributes = {"foo": "bar"}
+        iris2.domain.attributes[0].attributes = {"foo": "baz"}
+        iris3.domain.attributes[0].attributes = {"foo": "bar"}
+        iris4.domain.attributes[0].attributes = {"bar": "baz"}
+
+        self.send_signal(self.widget.Inputs.additional_data, iris1, 0)
+        self.send_signal(self.widget.Inputs.additional_data, iris2, 1)
+        self.assertTrue(self.widget.Warning.unmergeable_attributes.is_shown())
+        self.assertEqual(iris1.domain.attributes[0].attributes, {"foo": "bar"})
+        self.assertEqual(iris2.domain.attributes[0].attributes, {"foo": "baz"})
+
+        self.send_signal(self.widget.Inputs.additional_data, iris3, 1)
+        self.assertFalse(self.widget.Warning.unmergeable_attributes.is_shown())
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output.domain.attributes[0].attributes, {"foo": "bar"})
+        self.assertEqual(iris1.domain.attributes[0].attributes, {"foo": "bar"})
+        self.assertEqual(iris3.domain.attributes[0].attributes, {"foo": "bar"})
+
+        self.send_signal(self.widget.Inputs.additional_data, iris4, 1)
+        self.assertFalse(self.widget.Warning.unmergeable_attributes.is_shown())
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output.domain.attributes[0].attributes,
+                         {"foo": "bar", "bar": "baz"})
+        self.assertEqual(iris1.domain.attributes[0].attributes, {"foo": "bar"})
+        self.assertEqual(iris4.domain.attributes[0].attributes, {"bar": "baz"})
+
+        iris1 = Table("iris")[:5]
+        iris2 = Table("iris")[5:10]
+        iris1.domain.attributes[0].attributes = {"foo": "bar", "bar": "baz"}
+        iris2.domain.attributes[0].attributes = {"foo": "baz", "bar": "baz"}
+
+        self.send_signal(self.widget.Inputs.additional_data, iris1, 0)
+        self.send_signal(self.widget.Inputs.additional_data, iris2, 1)
+        self.assertTrue(self.widget.Warning.unmergeable_attributes.is_shown())
+        self.send_signal(self.widget.Inputs.additional_data, None, 1)
+        self.assertFalse(self.widget.Warning.unmergeable_attributes.is_shown())
+
+    def test_concatenate_feature_attributes_dict(self):
+        iris1 = Table("iris")[:5]
+        iris2 = Table("iris")[5:10]
+        iris1.domain.attributes[0].attributes = {"foo": {"bar": "baz"}}
+        iris1.domain.attributes[1].attributes = {"foo": {"bar": "baz"}}
+        iris2.domain.attributes[0].attributes = {"foo": "bar", "bar": "baz"}
+        iris2.domain.attributes[1].attributes = {"foo": {"bar": "baz"}}
+
+        self.send_signal(self.widget.Inputs.additional_data, iris1, 0)
+        self.send_signal(self.widget.Inputs.additional_data, iris2, 1)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertTrue(self.widget.Warning.unmergeable_attributes.is_shown())
+        self.assertEqual(output.domain.attributes[0].attributes,
+                         {"foo": "bar", "bar": "baz"})
+        self.assertEqual(output.domain.attributes[1].attributes,
+                         {"foo": {"bar": "baz"}})
+
 
 if __name__ == "__main__":
     unittest.main()
