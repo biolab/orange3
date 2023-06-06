@@ -20,7 +20,7 @@ from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.misc.wrapper_meta import WrapperMeta
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
-           "MSE", "RMSE", "MAE", "R2", "LogLoss", "MatthewsCorrCoefficient"]
+           "MSE", "RMSE", "MAE", "MAPE", "R2", "LogLoss", "MatthewsCorrCoefficient"]
 
 
 class ScoreMetaType(WrapperMeta):
@@ -399,6 +399,11 @@ class MAE(RegressionScore):
     long_name = "Mean absolute error"
     priority = 40
 
+class MAPE(RegressionScore):
+    __wraps__ = skl_metrics.mean_absolute_percentage_error
+    name = "MAPE"
+    long_name = "Mean absolute percentage error"
+    priority = 45
 
 # pylint: disable=invalid-name
 class R2(RegressionScore):
