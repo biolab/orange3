@@ -158,10 +158,12 @@ class PymssqlBackend(Backend):
         return self.create_sql_query(
             table_name,
             [field],
-            # workaround for collations that are not case sensitive and
-            # UTF characters sensitive - in the domain we still want to
-            # have all values (collation independent)
-            group_by=[f"{field}, Cast({field} as binary)"],
+            # Cast - workaround for collations that are not case-sensitive and
+            # UTF characters sensitive
+            # DATALENGTH - workaround for string comparison that ignore trailing
+            # spaces, two strings that differ only in space in the end would
+            # group together if DATALENGTH wouldn't be used
+            group_by=[f"{field}, Cast({field} as binary), DATALENGTH({field})"],
             order_by=[field],
             limit=21,
         )
