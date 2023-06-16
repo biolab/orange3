@@ -787,6 +787,7 @@ class ModelActionsWidget(QWidget):
         return self.insertAction(-1, action, *args)
 
 
+# pylint: disable=abstract-method
 class ModelCache(QObject, ConcurrentMixin):
     def __init__(self, model):
         super().__init__()
@@ -800,7 +801,7 @@ class ModelCache(QObject, ConcurrentMixin):
                      "height": 60,
                      "width": 15}
 
-        self.delayed_request = QTimer()
+        self.delayed_request = QTimer(self)
         self.delayed_request.timeout.connect(self.update)
         self.last_cache_time = 0
 
@@ -860,9 +861,6 @@ class ModelCache(QObject, ConcurrentMixin):
             self.update_view(item)
             self.fetch_data()
             return None
-
-    def on_partial_result(self, result):
-        pass  # can dask report progress?
 
     def on_done(self, result):
         top, left, bottom, right = result
