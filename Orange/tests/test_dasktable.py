@@ -189,3 +189,9 @@ class TableTestCase(unittest.TestCase):
         self.assertEqual(150, len(lines))
         self.assertEqual("[[5.1, 3.5, 1.4, 0.2 | Iris-setosa],", lines[0])
         self.assertEqual(" [5.9, 3.0, 5.1, 1.8 | Iris-virginica]]", lines[-1])
+
+    def test_table_len(self):
+        iris = temp_dasktable("iris")
+        iris = iris[iris.X[:, 0] > 6]
+        self.assertTrue(np.isnan(iris.X.shape[0]))
+        self.assertEqual(61, len(iris))
