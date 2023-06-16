@@ -44,7 +44,7 @@ class TestOWGroupBy(WidgetTest):
         self.assertEqual(self.widget.gb_attrs_model.rowCount(), 5)
 
         output = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(len(output), 35)
+        self.assertEqual(3, len(output))
 
         self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
@@ -63,27 +63,30 @@ class TestOWGroupBy(WidgetTest):
         sm = view.selectionModel()
         model = view.model()
         for ind in indices:
-            sm.select(model.index(ind), QItemSelectionModel.Select)
+            sm.select(model.index(ind, 0), QItemSelectionModel.Select)
 
     def test_groupby_attr_selection(self):
+        gb_view = self.widget.controls.gb_attrs
         self.send_signal(self.widget.Inputs.data, self.iris)
 
+        self._set_selection(gb_view, [1])  # sepal length
+        self.wait_until_finished()
         output = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(len(output), 35)
+        self.assertEqual(35, len(output))
 
         # select iris attribute with index 0
-        self._set_selection(self.widget.gb_attrs_view, [0])
+        self._set_selection(gb_view, [0])
         self.wait_until_finished()
 
         output = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(len(output), 3)
+        self.assertEqual(3, len(output))
 
-        # select iris attribute with index 0
-        self._set_selection(self.widget.gb_attrs_view, [0, 1])
+        # select iris and sepal length attribute
+        self._set_selection(gb_view, [0, 1])
         self.wait_until_finished()
 
         output = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(len(output), 57)
+        self.assertEqual(57, len(output))
 
     def assert_enabled_cbs(self, enabled_true):
         enabled_actual = set(
@@ -399,6 +402,7 @@ class TestOWGroupBy(WidgetTest):
     def test_aggregation(self):
         """Test aggregation results"""
         self.send_signal(self.widget.Inputs.data, self.data)
+        self._set_selection(self.widget.controls.gb_attrs, [1])  # a var
         output = self.get_output(self.widget.Outputs.data)
 
         np.testing.assert_array_almost_equal(
@@ -422,7 +426,7 @@ class TestOWGroupBy(WidgetTest):
         )
 
         # select all aggregations for all features except a and b
-        self._set_selection(self.widget.gb_attrs_view, [1, 2])
+        self._set_selection(self.widget.controls.gb_attrs, [1, 2])
         self.select_table_rows(self.widget.agg_table_view, [2, 3, 4])
         # select all aggregations
         for cb in self.widget.agg_checkboxes.values():
@@ -525,7 +529,7 @@ class TestOWGroupBy(WidgetTest):
     def test_metas_results(self):
         """Test if variable that is in meta in input table remains in metas"""
         self.send_signal(self.widget.Inputs.data, self.data)
-        self._set_selection(self.widget.gb_attrs_view, [0, 1])
+        self._set_selection(self.widget.controls.gb_attrs, [0, 1])
 
         output = self.get_output(self.widget.Outputs.data)
         self.assertIn(self.data.domain["svar"], output.domain.metas)
@@ -544,7 +548,7 @@ class TestOWGroupBy(WidgetTest):
             ["Mean, Median", "Mean", "Mean, Median", "Mode", "Concatenate"]
         )
 
-        self._set_selection(self.widget.gb_attrs_view, [1, 2])
+        self._set_selection(self.widget.controls.gb_attrs, [1, 2])
         self.assertListEqual([d["a"], d["b"]], self.widget.gb_attrs)
         self.assertDictEqual(
             {
@@ -564,7 +568,7 @@ class TestOWGroupBy(WidgetTest):
         self.assert_aggregations_equal(
             ["Mean, Median", "Mean", "Mean, Median", "Mode", "Concatenate"]
         )
-        self._set_selection(self.widget.gb_attrs_view, [1, 2])
+        self._set_selection(self.widget.controls.gb_attrs, [1, 2])
         self.assertListEqual([d["a"], d["b"]], self.widget.gb_attrs)
         self.assertDictEqual(
             {
@@ -624,14 +628,14 @@ class TestOWGroupBy(WidgetTest):
 
         # time variable as a group by variable
         self.send_signal(self.widget.Inputs.data, data)
-        self._set_selection(self.widget.gb_attrs_view, [3])
+        self._set_selection(self.widget.controls.gb_attrs, [3])
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(3, len(output))
 
         # time variable as a grouped variable
         attributes = [data.domain["c2"], data.domain["d2"]]
         self.send_signal(self.widget.Inputs.data, data[:, attributes])
-        self._set_selection(self.widget.gb_attrs_view, [1])  # d2
+        self._set_selection(self.widget.controls.gb_attrs, [1])  # d2
         # check all aggregations
         self.assert_aggregations_equal(["Mean", "Mode"])
         self.select_table_rows(self.widget.agg_table_view, [0])  # c2
@@ -855,7 +859,7 @@ class TestOWGroupBy(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
 
         # select feature A as group-by
-        self._set_selection(self.widget.gb_attrs_view, [0])
+        self._set_selection(self.widget.controls.gb_attrs, [0])
         # select all aggregations for feature B
         self.select_table_rows(self.widget.agg_table_view, [1])
         for cb in self.widget.agg_checkboxes.values():
@@ -907,6 +911,34 @@ class TestOWGroupBy(WidgetTest):
             check_column_type=False,
             check_categorical=False,
         )
+
+    def test_hidden_attributes(self):
+        domain = self.iris.domain
+        data = self.iris.transform(domain.copy())
+
+        data.domain.attributes[0].attributes["hidden"] = True
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertListEqual([data.domain["iris"]], self.widget.gb_attrs)
+
+        data = self.iris.transform(domain.copy())
+        data.domain.class_vars[0].attributes["hidden"] = True
+        self.send_signal(self.widget.Inputs.data, data)
+        # iris is hidden now so sepal length is selected
+        self.assertListEqual([data.domain["sepal length"]], self.widget.gb_attrs)
+
+        d = domain.copy()
+        data = self.iris.transform(Domain(d.attributes[:3], metas=d.attributes[3:]))
+        data.domain.metas[0].attributes["hidden"] = True
+        self.send_signal(self.widget.Inputs.data, data)
+        # sepal length still selected because of context
+        self.assertListEqual([data.domain["sepal length"]], self.widget.gb_attrs)
+
+        # test case when one of two selected attributes is hidden
+        self._set_selection(self.widget.controls.gb_attrs, [0, 1])  # sep l, sep w
+        data.domain.attributes[0].attributes["hidden"] = True
+        self.send_signal(self.widget.Inputs.data, data)
+        # sepal length is hidden - only sepal width remain selected
+        self.assertListEqual([data.domain["sepal width"]], self.widget.gb_attrs)
 
 
 if __name__ == "__main__":
