@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import time
 import unittest
 from unittest.mock import patch
 
@@ -22,6 +23,7 @@ from Orange.widgets.utils.itemmodels import \
     TableModel, _as_contiguous_range
 from Orange.widgets.gui import TableVariable
 from Orange.tests import test_filename
+from Orange.tests.test_dasktable import temp_dasktable
 from Orange.tests.sql.base import DataBaseTest as dbt
 from Orange.data.sql.table import SqlTable
 
@@ -555,6 +557,20 @@ class TestTableModel(unittest.TestCase, dbt):
     def test_local_dense_data(self):
         table = Table("iris.tab")
         model = TableModel(table)
+
+        self._dense_data(table, model.data, model.index)
+
+    def test_dask_dense_data(self):
+        table = temp_dasktable("iris.tab")
+        model = TableModel(table)
+
+        # table is empty until cache is filled
+        self.assertIsNone(model.data(model.index(0, 0), Qt.DisplayRole))
+
+        # for some reason timeout must be manually triggered...
+        model.cache.delayed_request.stop()
+        model.cache.delayed_request.timeout.emit()
+        time.sleep(1)
 
         self._dense_data(table, model.data, model.index)
 
