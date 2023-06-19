@@ -2,7 +2,7 @@ baycomp>=1.0.2
 bottleneck>=1.3.4
 # Encoding detection
 chardet>=3.0.2
-dask>=2022.1.0
+dask>=2022.2.0
 h5py>=3.0
 httpx>=0.21.0
 # Multiprocessing abstraction
