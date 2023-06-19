@@ -1,3 +1,4 @@
+from time import perf_counter
 from numbers import Number, Integral
 from math import isnan, isinf
 
@@ -12,7 +13,7 @@ from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import (
     Qt, QObject, QAbstractListModel, QModelIndex,
-    QItemSelectionModel, QItemSelection)
+    QItemSelectionModel, QItemSelection, QTimer)
 from AnyQt.QtCore import pyqtSignal as Signal
 from AnyQt.QtGui import QColor, QBrush
 from AnyQt.QtWidgets import (
@@ -21,6 +22,7 @@ from AnyQt.QtWidgets import (
 
 import numpy
 
+from orangewidget.utils.cache import LRUCache
 from orangewidget.utils.itemmodels import (
     PyListModel, AbstractSortTableModel as _AbstractSortTableModel,
     LabelledSeparator, SeparatorItem
@@ -29,8 +31,10 @@ from orangewidget.utils.itemmodels import (
 from Orange.widgets.utils.colorpalettes import ContinuousPalettes, ContinuousPalette
 from Orange.data import Value, Variable, Storage, DiscreteVariable, ContinuousVariable
 from Orange.data.domain import filter_visible
+from Orange.data.dask import DaskTable
 from Orange.widgets import gui
 from Orange.widgets.utils import datacaching
+from Orange.widgets.utils.concurrent import ConcurrentMixin
 from Orange.statistics import basic_stats
 from Orange.util import deprecated
 
@@ -783,6 +787,87 @@ class ModelActionsWidget(QWidget):
         return self.insertAction(-1, action, *args)
 
 
+# pylint: disable=abstract-method
+class ModelCache(QObject, ConcurrentMixin):
+    def __init__(self, model):
+        super().__init__()
+        self.model: TableModel = model
+
+        self.source = self.model.source
+
+        self.data = LRUCache(10000)
+        self.view = {"top": 0,
+                     "left": 0,
+                     "height": 60,
+                     "width": 15}
+
+        self.delayed_request = QTimer(self)
+        self.delayed_request.timeout.connect(self.update)
+        self.last_cache_time = 0
+
+    def update_view(self, item):
+        row, col = item
+        if row < self.view["top"]:
+            self.view["top"] = row
+        elif row > self.view["top"] + self.view["height"]:
+            self.view["top"] = row - self.view["height"]
+        if col < self.view["left"]:
+            self.view["left"] = col
+        elif col > self.view["left"] + self.view["width"]:
+            self.view["left"] = col - self.view["width"]
+
+    def apply_view(self):
+        buffer = 20  # completely arbitrary
+        max_h, max_w = len(self.source), len(self.source.domain)
+        top = max(self.view["top"] - buffer, 0)
+        left = max(self.view["left"] - buffer, 0)
+        bottom = min(self.view["top"] + self.view["height"] + buffer, max_h)
+        right = min(self.view["left"] + self.view["width"] + buffer, max_w)
+        return top, left, bottom, right
+
+    def update_cache(self, _task):
+        top, left, bottom, right = self.apply_view()
+
+        _vars = [self.model.columns[c].var for c in range(left, right)]
+
+        chunk = self.source[self.model.mapToSourceRows(range(top, bottom)),
+                            _vars].compute()
+
+        for c_row, v_row in enumerate(range(top, bottom)):
+            for c_col, v_col in enumerate(range(left, right)):
+                self.data[(v_row, v_col)] = chunk[c_row, _vars[c_col]]
+
+        return top, left, bottom, right
+
+    def update(self):
+        self.last_cache_time = perf_counter()
+        self.delayed_request.stop()
+        self.start(self.update_cache)
+
+    def reset(self):
+        self.data.clear()
+        self.update()
+
+    def fetch_data(self):
+        cache_interval = 0.02  # minimum time in seconds before requesting new data
+        elapsed = perf_counter() - self.last_cache_time
+        self.delayed_request.stop()
+        self.delayed_request.start(max(1, int(1000 * (cache_interval - elapsed))))
+
+    def __getitem__(self, item):
+        try:
+            return self.data[item]
+        except KeyError:
+            self.update_view(item)
+            self.fetch_data()
+            return None
+
+    def on_done(self, result):
+        top, left, bottom, right = result
+        self.model.dataChanged.emit(self.model.index(top, left),
+                                    self.model.index(bottom, right))
+
+
 class TableModel(AbstractSortTableModel):
     """
     An adapter for using Orange.data.Table within Qt's Item View Framework.
@@ -910,7 +995,17 @@ class TableModel(AbstractSortTableModel):
         if self.__rowCount > (2 ** 31 - 1):
             raise ValueError("len(sourcedata) > 2 ** 31 - 1")
 
-    def _get_source_item(self, row, coldesc):
+        self.lazy_loading = isinstance(self.source, DaskTable)
+        if self.lazy_loading:
+            self.cache = ModelCache(model=self)
+            self.layoutChanged.connect(self.cache.reset)
+
+    def _get_source_item(self, row, col):
+        if self.lazy_loading:
+            return self.cache[row, col]
+
+        row = self.mapToSourceRows(row)
+        coldesc = self.columns[col]
         if isinstance(coldesc, self.Basket):
             # `self.source[row:row + 1]` returns Table
             # `self.source[row]` returns RowInstance
@@ -979,12 +1074,13 @@ class TableModel(AbstractSortTableModel):
         if not 0 <= row <= self.__rowCount:
             return None
 
-        row = self.mapToSourceRows(row)
         col = 0 if role is _ClassValueRole else index.column()
 
         try:
             coldesc = self.columns[col]
-            instance = self._get_source_item(row, coldesc)
+            instance = self._get_source_item(row, col)
+            if instance is None:
+                return None
         except IndexError:
             self.layoutAboutToBeChanged.emit()
             self.beginRemoveRows(self.parent(), row, max(self.rowCount(), row))
