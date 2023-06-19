@@ -27,4 +27,4 @@ pyyaml
 openpyxl
 httpx>=0.21.0
 h5py>=3.0
-dask>=2022.1.0
+dask>=2022.2.0
