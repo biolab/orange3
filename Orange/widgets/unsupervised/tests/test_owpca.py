@@ -4,6 +4,8 @@ import unittest
 from unittest.mock import patch, Mock
 
 import numpy as np
+from sklearn.utils import check_random_state
+from sklearn.utils.extmath import svd_flip
 
 from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
 from Orange.preprocess import preprocess
@@ -12,8 +14,7 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import table_dense_sparse, possible_duplicate_table
 from Orange.widgets.unsupervised.owpca import OWPCA
 from Orange.tests import test_filename
-from sklearn.utils import check_random_state
-from sklearn.utils.extmath import svd_flip
+from Orange.tests.test_dasktable import with_dasktable
 
 
 class TestOWPCA(WidgetTest):
@@ -21,13 +22,16 @@ class TestOWPCA(WidgetTest):
         self.widget = self.create_widget(OWPCA)  # type: OWPCA
         self.iris = Table("iris")  # type: Table
 
-    def test_set_variance100(self):
-        self.widget.set_data(self.iris)
+    @with_dasktable
+    def test_set_variance100(self, prepare_table):
+        data = prepare_table(self.iris)
+        self.widget.set_data(data)
         self.widget.variance_covered = 100
         self.widget._update_selection_variance_spin()
 
-    def test_constant_data(self):
-        data = self.iris[::5].copy()
+    @with_dasktable
+    def test_constant_data(self, prepare_table):
+        data = prepare_table(self.iris[::5].copy())
         with data.unlocked():
             data.X[:, :] = 1.0
         # Ignore the warning: the test checks whether the widget shows
@@ -38,13 +42,15 @@ class TestOWPCA(WidgetTest):
         self.assertIsNone(self.get_output(self.widget.Outputs.transformed_data))
         self.assertIsNone(self.get_output(self.widget.Outputs.components))
 
-    def test_empty_data(self):
+    @with_dasktable
+    def test_empty_data(self, prepare_table):
         """ Check widget for dataset with no rows and for dataset with no attributes """
-        self.send_signal(self.widget.Inputs.data, self.iris[:0])
+        data = prepare_table(self.iris)
+        self.send_signal(self.widget.Inputs.data, data[:0])
         self.assertTrue(self.widget.Error.no_instances.is_shown())
 
-        domain = Domain([], None, self.iris.domain.variables)
-        new_data = Table.from_table(domain, self.iris)
+        domain = Domain([], None, data.domain.variables)
+        new_data = data.transform(domain)
         self.send_signal(self.widget.Inputs.data, new_data)
         self.assertTrue(self.widget.Error.no_features.is_shown())
         self.assertFalse(self.widget.Error.no_instances.is_shown())
@@ -52,9 +58,10 @@ class TestOWPCA(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.no_features.is_shown())
 
-    def test_limit_components(self):
+    @with_dasktable
+    def test_limit_components(self, prepare_table):
         X = np.random.RandomState(0).rand(101, 101)
-        data = Table.from_numpy(None, X)
+        data = prepare_table(Table.from_numpy(None, X))
         self.widget.ncomponents = 100
         self.send_signal(self.widget.Inputs.data, data)
         tran = self.get_output(self.widget.Outputs.transformed_data)
@@ -80,8 +87,10 @@ class TestOWPCA(WidgetTest):
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings["variance_covered"], 100)
 
-    def test_variance_shown(self):
-        self.send_signal(self.widget.Inputs.data, self.iris)
+    @with_dasktable
+    def test_variance_shown(self, prepare_table):
+        data = prepare_table(self.iris)
+        self.send_signal(self.widget.Inputs.data, data)
         self.widget.maxp = 2
         self.widget._setup_plot()
         var2 = self.widget.variance_covered
@@ -90,15 +99,18 @@ class TestOWPCA(WidgetTest):
         var3 = self.widget.variance_covered
         self.assertGreater(var3, var2)
 
-    def test_unique_domain_components(self):
-        table = possible_duplicate_table('components')
+    @with_dasktable
+    def test_unique_domain_components(self, prepare_table):
+        table = prepare_table(possible_duplicate_table('components'))
         self.send_signal(self.widget.Inputs.data, table)
         out = self.get_output(self.widget.Outputs.components)
         self.assertEqual(out.domain.metas[0].name, 'components (1)')
 
-    def test_variance_attr(self):
+    @with_dasktable
+    def test_variance_attr(self, prepare_table):
+        data = prepare_table(self.iris)
         self.widget.ncomponents = 2
-        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_stop_blocking()
         self.widget._variance_ratio = np.array([0.5, 0.25, 0.2, 0.05])
         self.widget.commit.now()
@@ -225,12 +237,13 @@ class TestOWPCA(WidgetTest):
 
         np.testing.assert_almost_equal(widget_result.X, pca_embedding)
 
-    def test_do_not_mask_features(self):
+    @with_dasktable
+    def test_do_not_mask_features(self, prepare_table):
         # the widget used to replace cached variables when creating the
         # components output (until 20170726)
-        data = Table("iris.tab")
+        data = prepare_table(self.iris)
+        ndata = data.copy()
         self.widget.set_data(data)
-        ndata = Table("iris.tab")
         self.assertEqual(data.domain[0], ndata.domain[0])
 
     def test_on_cut_changed(self):
@@ -248,13 +261,15 @@ class TestOWPCA(WidgetTest):
         invalidate.assert_not_called()
         self.assertEqual(widget.ncomponents, 0)
 
-    def test_output_data(self):
+    @with_dasktable
+    def test_output_data(self, prepare_table):
         widget = self.widget
         widget.ncomponents = 2
-        domain = Domain(self.iris.domain.attributes[:3],
-                        self.iris.domain.class_var,
-                        self.iris.domain.attributes[3:])
-        iris = self.iris.transform(domain)
+        data = prepare_table(self.iris)
+        domain = Domain(data.domain.attributes[:3],
+                        data.domain.class_var,
+                        data.domain.attributes[3:])
+        iris = data.transform(domain)
         self.send_signal(widget.Inputs.data, iris)
         output = self.get_output(widget.Outputs.data)
         outdom = output.domain
@@ -262,13 +277,13 @@ class TestOWPCA(WidgetTest):
         self.assertEqual(domain.class_var, outdom.class_var)
         self.assertEqual(domain.metas, outdom.metas[:1])
         self.assertEqual(len(outdom.metas), 3)
-        np.testing.assert_equal(iris.X, output.X)
-        np.testing.assert_equal(iris.Y, output.Y)
+        self.assertTrue(np.all(iris.X == output.X))
+        self.assertTrue(np.all(iris.Y == output.Y))
         np.testing.assert_equal(iris.metas[:, 0], output.metas[:, 0])
 
         trans = self.get_output(widget.Outputs.transformed_data)
         self.assertEqual(trans.domain.attributes, outdom.metas[1:])
-        np.testing.assert_equal(trans.X, output.metas[:, 1:])
+        np.testing.assert_equal(trans.X, output.metas[:, 1:])  # dask
 
         self.send_signal(widget.Inputs.data, None)
         output = self.get_output(widget.Outputs.data)
