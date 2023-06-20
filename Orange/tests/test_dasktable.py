@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from contextlib import contextmanager
 from datetime import datetime
+from functools import wraps
 
 import numpy as np
 import numpy.testing
@@ -51,6 +52,31 @@ def temp_dasktable(table):
     The temporary file is deleted after garbage collection. """
     table = _TempDaskTableHandler(table)
     return table.dasktable
+
+
+def with_dasktable(test_case):
+    # type: (Callable) -> Callable
+    """Run a single test case on both Orange Tables and DaskTables.
+
+    Examples
+    --------
+    >>> @with_dasktable
+    ... def test_something(self, prepare_table):
+    ...     data: Table  # The table you want to test on
+    ...     data = prepare_table(data)  # This converts the table to DaskTable
+
+    """
+
+    @wraps(test_case)
+    def _wrapper(self):
+        # Make sure to call setUp and tearDown methods in between test runs so
+        # any widget state doesn't interfere between tests
+        test_case(self, lambda table: table)
+        self.tearDown()
+        self.setUp()
+        test_case(self, lambda table: temp_dasktable(table))
+
+    return _wrapper
 
 
 class TableTestCase(unittest.TestCase):
