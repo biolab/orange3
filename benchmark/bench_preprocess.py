@@ -3,7 +3,7 @@ from unittest.mock import patch, MagicMock
 import numpy as np
 
 from Orange.data import Domain, Table, ContinuousVariable
-from Orange.preprocess import Normalize
+from Orange.preprocess import Normalize, SklImpute
 
 from .base import Benchmark, benchmark
 
@@ -30,3 +30,7 @@ class BenchNormalize(Benchmark):
         # avoid benchmarking transformation
         with patch("Orange.data.Table.transform", MagicMock()):
             Normalize()(self.table)
+
+    @benchmark(number=5)
+    def bench_sklimpute(self):
+        SklImpute()(self.table)
