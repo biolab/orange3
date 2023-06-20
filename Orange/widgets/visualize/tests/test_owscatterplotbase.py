@@ -52,19 +52,16 @@ class MockWidget(OWWidget):
             if isinstance(m, Mock):
                 m.reset_mock()
 
-
 class TestOWScatterPlotBase(WidgetTest):
     def setUp(self):
         super().setUp()
-        self.master = MockWidget()
+        self.master = self.create_widget(MockWidget)
         self.graph = OWScatterPlotBase(self.master)
 
         self.xy = (np.arange(10, dtype=float), np.arange(10, dtype=float))
         self.master.get_coordinates_data = lambda: self.xy
 
     def tearDown(self):
-        self.master.onDeleteWidget()
-        self.master.deleteLater()
         # Clear mocks as they keep ref to widget instance when called
         MockWidget.reset_mocks()
         del self.master
@@ -326,14 +323,13 @@ class TestOWScatterPlotBase(WidgetTest):
 
     base = "Orange.widgets.visualize.owscatterplotgraph.OWScatterPlotBase."
 
-    @staticmethod
     @patch(base + "update_sizes")
     @patch(base + "update_colors")
     @patch(base + "update_selection_colors")
     @patch(base + "update_shapes")
     @patch(base + "update_labels")
-    def test_reset_calls_all_updates_and_update_doesnt(*mocks):
-        master = MockWidget()
+    def test_reset_calls_all_updates_and_update_doesnt(self, *mocks):
+        master = self.create_widget(MockWidget)
         graph = OWScatterPlotBase(master)
         for mock in mocks:
             mock.assert_not_called()
