@@ -7,8 +7,10 @@ import numpy as np
 import scipy.sparse as sp
 
 from Orange.data import Table, Domain, ContinuousVariable
+from Orange.data.dask import DaskTable
 from Orange.preprocess import Normalize
 from Orange.tests import test_filename
+from Orange.tests.test_dasktable import temp_dasktable
 
 
 class TestNormalizer(unittest.TestCase):
@@ -26,6 +28,8 @@ class TestNormalizer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.data = Table(test_filename("datasets/test5.tab"))
+        cls.iris = Table("iris")
+        cls.test10 = Table(test_filename("datasets/test10.tab"))
 
     def test_normalize_default(self):
         normalizer = Normalize()
@@ -134,7 +138,7 @@ class TestNormalizer(unittest.TestCase):
         np.testing.assert_array_equal(data.X, normalized.X)
 
     def test_datetime_normalization(self):
-        data = Table(test_filename("datasets/test10.tab"))
+        data = self.test10
         normalizer = Normalize(zero_based=False,
                                norm_type=Normalize.NormalizeBySD,
                                transform_class=False)
@@ -145,7 +149,7 @@ class TestNormalizer(unittest.TestCase):
         self.compare_tables(data_norm, solution)
 
     def test_retain_vars_attributes(self):
-        data = Table("iris")
+        data = self.iris
         attributes = {"foo": "foo", "baz": 1}
         data.domain.attributes[0].attributes = attributes
         self.assertDictEqual(
@@ -167,6 +171,20 @@ class TestNormalizer(unittest.TestCase):
         for val1, val2 in zip(normalized[:, "Foo"],
                               ["-1.225", "0.0", "1.225"]):
             self.assertEqual(str(val1[0]), val2)
+
+
+class TestNormalizerDask(TestNormalizer):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.data = temp_dasktable(cls.data)
+        cls.iris = temp_dasktable(cls.iris)
+        cls.test10 = temp_dasktable(cls.test10)
+
+    def compare_tables(self, dataNorm, solution):
+        self.assertIsInstance(dataNorm, DaskTable)
+        super().compare_tables(dataNorm.compute(), solution)  # .compute avoids warnings
 
 
 if __name__ == "__main__":
