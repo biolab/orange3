@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.sparse
+import dask.array as da
 
 from Orange.data import Table, Instance
 from Orange.data.table import DomainTransformationError
@@ -20,7 +21,7 @@ class ClusteringModel:
             return x[0] if one_d else x
 
         one_d = False
-        if isinstance(data, np.ndarray):
+        if isinstance(data, (np.ndarray, da.Array)):
             one_d = data.ndim == 1
             prediction = self.predict(np.atleast_2d(data))
         elif isinstance(data, scipy.sparse.csr_matrix) or \
