@@ -34,7 +34,7 @@ class TestTree:
         learn = self.TreeLearner(**self.no_pruning_args)
         clf = learn(table)
         pred = clf(table)
-        self.assertTrue(np.all(table.Y.flatten() == pred))
+        np.testing.assert_equal(table.Y.flatten(), pred)
 
     def test_min_samples_split(self):
         clf = self.TreeLearner(
