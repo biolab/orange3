@@ -20,6 +20,8 @@ class KMeansModel(ClusteringModel):
         self.k = projector.get_params()["n_clusters"]
 
     def predict(self, X):
+        if isinstance(X, da.Array):
+            X = X.rechunk({0: "auto", 1: -1})
         return self.projector.predict(X)
 
 
@@ -48,7 +50,10 @@ class KMeans(Clustering):
                 import dask_ml.cluster
 
                 del params["n_init"]
-                assert params["init"] == "k-means||"
+                if params["init"] != "k-means||":
+                    warnings.warn(f"Initializing with {params['init']} defaults"
+                                  f" to sklearn. Using k-means|| instead.")
+                    params["init"] = "k-means||"
 
                 X = X.rechunk({0: "auto", 1: -1})
                 __wraps__ = dask_ml.cluster.KMeans
