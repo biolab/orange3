@@ -9,6 +9,7 @@ import scipy.sparse as sp
 from sklearn.impute import SimpleImputer
 
 import Orange.data
+from Orange.data.dask import DaskTable
 from Orange.data.filter import HasClass
 from Orange.statistics import distribution
 from Orange.util import Reprable, Enum, deprecated
@@ -157,8 +158,14 @@ class SklImpute(Preprocess):
         from Orange.data.sql.table import SqlTable
         if isinstance(data, SqlTable):
             return Impute()(data)
-        imputer = SimpleImputer(strategy=self.strategy)
-        imputer.fit(data.X)
+        wraps = self.__wraps__
+        X = data.X
+        if isinstance(data, DaskTable):
+            import dask_ml.impute
+            wraps = dask_ml.impute.SimpleImputer
+            X = X.rechunk({0: "auto", 1: -1})
+        imputer = wraps(strategy=self.strategy)
+        imputer.fit(X)
         # Create new variables with appropriate `compute_value`, but
         # drop the ones which do not have valid `imputer.statistics_`
         # (i.e. all NaN columns). `sklearn.preprocessing.Imputer` already
