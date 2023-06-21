@@ -48,6 +48,10 @@ class _ArrayConversionDask(_ArrayConversion):
 
 class _FromTableConversionDask(_FromTableConversion):
 
+    # set very high to make the compute graph smaller, because
+    # for dask operations it does not matter how high it is
+    max_rows_at_once = 5000*1000
+
     _array_conversion_class = _ArrayConversionDask
 
     def __init__(self, source, destination):
