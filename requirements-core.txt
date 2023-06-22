@@ -4,6 +4,7 @@ catboost>=1.0.1
 # Encoding detection
 chardet>=3.0.2
 dask>=2022.2.0
+dask-ml>=2022.5.27
 h5py>=3.0
 httpx>=0.21.0
 # Multiprocessing abstraction
