@@ -28,3 +28,4 @@ openpyxl
 httpx>=0.21.0
 h5py>=3.0
 dask>=2022.2.0
+dask-ml>=2022.5.27
