@@ -30,3 +30,4 @@ catboost>=1.0.1
 xgboost>=1.7.4
 h5py>=3.0
 dask>=2022.2.0
+dask-ml>=2022.5.27
