@@ -17,6 +17,7 @@ from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.widget import Input, Output
 
 # Maximum number of PCA components that we can set in the widget
