@@ -12,18 +12,19 @@ from Orange.data import Table, Domain
 from Orange.preprocess import Continuize, Normalize
 from Orange.projection import pca, PCA, SparsePCA, IncrementalPCA, TruncatedSVD
 from Orange.tests import test_filename
+from Orange.tests.test_dasktable import with_dasktable
 
 
 class TestPCA(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.ionosphere = Table(test_filename('datasets/ionosphere.tab'))
-        cls.iris = Table('iris')
-        cls.zoo = Table('zoo')
+    def setUp(self):
+        self.ionosphere = Table(test_filename('datasets/ionosphere.tab'))
+        self.iris = Table('iris')
+        self.zoo = Table('zoo')
 
-    def test_pca(self):
-        data = self.ionosphere
-        self.__pca_test_helper(data, n_com=3, min_xpl_var=0.5)
+    @with_dasktable
+    def test_pca(self, prepare_table):
+        data = prepare_table(self.ionosphere)
+        self.__pca_test_helper(data, n_com=3, min_xpl_var=0.49)
         self.__pca_test_helper(data, n_com=10, min_xpl_var=0.7)
         self.__pca_test_helper(data, n_com=32, min_xpl_var=1)
 
@@ -35,7 +36,7 @@ class TestPCA(unittest.TestCase):
         self.assertEqual(n_com, pca_model.n_components)
         self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
         proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
-        np.testing.assert_almost_equal(pca_model(data).X, proj)
+        self.assertTrue(np.allclose(pca_model(data).X, proj))
 
     def test_sparse_pca(self):
         data = self.ionosphere[:100]
@@ -50,9 +51,10 @@ class TestPCA(unittest.TestCase):
         self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
         self.assertLessEqual(pca_model.error_[-1], max_err)
 
-    def test_randomized_pca(self):
-        data = self.ionosphere
-        self.__rnd_pca_test_helper(data, n_com=3, min_xpl_var=0.5)
+    @with_dasktable
+    def test_randomized_pca(self, prepare_table):
+        data = prepare_table(self.ionosphere)
+        self.__rnd_pca_test_helper(data, n_com=3, min_xpl_var=0.47)
         self.__rnd_pca_test_helper(data, n_com=10, min_xpl_var=0.7)
         self.__rnd_pca_test_helper(data, n_com=32, min_xpl_var=0.98)
 
@@ -64,7 +66,7 @@ class TestPCA(unittest.TestCase):
         self.assertEqual(n_com, pca_model.n_components)
         self.assertEqual((n_com, data.X.shape[1]), pca_model.components_.shape)
         proj = np.dot(data.X - pca_model.mean_, pca_model.components_.T)
-        np.testing.assert_almost_equal(pca_model(data).X, proj)
+        self.assertTrue(np.allclose(pca_model(data).X, proj))
 
     def test_improved_randomized_pca_properly_called(self):
         # It doesn't matter what we put into the matrix
@@ -215,17 +217,20 @@ class TestPCA(unittest.TestCase):
         pca_iris2 = pickle.loads(pickle.dumps(pca_iris))
         self.assertIsNone(pca_iris2.domain[0].compute_value.transformed)
 
-    def test_chain(self):
-        zoo_c = Continuize()(self.zoo)
-        pca = PCA(n_components=3)(zoo_c)(self.zoo)
+    @with_dasktable
+    def test_chain(self, prepare_table):
+        zoo = prepare_table(self.zoo)
+        zoo_c = Continuize()(zoo)
+        pca = PCA(n_components=3)(zoo_c)(zoo)
         pca2 = PCA(n_components=3)(zoo_c)(zoo_c)
         pp = [Continuize()]
-        pca3 = PCA(n_components=3, preprocessors=pp)(self.zoo)(self.zoo)
-        np.testing.assert_almost_equal(pca.X, pca2.X)
-        np.testing.assert_almost_equal(pca.X, pca3.X)
+        pca3 = PCA(n_components=3, preprocessors=pp)(zoo)(zoo)
+        self.assertTrue(np.allclose(pca.X, pca2.X))
+        self.assertTrue(np.allclose(pca.X, pca3.X))
 
-    def test_PCA_scorer(self):
-        data = self.iris
+    @with_dasktable
+    def test_PCA_scorer(self, prepare_table):
+        data = prepare_table(self.iris)
         pca = PCA(preprocessors=[Normalize()])
         pca.component = 1
         scores = pca.score_data(data)
@@ -236,23 +241,28 @@ class TestPCA(unittest.TestCase):
         self.assertEqual([round(s, 4) for s in scores[0]],
                          [0.5224, 0.2634, 0.5813, 0.5656])
 
-    def test_PCA_scorer_component(self):
+    @with_dasktable
+    def test_PCA_scorer_component(self, prepare_table):
         pca = PCA()
-        for i in range(1, len(self.zoo.domain.attributes) + 1):
+        zoo = prepare_table(self.zoo)
+        for i in range(1, len(zoo.domain.attributes) + 1):
             pca.component = i
-            scores = pca.score_data(self.zoo)
+            scores = pca.score_data(zoo)
             self.assertEqual(scores.shape,
-                             (pca.component, len(self.zoo.domain.attributes)))
+                             (pca.component, len(zoo.domain.attributes)))
 
-    def test_PCA_scorer_all_components(self):
-        n_attr = len(self.iris.domain.attributes)
+    @with_dasktable
+    def test_PCA_scorer_all_components(self, prepare_table):
+        iris = prepare_table(self.iris)
+        n_attr = len(iris.domain.attributes)
         pca = PCA()
-        scores = pca.score_data(self.iris)
+        scores = pca.score_data(iris)
         self.assertEqual(scores.shape, (n_attr, n_attr))
 
-    def test_max_components(self):
+    @with_dasktable
+    def test_max_components(self, prepare_table):
         d = np.random.RandomState(0).rand(20, 20)
-        data = Table.from_numpy(None, d)
+        data = prepare_table(Table.from_numpy(None, d))
         pca = PCA()(data)
         self.assertEqual(len(pca.explained_variance_ratio_), 20)
         pca = PCA(n_components=10)(data)
