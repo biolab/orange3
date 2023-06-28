@@ -1,5 +1,8 @@
 import warnings
+from typing import Union
 
+import numpy as np
+import dask.array as da
 import sklearn.cluster
 
 from Orange.clustering.clustering import Clustering, ClusteringModel
@@ -17,6 +20,8 @@ class KMeansModel(ClusteringModel):
         self.k = projector.get_params()["n_clusters"]
 
     def predict(self, X):
+        if isinstance(X, da.Array):
+            X = X.rechunk({0: "auto", 1: -1})
         return self.projector.predict(X)
 
 
@@ -36,6 +41,27 @@ class KMeans(Clustering):
         super().__init__(
             preprocessors, {k: v for k, v in vars().items()
                             if k != "compute_silhouette_score"})
+
+    def fit(self, X: Union[np.ndarray, da.Array], y: np.ndarray = None):
+        params = self.params.copy()
+        __wraps__ = self.__wraps__
+        if isinstance(X, da.Array):
+            try:
+                import dask_ml.cluster
+
+                del params["n_init"]
+                if params["init"] != "k-means||":
+                    warnings.warn(f"Initializing with {params['init']} defaults"
+                                  f" to sklearn. Using k-means|| instead.")
+                    params["init"] = "k-means||"
+
+                X = X.rechunk({0: "auto", 1: -1})
+                __wraps__ = dask_ml.cluster.KMeans
+
+            except ImportError:
+                warnings.warn("dask_ml is not installed. Using sklearn instead.")
+
+        return self.__returns__(__wraps__(**params).fit(X))
 
 
 if __name__ == "__main__":

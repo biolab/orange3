@@ -4,6 +4,7 @@ from unittest.mock import patch, Mock
 
 import numpy as np
 import scipy.sparse as sp
+import dask.array as da
 
 from AnyQt.QtCore import Qt
 from AnyQt.QtWidgets import QRadioButton
@@ -11,9 +12,11 @@ from sklearn.metrics import silhouette_score
 
 import Orange.clustering
 from Orange.data import Table, Domain
+from Orange.data.dask import DaskTable
 from Orange.widgets import gui
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owkmeans import OWKMeans, ClusterTableModel
+from Orange.tests.test_dasktable import temp_dasktable
 
 
 class TestClusterTableModel(unittest.TestCase):
@@ -47,6 +50,7 @@ class TestOWKMeans(WidgetTest):
             OWKMeans, stored_settings={"auto_commit": False, "version": 2}
         )  # type: OWKMeans
         self.data = Table("heart_disease")
+        self.housing = Table("housing")
 
     def tearDown(self):
         self.widget.onDeleteWidget()
@@ -206,13 +210,15 @@ class TestOWKMeans(WidgetTest):
         widget.k = 4
         self.send_signal(widget.Inputs.data, self.data)
         self.commit_and_wait()
-        widget.clusterings[widget.k].labels = np.array([0] * 100 + [1] * 203).flatten()
-        widget.clusterings[widget.k].silhouette_samples = np.arange(303) / 303
+        l = len(self.data)
+        widget.clusterings[widget.k].labels = np.array([0] * (l // 3) +
+                                                       [1] * (l - l // 3)).flatten()
+        widget.clusterings[widget.k].silhouette_samples = np.arange(l) / l
         widget.send_data()
         out = self.get_output(widget.Outputs.centroids)
         np.testing.assert_array_almost_equal(
-            np.array([[0, np.mean(np.arctan(np.arange(100) / 303)) / np.pi + 0.5],
-                      [1, np.mean(np.arctan(np.arange(100, 303) / 303)) / np.pi + 0.5],
+            np.array([[0, np.mean(np.arctan(np.arange(l // 3) / l)) / np.pi + 0.5],
+                      [1, np.mean(np.arctan(np.arange(l // 3, l) / l)) / np.pi + 0.5],
                       [2, 0], [3, 0]]), out.metas.astype(float))
         self.assertEqual(out.name, "heart_disease centroids")
 
@@ -220,12 +226,11 @@ class TestOWKMeans(WidgetTest):
         widget = self.widget
         widget.optimize_k = False
         widget.k = 4
-        heart_disease = Table("heart_disease")
-        heart_disease.name = Table.name  # untitled
-        self.send_signal(widget.Inputs.data, heart_disease)
+        self.data.name = Table.name  # untitled
+        self.send_signal(widget.Inputs.data, self.data)
         self.commit_and_wait()
 
-        in_attrs = heart_disease.domain.attributes
+        in_attrs = self.data.domain.attributes
         out = self.get_output(widget.Outputs.centroids)
         out_attrs = out.domain.attributes
         out_names = {attr.name for attr in out_attrs}
@@ -316,7 +321,7 @@ class TestOWKMeans(WidgetTest):
         widget.k_from, widget.k_to = 2, 6
         widget.optimize_k = True
         widget.normalize = False
-        self.send_signal(self.widget.Inputs.data, Table("housing"), wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.housing, wait=5000)
         self.commit_and_wait()
         widget.update_results()
         # for housing dataset without normalization,
@@ -324,7 +329,7 @@ class TestOWKMeans(WidgetTest):
         self.assertEqual(widget.selected_row(), 1)
 
         self.widget.controls.normalize.toggle()
-        self.send_signal(self.widget.Inputs.data, Table("housing"), wait=5000)
+        self.send_signal(self.widget.Inputs.data, self.housing, wait=5000)
         self.commit_and_wait()
         widget.update_results()
         # for housing dataset with normalization,
@@ -471,27 +476,23 @@ class TestOWKMeans(WidgetTest):
 
         self.assertEqual(widget.clusterings, {})
 
-    def test_do_not_recluster_on_same_data(self):
-        """Do not recluster data points when targets or metas change."""
-
+    def dummy_data(self):
         # Prepare some dummy data
-        x = np.eye(5)
+        x1, x2 = np.eye(5), np.tri(5)
         y1, y2 = np.ones((5, 1)), np.ones((5, 2))
         meta1, meta2 = np.ones((5, 1)), np.ones((5, 2))
 
-        table1 = Table.from_numpy(
-            domain=Domain.from_numpy(X=x, Y=y1, metas=meta1),
-            X=x, Y=y1, metas=meta1,
-        )
+        table1 = Table.from_numpy(None, X=x1, Y=y1, metas=meta1)
         # X is same, should not cause update
-        table2 = Table.from_numpy(
-            domain=Domain.from_numpy(X=x, Y=y2, metas=meta2),
-            X=x, Y=y2, metas=meta2,
-        )
+        table2 = Table.from_numpy(None, X=x1, Y=y2, metas=meta2)
         # X is different, should cause update
-        table3 = table1.copy()
-        with table3.unlocked():
-            table3.X[:, 0] = 1
+        table3 = Table.from_numpy(None, X=x2, Y=y2, metas=meta2)
+
+        return table1, table2, table3
+
+    def test_do_not_recluster_on_same_data(self):
+        """Do not recluster data points when targets or metas change."""
+        table1, table2, table3 = self.dummy_data()
 
         with patch.object(self.widget.commit, 'now') as commit:
             self.send_signal(self.widget.Inputs.data, table1)
@@ -509,18 +510,14 @@ class TestOWKMeans(WidgetTest):
     def test_correct_smart_init(self):
         # due to a bug where wrong init was passed to _compute_clustering
         self.send_signal(self.widget.Inputs.data, self.data[::10], wait=5000)
-        self.widget.smart_init = 0
         self.widget.clusterings = {}
-        with patch.object(self.widget, "_compute_clustering",
-                          wraps=self.widget._compute_clustering) as compute:
-            self.commit_and_wait()
-            self.assertEqual(compute.call_args[1]['init'], "k-means++")
-        self.widget.invalidate()  # reset caches
-        self.widget.smart_init = 1
-        with patch.object(self.widget, "_compute_clustering",
-                          wraps=self.widget._compute_clustering) as compute:
-            self.commit_and_wait()
-            self.assertEqual(compute.call_args[1]['init'], "random")
+        for i, method in enumerate(self.widget.INIT_METHODS):
+            self.widget.smart_init = i
+            with patch.object(self.widget, "_compute_clustering",
+                              wraps=self.widget._compute_clustering) as compute:
+                self.commit_and_wait()
+                self.assertEqual(compute.call_args[1]['init'], method[1])
+            self.widget.invalidate()  # reset caches
 
     def test_always_same_cluster(self):
         """The same random state should always return the same clusters"""
@@ -535,11 +532,9 @@ class TestOWKMeans(WidgetTest):
             for a1, a2 in zip(l, l[1:]):
                 np.testing.assert_equal(a1, a2)
 
-        self.widget.smart_init = 0
-        assert_all_same([cluster() for _ in range(5)])
-
-        self.widget.smart_init = 1
-        assert_all_same([cluster() for _ in range(5)])
+        for i, _ in enumerate(self.widget.INIT_METHODS):
+            self.widget.smart_init = i
+            assert_all_same([cluster() for _ in range(5)])
 
     def test_error_no_attributes(self):
         domain = Domain([])
@@ -564,6 +559,57 @@ class TestOWKMeans(WidgetTest):
         self.wait_until_finished(widget=w)
         self.assertEqual(w.send_data.call_count, 2)
         self.assertEqual(self.widget.selected_row(), w.selected_row())
+
+
+class TestOWKMeansOnDask(TestOWKMeans):
+    def setUp(self):
+        super().setUp()
+        self.data = temp_dasktable(Table("heart_disease")[:50])
+        self.housing = temp_dasktable(Table("housing"))
+
+    def dummy_data(self):
+        # Prepare some dummy data
+        x1, x2 = da.eye(5), da.tri(5)
+        y1, y2 = da.ones((5, 1)), da.ones((5, 2))
+        meta1, meta2 = np.ones((5, 1)), np.ones((5, 2))
+        domain1 = Domain.from_numpy(X=np.asarray(x1), Y=np.asarray(y1), metas=meta1)
+        domain2 = Domain.from_numpy(X=np.asarray(x2), Y=np.asarray(y2), metas=meta2)
+
+        table1 = DaskTable.from_arrays(domain=domain1, X=x1, Y=y1, metas=meta1)
+        # X is same, should not cause update
+        table2 = DaskTable.from_arrays(domain=domain2, X=x1, Y=y2, metas=meta2)
+        # X is different, should cause update
+        table3 = DaskTable.from_arrays(domain=domain2, X=x2, Y=y2, metas=meta2)
+
+        return table1, table2, table3
+
+    @unittest.skip("optimization is disabled for dask tables")
+    def test_select_best_row(self):
+        super().test_select_best_row()
+
+    @unittest.skip("optimization is disabled for dask tables")
+    def test_from_to_table(self):
+        super().test_from_to_table()
+
+    @unittest.skip("optimization is disabled for dask tables")
+    def test_use_cache(self):
+        super().test_use_cache()
+
+    @unittest.skip("optimization is disabled for dask tables")
+    def test_optimization_fails(self):
+        super().test_optimization_fails()
+
+    @unittest.skip("optimization is disabled for dask tables")
+    def test_optimization_report_display(self):
+        super().test_optimization_report_display()
+
+    @unittest.skip("optimization is disabled for dask tables")
+    def test_saved_selection(self):
+        super().test_saved_selection()
+
+    @unittest.skip("optimization is disabled for dask tables")
+    def test_no_data_hides_main_area(self):
+        super().test_no_data_hides_main_area()
 
 
 if __name__ == "__main__":
