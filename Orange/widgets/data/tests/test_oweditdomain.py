@@ -364,8 +364,6 @@ class TestOWEditDomain(WidgetTest):
                          ["sepal length", "foo", "petal length", "petal width"])
         self.assertIsInstance(out.domain[2], ContinuousVariable)
 
-
-
     @patch("Orange.widgets.data.oweditdomain.ReinterpretVariableEditor.set_data")
     def test_selection_sets_data(self, set_data):
         w = self.widget
@@ -1046,7 +1044,6 @@ class TestEditors(GuiTest):
         self.assertSequenceEqual(
             [list(tr) for tr in w.get_data()[1]],
             transforms)
-
 
     def test_unlink(self):
         w = ContinuousVariableEditor()
