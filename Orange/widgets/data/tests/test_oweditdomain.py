@@ -35,7 +35,7 @@ from Orange.widgets.data.oweditdomain import (
     VariableEditDelegate, TransformRole,
     RealVector, TimeVector, StringVector, make_dict_mapper,
     LookupMappingTransform, as_float_or_nan, column_str_repr,
-    GroupItemsDialog, VariableListModel, StrpTime
+    GroupItemsDialog, VariableListModel, StrpTime, RestoreOriginal, BaseEditor
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
@@ -338,6 +338,87 @@ class TestOWEditDomain(WidgetTest):
         restore({viris: [("AsString", ()), ("Rename", ("Z",))]})
         tr = model.data(model.index(4), TransformRole)
         self.assertEqual(tr, [AsString(), Rename("Z")])
+
+    def test_reset_selected(self):
+        w = self.widget
+        model = w.domain_view.model()
+        sel_model = w.domain_view.selectionModel()
+
+        self.send_signal(self.iris)
+        model.setData(model.index(1, 0), [Rename("foo")], TransformRole)
+        model.setData(model.index(2, 0), [AsCategorical()], TransformRole)
+        model.setData(model.index(3, 0), [Rename("bar")], TransformRole)
+        w.commit()
+        out = self.get_output()
+        self.assertEqual([var.name for var in out.domain.attributes],
+                         ["sepal length", "foo", "petal length", "bar"])
+        self.assertIsInstance(out.domain[2], DiscreteVariable)
+
+        sel_model.select(model.index(0, 0), QItemSelectionModel.Select)
+        sel_model.select(model.index(2, 0), QItemSelectionModel.Select)
+        sel_model.select(model.index(3, 0), QItemSelectionModel.Select)
+        w.reset_selected()
+        w.commit()
+        out = self.get_output()
+        self.assertEqual([var.name for var in out.domain.attributes],
+                         ["sepal length", "foo", "petal length", "petal width"])
+        self.assertIsInstance(out.domain[2], ContinuousVariable)
+
+    @patch("Orange.widgets.data.oweditdomain.ReinterpretVariableEditor.set_data")
+    def test_selection_sets_data(self, set_data):
+        w = self.widget
+        model = w.domain_view.model()
+        sel_model = w.domain_view.selectionModel()
+        tr = (Rename("x"), )
+
+        iris = self.iris
+
+        self.send_signal(iris)
+        model.setData(model.index(1, 0), tr, TransformRole)
+
+        sel_model.select(model.index(1, 0), QItemSelectionModel.ClearAndSelect)
+        args, kwargs = set_data.call_args
+        self.assertEqual(len(args), 1)
+        self.assertEqual(len(args[0]), 1)
+        self.assertEqual(args[0][0].vtype.name, iris.domain[1].name)
+        self.assertEqual(kwargs["transforms"], [tr])
+
+        sel_model.select(model.index(2, 0), QItemSelectionModel.Select)
+        args, kwargs = set_data.call_args
+        self.assertEqual(len(args), 1)
+        self.assertEqual(len(args[0]), 2)
+        self.assertEqual(args[0][0].vtype.name, iris.domain[1].name)
+        self.assertEqual(args[0][1].vtype.name, iris.domain[2].name)
+        self.assertEqual(kwargs["transforms"], [tr, ()])
+
+    def test_selection_after_new_data(self):
+        w = self.widget
+        model = w.domain_view.model()
+        sel_model = w.domain_view.selectionModel()
+        iris = self.iris
+        attrs = iris.domain.attributes
+
+        self.send_signal(iris.transform(Domain(attrs[:3])))
+        sel_model.select(model.index(1, 0), QItemSelectionModel.ClearAndSelect)
+        sel_model.select(model.index(2, 0), QItemSelectionModel.Select)
+        # Select #1 and #2, out of attributes 0, 1, 2
+        self.assertEqual(w.selected_var_indices(), [1, 2])
+
+        # Send attributes 1, 2, 3; #0 and #1 must be selected
+        self.send_signal(iris.transform(Domain(attrs[1:])))
+        self.assertEqual(w.selected_var_indices(), [0, 1])
+
+        # Now send 0 and 2; only #1 (2) must be selected
+        self.send_signal(iris.transform(Domain([attrs[0], attrs[2]])))
+        self.assertEqual(w.selected_var_indices(), [1])
+
+        # Send 0 and 3, first must be selected by default
+        self.send_signal(iris.transform(Domain([attrs[0], attrs[3]])))
+        self.assertEqual(w.selected_var_indices(), [0])
+
+        # Send 1 and 2; first is selected by default
+        self.send_signal(iris.transform(Domain([attrs[1], attrs[2]])))
+        self.assertEqual(w.selected_var_indices(), [0])
 
     def test_hint_keeping(self):
         editor: ContinuousVariableEditor = self.widget.findChild(ContinuousVariableEditor)
@@ -768,28 +849,28 @@ class TestEditors(GuiTest):
 
     def test_reinterpret_editor(self):
         w = ReinterpretVariableEditor()
-        self.assertEqual(w.get_data(), (None, []))
+        self.assertEqual(w.get_data(), ((None, ), ([], )))
         data = self.DataVectors[0]
-        w.set_data(data, )
-        self.assertEqual(w.get_data(), (data.vtype, []))
-        w.set_data(data, [Rename("Z")])
-        self.assertEqual(w.get_data(), (data.vtype, [Rename("Z")]))
+        w.set_data((data, ))
+        self.assertEqual(w.get_data(), ((data.vtype, ), ([], )))
+        w.set_data((data, ), ([Rename("Z")], ))
+        self.assertEqual(w.get_data(), ((data.vtype, ), ([Rename("Z")], )))
 
         for vec, tr in product(self.DataVectors, self.ReinterpretTransforms.values()):
-            w.set_data(vec, [t() for t in tr])
+            w.set_data((vec, ), ([t() for t in tr], ))
             v, tr_ = w.get_data()
-            self.assertEqual(v, vec.vtype)
-            if not tr_:
-                self.assertEqual(tr, self.ReinterpretTransforms[type(v)])
+            self.assertEqual(*v, vec.vtype)
+            if not tr_[0]:
+                self.assertEqual(tr, self.ReinterpretTransforms[type(*v)])
             else:
-                self.assertListEqual(tr_, [t() for t in tr])
+                self.assertListEqual(*tr_, [t() for t in tr])
 
     def test_reinterpret_editor_simulate(self):
         w = ReinterpretVariableEditor()
-        tc = w.findChild(QComboBox, name="type-combo")
 
         def cb():
             var, tr = w.get_data()
+            var, tr = var[0], tr[0]
             type_ = tc.currentData()
             if type_ is not type(var):
                 self.assertEqual(
@@ -799,8 +880,170 @@ class TestEditors(GuiTest):
                 self.assertEqual(tr, [Rename("Z")])
 
         for vec in self.DataVectors:
-            w.set_data(vec, [Rename("Z")])
+            w.set_data((vec, ), ([Rename("Z")], ))
+            tc = w.layout().currentWidget().findChild(QComboBox,
+                                                      name="type-combo")
             simulate.combobox_run_through_all(tc, callback=cb)
+
+    def test_multiple_editor_init(self):
+        w = ReinterpretVariableEditor()
+        w.set_data(self.DataVectors, [()] * 4)
+        cw = w.layout().currentWidget()
+        tc = cw.findChild(QComboBox, name="type-combo")
+        self.assertIs(type(cw), BaseEditor)
+        self.assertEqual(tc.count(), 6)
+
+        w.set_data(self.DataVectors[:1], [()])
+        cw = w.layout().currentWidget()
+        tc = cw.findChild(QComboBox, name="type-combo")
+        self.assertIsNot(type(cw), BaseEditor)
+        self.assertEqual(tc.count(), 4)
+
+    def test_reinterpret_set_data_multiple_transforms(self):
+        w = ReinterpretVariableEditor()
+
+        w.set_data((Mock(), ) * 4,
+                   [[AsContinuous()] for _ in range(4)])
+        cw = w.layout().currentWidget()
+        self.assertIs(type(cw), BaseEditor)
+        tc = cw.findChild(QComboBox, name="type-combo")
+
+        self.assertIsInstance(
+            w.__dict__["_ReinterpretVariableEditor__transform"],
+            AsContinuous)
+        self.assertEqual(tc.currentData(), Real)
+
+        w.set_data((Mock(), ) * 3,
+                   [[AsContinuous(), Rename("x")],
+                    [AsContinuous(), Rename("y")],
+                    [AsContinuous()]
+                    ]
+                   )
+        self.assertIsInstance(
+            w.__dict__["_ReinterpretVariableEditor__transform"],
+            AsContinuous)
+        self.assertEqual(tc.currentData(), Real)
+
+        w.set_data((Mock(), ) * 3,
+                   [[AsContinuous(), Rename("x")],
+                    [Rename("y")],
+                    [AsContinuous()]
+                    ]
+                   )
+        self.assertIsNone(w.__dict__["_ReinterpretVariableEditor__transform"])
+        self.assertIsNone(tc.currentData())
+
+        w.set_data((Mock(), ) * 3,
+                   [[AsContinuous(), Rename("x")],
+                    [],
+                    [AsContinuous()]
+                    ]
+                   )
+        self.assertIsNone(w.__dict__["_ReinterpretVariableEditor__transform"])
+        self.assertIsNone(tc.currentData())
+
+        w.set_data((Mock(),) * 3,
+                   [[AsContinuous(), Rename("x")],
+                    [AsTime()],
+                    [AsContinuous()]
+                    ]
+                   )
+        self.assertIsNone(w.__dict__["_ReinterpretVariableEditor__transform"])
+        self.assertIsNone(tc.currentData())
+
+    def test_reinterpret_multiple(self):
+        def cb():
+            for var, tr, v in zip(*w.get_data(), "SPQR"):
+                type_ = tc.currentData()
+                if type_ is not type(var) \
+                        and type_ not in (RestoreOriginal, None):
+                    self.assertSequenceEqual(
+                        tr, [t() for t in self.ReinterpretTransforms[type_][:1]]
+                            + [Rename(v)],
+                        f"type: {type_}"
+                    )
+                else:
+                    self.assertSequenceEqual(tr, (Rename(v), ), f"type: {type_}")
+
+        w = ReinterpretVariableEditor()
+        w.set_data(self.DataVectors, tuple([Rename(c)] for c in "SPQR"))
+        tc = w.layout().currentWidget().findChild(QComboBox, name="type-combo")
+        simulate.combobox_run_through_all(tc, callback=cb)
+
+    def test_reinterpret_remove_specific(self):
+        def cb():
+            for var, tr, v in zip(*w.get_data(), "SPQR"):
+                type_ = tc.currentData()
+                if type_ is not type(var) \
+                        and type_ not in (RestoreOriginal, None):
+                    self.assertSequenceEqual(
+                        tr, [t() for t in self.ReinterpretTransforms[type_][:1]]
+                            + [Rename(v)],
+                        f"type: {type_}"
+                    )
+                else:
+                    self.assertSequenceEqual(tr, (Rename(v), ), f"type: {type_}")
+
+        w = ReinterpretVariableEditor()
+        transforms = (
+            [CategoriesMapping([("a", "b")])],
+            [AsCategorical(), Rename("xx")],
+            [AsCategorical(), CategoriesMapping([("c", "d")])])
+        w.set_data(self.DataVectors[:3], transforms)
+        tc = w.layout().currentWidget().findChild(QComboBox, name="type-combo")
+
+        tc.setCurrentIndex(0)  # Categorical
+        tc.activated[int].emit(0)
+        self.assertSequenceEqual(w.get_data()[1], transforms)
+
+        tc.setCurrentIndex(1)  # Numeric
+        tc.activated[int].emit(1)
+        self.assertEqual(w.get_data()[1],
+                         [[AsContinuous()],
+                          [Rename("xx")],
+                          [AsContinuous()]])
+
+        tc.setCurrentIndex(4)  # Restore original
+        tc.activated[int].emit(4)
+        self.assertEqual(w.get_data()[1],
+                         [[CategoriesMapping([("a", "b")])],
+                          [Rename("xx")],
+                          []])
+
+        tc.setCurrentIndex(5)  # None
+        tc.activated[int].emit(5)
+        self.assertSequenceEqual(w.get_data()[1], transforms)
+
+        # We don't have this situation, but simulate a situation in which the
+        # target type has the same (specific) transformation
+        with patch.dict(w.Specific, {Real: (CategoriesMapping, )}):
+            tc.setCurrentIndex(1)  # Numeric
+            tc.activated[int].emit(1)
+            self.assertSequenceEqual(
+                w.get_data()[1],
+                ([AsContinuous(), CategoriesMapping([("a", "b")])],
+                 [Rename("xx")],
+                 [AsContinuous(), CategoriesMapping([("c", "d")])]
+                 )
+            )
+
+    def test_reinterpret_multiple_keep_and_restore(self):
+        w = ReinterpretVariableEditor()
+        transforms = tuple([AsString(), Rename(c)] for c in "SPQR")
+        w.set_data(self.DataVectors, tuple([AsString(), Rename(c)] for c in "SPQR"))
+        tc = w.layout().currentWidget().findChild(QComboBox, name="type-combo")
+
+        tc.setCurrentIndex(4)  # Restore original
+        tc.activated[int].emit(4)
+        self.assertSequenceEqual(
+            [list(tr) for tr in w.get_data()[1]],
+            [[Rename(c)] for c in "SPQR"])
+
+        tc.setCurrentIndex(5)  # Keep
+        tc.activated[int].emit(5)
+        self.assertSequenceEqual(
+            [list(tr) for tr in w.get_data()[1]],
+            transforms)
 
     def test_unlink(self):
         w = ContinuousVariableEditor()

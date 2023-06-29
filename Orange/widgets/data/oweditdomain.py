@@ -12,7 +12,7 @@ from collections import namedtuple, Counter
 from functools import singledispatch, partial
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
-    FrozenSet, Type, Callable, TypeVar, Mapping, Hashable, cast
+    FrozenSet, Type, Callable, TypeVar, Mapping, Hashable, cast, Set
 )
 
 import numpy as np
@@ -31,7 +31,7 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtCore import (
     Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex, QRect,
-    QPoint,
+    QPoint, QItemSelectionModel
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
@@ -136,6 +136,10 @@ class Time(
     ])): pass
 
 
+class RestoreOriginal:
+    # Indicator type used only for UserRole in ComboBox
+    pass
+
 Variable = Union[Categorical, Real, Time, String]
 VariableTypes = (Categorical, Real, Time, String)
 
@@ -200,8 +204,6 @@ class StrpTime(_DataType, namedtuple("StrpTime", ["label", "formats", "have_date
 
 Transform = Union[Rename, CategoriesMapping, Annotate, Unlink, StrpTime]
 TransformTypes = (Rename, CategoriesMapping, Annotate, Unlink, StrpTime)
-
-CategoricalTransformTypes = (CategoriesMapping, Unlink)
 
 
 # Reinterpret vector transformations.
@@ -332,6 +334,14 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
 ReinterpretTransform = Union[AsCategorical, AsContinuous, AsTime, AsString]
 ReinterpretTransformTypes = (AsCategorical, AsContinuous, AsTime, AsString)
 
+TypeTransformers = {
+    Real: AsContinuous,
+    Categorical: AsCategorical,
+    Time: AsTime,
+    String: AsString,
+    RestoreOriginal: RestoreOriginal
+}
+
 
 def deconstruct(obj):
     # type: (tuple) -> Tuple[str, Tuple[Any, ...]]
@@ -368,8 +378,8 @@ def reconstruct(tname, args):
     """
     try:
         constructor = globals()[tname]
-    except KeyError:
-        raise NameError(tname)
+    except KeyError as exc:
+        raise NameError(tname) from exc
     return constructor(*args)
 
 
@@ -480,26 +490,33 @@ class DictItemsModel(QStandardItemModel):
         return rval
 
 
-class VariableEditor(QWidget):
+class BaseEditor(QWidget):
+    variable_changed = Signal()
+
+    def __init__(self, parent=None, **kwargs):
+        super().__init__(parent, **kwargs)
+
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        self.form = QFormLayout(
+            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
+            objectName="editor-form-layout"
+        )
+        layout.addLayout(self.form)
+
+
+class VariableEditor(BaseEditor):
     """
     An editor widget for a variable.
 
     Can edit the variable name, and its attributes dictionary.
     """
-    variable_changed = Signal()
-
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         self.var = None  # type: Optional[Variable]
 
-        layout = QVBoxLayout()
-        self.setLayout(layout)
-
-        self.form = form = QFormLayout(
-            fieldGrowthPolicy=QFormLayout.AllNonFixedFieldsGrow,
-            objectName="editor-form-layout"
-        )
-        layout.addLayout(self.form)
+        form = self.form
 
         self.name_edit = QLineEdit(objectName="name-editor")
         self.name_edit.editingFinished.connect(
@@ -1310,7 +1327,7 @@ class DiscreteVariableEditor(VariableEditor):
                         SourceNameRole: ci
                     }
                 else:
-                    assert False, "invalid mapping: {!r}".format(tr.mapping)
+                    assert False, f"invalid mapping: {tr.mapping}"
                 items.append(item)
         elif var is not None:
             items = [
@@ -1440,8 +1457,7 @@ class DiscreteVariableEditor(VariableEditor):
                 # new level -> remove it
                 model.removeRow(index.row())
             else:
-                assert False, "invalid state '{}' for {}" \
-                    .format(state, index.row())
+                assert False, f"invalid state '{state}' for {index.row()}"
 
     def _add_category(self):
         """
@@ -1616,8 +1632,7 @@ class VariableEditDelegate(QStyledItemDelegate):
             text = var.name
             for tr in transform:
                 if isinstance(tr, Rename):
-                    text = ("{} \N{RIGHTWARDS ARROW} {}"
-                            .format(var.name, tr.name))
+                    text = f"{var.name} \N{RIGHTWARDS ARROW} {tr.name}"
             for tr in transform:
                 if isinstance(tr, ReinterpretTransformTypes):
                     text += f" (reinterpreted as " \
@@ -1703,21 +1718,31 @@ class ReinterpretVariableEditor(VariableEditor):
         type(None): -1,
     }
 
+    _editors_by_transform = {
+        AsCategorical: 0,
+        AsContinuous: 1,
+        AsString: 2,
+        AsTime: 3,
+        type(None): 5
+    }
+
     def __init__(self, parent=None, **kwargs):
-        # Explicitly skip VariableEditor's __init__, this is ugly but we have
+        # Explicitly skip BaseEditor's __init__, this is ugly but we have
         # a completely different layout/logic as a compound editor (should
-        # really not subclass VariableEditor).
-        super(VariableEditor, self).__init__(parent, **kwargs)  # pylint: disable=bad-super-call
+        # really not subclass BaseEditor).
+        super(BaseEditor, self).__init__(parent, **kwargs)  # pylint: disable=bad-super-call
+        self.variables = None  # type: Optional[Tuple[Variable]]
         self.var = None  # type: Optional[Variable]
         self.__transform = None  # type: Optional[ReinterpretTransform]
-        self.__data = None  # type: Optional[DataVector]
+        self.__transforms = ()  # type: Sequence[Sequence[Transform]]
+        self.__data = None  # type: Union[None, DataVector, Tuple[DataVector]]
         #: Stored transform state indexed by variable. Used to preserve state
         #: between type switches.
         self.__history = {}  # type: Dict[Variable, List[Transform]]
 
         self.setLayout(QStackedLayout())
 
-        def decorate(editor: VariableEditor) -> VariableEditor:
+        def decorate(editor: BaseEditor) -> VariableEditor:
             """insert an type combo box into a `editor`'s layout."""
             form = editor.layout().itemAt(0)
             assert isinstance(form, QFormLayout)
@@ -1726,7 +1751,12 @@ class ReinterpretVariableEditor(VariableEditor):
             typecb.addItem(variable_icon(Real), "Numeric", Real)
             typecb.addItem(variable_icon(String), "Text", String)
             typecb.addItem(variable_icon(Time), "Time", Time)
-            typecb.activated[int].connect(self.__reinterpret_activated)
+            if type(editor) is BaseEditor:  # pylint: disable=unidiomatic-typecheck
+                typecb.addItem("(Restore original)", RestoreOriginal)
+                typecb.addItem("")
+                typecb.activated[int].connect(self.__reinterpret_activated_multi)
+            else:
+                typecb.activated[int].connect(self.__reinterpret_activated_single)
             form.insertRow(1, "Type:", typecb)
             # Insert the typecb after name edit in the focus chain
             name_edit = editor.findChild(QLineEdit, )
@@ -1740,16 +1770,32 @@ class ReinterpretVariableEditor(VariableEditor):
         cedit = decorate(ContinuousVariableEditor())
         tedit = decorate(TimeVariableEditor())
         sedit = decorate(VariableEditor())
+        medit = decorate(BaseEditor())
 
-        for ed in [dedit, cedit, tedit, sedit]:
+        for ed in [dedit, cedit, tedit, sedit, medit]:
             ed.variable_changed.connect(self.variable_changed)
 
         self.layout().addWidget(dedit)
         self.layout().addWidget(cedit)
         self.layout().addWidget(sedit)
         self.layout().addWidget(tedit)
+        self.layout().addWidget(medit)
 
-    def set_data(self, data, transform=()):  # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ,arguments-renamed
+    def set_data(self,
+                 data: Sequence[DataVector],
+                 transforms: Sequence[Sequence[Transform]] = None) -> None:
+        if transforms is None:
+            transforms = ([], ) * len(data)
+        else:
+            assert len(data) == len(transforms)
+        if len(data) > 1:
+            self._set_data_multi(data, transforms)
+        else:
+            self._set_data_single(data[0] if data else None,
+                                  transforms[0] if transforms else None)
+
+    def _set_data_single(self, data, transform=()):  # pylint: disable=arguments-differ
         # type: (Optional[DataVector], Sequence[Transform]) -> None
         """
         Set the editor data.
@@ -1772,6 +1818,7 @@ class ReinterpretVariableEditor(VariableEditor):
                            for t in transform)
         self.__transform = type_transform
         self.__data = data
+        self.variables = None
         self.var = data.vtype if data is not None else None
 
         if type_transform is not None and data is not None:
@@ -1793,26 +1840,104 @@ class ReinterpretVariableEditor(VariableEditor):
             cb = w.findChild(QComboBox, "type-combo")
             cb.setCurrentIndex(index)
 
+    def _set_data_multi(self,
+                 data: Sequence[DataVector],
+                 transforms: Sequence[Sequence[Transform]] = ()) -> None:
+        assert len(data) == len(transforms)
+        self.__data = data
+        self.var = None
+        self.variables = tuple(d.vtype for d in self.__data)
+
+        self.__transforms = transforms
+        type_transforms: Set[Type[Optional[ReinterpretTransform]]] = {
+            type(
+                transform[0]
+                if transform and isinstance(transform[0], ReinterpretTransformTypes)
+                else None)
+            for transform in transforms
+        }
+        if len(type_transforms) == 1:
+            self.__transform = type_transforms.pop()()
+        else:
+            self.__transform = None
+
+        self.layout().setCurrentIndex(4)
+        w = self.layout().currentWidget()
+        assert isinstance(w, BaseEditor)
+
+        cb = w.findChild(QComboBox, "type-combo")
+        index = self._editors_by_transform[type(self.__transform)]
+        cb.setCurrentIndex(index)
+
     def get_data(self):
+        if self.variables is None:
+            return self._get_data_single()
+        else:
+            return self._get_data_multi()
+
+    def _get_data_single(self):
         # type: () -> Tuple[Variable, Sequence[Transform]]
         editor = self.layout().currentWidget()  # type: VariableEditor
         var, tr = editor.get_data()
-        if type(var) != type(self.var):  # pylint: disable=unidiomatic-typecheck
+        if type(var) is not type(self.var):
             assert self.__transform is not None
             var = self.var
             tr = [self.__transform, *tr]
-        return var, tr
+        return (var, ), (tr, )
 
-    def __reinterpret_activated(self, index):
+    def _get_data_multi(self):
+        # type: () -> Tuple[Variable, Sequence[Transform]]
+        if self.__transform is None:
+            transforms = self.__transforms
+        else:
+            rev_transforms = {v: k for k, v in TypeTransformers.items()}
+            target = rev_transforms[type(self.__transform)]
+            if target in (RestoreOriginal, None):
+                gen_target_spec = None
+            else:
+                gen_target_spec = self.Specific.get(target, ())
+
+            transforms = []
+            for var, tr in zip(self.variables, self.__transforms):
+                if tr and isinstance(tr[0], ReinterpretTransformTypes):
+                    source_type = rev_transforms[type(tr[0])]
+                else:
+                    source_type = type(var)
+                source_spec = self.Specific.get(source_type)
+                if gen_target_spec is None:
+                    target_spec = self.Specific.get(type(var))
+                else:
+                    target_spec = gen_target_spec
+
+                # Remove type reinterpretation and
+                # transformation specific to source type that aren't
+                # applicable to destination type
+                tr = [
+                    t for t in tr
+                    if not (
+                        isinstance(t, ReinterpretTransformTypes)
+                        or (source_spec and isinstance(t, source_spec)
+                            and not (target_spec and isinstance(t, target_spec))
+                            )
+                    )
+                ]
+                # pylint: disable=unidiomatic-typecheck
+                if target is not RestoreOriginal and type(var) is not target:
+                    tr = [self.__transform, *tr]
+                transforms.append(tr)
+        return self.variables, transforms
+
+    Specific = {
+        Categorical: (CategoriesMapping, )
+    }
+
+    def __reinterpret_activated_single(self, index):
         layout = self.layout()
         assert isinstance(layout, QStackedLayout)
         if index == layout.currentIndex():
             return
         current = layout.currentWidget()
         assert isinstance(current, VariableEditor)
-        Specific = {
-            Categorical: CategoricalTransformTypes
-        }
         _var, _tr = current.get_data()
         if _var is not None:
             self.__history[_var] = _tr
@@ -1820,7 +1945,7 @@ class ReinterpretVariableEditor(VariableEditor):
         var = self.var
         transform = self.__transform
         # take/preserve the general transforms that apply to all types
-        specific = Specific.get(type(var), ())
+        specific = self.Specific.get(type(var), ())
         _tr = [t for t in _tr if not isinstance(t, specific)]
 
         layout.setCurrentIndex(index)
@@ -1831,17 +1956,9 @@ class ReinterpretVariableEditor(VariableEditor):
         target = cb.itemData(index, Qt.UserRole)
         assert issubclass(target, VariableTypes)
         if not isinstance(var, target):
-            if target == Real:
-                transform = AsContinuous()
-            elif target == Categorical:
-                transform = AsCategorical()
-            elif target == Time:
-                transform = AsTime()
-            elif target == String:
-                transform = AsString()
+            transform = TypeTransformers[target]()
         else:
             transform = None
-            var = self.var
 
         self.__transform = transform
         data = None
@@ -1854,7 +1971,7 @@ class ReinterpretVariableEditor(VariableEditor):
         else:
             tr = []
         # type specific transform
-        specific = Specific.get(type(var), ())
+        specific = self.Specific.get(type(var), ())
         # merge tr and _tr
         tr = _tr + [t for t in tr if isinstance(t, specific)]
         with disconnected(
@@ -1867,6 +1984,29 @@ class ReinterpretVariableEditor(VariableEditor):
             else:
                 w.set_data(var, transform=tr)
         self.variable_changed.emit()
+
+    def __reinterpret_activated_multi(self, index):
+        layout = self.layout()
+        assert isinstance(layout, QStackedLayout)
+        w = layout.currentWidget()
+        cb = w.findChild(QComboBox, "type-combo")
+        target = cb.itemData(index, Qt.UserRole)
+        if target is None:
+            transform = target
+        else:
+            transform = TypeTransformers[target]()
+        if transform == self.__transform:
+            return
+        self.__transform = transform
+        self.variable_changed.emit()
+
+    def clear(self):
+        self.variables = self.var = None
+        layout = self.layout()
+        assert isinstance(layout, QStackedLayout)
+        w = layout.currentWidget()
+        if isinstance(w, VariableEditor):
+            w.clear()
 
     def set_merge_context(self, merge_context):
         self.disc_edit.merge_dialog_settings = merge_context
@@ -1903,8 +2043,7 @@ class OWEditDomain(widget.OWWidget):
         super().__init__()
         self.data = None  # type: Optional[Orange.data.Table]
         #: The current selected variable index
-        self.selected_index = -1
-        self._selected_item = None
+        self._selected_items = []
         self._invalidated = False
         self.typeindex = 0
 
@@ -1913,7 +2052,7 @@ class OWEditDomain(widget.OWWidget):
 
         self.variables_model = VariableListModel(parent=self)
         self.variables_view = self.domain_view = QListView(
-            selectionMode=QListView.SingleSelection,
+            selectionMode=QListView.ExtendedSelection,
             uniformItemSizes=True,
         )
         self.variables_view.setItemDelegate(VariableEditDelegate(self))
@@ -1934,21 +2073,21 @@ class OWEditDomain(widget.OWWidget):
         gui.rubber(self.buttonsArea)
 
         bbox = gui.hBox(self.buttonsArea)
-        breset_all = gui.button(
+        gui.button(
             bbox, self, "Reset All",
             objectName="button-reset-all",
             toolTip="Reset all variables to their input state.",
             autoDefault=False,
             callback=self.reset_all
         )
-        breset = gui.button(
+        gui.button(
             bbox, self, "Reset Selected",
             objectName="button-reset",
             toolTip="Rest selected variable to its input state.",
             autoDefault=False,
             callback=self.reset_selected
         )
-        bapply = gui.button(
+        gui.button(
             bbox, self, "Apply",
             objectName="button-apply",
             toolTip="Apply changes and commit data on output.",
@@ -1962,6 +2101,11 @@ class OWEditDomain(widget.OWWidget):
     @Inputs.data
     def set_data(self, data):
         """Set input dataset."""
+        if data is not None:
+            self._selected_items = [
+                index.data()
+                for index in self.variables_view.selectedIndexes()]
+
         self.clear()
         self.data = data
 
@@ -1980,26 +2124,25 @@ class OWEditDomain(widget.OWWidget):
         self.data = None
         self.variables_model.clear()
         self.clear_editor()
-        assert self.selected_index == -1
-        self.selected_index = -1
 
         self._merge_dialog_settings = {}
 
     def reset_selected(self):
         """Reset the currently selected variable to its original state."""
-        ind = self.selected_var_index()
-        if ind >= 0:
-            model = self.variables_model
+        model = self.variables_model
+        editor = self._editor
+        modified = []
+        for ind in self.selected_var_indices():
             midx = model.index(ind)
-            var = midx.data(Qt.EditRole)
-            tr = midx.data(TransformRole)
-            if not tr:
-                return  # nothing to reset
-            editor = self._editor
+            if midx.data(TransformRole):
+                model.setData(midx, [], TransformRole)
+                var = midx.data(Qt.EditRole)
+                self._store_transform(var, [])
+                modified.append(var)
+        if modified:
             with disconnected(editor.variable_changed,
                               self._on_variable_changed):
-                model.setData(midx, [], TransformRole)
-                editor.set_data(var, transform=[])
+                self._editor.set_data(modified)
             self._invalidate()
 
     def reset_all(self):
@@ -2009,16 +2152,12 @@ class OWEditDomain(widget.OWWidget):
             for i in range(model.rowCount()):
                 midx = model.index(i)
                 model.setData(midx, [], TransformRole)
-            index = self.selected_var_index()
-            if index >= 0:
-                self.open_editor(index)
+            self.open_editor()
             self._invalidate()
 
-    def selected_var_index(self):
-        """Return the current selected variable index."""
-        rows = self.variables_view.selectedIndexes()
-        assert len(rows) <= 1
-        return rows[0].row() if rows else -1
+    def selected_var_indices(self):
+        """Return the current selected variable indices."""
+        return [index.row() for index in self.variables_view.selectedIndexes()]
 
     def setup_model(self, data: Orange.data.Table):
         model = self.variables_model
@@ -2041,7 +2180,7 @@ class OWEditDomain(widget.OWWidget):
         for i, d in enumerate(columns):
             model.setData(model.index(i), d, Qt.EditRole)
 
-    def _restore(self, ):
+    def _restore(self):
         """
         Restore the edit transform from saved state.
         """
@@ -2063,40 +2202,38 @@ class OWEditDomain(widget.OWWidget):
             del hints[key]  # pylint: disable=unsupported-delete-operation
 
         # Restore the current variable selection
-        i = -1
-        if self._selected_item is not None:
-            for i, vec in enumerate(model):
-                if vec.vtype.name_type() == self._selected_item:
-                    break
-            else:
-                self._selected_item = None
-        if i == -1 and model.rowCount():
-            i = 0
+        selected_rows = [i for i, vec in enumerate(model)
+                         if vec.vtype.name_type()[0] in self._selected_items]
+        if not selected_rows and model.rowCount():
+            selected_rows = [0]
+        itemmodels.select_rows(self.variables_view, selected_rows)
 
-        if i != -1:
-            itemmodels.select_row(self.variables_view, i)
-
-    def _on_selection_changed(self):
-        self.selected_index = self.selected_var_index()
-        if self.selected_index != -1:
-            self._selected_item = self.variables_model[self.selected_index].vtype.name_type()
-        else:
-            self._selected_item = None
-        self.open_editor(self.selected_index)
-
-    def open_editor(self, index):
-        # type: (int) -> None
-        self.clear_editor()
-        model = self.variables_model
-        if not 0 <= index < model.rowCount():
+    def _on_selection_changed(self, _, deselected):
+        # If the user deselected the last item, select it back with disabled
+        # signals, so nothing happens
+        if not self.selected_var_indices():
+            sel_model = self.variables_view.selectionModel()
+            with disconnected(sel_model.selectionChanged,
+                              self._on_selection_changed):
+                sel_model.select(deselected, QItemSelectionModel.Select)
             return
-        idx = model.index(index, 0)
-        vector = model.data(idx, Qt.EditRole)
-        tr = model.data(idx, TransformRole)
-        if tr is None:
-            tr = []
+
+        self.open_editor()
+
+    def open_editor(self):
+        self.clear_editor()
+
+        indices = self.selected_var_indices()
+        if not indices:
+            return
+
+        model = self.variables_model
+
+        vectors = [model.index(idx, 0).data(Qt.EditRole) for idx in indices]
+        transforms = [model.index(idx, 0).data(TransformRole) or ()
+                      for idx in indices]
         editor = self._editor
-        editor.set_data(vector, transform=tr)
+        editor.set_data(vectors, transforms=transforms)
         editor.variable_changed.connect(
             self._on_variable_changed, Qt.UniqueConnection
         )
@@ -2107,19 +2244,19 @@ class OWEditDomain(widget.OWWidget):
             current.variable_changed.disconnect(self._on_variable_changed)
         except TypeError:
             pass
-        current.set_data(None)
-        current.layout().currentWidget().clear()
+        current.set_data((), ())
+        current.clear()
 
     @Slot()
     def _on_variable_changed(self):
         """User edited the current variable in editor."""
-        assert 0 <= self.selected_index <= len(self.variables_model)
         editor = self._editor
-        var, transform = editor.get_data()
         model = self.variables_model
-        midx = model.index(self.selected_index, 0)
-        model.setData(midx, transform, TransformRole)
-        self._store_transform(var, transform)
+        for idx, var, transform in zip(self.selected_var_indices(),
+                                            *editor.get_data()):
+            midx = model.index(idx, 0)
+            model.setData(midx, transform, TransformRole)
+            self._store_transform(var, transform)
         self._invalidate()
 
     def _store_transform(self, var, transform, deconvar=None):
@@ -2143,7 +2280,7 @@ class OWEditDomain(widget.OWWidget):
                 tr.append(reconstruct(*t))
             except (NameError, TypeError) as err:
                 warnings.warn(
-                    "Failed to restore transform: {}, {!r}".format(t, err),
+                    f"Failed to restore transform: {t}, {err}",
                     UserWarning, stacklevel=2
                 )
         if tr:
@@ -2262,7 +2399,7 @@ class OWEditDomain(widget.OWWidget):
                     parts.append(report_transform(vector.vtype, trs))
             if parts:
                 html = ("<ul>" +
-                        "".join(map("<li>{}</li>".format, parts)) +
+                        "".join(f"<li>{part}</li>" for part in parts) +
                         "</ul>")
             else:
                 html = "No changes"
@@ -2272,7 +2409,6 @@ class OWEditDomain(widget.OWWidget):
 
     @classmethod
     def migrate_context(cls, context, version):
-        # pylint: disable=bad-continuation
         if version is None or version <= 1:
             hints_ = context.values.get("domain_change_hints", ({}, -2))[0]
             store = []
@@ -2414,13 +2550,13 @@ def report_transform(var, trs):
         return ReinterpretTypeCode.get(type(value), "?")
 
     def strike(text):
-        return "<s>{}</s>".format(escape(text))
+        return f"<s>{escape(text)}</s>"
 
     def i(text):
-        return "<i>{}</i>".format(escape(text))
+        return f"<i>{escape(text)}</i>"
 
     def text(text):
-        return "<span>{}</span>".format(escape(text))
+        return f"<span>{escape(text)}</span>"
     assert trs
     rename = annotate = catmap = unlink = None
     reinterpret = None
@@ -2438,12 +2574,10 @@ def report_transform(var, trs):
             reinterpret = tr
 
     if reinterpret is not None:
-        header = "{} → ({}) {}".format(
-            var.name, type_char(reinterpret),
-            rename.name if rename is not None else var.name
-        )
+        header = f"{var.name} → ({type_char(reinterpret)}) " \
+                 f"{rename.name if rename is not None else var.name}"
     elif rename is not None:
-        header = "{} → {}".format(var.name, rename.name)
+        header = f"{var.name} → {rename.name}"
     else:
         header = var.name
     if unlink is not None:
@@ -2483,9 +2617,9 @@ def report_transform(var, trs):
                     i(name) + " : " + text(old[name]) + " → " + text(new[name])
                 )
 
-    html = ["<div style='font-weight: bold;'>{}</div>".format(header)]
+    html = [f"<div style='font-weight: bold;'>{header}</div>"]
     for title, contents in filter(None, [values_section, annotate_section]):
-        section_header = "<div>{}:</div>".format(title)
+        section_header = f"<div>{title}:</div>"
         section_contents = "<br/>\n".join(contents)
         html.append(section_header)
         html.append(
@@ -2531,7 +2665,7 @@ def _parse_attributes(mapping):
     # Use the same functionality that parses attributes
     # when reading text files
     return Orange.data.Flags([
-        "{}={}".format(*item) for item in mapping
+        f"{item[0]}={item[1]}" for item in mapping
     ]).attributes
 
 
