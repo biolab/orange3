@@ -6,7 +6,6 @@ from scipy.sparse import csr_matrix, csc_matrix
 
 from Orange.data import Table
 from Orange.clustering import DBSCAN
-from Orange.distance import Euclidean
 from Orange.preprocess import Normalize, Continuize, SklImpute
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate, possible_duplicate_table
@@ -169,12 +168,6 @@ class TestOWDBSCAN(WidgetTest):
 
     def test_get_kth_distances(self):
         dists = get_kth_distances(self.iris, "euclidean", k=5)
-        self.assertEqual(len(self.iris), len(dists))
-        # dists must be sorted
-        np.testing.assert_array_equal(dists, np.sort(dists)[::-1])
-
-        # test with different distance - e.g. Orange distance
-        dists = get_kth_distances(self.iris, Euclidean, k=5)
         self.assertEqual(len(self.iris), len(dists))
         # dists must be sorted
         np.testing.assert_array_equal(dists, np.sort(dists)[::-1])

@@ -354,7 +354,7 @@ cdef void contingency_tables(np.ndarray X,
 
 cdef tuple prepare(X, y, is_discrete, contingencies):
     X = np.array(X, dtype=np.float64, order='C')
-    is_discrete = np.asarray(is_discrete, dtype=np.bool8)
+    is_discrete = np.asarray(is_discrete, dtype=np.bool_)
     is_continuous = ~is_discrete
     if is_continuous.any():
         row_min = np.nanmin(X, 0)
