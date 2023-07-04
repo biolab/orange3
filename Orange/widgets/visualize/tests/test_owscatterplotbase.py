@@ -75,6 +75,10 @@ class MockWidget(OWWidget):
         else:
             return colorpalettes.DefaultDiscretePalette
 
+    def onDeleteWidget(self):
+        self.graph.clear()
+        super().onDeleteWidget()
+
 
 class TestOWScatterPlotBase(WidgetTest):
     def setUp(self):
