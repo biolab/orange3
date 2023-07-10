@@ -5,11 +5,8 @@ Orange Canvas Configuration
 import random
 import uuid
 import warnings
-
 import os
 import sys
-import itertools
-from distutils.version import LooseVersion
 
 from typing import Dict, Any, Optional, Iterable, List
 
@@ -112,7 +109,7 @@ class Config(config.Config):
 
         version = Config.ApplicationVersion
         if version:
-            version_parsed = LooseVersion(version)
+            version_parsed = pkg_resources.parse_version(version)
             version_comp = version_parsed.version
             version = ".".join(map(str, version_comp[:2]))
         size = 13

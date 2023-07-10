@@ -2,8 +2,8 @@ import sys
 import os
 import unittest
 from doctest import DocTestSuite, ELLIPSIS, NORMALIZE_WHITESPACE
-from distutils.version import LooseVersion
 
+import pkg_resources
 import numpy
 
 SKIP_DIRS = (
@@ -58,8 +58,8 @@ def suite(package):
     # numpy 1.14 changed array str/repr (NORMALIZE_WHITESPACE does not
     # handle this). When 1.15 is released update all docstrings and skip the
     # tests for < 1.14.
-    npversion = LooseVersion(numpy.__version__)
-    if npversion >= LooseVersion("1.14"):
+    npversion = pkg_resources.parse_version(numpy.__version__)
+    if npversion >= pkg_resources.parse_version("1.14"):
         def setUp(test):
             raise unittest.SkipTest("Skip doctest on numpy >= 1.14.0")
     else:
