@@ -21,6 +21,8 @@ __all__ = ["Continuize", "Discretize", "Impute", "RemoveNaNRows",
            "ProjectPCA", "ProjectCUR", "Scale", "RemoveSparse",
            "AdaptiveNormalize", "PreprocessorList"]
 
+from ..data.util import SubarrayComputeValue
+
 
 class Preprocess(Reprable):
     """
@@ -148,6 +150,53 @@ class Impute(Preprocess):
         return data.transform(domain)
 
 
+class SubarrayImpute:
+
+    def __init__(self, source_vars, vals):
+        self.source_vars = tuple(source_vars)
+        self.vals = np.array(vals)
+
+    def __call__(self, data, cols):
+        X = data.transform(Orange.data.Domain(self.source_vars[cols])).X
+        vals = self.vals[cols]
+
+        if sp.issparse(X):
+            X = sp.csc_matrix(X, copy=True)
+            # this is what scikit-learn does for sparse data
+            nans = np.isnan(X.data)
+            col_indexes = np.repeat(
+                np.arange(len(X.indptr) - 1, dtype=int), np.diff(X.indptr)
+            )
+            X.data[nans] = vals[col_indexes[nans]]
+            return X
+        else:
+            return np.where(np.isnan(X), vals.reshape(1, -1), X)
+
+
+def compress_replace_unknowns_to_subarray(domain):
+    source_vars = []
+    vals = []
+
+    for a in domain.attributes:
+        if isinstance(a.compute_value, impute.ReplaceUnknowns):
+            tr = a.compute_value
+            source_vars.append(tr.variable)
+            vals.append(tr.value)
+
+    st = SubarrayImpute(source_vars, vals)
+
+    new_atts = []
+    ind = 0
+    for a in domain.attributes:
+        if isinstance(a.compute_value, impute.ReplaceUnknowns):
+            cv = SubarrayComputeValue(st, ind, a.compute_value.variable)
+            a = a.copy(compute_value=cv)
+            ind += 1
+        new_atts.append(a)
+
+    return Orange.data.Domain(new_atts, domain.class_vars, domain.metas)
+
+
 class SklImpute(Preprocess):
     __wraps__ = SimpleImputer
 
@@ -176,6 +225,7 @@ class SklImpute(Preprocess):
                     if not np.isnan(value)]
         domain = Orange.data.Domain(features, data.domain.class_vars,
                                     data.domain.metas)
+        domain = compress_replace_unknowns_to_subarray(domain)
         new_data = data.transform(domain)
         return new_data
 
