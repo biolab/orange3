@@ -2,6 +2,7 @@ from functools import partial, reduce
 from itertools import count, groupby, repeat
 from xml.sax.saxutils import escape
 
+import dask
 import numpy as np
 from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
 
@@ -13,6 +14,7 @@ from orangewidget.utils.listview import ListViewSearch
 import pyqtgraph as pg
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
+from Orange.data.dask import DaskTable
 from Orange.preprocess.discretize import decimal_binnings, time_binnings, \
     short_time_units
 from Orange.statistics import distribution, contingency
@@ -27,6 +29,7 @@ from Orange.widgets.widget import Input, Output, OWWidget, Msg
 
 from Orange.widgets.visualize.owscatterplotgraph import \
     LegendItem as SPGLegendItem
+
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -444,6 +447,7 @@ class OWDistributions(OWWidget):
             self.var = varmodel[min(len(domain.class_vars), len(varmodel) - 1)]
         if domain is not None and domain.has_discrete_class:
             self.cvar = domain.class_var
+
         self.reset_select()
         self._user_var_bins.clear()
         self.openContext(domain)
@@ -539,12 +543,17 @@ class OWDistributions(OWWidget):
             return
 
         column = self.data.get_column(self.var)
+        if isinstance(self.data, DaskTable):
+            column = dask.compute(column)[0]
+
         valid_mask = np.isfinite(column)
         if not np.any(valid_mask):
             self.Error.no_defined_values_var(self.var.name)
             return
         if self.cvar:
             ccolumn = self.data.get_column(self.cvar)
+            if isinstance(self.data, DaskTable):
+                ccolumn = dask.compute(ccolumn)[0]
             valid_mask *= np.isfinite(ccolumn)
             if not np.any(valid_mask):
                 self.Error.no_defined_values_pair(self.var.name, self.cvar.name)
@@ -882,6 +891,9 @@ class OWDistributions(OWWidget):
         if self.is_valid and self.var.is_continuous:
             # binning is computed on valid var data, ignoring any cvar nans
             column = self.data.get_column(self.var)
+            if isinstance(self.data, DaskTable):
+                column = dask.compute(column)[0]
+
             if np.any(np.isfinite(column)):
                 if self.var.is_time:
                     self.binnings = time_binnings(column, min_unique=5)
