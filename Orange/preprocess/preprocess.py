@@ -158,21 +158,18 @@ class SklImpute(Preprocess):
         if isinstance(data, SqlTable):
             return Impute()(data)
         imputer = SimpleImputer(strategy=self.strategy)
-        X = imputer.fit_transform(data.X)
+        imputer.fit(data.X)
         # Create new variables with appropriate `compute_value`, but
         # drop the ones which do not have valid `imputer.statistics_`
         # (i.e. all NaN columns). `sklearn.preprocessing.Imputer` already
         # drops them from the transformed X.
-        features = [impute.Average()(data, var, value)
+        features = [var.copy(compute_value=impute.ReplaceUnknowns(var, value))
                     for var, value in zip(data.domain.attributes,
                                           imputer.statistics_)
                     if not np.isnan(value)]
-        assert X.shape[1] == len(features)
         domain = Orange.data.Domain(features, data.domain.class_vars,
                                     data.domain.metas)
         new_data = data.transform(domain)
-        with new_data.unlocked(new_data.X):
-            new_data.X = X
         return new_data
 
 
