@@ -42,7 +42,7 @@ class _ArrayConversionDask(_ArrayConversion):
     def join_columns(self, data):
         if self.is_dask:
             return dask.array.hstack(data)
-        return super().join_columns(self, data)
+        return super().join_columns(data)
 
 
 class _FromTableConversionDask(_FromTableConversion):
