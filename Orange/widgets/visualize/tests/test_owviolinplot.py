@@ -10,6 +10,7 @@ from AnyQt.QtGui import QFont
 from pyqtgraph import ViewBox
 
 from Orange.data import Table
+from Orange.tests.test_dasktable import temp_dasktable
 from Orange.widgets.tests.base import datasets, simulate, \
     WidgetOutputsTestMixin, WidgetTest
 from Orange.widgets.visualize.owviolinplot import OWViolinPlot, \
@@ -34,6 +35,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         cls.signal_name = OWViolinPlot.Inputs.data
         cls.signal_data = cls.data
         cls.housing = Table("housing")
+        cls.zoo = Table("zoo")
 
     def setUp(self):
         self.widget = self.create_widget(OWViolinPlot)
@@ -50,8 +52,7 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
             simulate.combobox_activate_item(kernel_combo, kernel)
 
     def test_no_cont_features(self):
-        data = Table("zoo")
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, self.zoo)
         self.assertTrue(self.widget.Error.no_cont_features.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
         self.assertFalse(self.widget.Error.no_cont_features.is_shown())
@@ -390,6 +391,27 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
             if model.data(idx) == value:
                 list_.selectionModel().setCurrentIndex(
                     idx, QItemSelectionModel.ClearAndSelect)
+
+
+class TestOWViolinPlotWithDask(TestOWViolinPlot):
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.data = temp_dasktable("iris")
+        cls.signal_data = cls.data
+        cls.housing = temp_dasktable("housing")
+        cls.zoo = temp_dasktable("zoo")
+
+    def test_datasets(self):
+        self.widget.controls.show_strip_plot.setChecked(True)
+        self.widget.controls.show_rug_plot.setChecked(True)
+        for ds in datasets.datasets():
+            ds = temp_dasktable(ds)
+            self.send_signal(self.widget.Inputs.data, ds)
+            for i in range(3):
+                cb = self.widget.controls.scale_index
+                simulate.combobox_activate_index(cb, i)
 
 
 if __name__ == "__main__":
