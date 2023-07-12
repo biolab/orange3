@@ -11,6 +11,7 @@ from AnyQt.QtWidgets import QCheckBox
 from orangewidget.utils.combobox import qcombobox_emit_activated
 
 from Orange.data import Table, Domain, DiscreteVariable
+from Orange.tests.test_dasktable import temp_dasktable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 from Orange.widgets.utils.itemmodels import DomainModel
@@ -21,6 +22,7 @@ class TestOWDistributions(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWDistributions)  #: OWDistributions
         self.iris = Table("iris")
+        self.heart_disease = Table("heart_disease")
 
     def _set_cvar(self, cvar):
         combo = self.widget.controls.cvar
@@ -526,7 +528,7 @@ class TestOWDistributions(WidgetTest):
         widget.send_report()
 
     def test_sort_by_freq_no_split(self):
-        data = Table("heart_disease")
+        data = self.heart_disease
         domain = data.domain
         sort_by_freq = self.widget.controls.sort_by_freq
 
@@ -549,7 +551,7 @@ class TestOWDistributions(WidgetTest):
         self.assertEqual(out[1][1], 97)
 
     def test_sort_by_freq_split(self):
-        data = Table("heart_disease")
+        data = self.heart_disease
         domain = data.domain
         sort_by_freq = self.widget.controls.sort_by_freq
 
@@ -574,6 +576,14 @@ class TestOWDistributions(WidgetTest):
         self.assertEqual(out[4][0], "female")
         self.assertEqual(out[4][1], "left vent hypertrophy")
         self.assertEqual(out[4][2], 45)
+
+
+class TestOWDistributionsWithDask(TestOWDistributions):
+
+    def setUp(self):
+        self.widget = self.create_widget(OWDistributions)
+        self.iris = temp_dasktable("iris")
+        self.heart_disease = temp_dasktable("heart_disease")
 
 
 if __name__ == "__main__":
