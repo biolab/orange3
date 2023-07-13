@@ -79,7 +79,7 @@ def find_threshold_entropy(const double[:] x, const double[:] y,
             curr_y = <int>y[idx[i]]
             distr[curr_y] -= 1
             distr[n_classes + curr_y] += 1
-            if curr_y != y[idx[i + 1]] and x[idx[i]] != x[idx[i + 1]]:
+            if x[idx[i]] != x[idx[i + 1]]:
                 entro = (i + 1) * log(i + 1) + (N - i - 1) * log(N - i - 1)
                 for j in range(2 * n_classes):
                     if distr[j]:
