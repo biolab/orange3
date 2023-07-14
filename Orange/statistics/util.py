@@ -116,9 +116,9 @@ def bincount(x, weights=None, max_val=None, minlength=0):
     values as well, even if they do not appear in the data. However, this will
     not truncate the bincount if values larger than `max_count` are found.
     >>> bincount([0, 0, 1, 1, 2], max_val=4)
-    (array([ 2.,  2.,  1.,  0.,  0.]), 0.0)
+    (array([2., 2., 1., 0., 0.]), 0.0)
     >>> bincount([0, 1, 2, 3, 4], max_val=2)
-    (array([ 1.,  1.,  1.,  1.,  1.]), 0.0)
+    (array([1., 1., 1., 1., 1.]), 0.0)
 
     """
     # Store the original matrix before any manipulation to check for sparse

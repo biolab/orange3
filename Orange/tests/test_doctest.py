@@ -1,10 +1,6 @@
 import sys
 import os
-import unittest
 from doctest import DocTestSuite, ELLIPSIS, NORMALIZE_WHITESPACE
-from distutils.version import LooseVersion
-
-import numpy
 
 SKIP_DIRS = (
     # Skip modules which import and initialize stuff that require QApplication
@@ -55,24 +51,12 @@ class Context(dict):
 def suite(package):
     """Assemble test suite for doctests in path (recursively)"""
     from importlib import import_module
-    # numpy 1.14 changed array str/repr (NORMALIZE_WHITESPACE does not
-    # handle this). When 1.15 is released update all docstrings and skip the
-    # tests for < 1.14.
-    npversion = LooseVersion(numpy.__version__)
-    if npversion >= LooseVersion("1.14"):
-        def setUp(test):
-            raise unittest.SkipTest("Skip doctest on numpy >= 1.14.0")
-    else:
-        def setUp(test):
-            pass
-
     for module in find_modules(package.__file__):
         try:
             module = import_module(module)
             yield DocTestSuite(module,
                                globs=Context(module.__dict__.copy()),
-                               optionflags=ELLIPSIS | NORMALIZE_WHITESPACE,
-                               setUp=setUp)
+                               optionflags=ELLIPSIS | NORMALIZE_WHITESPACE)
         except ValueError:
             pass  # No doctests in module
         except ImportError:

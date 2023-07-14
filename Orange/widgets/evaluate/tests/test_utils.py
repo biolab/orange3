@@ -2,7 +2,6 @@
 
 import unittest
 import collections
-from distutils.version import LooseVersion
 from itertools import count
 from unittest.mock import patch
 
