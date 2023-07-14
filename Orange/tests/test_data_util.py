@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from Orange.data.util import scale, one_hot, SharedComputeValue
+from Orange.data.util import scale, one_hot, SharedComputeValue, SubarrayComputeValue
 import Orange
 
 class TestDataUtil(unittest.TestCase):
@@ -145,3 +145,60 @@ class TestSharedComputeValue(unittest.TestCase):
 
         self.assertNotEqual(c1, e)
         self.assertNotEqual(hash(c1), hash(e))
+
+
+class DummyPlusSubarray(SubarrayComputeValue):
+    pass
+
+
+class TestSubarrayComputeValue(unittest.TestCase):
+
+    def test_values(self):
+        fn = lambda data, cols: data.X[:, cols] + 1
+        cv1 = DummyPlusSubarray(fn, 1)
+        cv2 = DummyPlusSubarray(fn, 3)
+        iris = Orange.data.Table("iris")
+        domain = Orange.data.Domain([
+            Orange.data.ContinuousVariable("cv1", compute_value=cv1),
+            Orange.data.ContinuousVariable("cv2", compute_value=cv2)
+        ])
+        data = iris.transform(domain)
+        np.testing.assert_equal(iris.X[:, [1,3]] + 1, data.X)
+
+    def test_with_row_indices(self):
+        fn = lambda data, cols: data.X[:, cols] + 1
+        cv = DummyPlusSubarray(fn, 1)
+        iris = Orange.data.Table("iris")
+        domain = Orange.data.Domain([Orange.data.ContinuousVariable("cv", compute_value=cv)])
+        data1 = Orange.data.Table.from_table(domain, iris)[10:20]
+        data2 = Orange.data.Table.from_table(domain, iris, range(10, 20))
+        np.testing.assert_equal(data1.X, data2.X)
+
+    def test_single_call(self):
+        fn = lambda data, cols: data.X[:, cols] + 1
+        mockfn = Mock(side_effect=fn)
+        cvs = [DummyPlusSubarray(mockfn, i) for i in range(4)]
+        self.assertEqual(mockfn.call_count, 0)
+        data = Orange.data.Table("iris")[45:55]  # two classes
+        domain = Orange.data.Domain([at.copy(compute_value=cv)
+                                     for at, cv in zip(data.domain.attributes, cvs)],
+                                     data.domain.class_vars)
+
+        assert cvs[0].compute_shared is mockfn
+
+        Orange.data.Table.from_table(domain, data)
+        self.assertEqual(mockfn.call_count, 1)
+        ndata = Orange.data.Table.from_table(domain, data)
+        self.assertEqual(mockfn.call_count, 2)
+
+        np.testing.assert_equal(ndata.X, data.X + 1)
+
+        # learner performs imputation
+        c = Orange.classification.LogisticRegressionLearner()(ndata)
+        self.assertEqual(mockfn.call_count, 2)
+        c(data)  # new data should be converted with one call
+        self.assertEqual(mockfn.call_count, 3)
+
+        # test with descendants of table
+        DummyTable.from_table(c.domain, data)
+        self.assertEqual(mockfn.call_count, 4)
