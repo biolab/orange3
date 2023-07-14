@@ -14,6 +14,7 @@ from AnyQt.QtWidgets import QCheckBox
 from orangewidget.utils.combobox import qcombobox_emit_activated
 
 from Orange.data import Table, Domain, DiscreteVariable
+from Orange.tests.test_dasktable import temp_dasktable
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 from Orange.widgets.utils.itemmodels import DomainModel
@@ -531,7 +532,8 @@ class TestOWDistributions(WidgetTest):
         widget.send_report()
 
     def test_sort_by_freq_no_split(self):
-        domain = self.heart.domain
+        data = self.heart
+        domain = data.domain
         sort_by_freq = self.widget.controls.sort_by_freq
 
         self.send_signal(self.widget.Inputs.data, self.heart)
@@ -553,7 +555,8 @@ class TestOWDistributions(WidgetTest):
         self.assertEqual(out[1][1], 97)
 
     def test_sort_by_freq_split(self):
-        domain = self.heart.domain
+        data = self.heart
+        domain = data.domain
         sort_by_freq = self.widget.controls.sort_by_freq
 
         self.send_signal(self.widget.Inputs.data, self.heart)
@@ -695,6 +698,14 @@ class TestOWDistributions(WidgetTest):
                 # Right again selects the item to the right of the single itsm
                 widget.keyPressEvent(press(right, Qt.ShiftModifier))
                 assert widget.selected_bars == {values[1], values[2]}
+
+
+class TestOWDistributionsWithDask(TestOWDistributions):
+
+    def setUp(self):
+        self.widget = self.create_widget(OWDistributions)
+        self.iris = temp_dasktable("iris")
+        self.heart = temp_dasktable("heart_disease")
 
 
 if __name__ == "__main__":
