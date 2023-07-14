@@ -2,6 +2,7 @@ from functools import partial, reduce
 from itertools import count, groupby, repeat
 from xml.sax.saxutils import escape
 
+import dask
 import numpy as np
 from scipy.stats import norm, rayleigh, beta, gamma, pareto, expon
 
@@ -13,6 +14,7 @@ from orangewidget.utils.listview import ListViewSearch
 import pyqtgraph as pg
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
+from Orange.data.dask import DaskTable
 from Orange.preprocess.discretize import decimal_binnings, time_binnings, \
     short_time_units
 from Orange.statistics import distribution, contingency
@@ -27,6 +29,7 @@ from Orange.widgets.widget import Input, Output, OWWidget, Msg
 
 from Orange.widgets.visualize.owscatterplotgraph import \
     LegendItem as SPGLegendItem
+
 
 
 class ScatterPlotItem(pg.ScatterPlotItem):
@@ -308,6 +311,7 @@ class OWDistributions(OWWidget):
         super().__init__()
         self.data = None
         self.valid_data = self.valid_group_data = None
+        self.var_column = None  # cache active column for faster Dask access
         self.bar_items = []
         self.curve_items = []
         self.curve_descriptions = None
@@ -446,6 +450,7 @@ class OWDistributions(OWWidget):
             self.var = varmodel[min(len(domain.class_vars), len(varmodel) - 1)]
         if domain is not None and domain.has_discrete_class:
             self.cvar = domain.class_var
+
         self.reset_select()
         self._user_var_bins.clear()
         self.openContext(domain)
@@ -542,12 +547,18 @@ class OWDistributions(OWWidget):
             return
 
         column = self.data.get_column(self.var)
+        if isinstance(self.data, DaskTable):
+            column = dask.compute(column)[0]
+        self.var_column = column  # cache column because of slow Dask
+
         valid_mask = np.isfinite(column)
         if not np.any(valid_mask):
             self.Error.no_defined_values_var(self.var.name)
             return
         if self.cvar:
             ccolumn = self.data.get_column(self.cvar)
+            if isinstance(self.data, DaskTable):
+                ccolumn = dask.compute(ccolumn)[0]
             valid_mask *= np.isfinite(ccolumn)
             if not np.any(valid_mask):
                 self.Error.no_defined_values_pair(self.var.name, self.cvar.name)
@@ -891,7 +902,8 @@ class OWDistributions(OWWidget):
     def recompute_binnings(self):
         if self.is_valid and self.var.is_continuous:
             # binning is computed on valid var data, ignoring any cvar nans
-            column = self.data.get_column(self.var)
+            column = self.var_column
+
             if np.any(np.isfinite(column)):
                 if self.var.is_time:
                     self.binnings = time_binnings(column, min_unique=5)
@@ -1197,7 +1209,7 @@ class OWDistributions(OWWidget):
 
     def _get_output_indices_disc(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column(self.var)
+        col = self.var_column
         group_idx = 1
         values = []
         # self.selected_bars is a set, so its order is random;
@@ -1212,7 +1224,7 @@ class OWDistributions(OWWidget):
 
     def _get_output_indices_cont(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column(self.var)
+        col = self.var_column
         values = []
         for group_idx, group in enumerate(self.grouped_selection(), start=1):
             x0 = x1 = None
@@ -1245,7 +1257,7 @@ class OWDistributions(OWWidget):
 
     def _get_histogram_indices(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column(self.var)
+        col = self.var_column
         values = []
         for bar_idx in range(len(self.bar_items)):
             x0, x1, mask = self._get_cont_baritem_indices(col, bar_idx)
