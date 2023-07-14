@@ -5,7 +5,7 @@ Examples
 --------
 >>> import Orange
 >>> data = Orange.data.Table('iris')
->>> learner = Orange.classification.LogisticRegressionLearner()
+>>> learner = Orange.classification.LogisticRegressionLearner(solver="liblinear")
 >>> results = Orange.evaluation.TestOnTrainingData(data, [learner])
 
 """
@@ -293,7 +293,7 @@ class LogLoss(ClassificationScore):
     Examples
     --------
     >>> Orange.evaluation.LogLoss(results)
-    array([ 0.3...])
+    array([0.3...])
 
     """
     __wraps__ = skl_metrics.log_loss
