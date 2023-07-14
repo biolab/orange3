@@ -3,6 +3,7 @@ from collections import namedtuple
 from itertools import chain, count
 from typing import List, Optional, Tuple, Set, Sequence
 
+import dask
 import numpy as np
 from scipy import stats
 from sklearn.neighbors import KernelDensity
@@ -19,6 +20,7 @@ from orangewidget.utils.visual_settings_dlg import KeyType, ValueType, \
     VisualSettingsDialog
 
 from Orange.data import ContinuousVariable, DiscreteVariable, Table
+from Orange.data.dask import DaskTable
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting, DomainContextHandler, \
     Setting
@@ -997,6 +999,8 @@ class OWViolinPlot(OWWidget):
             if attr is group_var:
                 return 3
             col = self.data.get_column(attr)
+            if isinstance(self.data, DaskTable):
+                col = dask.compute(col)[0]
             groups = (col[group_col == i] for i in range(n_groups))
             groups = (col[~np.isnan(col)] for col in groups)
             groups = [group for group in groups if len(group)]
@@ -1011,6 +1015,8 @@ class OWViolinPlot(OWWidget):
         if self.order_by_importance and group_var is not None:
             n_groups = len(group_var.values)
             group_col = self.data.get_column(group_var)
+            if isinstance(self.data, DaskTable):
+                group_col = dask.compute(group_var)[0]
             self._sort_list(self._value_var_model, self._value_var_view,
                             compute_score)
         else:
@@ -1023,6 +1029,8 @@ class OWViolinPlot(OWWidget):
             if group is None:
                 return -1
             col = self.data.get_column(group)
+            if isinstance(self.data, DaskTable):
+                col = dask.compute(col)[0]
             groups = (value_col[col == i] for i in range(len(group.values)))
             groups = (col[~np.isnan(col)] for col in groups)
             groups = [group for group in groups if len(group)]
@@ -1036,6 +1044,8 @@ class OWViolinPlot(OWWidget):
         value_var = self.value_var
         if self.order_grouping_by_importance:
             value_col = self.data.get_column(value_var)
+            if isinstance(self.data, DaskTable):
+                value_col = dask.compute(value_col)[0]
             self._sort_list(self._group_var_model, self._group_var_view,
                             compute_stat)
         else:
@@ -1069,9 +1079,14 @@ class OWViolinPlot(OWWidget):
             return
 
         y = self.data.get_column(self.value_var)
+        if isinstance(self.data, DaskTable):
+            y = dask.compute(y)[0]
+
         x = None
         if self.group_var:
             x = self.data.get_column(self.group_var)
+            if isinstance(self.data, DaskTable):
+                x = dask.compute(x)[0]
         self.graph.set_data(y, self.value_var, x, self.group_var)
 
     def apply_selection(self):
