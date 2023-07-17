@@ -1695,7 +1695,9 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.plot_widget.getViewBox().RectMode)
 
     def reset_button_clicked(self):
-        self.plot_widget.getViewBox().autoRange()
+        self._reset_view(self.master.cached_x_data, self.master.cached_y_data)
+        if isinstance(self.master.data, DaskTable):
+            self.resample_current_view_range()
         self.update_labels()
 
     def select_by_click(self, _, points):
