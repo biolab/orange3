@@ -16,6 +16,7 @@ class SubarrayNorms:
         self.source_vars = tuple(source_vars)
         self.offsets = np.array(offsets)
         self.factors = np.array(factors)
+        self._hash = None
 
     def __call__(self, data, cols):
         X = data.transform(Domain(self.source_vars[cols])).X
@@ -28,6 +29,28 @@ class SubarrayNorms:
             return X.multiply(factors.reshape(1, -1))  # the "-" operation return dense
         else:
             return (X-offsets.reshape(1, -1)) * (factors.reshape(1, -1))
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return type(self) is type(other) \
+            and self.source_vars == other.source_vars \
+            and np.all(self.offsets == other.offsets) \
+            and np.all(self.factors == other.factors)
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._hash = None
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state["_hash"]
+        return state
+
+    def __hash__(self):
+        if self._hash is None:
+            self._hash = hash((self.source_vars, tuple(self.offsets), tuple(self.factors)))
+        return self._hash
 
 
 def compress_norm_to_subarray(domain):
