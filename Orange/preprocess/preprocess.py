@@ -155,6 +155,7 @@ class SubarrayImpute:
     def __init__(self, source_vars, vals):
         self.source_vars = tuple(source_vars)
         self.vals = np.array(vals)
+        self._hash = None
 
     def __call__(self, data, cols):
         X = data.transform(Orange.data.Domain(self.source_vars[cols])).X
@@ -171,6 +172,27 @@ class SubarrayImpute:
             return X
         else:
             return np.where(np.isnan(X), vals.reshape(1, -1), X)
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return type(self) is type(other) \
+            and self.source_vars == other.source_vars \
+            and np.all(self.vals == other.vals)
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._hash = None
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state["_hash"]
+        return state
+
+    def __hash__(self):
+        if self._hash is None:
+            self._hash = hash((self.source_vars, tuple(self.vals)))
+        return self._hash
 
 
 def compress_replace_unknowns_to_subarray(domain):
