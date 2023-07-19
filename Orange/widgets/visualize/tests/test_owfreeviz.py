@@ -1,7 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -155,6 +155,46 @@ class TestOWFreeViz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, zoo)
         self.assertTrue(self.widget.Warning.removed_features.is_shown())
         self.widget.run_button.click()
+
+    def test_gravity_slider(self):
+        w = self.widget
+
+        w.balance = False
+        w.gravity_index = 0
+
+        w.grav_slider.setValue(2)
+        self.assertTrue(w.balance)
+        self.assertEqual(w.gravity_label.text(), str(w.GravityValues[2]))
+
+        w.grav_slider.setValue(3)
+        self.assertTrue(w.balance)
+        self.assertEqual(w.gravity_label.text(), str(w.GravityValues[3]))
+
+        assert w.projector is None
+        self.send_signal(self.widget.Inputs.data, Table("zoo"))
+        self.wait_until_finished()
+        assert w.projector is not None
+
+        # w.projector.gravity has correct value if gravity was set before data
+        self.assertEqual(w.projector.gravity, w.GravityValues[3])
+
+        # ... and if set when the data is already present and projector exists
+        w.grav_slider.setValue(1)
+        self.assertEqual(w.projector.gravity, w.GravityValues[1])
+
+        # Check that optimization is restarted if the projection is optimized
+        with patch.object(w, "_run") as run, \
+                patch.object(w, "_OWFreeViz__optimized", new=True):
+            w.grav_slider.setValue(2)
+            self.assertEqual(w.projector.gravity, w.GravityValues[2])
+            run.assert_called_once()
+
+        # Also, check that checkbox also does all that
+            run.reset_mock()
+            w.controls.balance.click()
+            self.assertFalse(w.balance)
+            self.assertIsNone(w.projector.gravity)
+            run.assert_called_once()
 
 
 class TestOWFreeVizRunner(unittest.TestCase):
