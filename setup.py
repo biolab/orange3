@@ -30,6 +30,7 @@ except ImportError:
 
 try:
     from Cython.Distutils.build_ext import new_build_ext as build_ext
+    from Cython.Build import cythonize
     have_cython = True
 except ImportError:
     have_cython = False
@@ -434,14 +435,7 @@ def ext_modules():
     if os.name == 'posix':
         libraries.append("m")
 
-    return [
-        # Cython extensions. Will be automatically cythonized.
-        Extension(
-            "*",
-            ["Orange/*/*.pyx"],
-            include_dirs=includes,
-            libraries=libraries,
-        ),
+    modules = [
         Extension(
             "Orange.classification._simple_tree",
             sources=[
@@ -463,6 +457,16 @@ def ext_modules():
             export_symbols=["compute_density"],
         ),
     ]
+
+    if have_cython:
+        modules += cythonize(Extension(
+            "*",
+            ["Orange/*/*.pyx"],
+            include_dirs=includes,
+            libraries=libraries,
+        ))
+
+    return modules
 
 
 def setup_package():
