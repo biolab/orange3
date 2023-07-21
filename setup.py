@@ -29,7 +29,6 @@ except ImportError:
     have_sphinx = False
 
 try:
-    from Cython.Distutils.build_ext import new_build_ext as build_ext
     from Cython.Build import cythonize
     have_cython = True
 except ImportError:
@@ -484,7 +483,6 @@ def setup_package():
     }
     if have_numpy and have_cython:
         extra_args = {}
-        cmdclass["build_ext"] = build_ext
     else:
         # substitute a build_ext command with one that raises an error when
         # building. In order to fully support `pip install` we need to
