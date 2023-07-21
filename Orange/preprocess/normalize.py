@@ -1,11 +1,82 @@
 import numpy as np
+import scipy.sparse as sp
 
 from Orange.data import Domain, ContinuousVariable
+from Orange.data.util import SubarrayComputeValue
 from Orange.statistics import basic_stats
 from Orange.util import Reprable
 from .preprocess import Normalize
 from .transformation import Normalizer as Norm
 __all__ = ["Normalizer"]
+
+
+class SubarrayNorms:
+
+    def __init__(self, source_vars, offsets, factors):
+        self.source_vars = tuple(source_vars)
+        self.offsets = np.array(offsets)
+        self.factors = np.array(factors)
+        self._hash = None
+
+    def __call__(self, data, cols):
+        X = data.transform(Domain(self.source_vars[cols])).X
+        offsets = self.offsets[cols]
+        factors = self.factors[cols]
+
+        if sp.issparse(X):
+            if np.any(offsets != 0):
+                raise ValueError('Normalization does not work for sparse data.')
+            return X.multiply(factors.reshape(1, -1))  # the "-" operation return dense
+        else:
+            return (X-offsets.reshape(1, -1)) * (factors.reshape(1, -1))
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return type(self) is type(other) \
+            and self.source_vars == other.source_vars \
+            and np.all(self.offsets == other.offsets) \
+            and np.all(self.factors == other.factors)
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._hash = None
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state["_hash"]
+        return state
+
+    def __hash__(self):
+        if self._hash is None:
+            self._hash = hash((self.source_vars, tuple(self.offsets), tuple(self.factors)))
+        return self._hash
+
+
+def compress_norm_to_subarray(domain):
+    source_vars = []
+    offsets = []
+    factors = []
+
+    for a in domain.attributes:
+        if isinstance(a.compute_value, Norm):
+            tr = a.compute_value
+            source_vars.append(tr.variable)
+            offsets.append(tr.offset)
+            factors.append(tr.factor)
+
+    st = SubarrayNorms(source_vars, offsets, factors)
+
+    new_atts = []
+    ind = 0
+    for a in domain.attributes:
+        if isinstance(a.compute_value, Norm):
+            cv = SubarrayComputeValue(st, ind, a.compute_value.variable)
+            a = a.copy(compute_value=cv)
+            ind += 1
+        new_atts.append(a)
+
+    return Domain(new_atts, domain.class_vars, domain.metas)
 
 
 class Normalizer(Reprable):
@@ -33,6 +104,7 @@ class Normalizer(Reprable):
                               (i, var) in enumerate(data.domain.class_vars)]
 
         domain = Domain(new_attrs, new_class_vars, data.domain.metas)
+        domain = compress_norm_to_subarray(domain)
         return data.transform(domain)
 
     def normalize(self, stats, var):
