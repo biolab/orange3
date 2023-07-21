@@ -103,6 +103,25 @@ class SharedComputeValue:
         return hash((type(self), self.compute_shared, self.variable))
 
 
+class SubarrayComputeValue(SharedComputeValue):
+
+    def __init__(self, compute_shared, index, variable=None):
+        super().__init__(compute_shared, variable)
+        self.index = index
+
+    def __call__(self, data, shared_data=None):
+        """Fallback."""
+        shared_data = self.compute_shared(data, [self.index])
+        return shared_data
+
+    def __eq__(self, other):
+        return super().__eq__(other) \
+               and self.index == other.index
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.index))
+
+
 def vstack(arrays):
     """vstack that supports sparse and dense arrays
 
