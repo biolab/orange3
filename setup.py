@@ -481,16 +481,14 @@ def setup_package():
         # numpy.distutils insist all data files are installed in site-packages
         'install_data': install_data.install_data
     }
-    if have_numpy and have_cython:
-        extra_args = {}
-    else:
+    if not (have_numpy and have_cython):
         # substitute a build_ext command with one that raises an error when
         # building. In order to fully support `pip install` we need to
         # survive a `./setup egg_info` without numpy so pip can properly
         # query our install dependencies
-        extra_args = {}
         cmdclass["build_ext"] = build_ext_error
 
+    extra_args = {}
     setup(
         name=NAME,
         version=FULLVERSION,
