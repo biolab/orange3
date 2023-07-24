@@ -124,6 +124,7 @@ class TestLinearRegressionLearner(unittest.TestCase):
         self.assertIsInstance(learner2, LinearRegressionLearner)
 
 
+# pylint: disable=invalid-name
 class TestLinearRegressionLearnerOnDask(TestLinearRegressionLearner):
     learners = [
         RidgeRegressionLearner(),
