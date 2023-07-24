@@ -127,6 +127,7 @@ class TestLinearRegressionLearner(unittest.TestCase):
         self.assertTrue(LinearRegressionLearner().supports_weights)
 
 
+# pylint: disable=invalid-name
 class TestLinearRegressionLearnerOnDask(TestLinearRegressionLearner):
     learners = [
         RidgeRegressionLearner(),
