@@ -52,7 +52,7 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
-    def _initialize_wrapped(self):
+    def _initialize_wrapped(self, X=None, Y=None):
         params = self.params.copy()
 
         multi_class = params.pop("multi_class")

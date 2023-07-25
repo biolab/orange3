@@ -1,4 +1,5 @@
 from copy import deepcopy
+import numpy as np
 
 from AnyQt.QtCore import QTimer, Qt
 
@@ -252,7 +253,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
                 self.Error.data_error(reason)
             elif not len(self.data):
                 self.Error.data_error("Dataset is empty.")
-            elif len(ut.unique(self.data.Y)) < 2:
+            elif len(np.asarray(ut.unique(self.data.Y))) < 2:
                 self.Error.data_error("Data contains a single target value.")
             elif self.data.X.size == 0:
                 self.Error.data_error("Data has no features to learn from.")
