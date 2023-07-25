@@ -255,6 +255,15 @@ class DaskTable(Table):
             self.X.compute_chunk_sizes()
         return self.X.shape[0]
 
+    def _filter_has_class(self, negate=False):
+        if self._Y.ndim == 1:
+            retain = np.isnan(self._Y)
+        else:
+            retain = np.any(np.isnan(self._Y), axis=1)
+        if not negate:
+            retain = np.logical_not(retain)
+        return self.from_table_rows(self, np.asarray(retain))
+
 
 def dask_stats(X, compute_variance=False):
     is_numeric = np.issubdtype(X.dtype, np.number)
