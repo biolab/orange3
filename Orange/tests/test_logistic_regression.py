@@ -9,6 +9,7 @@ import sklearn
 from Orange.data import Table, ContinuousVariable, Domain
 from Orange.classification import LogisticRegressionLearner, Model
 from Orange.evaluation import CrossValidation, CA
+from Orange.tests.test_dasktable import temp_dasktable
 
 
 class TestLogisticRegressionLearner(unittest.TestCase):
@@ -114,9 +115,9 @@ class TestLogisticRegressionLearner(unittest.TestCase):
 
     def test_predict_on_instance(self):
         lr = LogisticRegressionLearner()
-        m = lr(self.zoo)
-        probs = m(self.zoo[50], m.Probs)
-        probs2 = m(self.zoo[50, :], m.Probs)
+        m = lr(self.heart_disease)
+        probs = m(self.heart_disease[50], m.Probs)
+        probs2 = m(self.heart_disease[50, :], m.Probs)
         np.testing.assert_almost_equal(probs, probs2[0])
 
     def test_single_class(self):
@@ -151,3 +152,54 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         skl_clf = lr._initialize_wrapped()
         self.assertEqual(skl_clf.solver, "liblinear")
         self.assertEqual(skl_clf.penalty, "l1")
+
+
+class TestLogisticRegressionOnDask(TestLogisticRegressionLearner):
+    @classmethod
+    def setUpClass(cls):
+        cls.iris = temp_dasktable(Table('iris'))
+        cls.heart_disease = temp_dasktable(Table('heart_disease.tab'))
+
+    def test_learner_scorer(self):
+        # for some reason dask_ml and sklearn yield different results
+        learner = LogisticRegressionLearner()
+        scores = learner.score_data(self.heart_disease)
+        self.assertEqual('major vessels colored',
+                         self.heart_disease.domain.attributes[np.argmax(scores)].name)
+        self.assertEqual(scores.shape, (1, len(self.heart_disease.domain.attributes)))
+
+    @unittest.skip("Discretizer not yet implemented")
+    def test_learner_scorer_previous_transformation(self):
+        super().test_learner_scorer_previous_transformation()
+
+    @unittest.skip("Dask-ML does not support multiclass regression")
+    def test_learner_scorer_multiclass(self):
+        super().test_learner_scorer_multiclass()
+
+    @unittest.skip("Dask-ML does not support multiclass regression")
+    def test_learner_scorer_multiclass_feature(self):
+        super().test_learner_scorer_multiclass_feature()
+
+    @unittest.skip("Dask-ML accepts single class")
+    def test_single_class(self):
+        super().test_single_class()
+
+    @unittest.skip("Dask-ML accepts single class")
+    def test_sklearn_single_class(self):
+        super().test_sklearn_single_class()
+
+    def test_auto_solver(self):
+        lr = LogisticRegressionLearner(penalty="l2", solver="auto")
+        skl_clf = lr._initialize_wrapped(self.iris.X)
+        self.assertEqual(skl_clf.solver, "admm")
+        self.assertEqual(skl_clf.penalty, "l2")
+
+        lr = LogisticRegressionLearner(penalty="l1", solver="auto")
+        skl_clf = lr._initialize_wrapped(self.iris.X)
+        self.assertEqual(skl_clf.solver, "admm")
+        self.assertEqual(skl_clf.penalty, "l1")
+
+        lr = LogisticRegressionLearner(penalty=None, solver="auto")
+        skl_clf = lr._initialize_wrapped(self.iris.X)
+        self.assertEqual(skl_clf.solver, "gradient_descent")
+        self.assertEqual(skl_clf.penalty, "none")
