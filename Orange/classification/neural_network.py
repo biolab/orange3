@@ -26,7 +26,7 @@ class MLPClassifierWCallback(skl_nn.MLPClassifier, NIterCallbackMixin):
 class NNClassificationLearner(NNBase, SklLearner):
     __wraps__ = MLPClassifierWCallback
 
-    def _initialize_wrapped(self):
+    def _initialize_wrapped(self, X=None, Y=None):
         clf = SklLearner._initialize_wrapped(self)
         clf.orange_callback = getattr(self, "callback", None)
         return clf
