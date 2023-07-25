@@ -14,7 +14,7 @@ class NNRegressionLearner(NNBase, SklLearner):
     __wraps__ = MLPRegressorWCallback
     supports_weights = False
 
-    def _initialize_wrapped(self):
+    def _initialize_wrapped(self, X=None, Y=None):
         clf = SklLearner._initialize_wrapped(self)
         clf.orange_callback = getattr(self, "callback", None)
         return clf
