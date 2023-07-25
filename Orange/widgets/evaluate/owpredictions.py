@@ -397,7 +397,7 @@ class OWPredictions(OWWidget):
             results.domain = self.data.domain
             results.row_indices = numpy.arange(len(self.data))
             results.folds = (Ellipsis, )
-            results.actual = self.data.Y
+            results.actual = numpy.asarray(self.data.Y)
             results.unmapped_probabilities = prob
             results.unmapped_predicted = pred
             results.probabilities = results.predicted = None

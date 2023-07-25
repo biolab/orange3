@@ -41,7 +41,7 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
-    def _initialize_wrapped(self):
+    def _initialize_wrapped(self, X=None, Y=None):
         params = self.params.copy()
         # The default scikit-learn solver `lbfgs` (v0.22) does not support the
         # l1 penalty.
