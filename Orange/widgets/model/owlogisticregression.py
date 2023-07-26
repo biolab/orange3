@@ -5,6 +5,7 @@ from AnyQt.QtCore import Qt
 from orangewidget.report import bool_str
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
+from Orange.data.dask import DaskTable
 from Orange.classification.logistic_regression import LogisticRegressionLearner
 from Orange.widgets import settings, gui
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
@@ -138,6 +139,15 @@ class OWLogisticRegression(OWBaseLearner):
         return (("Regularization", "{}, C={}, class weights: {}".format(
             self.penalty_types[self.penalty_type], self.C_s[self.C_index],
             bool_str(self.class_weight))),)
+
+    def check_data(self):
+        valid = super().check_data()
+        if valid and isinstance(self.data, DaskTable) \
+                and len(self.data.domain.class_var.values) > 2 \
+                and len(np.unique(self.data).compute()) > 2:
+            self.Error.data_error("Data contains too many target values.")
+            valid = False
+        return valid
 
 
 def create_coef_table(classifier):

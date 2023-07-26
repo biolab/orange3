@@ -950,7 +950,7 @@ class OWTestAndScore(OWWidget):
                     do_stratify = False
                 elif self.data.domain.class_var.is_discrete:
                     least = min(filter(None,
-                                       np.bincount(self.data.Y.astype(int))))
+                                       np.bincount(np.asarray(self.data.Y, dtype=int))))
                     if least < k:
                         self.Warning.cant_stratify(k, least)
                         do_stratify = False
