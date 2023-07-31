@@ -11,6 +11,11 @@ from sklearn.utils import check_random_state
 from sklearn.utils.extmath import svd_flip, safe_sparse_dot
 from sklearn.utils.validation import check_is_fitted
 
+try:
+    import dask_ml.decomposition as dask_decomposition
+except ImportError:
+    dask_decomposition = skl_decomposition
+
 import Orange.data
 from Orange.statistics import util as ut
 from Orange.data import Variable
@@ -275,18 +280,13 @@ class PCA(SklProjector, _FeatureScorerMixin):
             params["n_components"] = min(*X.shape, params["n_components"])
 
         if isinstance(X, da.Array) or isinstance(Y, da.Array):
-            try:
-                import dask_ml.decomposition as dask_decomposition
-
+            if dask_decomposition is skl_decomposition:
+                warnings.warn("dask_ml is not installed. Using sklearn instead.")
+            else:
                 if params["iterated_power"] == "auto":
                     params["iterated_power"] = 0
-                del params["tol"]
 
-                # use IPCA instead of PCA due to memory issues
-                return dask_decomposition.IncrementalPCA(**params)
-
-            except ImportError:
-                warnings.warn("dask_ml is not installed. Using sklearn instead.")
+                return dask_decomposition.PCA(**params)
 
         return self.__wraps__(**params)
 
@@ -340,8 +340,16 @@ class IncrementalPCA(SklProjector):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
+    def _initialize_wrapped(self, X=None, Y=None):
+        if isinstance(X, da.Array) or isinstance(Y, da.Array):
+            if dask_decomposition is skl_decomposition:
+                warnings.warn("dask_ml is not installed. Using sklearn instead.")
+            else:
+                return dask_decomposition.IncrementalPCA(**self.params)
+        return self.__wraps__(**self.params)
+
     def fit(self, X, Y=None):
-        proj = self.__wraps__(**self.params)
+        proj = self._initialize_wrapped(X, Y)
         proj = proj.fit(X, Y)
         return IncrementalPCAModel(proj, self.domain, len(proj.components_))
 
