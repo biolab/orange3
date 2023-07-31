@@ -27,7 +27,6 @@ class OWKNNLearner(OWBaseLearner):
     weights_options = ["Uniform", "By Distances"]
     metrics_options = ["Euclidean", "Manhattan", "Chebyshev", "Mahalanobis"]
 
-    learner_name = Setting("kNN")
     n_neighbors = Setting(5)
     metric_index = Setting(0)
     weight_index = Setting(0)
