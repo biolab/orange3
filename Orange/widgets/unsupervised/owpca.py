@@ -63,7 +63,6 @@ class OWPCA(widget.OWWidget):
         self._transformed = None
         self._variance_ratio = None
         self._cumulative = None
-        self._init_projector()
 
         # Components Selection
         form = QFormLayout()
@@ -138,8 +137,6 @@ class OWPCA(widget.OWWidget):
                 self.clear_outputs()
                 return
 
-        self._init_projector()
-
         self.data = data
         self.fit()
 
@@ -151,14 +148,10 @@ class OWPCA(widget.OWWidget):
 
         data = self.data
 
-        if self.normalize:
-            self._pca_projector.preprocessors = \
-                PCA.preprocessors + [preprocess.Normalize(center=False)]
-        else:
-            self._pca_projector.preprocessors = PCA.preprocessors
+        projector = self._create_projector()
 
         if not isinstance(data, SqlTable):
-            pca = self._pca_projector(data)
+            pca = projector(data)
             variance_ratio = pca.explained_variance_ratio_
             cumulative = numpy.cumsum(variance_ratio)
 
@@ -184,7 +177,7 @@ class OWPCA(widget.OWWidget):
         self.Outputs.transformed_data.send(None)
         self.Outputs.data.send(None)
         self.Outputs.components.send(None)
-        self.Outputs.pca.send(self._pca_projector)
+        self.Outputs.pca.send(self._create_projector())
 
     def _setup_plot(self):
         if self._pca is None:
@@ -251,9 +244,13 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             self._invalidate_selection()
 
-    def _init_projector(self):
-        self._pca_projector = PCA(n_components=MAX_COMPONENTS, random_state=0)
-        self._pca_projector.component = self.ncomponents
+    def _create_projector(self):
+        projector = PCA(n_components=MAX_COMPONENTS, random_state=0)
+        projector.component = self.ncomponents  # for use as a Scorer
+        if self.normalize:
+            projector.preprocessors = \
+                PCA.preprocessors + [preprocess.Normalize(center=False)]
+        return projector
 
     def _nselected_components(self):
         """Return the number of selected components."""
@@ -337,11 +334,10 @@ class OWPCA(widget.OWWidget):
                 numpy.hstack((self.data.metas, transformed.X)),
                 ids=self.data.ids)
 
-        self._pca_projector.component = self.ncomponents
         self.Outputs.transformed_data.send(transformed)
         self.Outputs.components.send(components)
         self.Outputs.data.send(data)
-        self.Outputs.pca.send(self._pca_projector)
+        self.Outputs.pca.send(self._create_projector())
 
     def send_report(self):
         if self.data is None:

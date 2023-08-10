@@ -7,7 +7,6 @@ import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
 from Orange.preprocess import preprocess
-from Orange.preprocess.preprocess import Normalize
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import table_dense_sparse, possible_duplicate_table
 from Orange.widgets.unsupervised.owpca import OWPCA
@@ -162,7 +161,7 @@ class TestOWPCA(WidgetTest):
         # Enable checkbox
         self.widget.controls.normalize.setChecked(True)
         self.assertTrue(self.widget.controls.normalize.isChecked())
-        with patch.object(preprocess, "Normalize", wraps=Normalize) as normalize:
+        with patch.object(preprocess.Normalize, "__call__", wraps=lambda x: x) as normalize:
             self.send_signal(self.widget.Inputs.data, data)
             self.wait_until_stop_blocking()
             self.assertTrue(self.widget.controls.normalize.isEnabled())
@@ -171,7 +170,7 @@ class TestOWPCA(WidgetTest):
         # Disable checkbox
         self.widget.controls.normalize.setChecked(False)
         self.assertFalse(self.widget.controls.normalize.isChecked())
-        with patch.object(preprocess, "Normalize", wraps=Normalize) as normalize:
+        with patch.object(preprocess.Normalize, "__call__", wraps=lambda x: x) as normalize:
             self.send_signal(self.widget.Inputs.data, data)
             self.wait_until_stop_blocking()
             self.assertTrue(self.widget.controls.normalize.isEnabled())
