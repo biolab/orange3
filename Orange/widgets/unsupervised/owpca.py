@@ -153,9 +153,9 @@ class OWPCA(widget.OWWidget):
 
         if self.normalize:
             self._pca_projector.preprocessors = \
-                self._pca_preprocessors + [preprocess.Normalize(center=False)]
+                PCA.preprocessors + [preprocess.Normalize(center=False)]
         else:
-            self._pca_projector.preprocessors = self._pca_preprocessors
+            self._pca_projector.preprocessors = PCA.preprocessors
 
         if not isinstance(data, SqlTable):
             pca = self._pca_projector(data)
@@ -254,7 +254,6 @@ class OWPCA(widget.OWWidget):
     def _init_projector(self):
         self._pca_projector = PCA(n_components=MAX_COMPONENTS, random_state=0)
         self._pca_projector.component = self.ncomponents
-        self._pca_preprocessors = PCA.preprocessors
 
     def _nselected_components(self):
         """Return the number of selected components."""
