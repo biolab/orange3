@@ -12,6 +12,7 @@ from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import preprocess
 from Orange.projection import PCA
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
@@ -21,7 +22,7 @@ MAX_COMPONENTS = 100
 LINE_NAMES = ["component variance", "cumulative variance"]
 
 
-class OWPCA(widget.OWWidget):
+class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
     name = "PCA"
     description = "Principal component analysis with a scree-diagram."
     icon = "icons/PCA.svg"
@@ -57,8 +58,9 @@ class OWPCA(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.data = None
+        ConcurrentWidgetMixin.__init__(self)
 
+        self.data = None
         self._pca = None
         self._transformed = None
         self._variance_ratio = None
@@ -113,6 +115,7 @@ class OWPCA(widget.OWWidget):
 
     @Inputs.data
     def set_data(self, data):
+        self.cancel()
         self.clear_messages()
         self.clear()
         self.information()
@@ -141,6 +144,7 @@ class OWPCA(widget.OWWidget):
         self.fit()
 
     def fit(self):
+        self.cancel()
         self.clear()
         self.Warning.trivial_components.clear()
         if self.data is None:
@@ -151,20 +155,34 @@ class OWPCA(widget.OWWidget):
         projector = self._create_projector()
 
         if not isinstance(data, SqlTable):
-            pca = projector(data)
-            variance_ratio = pca.explained_variance_ratio_
-            cumulative = numpy.cumsum(variance_ratio)
+            self.start(self._call_projector, data, projector)
 
-            if numpy.isfinite(cumulative[-1]):
-                self.components_spin.setRange(0, len(cumulative))
-                self._pca = pca
-                self._variance_ratio = variance_ratio
-                self._cumulative = cumulative
-                self._setup_plot()
-            else:
-                self.Warning.trivial_components()
+    @staticmethod
+    def _call_projector(data: Table, projector, _):
+        return projector(data)
 
-            self.commit.now()
+    def on_done(self, result):
+        pca = result
+        variance_ratio = pca.explained_variance_ratio_
+        cumulative = numpy.cumsum(variance_ratio)
+
+        if numpy.isfinite(cumulative[-1]):
+            self.components_spin.setRange(0, len(cumulative))
+            self._pca = pca
+            self._variance_ratio = variance_ratio
+            self._cumulative = cumulative
+            self._setup_plot()
+        else:
+            self.Warning.trivial_components()
+
+        self.commit.now()
+
+    def on_partial_result(self, result):
+        pass
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
     def clear(self):
         self._pca = None

@@ -32,7 +32,7 @@ class TestOWPCA(WidgetTest):
         # Ignore the warning: the test checks whether the widget shows
         # Warning.trivial_components when this happens
         with np.errstate(invalid="ignore"):
-            self.send_signal(self.widget.Inputs.data, data)
+            self.send_signal(self.widget.Inputs.data, data, wait=5000)
         self.assertTrue(self.widget.Warning.trivial_components.is_shown())
         self.assertIsNone(self.get_output(self.widget.Outputs.transformed_data))
         self.assertIsNone(self.get_output(self.widget.Outputs.components))
@@ -55,12 +55,12 @@ class TestOWPCA(WidgetTest):
         X = np.random.RandomState(0).rand(101, 101)
         data = Table.from_numpy(None, X)
         self.widget.ncomponents = 100
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, data, wait=5000)
         tran = self.get_output(self.widget.Outputs.transformed_data)
         self.assertEqual(len(tran.domain.attributes), 100)
         self.widget.ncomponents = 101  # should not be accesible
         with self.assertRaises(IndexError):
-            self.send_signal(self.widget.Inputs.data, data)
+            self.widget._setup_plot()  # pylint: disable=protected-access
 
     def test_migrate_settings_limits_components(self):
         settings = dict(ncomponents=10)
@@ -83,9 +83,11 @@ class TestOWPCA(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.widget.maxp = 2
         self.widget._setup_plot()
+        self.wait_until_finished()
         var2 = self.widget.variance_covered
         self.widget.ncomponents = 3
         self.widget._update_selection_component_spin()
+        self.wait_until_finished()
         var3 = self.widget.variance_covered
         self.assertGreater(var3, var2)
 
@@ -97,10 +99,11 @@ class TestOWPCA(WidgetTest):
 
     def test_variance_attr(self):
         self.widget.ncomponents = 2
-        self.send_signal(self.widget.Inputs.data, self.iris)
+        self.send_signal(self.widget.Inputs.data, self.iris, wait=5000)
         self.wait_until_stop_blocking()
         self.widget._variance_ratio = np.array([0.5, 0.25, 0.2, 0.05])
         self.widget.commit.now()
+        self.wait_until_finished()
 
         result = self.get_output(self.widget.Outputs.transformed_data)
         pc1, pc2 = result.domain.attributes
@@ -162,7 +165,7 @@ class TestOWPCA(WidgetTest):
         self.widget.controls.normalize.setChecked(True)
         self.assertTrue(self.widget.controls.normalize.isChecked())
         with patch.object(preprocess.Normalize, "__call__", wraps=lambda x: x) as normalize:
-            self.send_signal(self.widget.Inputs.data, data)
+            self.send_signal(self.widget.Inputs.data, data, wait=5000)
             self.wait_until_stop_blocking()
             self.assertTrue(self.widget.controls.normalize.isEnabled())
             normalize.assert_called_once()
@@ -171,7 +174,7 @@ class TestOWPCA(WidgetTest):
         self.widget.controls.normalize.setChecked(False)
         self.assertFalse(self.widget.controls.normalize.isChecked())
         with patch.object(preprocess.Normalize, "__call__", wraps=lambda x: x) as normalize:
-            self.send_signal(self.widget.Inputs.data, data)
+            self.send_signal(self.widget.Inputs.data, data, wait=5000)
             self.wait_until_stop_blocking()
             self.assertTrue(self.widget.controls.normalize.isEnabled())
             normalize.assert_not_called()
@@ -184,13 +187,14 @@ class TestOWPCA(WidgetTest):
         # Enable normalization
         self.widget.controls.normalize.setChecked(True)
         self.assertTrue(self.widget.normalize)
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, data, wait=5000)
         self.wait_until_stop_blocking()
         variance_normalized = self.widget.variance_covered
 
         # Disable normalization
         self.widget.controls.normalize.setChecked(False)
         self.assertFalse(self.widget.normalize)
+        self.wait_until_finished()
         self.wait_until_stop_blocking()
         variance_unnormalized = self.widget.variance_covered
 
