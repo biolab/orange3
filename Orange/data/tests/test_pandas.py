@@ -201,7 +201,7 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(table.domain.variables[0].have_date, 1)
 
     @skipIf(
-        datetime.today() < datetime(2023, 8, 1),
+        datetime.today() < datetime(2023, 10, 1),
         "Temporarily skipping because of pandas issue",
     )
     # https://github.com/pandas-dev/pandas/issues/53134#issuecomment-1546011517
@@ -419,7 +419,7 @@ class TestPandasCompat(unittest.TestCase):
         self.assertTrue(all(isinstance(v, StringVariable) for v in table.domain.metas))
 
     @skipIf(
-        datetime.today() < datetime(2023, 8, 1),
+        datetime.today() < datetime(2023, 10, 1),
         "Temporarily skipping because of pandas issue",
     )
     # https://github.com/pandas-dev/pandas/issues/53134#issuecomment-1546011517
