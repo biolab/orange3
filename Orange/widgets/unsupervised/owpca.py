@@ -158,8 +158,16 @@ class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
             self.start(self._call_projector, data, projector)
 
     @staticmethod
-    def _call_projector(data: Table, projector, _):
-        return projector(data)
+    def _call_projector(data: Table, projector, state):
+
+        def callback(i: float, status=""):
+            state.set_progress_value(i * 100)
+            if status:
+                state.set_status(status)
+            if state.is_interruption_requested():
+                raise Exception  # pylint: disable=broad-exception-raised
+
+        return projector(data, progress_callback=callback)
 
     def on_done(self, result):
         pca = result
