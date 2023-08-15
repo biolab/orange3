@@ -7,6 +7,7 @@ import numpy as np
 from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
 from AnyQt.QtGui import QColor, QFont
+from orangewidget.tests.base import DEFAULT_TIMEOUT
 
 from Orange.data import (
     Table, Domain, ContinuousVariable, DiscreteVariable, TimeVariable
@@ -139,17 +140,17 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         attr_x = self.widget.controls.attr_x
         simulate.combobox_activate_item(attr_x, "b")
 
-    def test_regression_line(self):
+    def test_regression_line_pair(self):
         """It is possible to draw the line only for pair of continuous attrs"""
         self.send_signal(self.widget.Inputs.data, self.data)
         self.assertTrue(self.widget.cb_reg_line.isEnabled())
-        self.assertIsNone(self.widget.graph.reg_line_item)
+        self.assertListEqual([], self.widget.graph.reg_line_items)
         self.widget.cb_reg_line.setChecked(True)
-        self.assertIsNotNone(self.widget.graph.reg_line_item)
+        self.assertEqual(4, len(self.widget.graph.reg_line_items))
         self.widget.cb_attr_y.activated.emit(4)
         self.widget.cb_attr_y.setCurrentIndex(4)
         self.assertFalse(self.widget.cb_reg_line.isEnabled())
-        self.assertIsNone(self.widget.graph.reg_line_item)
+        self.assertListEqual([], self.widget.graph.reg_line_items)
 
     def test_points_combo_boxes(self):
         """Check Point box combo models and values"""
@@ -277,7 +278,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertIsNone(selected_data)
 
     def test_migrate_selection(self):
-        settings = dict(selection=list(range(2)))
+        settings = {"selection": list(range(2))}
         OWScatterPlot.migrate_settings(settings, 0)
         self.assertEqual(settings["selection_group"], [(0, 1), (1, 1)])
 
@@ -371,7 +372,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         vizrank = ScatterPlotVizRank(self.widget)
         n_states = len(data.domain.attributes)
         n_states = n_states * (n_states - 1) / 2
-        states = [state for state in vizrank.iterate_states(None)]
+        states = list(vizrank.iterate_states(None))
         self.assertEqual(len(states), n_states)
         self.assertEqual(len(set(states)), n_states)
         self.assertIsNotNone(vizrank.compute_score(states[0]))
@@ -381,8 +382,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data = Table("housing")[::10]
         self.send_signal(self.widget.Inputs.data, data)
         vizrank = ScatterPlotVizRank(self.widget)
-        states = [state for state in vizrank.iterate_states(None)]
-        self.assertIsNotNone(vizrank.compute_score(states[0]))
+        self.assertIsNotNone(vizrank.compute_score(next(vizrank.iterate_states(None))))
 
     def test_vizrank_class_nan(self):
         """
@@ -505,7 +505,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
     def test_color_is_optional(self):
         zoo = Table("zoo")
-        backbone, breathes, airborne, type = \
+        backbone, breathes, airborne, type_ = \
             [zoo.domain[x] for x in ["backbone", "breathes", "airborne", "type"]]
         default_x, default_y, default_color = \
             zoo.domain[0], zoo.domain[1], zoo.domain.class_var
@@ -524,7 +524,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         simulate.combobox_activate_item(attr_color, airborne.name)
 
         # Send compatible dataset, values should not change
-        zoo2 = zoo[:, (backbone, breathes, airborne, type)]
+        zoo2 = zoo[:, (backbone, breathes, airborne, type_)]
         self.send_signal(self.widget.Inputs.data, zoo2)
         self.assertEqual(attr_x.currentText(), backbone.name)
         self.assertEqual(attr_y.currentText(), breathes.name)
@@ -532,7 +532,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         # Send dataset without color variable
         # x and y should remain, color reset to default
-        zoo3 = zoo[:, (backbone, breathes, type)]
+        zoo3 = zoo[:, (backbone, breathes, type_)]
         self.send_signal(self.widget.Inputs.data, zoo3)
         self.assertEqual(attr_x.currentText(), backbone.name)
         self.assertEqual(attr_y.currentText(), breathes.name)
@@ -540,7 +540,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         # Send dataset without x
         # y and color should be the same as with zoo
-        zoo4 = zoo[:, (default_x, default_y, breathes, airborne, type)]
+        zoo4 = zoo[:, (default_x, default_y, breathes, airborne, type_)]
         self.send_signal(self.widget.Inputs.data, zoo4)
         self.assertEqual(attr_x.currentText(), default_x.name)
         self.assertEqual(attr_y.currentText(), default_y.name)
@@ -549,11 +549,11 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         # Send dataset compatible with zoo2 and zoo3
         # Color should reset to one in zoo3, as it was used more
         # recently
-        zoo5 = zoo[:, (default_x, backbone, breathes, airborne, type)]
+        zoo5 = zoo[:, (default_x, backbone, breathes, airborne, type_)]
         self.send_signal(self.widget.Inputs.data, zoo5)
         self.assertEqual(attr_x.currentText(), backbone.name)
         self.assertEqual(attr_y.currentText(), breathes.name)
-        self.assertEqual(attr_color.currentText(), type.name)
+        self.assertEqual(attr_color.currentText(), type_.name)
 
     def test_handle_metas(self):
         """
@@ -646,18 +646,18 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                 widget.tooltip_shows_all = False
                 self.assertTrue(graph.help_event(event))
                 (_, text), _ = show_text.call_args
-                self.assertIn("age = {}".format(data[42, "age"]), text)
-                self.assertIn("gender = {}".format(data[42, "gender"]), text)
-                self.assertNotIn("max HR = {}".format(data[42, "max HR"]), text)
+                self.assertIn(f"age = {data[42, 'age']}", text)
+                self.assertIn(f"gender = {data[42, 'gender']}", text)
+                self.assertNotIn(f"max HR = {data[42, 'max HR']}", text)
                 self.assertNotIn("others", text)
 
                 # Show all attributes
                 widget.tooltip_shows_all = True
                 self.assertTrue(graph.help_event(event))
                 (_, text), _ = show_text.call_args
-                self.assertIn("age = {}".format(data[42, "age"]), text)
-                self.assertIn("gender = {}".format(data[42, "gender"]), text)
-                self.assertIn("max HR = {}".format(data[42, "max HR"]), text)
+                self.assertIn(f"age = {data[42, 'age']}", text)
+                self.assertIn(f"gender = {data[42, 'gender']}", text)
+                self.assertIn(f"max HR = {data[42, 'max HR']}", text)
                 self.assertIn("... and 4 others", text)
 
             # Two points hovered
@@ -665,10 +665,10 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                               return_value=[all_points[42], all_points[100]]):
                 self.assertTrue(graph.help_event(event))
                 (_, text), _ = show_text.call_args
-                self.assertIn("age = {}".format(data[42, "age"]), text)
-                self.assertIn("gender = {}".format(data[42, "gender"]), text)
-                self.assertIn("age = {}".format(data[100, "age"]), text)
-                self.assertIn("gender = {}".format(data[100, "gender"]), text)
+                self.assertIn(f"age = {data[42, 'age']}", text)
+                self.assertIn(f"gender = {data[42, 'gender']}", text)
+                self.assertIn(f"age = {data[100, 'age']}", text)
+                self.assertIn(f"gender = {data[100, 'gender']}", text)
 
             # No points hovered
             with patch.object(scatterplot_item, "pointsAt",
@@ -694,10 +694,10 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                 data.Y = np.array(values * 10, dtype=float)
             return data
 
-        def assert_equal(data, max):
+        def assert_equal(data, max_):
             self.send_signal(self.widget.Inputs.data, data)
-            pen_data, brush_data = self.widget.graph.get_colors()
-            self.assertEqual(max, len(np.unique([id(p) for p in pen_data])), )
+            pen_data, _ = self.widget.graph.get_colors()
+            self.assertEqual(max_, len(np.unique([id(p) for p in pen_data])), )
 
         assert_equal(prepare_data(), MAX_COLORS)
         # data with nan value
@@ -1156,7 +1156,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         with excepthook_catch():
             self.send_signal(self.widget.Inputs.data, self.data)
 
-    def test_visual_settings(self):
+    def test_visual_settings(self, timeout=DEFAULT_TIMEOUT):
         super().test_visual_settings()
 
         graph = self.widget.graph
