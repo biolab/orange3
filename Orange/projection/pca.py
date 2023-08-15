@@ -18,6 +18,7 @@ from Orange.data.util import get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess.score import LearnerScorer
 from Orange.projection import SklProjector, DomainProjection
+from Orange.util import dummy_callback, wrap_callback
 
 __all__ = ["PCA", "SparsePCA", "IncrementalPCA", "TruncatedSVD"]
 
@@ -289,12 +290,18 @@ class PCA(SklProjector, _FeatureScorerMixin):
 
         return self.__wraps__(**params)
 
-    def __call__(self, data):
-        data = self.preprocess(data)
+    def __call__(self, data, progress_callback=None):
+        if progress_callback is None:
+            progress_callback = dummy_callback
+        progress_callback(0, "Preprocessing...")
+        cb = wrap_callback(progress_callback, end=0.1)
+        data = self.preprocess(data, progress_callback=cb)
+        progress_callback(0.1, "Fitting...")
         proj = self.fit(data.X, data.Y)
         model = PCAModel(proj, data.domain, len(proj.components_))
         model.pre_domain = data.domain
         model.name = self.name
+        progress_callback(1)
         return model
 
 
