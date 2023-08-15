@@ -1,4 +1,3 @@
-from itertools import chain
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -87,9 +86,11 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
 
     def score_heuristic(self):
         assert self.attr_color is not None
-        master_domain = self.master.data.domain
-        vars = [v for v in chain(master_domain.variables, master_domain.metas)
-                if v is not self.attr_color and v.is_primitive()]
+        vars = [
+            v
+            for v in self.master.xy_model  # same attributes that are in xy combos
+            if v is not self.attr_color and v.is_primitive()
+        ]
         domain = Domain(attributes=vars, class_vars=self.attr_color)
         data = self.master.data.transform(domain)
         relief = ReliefF if isinstance(domain.class_var, DiscreteVariable) \

@@ -472,6 +472,20 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(self.widget.vizrank_button.toolTip(),
                          "Color variable has no values")
 
+    def test_vizrank_hidden_attributes(self):
+        """
+        Test hidden attributes not considered in Find Informative Projections
+        """
+        new_domain = self.data.domain.copy()
+        new_domain.attributes[0].attributes["hidden"] = True
+        data = self.data.transform(new_domain)
+        self.send_signal(self.widget.Inputs.data, data)
+        vizrank = ScatterPlotVizRank(self.widget)
+        self.assertListEqual(
+            ["petal width", "petal length", "sepal width"],
+            [x.name for x in vizrank.score_heuristic()],
+        )
+
     def test_auto_send_selection(self):
         """
         Scatter Plot automatically sends selection only when the checkbox Send automatically
