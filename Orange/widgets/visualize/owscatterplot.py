@@ -526,6 +526,7 @@ class OWScatterPlot(OWDataProjectionWidget):
     def can_draw_regresssion_line(self):
         return self.data is not None and \
                self.data.domain is not None and \
+               self.attr_x is not None and self.attr_y is not None and \
                self.attr_x.is_continuous and \
                self.attr_y.is_continuous
 
@@ -571,12 +572,13 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.attr_box.setEnabled(True)
         self.vizrank.setEnabled(True)
         if self.attribute_selection_list and self.data is not None and \
-                self.data.domain is not None and \
-                all(attr in self.data.domain for attr
-                        in self.attribute_selection_list):
-            self.attr_x, self.attr_y = self.attribute_selection_list[:2]
+                self.data.domain is not None:
             self.attr_box.setEnabled(False)
             self.vizrank.setEnabled(False)
+            if all(attr in self.xy_model for attr in self.attribute_selection_list):
+                self.attr_x, self.attr_y = self.attribute_selection_list
+            else:
+                self.attr_x, self.attr_y = None, None
         self._invalidated = self._invalidated or self._xy_invalidated
         self._xy_invalidated = False
         super().handleNewSignals()
@@ -593,6 +595,10 @@ class OWScatterPlot(OWDataProjectionWidget):
                 or self.attr_x != attributes[0] \
                 or self.attr_y != attributes[1]
         else:
+            if self.attr_x is None or self.attr_y is None:
+                # scenario happens when features input removed and features
+                # were invalid or hidden and those attr_x and attr_h were None
+                self.init_attr_values()
             self.attribute_selection_list = None
 
     def set_attr(self, attr_x, attr_y):
