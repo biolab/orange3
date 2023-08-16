@@ -307,7 +307,8 @@ class RemoveNaNColumns(Preprocess):
                         self.threshold
         if isinstance(threshold, float):
             threshold = threshold * data.X.shape[0]
-        nans = np.sum(np.isnan(data.X), axis=0)
+        # compute nans in advance, otherwise dask will do it for every attribute
+        nans = np.asarray(np.sum(np.isnan(data.X), axis=0))
         att = [a for a, n in zip(data.domain.attributes, nans) if n < threshold]
         domain = Orange.data.Domain(att, data.domain.class_vars,
                                     data.domain.metas)
