@@ -414,12 +414,12 @@ class OWTestAndScore(OWWidget):
                     "Train data input requires a target variable.",
                     not data.domain.class_vars
                 ),
-                ("Target variable has no values.", np.isnan(data.Y).all()),
+                ("Target variable has no values.", np.asarray(np.isnan(data.Y).all())),
                 (
                     "Target variable has only one value.",
-                    data.domain.has_discrete_class and len(unique(data.Y)) < 2
+                    data.domain.has_discrete_class and len(np.asarray(unique(data.Y))) < 2
                 ),
-                ("Data has no features to learn from.", data.X.shape[1] == 0),
+                ("Data has no features to learn from.", len(data.domain.attributes) == 0),
             ]
 
             for error_msg, cond in data_errors:
