@@ -5,6 +5,7 @@ from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 from orangewidget.report import bool_str
+from orangewidget.settings import Setting
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
 from Orange.data.util import get_unique_names
@@ -39,12 +40,12 @@ class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
 
-    ncomponents = settings.Setting(2)
-    variance_covered = settings.Setting(100)
-    auto_commit = settings.Setting(True)
-    normalize = settings.Setting(True)
-    maxp = settings.Setting(20)
-    axis_labels = settings.Setting(10)
+    ncomponents = Setting(2)
+    variance_covered = Setting(100)
+    auto_commit = Setting(True)
+    normalize = Setting(True)
+    maxp = Setting(20)
+    axis_labels = Setting(10)
 
     graph_name = "plot.plotItem"  # QGraphicsView (pg.PlotWidget -> SliderGraph)
 
@@ -223,8 +224,7 @@ class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
         self._update_axis()
 
     def _on_cut_changed(self, components):
-        if components == self.ncomponents \
-                or self.ncomponents == 0:
+        if self.ncomponents in (components, 0):
             return
 
         self.ncomponents = components
@@ -334,9 +334,9 @@ class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
             proposed = [a.name for a in self._pca.orig_domain.attributes]
             meta_name = get_unique_names(proposed, 'components')
             meta_vars = [StringVariable(name=meta_name)]
-            metas = numpy.array([['PC{}'.format(i + 1)
-                                  for i in range(self.ncomponents)]],
-                                dtype=object).T
+            metas = numpy.array(
+                [[f"PC{i + 1}"for i in range(self.ncomponents)]], dtype=object
+            ).T
             if self._variance_ratio is not None:
                 variance_name = get_unique_names(proposed, "variance")
                 meta_vars.append(ContinuousVariable(variance_name))
@@ -366,7 +366,7 @@ class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
         self.report_items((
             ("Normalize data", bool_str(self.normalize)),
             ("Selected components", self.ncomponents),
-            ("Explained variance", "{:.3f} %".format(self.variance_covered))
+            ("Explained variance", f"{self.variance_covered:.3f} %")
         ))
         self.report_plot()
 
