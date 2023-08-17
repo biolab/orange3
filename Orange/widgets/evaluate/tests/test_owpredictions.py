@@ -152,6 +152,14 @@ class TestOWPredictions(WidgetTest):
             predmodel.data(predmodel.index(0, 0), Qt.UserRole)))
         self.assertIn(predmodel.data(predmodel.index(0, 0))[0],
                       titanic.domain.class_var.values)
+        self.widget.send_report()
+
+        housing = self.housing[::5]
+        mean_housing = ConstantLearner()(housing)
+        no_target = housing.transform(Domain(housing.domain.attributes, None))
+        self.send_signal(self.widget.Inputs.data, no_target)
+        self.send_signal(self.widget.Inputs.predictors, mean_housing, 1)
+        self.widget.send_report()
 
     def test_invalid_regression_target(self):
         widget = self.widget
