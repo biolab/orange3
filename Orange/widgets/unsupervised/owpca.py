@@ -11,7 +11,8 @@ from Orange.data.util import get_unique_names
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import preprocess
 from Orange.projection import PCA
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import widget, gui
+from Orange.widgets.utils.annotated_data import add_columns
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -351,14 +352,8 @@ class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
                                metas=metas)
             components.name = 'components'
 
-            data_dom = Domain(
-                self.data.domain.attributes,
-                self.data.domain.class_vars,
-                self.data.domain.metas + domain.attributes)
-            data = Table.from_numpy(
-                data_dom, self.data.X, self.data.Y,
-                numpy.hstack((self.data.metas, transformed.X)),
-                ids=self.data.ids)
+            data_dom = add_columns(self.data.domain, metas=domain.attributes)
+            data = self.data.transform(data_dom)
 
         self.Outputs.transformed_data.send(transformed)
         self.Outputs.components.send(components)

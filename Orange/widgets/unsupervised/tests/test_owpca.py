@@ -277,6 +277,21 @@ class TestOWPCA(WidgetTest):
         output = self.get_output(widget.Outputs.data)
         self.assertIsNone(output)
 
+    def test_table_subclass(self):
+        """
+        When input table is instance of Table's subclass (e.g. Corpus) resulting
+        tables should also be an instance subclasses
+        """
+        class TableSub(Table):
+            pass
+
+        table_subclass = TableSub(self.iris)
+        self.send_signal(self.widget.Inputs.data, table_subclass)
+        data_out = self.get_output(self.widget.Outputs.data)
+        trans_data_out = self.get_output(self.widget.Outputs.transformed_data)
+        self.assertIsInstance(data_out, TableSub)
+        self.assertIsInstance(trans_data_out, TableSub)
+
 
 if __name__ == "__main__":
     unittest.main()
