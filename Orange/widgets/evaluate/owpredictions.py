@@ -9,7 +9,7 @@ from typing import Set, Sequence, Union, Optional, List, NamedTuple
 import numpy
 from AnyQt.QtWidgets import (
     QTableView, QSplitter, QToolTip, QStyle, QApplication, QSizePolicy,
-    QPushButton, QAbstractItemDelegate)
+    QPushButton, QStyledItemDelegate)
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor, QBrush
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QPointF, QLocale,
@@ -1117,13 +1117,15 @@ class ErrorDelegate(PredictionsBarItemDelegate):
         return cls.__size_hint
 
 
-class NoopItemDelegate(QAbstractItemDelegate):
+class NoopItemDelegate(QStyledItemDelegate):
     def paint(self, *_):
         pass
 
-    @staticmethod
-    def sizeHint(*_):
+    def sizeHint(self, *_):
         return QSize(0, 0)
+
+    def displayText(self, *_):
+        return ""
 
 
 class ClassificationErrorDelegate(ErrorDelegate):
