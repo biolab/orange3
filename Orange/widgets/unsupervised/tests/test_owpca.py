@@ -4,6 +4,8 @@ import unittest
 from unittest.mock import patch, Mock
 
 import numpy as np
+from sklearn.utils import check_random_state
+from sklearn.utils.extmath import svd_flip
 
 from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
 from Orange.preprocess import preprocess
@@ -11,8 +13,6 @@ from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import table_dense_sparse, possible_duplicate_table
 from Orange.widgets.unsupervised.owpca import OWPCA
 from Orange.tests import test_filename
-from sklearn.utils import check_random_state
-from sklearn.utils.extmath import svd_flip
 
 
 class TestOWPCA(WidgetTest):
@@ -63,19 +63,19 @@ class TestOWPCA(WidgetTest):
             self.widget._setup_plot()  # pylint: disable=protected-access
 
     def test_migrate_settings_limits_components(self):
-        settings = dict(ncomponents=10)
+        settings = {"ncomponents": 10}
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings['ncomponents'], 10)
-        settings = dict(ncomponents=101)
+        settings = {"ncomponents": 101}
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings['ncomponents'], 100)
 
     def test_migrate_settings_changes_variance_covered_to_int(self):
-        settings = dict(variance_covered=17.5)
+        settings = {"variance_covered": 17.5}
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings["variance_covered"], 17)
 
-        settings = dict(variance_covered=float('nan'))
+        settings = {"variance_covered": float('nan')}
         OWPCA.migrate_settings(settings, 0)
         self.assertEqual(settings["variance_covered"], 100)
 
@@ -276,6 +276,21 @@ class TestOWPCA(WidgetTest):
         self.send_signal(widget.Inputs.data, None)
         output = self.get_output(widget.Outputs.data)
         self.assertIsNone(output)
+
+    def test_table_subclass(self):
+        """
+        When input table is instance of Table's subclass (e.g. Corpus) resulting
+        tables should also be an instance subclasses
+        """
+        class TableSub(Table):  # pylint: disable=abstract-method
+            pass
+
+        table_subclass = TableSub(self.iris)
+        self.send_signal(self.widget.Inputs.data, table_subclass)
+        data_out = self.get_output(self.widget.Outputs.data)
+        trans_data_out = self.get_output(self.widget.Outputs.transformed_data)
+        self.assertIsInstance(data_out, TableSub)
+        self.assertIsInstance(trans_data_out, TableSub)
 
 
 if __name__ == "__main__":
