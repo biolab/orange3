@@ -22,6 +22,8 @@ def get_winners(np.float64_t[:, :, :] weights, np.float64_t[:, :] X, int hex):
         np.float64_t[:] row
         np.ndarray[np.int16_t, ndim=2] winners = \
             np.empty((X.shape[0], 2), dtype=np.int16)
+        np.ndarray[np.float64_t, ndim=1] distances = \
+            np.empty((X.shape[0]), dtype=np.float64)
         int nrows = X.shape[0]
 
     with nogil:
@@ -40,8 +42,9 @@ def get_winners(np.float64_t[:, :, :] weights, np.float64_t[:, :] X, int hex):
                         min_diff = diff
             winners[rowi, 0] = win_x
             winners[rowi, 1] = win_y
+            distances[rowi] = min_diff
 
-    return winners
+    return winners, distances
 
 
 def update(np.float64_t[:, :, :] weights,
@@ -127,6 +130,8 @@ def get_winners_sparse(np.float64_t[:, :, :] weights,
         np.float64_t[:] row,
         np.ndarray[np.int16_t, ndim=2] winners = \
             np.empty((X.shape[0], 2), dtype=np.int16)
+        np.ndarray[np.float64_t, ndim=1] distances = \
+            np.empty((X.shape[0]), dtype=np.float64)
         int nrows = X.shape[0]
 
     with nogil:
@@ -149,7 +154,8 @@ def get_winners_sparse(np.float64_t[:, :, :] weights,
 
             winners[rowi, 0] = win_x
             winners[rowi, 1] = win_y
-    return winners
+            distances[rowi] = min_diff
+    return winners, distances
 
 
 def update_sparse(np.ndarray[np.float64_t, ndim=3] weights,
