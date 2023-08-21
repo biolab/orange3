@@ -19,11 +19,12 @@ from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from Orange.widgets.utils.localization import pl
 from orangewidget.utils.itemmodels import PyListModel
+from orangewidget.utils.signals import LazyValue
 
 import Orange.data
 from Orange.data.domain import filter_visible
 from Orange.data import Domain, DiscreteVariable, ContinuousVariable, \
-    StringVariable
+    StringVariable, Table
 import Orange.misc
 from Orange.clustering.hierarchical import \
     postorder, preorder, Tree, tree_from_linkage, dist_matrix_linkage, \
@@ -32,8 +33,11 @@ from Orange.data.util import get_unique_names
 
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.utils import itemmodels, combobox
-from Orange.widgets.utils.annotated_data import (create_annotated_table,
-                                                 ANNOTATED_DATA_SIGNAL_NAME)
+from Orange.widgets.utils.annotated_data import (lazy_annotated_table,
+                                                 ANNOTATED_DATA_SIGNAL_NAME,
+                                                 domain_with_annotation_column,
+                                                 add_columns,
+                                                 create_annotated_table)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.plotutils import AxisItem
 from Orange.widgets.widget import Input, Output, Msg
@@ -776,71 +780,73 @@ class OWHierarchicalClustering(widget.OWWidget):
                 for node in selection]
 
         selected_indices = list(chain(*maps))
-        unselected_indices = sorted(set(range(self.root.value.last)) -
-                                    set(selected_indices))
 
         if not selected_indices:
             self.Outputs.selected_data.send(None)
-            annotated_data = create_annotated_table(items, []) \
+            annotated_data = lazy_annotated_table(items, []) \
                 if self.selection_method == 0 and self.matrix.axis else None
             self.Outputs.annotated_data.send(annotated_data)
             return
 
-        selected_data = None
+        selected_data = annotated_data = None
 
         if isinstance(items, Orange.data.Table) and self.matrix.axis == 1:
             # Select rows
-            c = np.zeros(self.matrix.shape[0])
+            data, domain = items, items.domain
 
+            c = np.full(self.matrix.shape[0], len(maps))
             for i, indices in enumerate(maps):
                 c[indices] = i
-            c[unselected_indices] = len(maps)
 
-            mask = c != len(maps)
-
-            data, domain = items, items.domain
-            attrs = domain.attributes
-            classes = domain.class_vars
-            metas = domain.metas
-
-            var_name = get_unique_names(domain, "Cluster")
+            clust_name = get_unique_names(domain, "Cluster")
             values = [f"C{i + 1}" for i in range(len(maps))]
 
-            clust_var = Orange.data.DiscreteVariable(
-                var_name, values=values + ["Other"])
-            domain = Orange.data.Domain(attrs, classes, metas + (clust_var,))
-            data = items.transform(domain)
-            with data.unlocked(data.metas):
-                data.set_column(clust_var, c)
+            sel_clust_var = Orange.data.DiscreteVariable(
+                name=clust_name, values=values)
+            sel_domain = add_columns(domain, metas=(sel_clust_var,))
+            selected_data = LazyValue[Table](
+                lambda: items.add_column(
+                    sel_clust_var, c, to_metas=True)[c != len(maps)],
+                domain=sel_domain, length=len(selected_indices))
 
-            if selected_indices:
-                selected_data = data[mask]
-                clust_var = Orange.data.DiscreteVariable(
-                    var_name, values=values)
-                selected_data.domain = Domain(
-                    attrs, classes, metas + (clust_var, ))
-
-            annotated_data = create_annotated_table(data, selected_indices)
+            ann_clust_var = Orange.data.DiscreteVariable(
+                name=clust_name, values=values + ["Other"]
+            )
+            ann_domain = add_columns(
+                domain_with_annotation_column(data)[0], metas=(ann_clust_var, ))
+            annotated_data = LazyValue[Table](
+                lambda: create_annotated_table(
+                    data=items.add_column(ann_clust_var, c, to_metas=True),
+                    selected_indices=selected_indices),
+                domain=ann_domain, length=len(items)
+            )
 
         elif isinstance(items, Orange.data.Table) and self.matrix.axis == 0:
             # Select columns
             attrs = []
+            unselected_indices = sorted(set(range(self.root.value.last)) -
+                                        set(selected_indices))
             for clust, indices in chain(enumerate(maps, start=1),
                                         [(0, unselected_indices)]):
                 for i in indices:
                     attr = items.domain[i].copy()
                     attr.attributes["cluster"] = clust
                     attrs.append(attr)
-            domain = Orange.data.Domain(
+            all_domain = Orange.data.Domain(
                 # len(unselected_indices) can be 0
                 attrs[:len(attrs) - len(unselected_indices)],
                 items.domain.class_vars, items.domain.metas)
-            selected_data = items.from_table(domain, items)
 
-            domain = Orange.data.Domain(
+            selected_data = LazyValue[Table](
+                lambda: items.from_table(all_domain, items),
+                domain=all_domain, length=len(items))
+
+            sel_domain = Orange.data.Domain(
                 attrs,
                 items.domain.class_vars, items.domain.metas)
-            annotated_data = items.from_table(domain, items)
+            annotated_data = LazyValue[Table](
+                lambda: items.from_table(sel_domain, items),
+                domain=sel_domain, length=len(items))
 
         self.Outputs.selected_data.send(selected_data)
         self.Outputs.annotated_data.send(annotated_data)
