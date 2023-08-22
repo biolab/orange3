@@ -379,7 +379,8 @@ class Variable(Reprable, metaclass=VariableMeta):
                 and not type(compute_value).__dict__.get("InheritEq", False):
             warnings.warn(f"{type(compute_value).__name__} should define "
                           "__eq__ and __hash__ to be used for compute_value\n"
-                          "or set InheritEq = True if inherited methods suffice")
+                          "or set InheritEq = True if inherited methods suffice",
+                          stacklevel=3)
 
         self._compute_value = compute_value
         self.unknown_str = MISSING_VALUES
