@@ -4,6 +4,7 @@ import warnings
 from numbers import Integral
 
 import h5py
+import dask.delayed
 import dask.array as da
 import numpy as np
 import pandas
@@ -11,6 +12,7 @@ from os import path
 
 from Orange.data import Table, RowInstance
 from Orange.data.table import _FromTableConversion, _ArrayConversion
+from Orange.statistics.util import contingency
 
 
 class DaskRowInstance(RowInstance):
@@ -262,6 +264,51 @@ class DaskTable(Table):
         if not negate:
             retain = np.logical_not(retain)
         return self.from_table_rows(self, np.asarray(retain))
+
+    def _compute_contingency(self, col_vars=None, row_var=None):
+        if row_var is None:
+            row_var = self.domain.class_var
+            if row_var is None:
+                raise ValueError("No row variable")
+
+        row_indi = self.domain.index(row_var)
+        row_var = self.domain[row_indi]
+
+        if not row_var.is_discrete:
+            raise TypeError("Row variable must be discrete")
+
+        if col_vars is None:
+            col_indi = range(len(self.domain.variables))
+        else:
+            col_indi = [self.domain.index(var) for var in col_vars]
+        col_vars = [self.domain[ind] for ind in col_indi]
+
+        if any(not var.is_discrete for var in col_vars):
+            raise NotImplementedError("Contingency can only be computed for categorical values.")
+
+        @dask.delayed
+        def delayed_contingency(*args, **kwargs):
+            return contingency(*args, **kwargs)
+
+        n_atts = self.X.shape[1]
+        contingencies = [None] * len(col_vars)
+        for arr, f_cond, f_ind in (
+                (self.X, lambda i: 0 <= i < n_atts, lambda i: i),
+                (self._Y, lambda i: i >= n_atts, lambda i: i - n_atts),
+                (self.metas, lambda i: i < 0, lambda i: -1 - i)):
+
+            for e, ind in enumerate(col_indi):
+                if f_cond(ind):
+                    col_i, arr_i, var = e, f_ind(col_indi[e]), col_vars[e]
+                    col = arr if arr.ndim == 1 else arr[:, arr_i]
+                    contingencies[col_i] = delayed_contingency(
+                        col.astype(float),
+                        self._get_column_view(row_indi),
+                        max_X=len(var.values) - 1,
+                        max_y=len(row_var.values) - 1,
+                        weights=self.W if self.has_weights() else None)
+
+        return da.compute(contingencies)[0]
 
 
 def dask_stats(X, compute_variance=False):
