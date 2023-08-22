@@ -218,7 +218,7 @@ class TSNEModel(Projection):
 
         def proj_variable(i):
             return self.embedding.domain[i].copy(
-                compute_value=ComputeValueProjector(self, i, transformer))
+                compute_value=ComputeValueProjector(feature=i, transform=transformer))
 
         super().__init__(self)
         self.embedding_ = embedding
