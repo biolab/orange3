@@ -1,5 +1,5 @@
-Feature Constructor
-===================
+Formula
+=======
 
 Add new features to your dataset.
 
@@ -11,7 +11,9 @@ Add new features to your dataset.
 
 - Data: dataset with additional features
 
-The **Feature Constructor** allows you to manually add features (columns) into your dataset. The new feature can be a computation of an existing one or a combination of several (addition, subtraction, etc.). You can choose what type of feature it will be (discrete, continuous or string) and what its parameters are (name, value, expression). For continuous variables you only have to construct an expression in Python.
+**Formula** allows computing new columns by combining the existing ones with a user-defined expression. The resulting column can be categorical, numerical or textual.
+
+For numeric variables, it sufices to provide a name and an expression.
 
 ![](images/feature-constructor1-stamped.png)
 
@@ -24,7 +26,7 @@ The **Feature Constructor** allows you to manually add features (columns) into y
 7. Produce a report
 8. Press *Send* to communicate changes
 
-For discrete variables, however, there's a bit more work. First add or remove the values you want for the new feature. Then select the base value and the expression. In the example below, we have constructed an expression with 'if lower than' and defined three conditions; the program ascribes 0 (which we renamed to lower) if the original value is lower than 6, 1 (mid) if it is lower than 7 and 2 (higher) for all the other values. Notice that we use an underscore for the feature name (e.g. petal\_length).
+The following example shows construction of a categorical variable: its value is "lower" is "sepal length" is below 6, "mid" if it is at least 6 but below 7, and "higher" otherwise. Note that spaces need to be replaced by underscores (`sepal_length`).
 
 ![](images/feature-constructor2-stamped.png)
 
@@ -32,36 +34,25 @@ For discrete variables, however, there's a bit more work. First add or remove th
 2. Add or remove variables
 3. New feature name
 4. Expression in Python
-5. Select a feature
-6. Select a function
-7. Assign values
-8. Produce a report
-9. Press *Send* to communicate changes
-
-Example
--------
-
-With the **Feature Constructor** you can easily adjust or combine existing features into new ones. Below, we added one new discrete feature to the *Titanic* dataset. We created a new attribute called *Financial status* and set the values to be *rich* if the person belongs to the first class (status = first) and *not rich* for everybody else. We can see the new dataset with [Data Table](../data/datatable.md) widget.
-
-![](images/FeatureConstructor-Example.png)
+5. If checked, the feature is put among meta attributes
+6. Select a feature to use in expression
+7. Select a function to use in expression
+8. Optional list of values, used to define their order
+9. Press *Send* to compute and output data
 
 Hints
 -----
 
 If you are unfamiliar with Python math language, here's a quick introduction.
 
-- +, - to add, subtract
-- \* to multiply
-- / to divide
-- % to divide and return the remainder
-- \*\* for exponent (for square root square by 0.5)
-- // for floor division
-- <, >, <=, >= less than, greater than, less or equal, greater or equal
-- == for equal
-- != for not equal
-
-As in the example: (*value*) if (*feature name*) < (*value*), else (*value*) if (*feature name*) < (*value*), else (*value*)
-
-[Use value 1 if feature is less than specified value, else use value 2 if feature is less than specified value 2, else use value 3.]
+Expressions can use the following operators:
+- `+`, `-`, `*`, `/`: addition, subtraction, multiplication, division
+- `//`: integer division
+- `%`: remainder after integer division
+- `**`: exponentiation (for square root square by 0.5)
+- `<`, `>`, `<=`, `>=` less than, greater than, less or equal, greater or equal
+- `==` equal
+- `!=` not equal
+- if-else: *value* `if` *condition* else *other-value* (see the above example
 
 See more [here](http://www.tutorialspoint.com/python/python_basic_operators.htm).
