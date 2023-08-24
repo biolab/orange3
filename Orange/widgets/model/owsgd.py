@@ -59,7 +59,6 @@ class OWSGD(OWBaseLearner):
         ('Optimal', 'optimal'),
         ('Inverse scaling', 'invscaling'))
 
-    learner_name = Setting('SGD')
     #: Loss function index for classification problems
     cls_loss_function_index = Setting(0)
     #: Epsilon loss function parameter for classification problems
