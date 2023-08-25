@@ -16,9 +16,9 @@ from AnyQt.QtCore import Qt, QCoreApplication
 
 from orangewidget.utils import enum_as_int
 
-from Orange.widgets import widget
 from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
 from Orange.widgets.data.utils.pythoneditor.vim import key_code
+from Orange.widgets.tests.base import GuiTest
 
 
 def _processPendingEvents(app):
@@ -57,13 +57,16 @@ def in_main_loop(func, *_):
     wrapper.__name__ = func.__name__  # for unittest test runner
     return wrapper
 
-class SimpleWidget(widget.OWWidget):
-    name = "Simple widget"
 
-    def __init__(self):
-        super().__init__()
-        self.qpart = PythonEditor(self)
-        self.mainArea.layout().addWidget(self.qpart)
+class EditorTest(GuiTest):
+    def setUp(self) -> None:
+        super().setUp()
+        self.qpart = PythonEditor()
+
+    def tearDown(self) -> None:
+        self.qpart.terminate()
+        del self.qpart
+        super().tearDown()
 
 
 def keySequenceClicks(widget_, keySequence, extraModifiers=Qt.NoModifier):

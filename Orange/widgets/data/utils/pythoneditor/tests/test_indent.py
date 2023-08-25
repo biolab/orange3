@@ -12,23 +12,10 @@ import unittest
 from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest
 
-from Orange.widgets.data.utils.pythoneditor.tests.base import SimpleWidget
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.data.utils.pythoneditor.tests.base import EditorTest
 
 
-class Test(WidgetTest):
-    """Base class for tests
-    """
-
-    def setUp(self):
-        super().setUp()
-        self.widget = self.create_widget(SimpleWidget)
-        self.qpart = self.widget.qpart
-
-    def tearDown(self):
-        self.qpart.terminate()
-        super().tearDown()
-
+class Test(EditorTest):
     def test_1(self):
         # Indent with Tab
         self.qpart.indentUseTabs = True
