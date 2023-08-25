@@ -3,7 +3,6 @@
 
 import unittest
 from unittest.mock import patch
-from copy import deepcopy
 
 import numpy as np
 
@@ -36,7 +35,7 @@ class TestOWVennDiagram(WidgetTest, WidgetOutputsTestMixin):
 
     def test_rows_id(self):
         data = Table('zoo')
-        data1 = deepcopy(data)
+        data1 = data.copy()
         with data1.unlocked():
             data1[:, 1] = 1
         self.widget.rowwise = True
