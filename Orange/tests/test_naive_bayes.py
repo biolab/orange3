@@ -6,11 +6,13 @@ from unittest.mock import Mock
 
 import numpy as np
 import scipy.sparse as sp
+import dask.array as da
 
 from Orange.classification import NaiveBayesLearner
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import CrossValidation, CA
 from Orange.tests import test_filename
+from Orange.tests.test_dasktable import temp_dasktable
 
 
 # This class is used to force predict_storage to fall back to the slower
@@ -52,6 +54,8 @@ class TestNaiveBayesLearner(unittest.TestCase):
         cls.data = data = Table('titanic')
         cls.learner = NaiveBayesLearner()
         cls.table = data[::20]
+        cls.iris = Table("iris")
+        cls.lenses = Table(test_filename("datasets/lenses.tab"))
 
     def setUp(self):
         self.model = self.learner(self.data)
@@ -64,16 +68,20 @@ class TestNaiveBayesLearner(unittest.TestCase):
         self.assertLess(ca, 0.9)
 
         cv = CrossValidation(k=10)
-        results = cv(Table("iris"), [self.learner])
+        results = cv(self.iris, [self.learner])
         ca = CA(results)
         self.assertGreater(ca, 0.7)
 
-    def test_degenerate(self):
-        d = Domain((ContinuousVariable(name="A"),
+    @staticmethod
+    def _create_degenerate():
+        d = Domain([ContinuousVariable(name="A"),
                     ContinuousVariable(name="B"),
-                    ContinuousVariable(name="C")),
+                    ContinuousVariable(name="C")],
                    DiscreteVariable(name="CLASS", values=("M", "F")))
-        t = Table.from_list(d, [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 1]])
+        return Table.from_list(d, [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 1]])
+
+    def test_degenerate(self):
+        t = self._create_degenerate()
         nb = NaiveBayesLearner()
         model = nb(t)
         self.assertEqual(model.domain.attributes, ())
@@ -82,14 +90,13 @@ class TestNaiveBayesLearner(unittest.TestCase):
 
     def test_allnan_cv(self):
         # GH 2740
-        data = Table(test_filename('datasets/lenses.tab'))
         cv = CrossValidation(stratified=False)
-        results = cv(data, [self.learner])
+        results = cv(self.lenses, [self.learner])
         self.assertFalse(any(results.failed))
 
     def test_prediction_routing(self):
         data = self.data
-        predict = self.model.predict = Mock(return_value=(data.Y, None))
+        predict = self.model.predict = Mock(return_value=(np.asarray(data.Y), None))
 
         self.model(data)
         predict.assert_called()
@@ -258,26 +265,79 @@ class TestNaiveBayesLearner(unittest.TestCase):
         probs = model(test_x, ret=model.Probs)
         np.testing.assert_almost_equal(probs, exp_probs)
 
-    def test_no_attributes(self):
+    @staticmethod
+    def _create_no_attributes():
         y = np.array([0, 0, 0, 1, 1, 1, 2, 2])
         domain = Domain([], DiscreteVariable("y", values="abc"))
-        data = Table.from_numpy(domain, np.zeros((len(y), 0)), y.T)
+        return Table.from_numpy(domain, np.zeros((len(y), 0)), y.T)
+
+    def test_no_attributes(self):
+        data = self._create_no_attributes()
         model = self.learner(data)
         np.testing.assert_almost_equal(
             model.predict_storage(np.zeros((5, 0)))[1],
             [[4/11, 4/11, 3/11]] * 5
         )
 
-    def test_no_targets(self):
+    @staticmethod
+    def _create_no_targets():
         x = np.array([[0], [1], [2]])
         y = np.full(3, np.nan)
         domain = Domain([DiscreteVariable("x", values="abc")],
                         DiscreteVariable("y", values="abc"))
-        data = Table.from_numpy(domain, x, y)
+        return Table.from_numpy(domain, x, y)
+
+    def test_no_targets(self):
+        data = self._create_no_targets()
         self.assertRaises(ValueError, self.learner, data)
 
     def test_supports_weights(self):
         self.assertFalse(NaiveBayesLearner().supports_weights)
+
+
+class TestNaivebayesLearnerOnDask(TestNaiveBayesLearner):
+    @classmethod
+    def setUpClass(cls):
+        data = Table('titanic')
+        cls.learner = NaiveBayesLearner()
+        cls.data = temp_dasktable(data)
+        cls.table = temp_dasktable(data[::20])
+
+    @unittest.skip("sparse matrices not supported")
+    def test_predictions_csr_matrix(self):
+        super().test_predictions_csr_matrix()
+
+    @unittest.skip("sparse matrices not supported")
+    def test_predictions_csc_matrix(self):
+        super().test_predictions_csc_matrix()
+
+    def _test_predictions(self, sparse, absent_class=False):
+        (data, domain, results,
+         test_x, test_y, exp_probs) = self._create_prediction_data(sparse, absent_class)
+        self.assertIsNone(sparse)
+        model = self.learner(temp_dasktable(data))
+        assert_model_equal(model, results)
+        test_data = temp_dasktable(Table.from_numpy(domain, test_x, test_y))
+        assert_predictions_equal(test_data, model, exp_probs)
+
+    def _test_predict_missing_attributes(self, sparse):
+        data, test_x, exp_probs = self._create_missing_attributes(sparse)
+        self.assertIsNone(sparse)
+        model = self.learner(temp_dasktable(data))
+        probs = model(da.from_array(test_x), ret=model.Probs)
+        np.testing.assert_almost_equal(probs, exp_probs)
+
+    @staticmethod
+    def _create_degenerate():
+        return temp_dasktable(TestNaiveBayesLearner._create_degenerate())
+
+    @staticmethod
+    def _create_no_targets():
+        return temp_dasktable(TestNaiveBayesLearner._create_no_targets())
+
+    @staticmethod
+    def _create_no_attributes():
+        return temp_dasktable(TestNaiveBayesLearner._create_no_attributes())
 
 
 if __name__ == "__main__":

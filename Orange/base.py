@@ -445,7 +445,7 @@ class Model(Reprable):
         # Call the predictor
         backmappers = None
         n_values = []
-        if isinstance(data, (np.ndarray, scipy.sparse.csr_matrix)):
+        if isinstance(data, (np.ndarray, scipy.sparse.csr_matrix, da.Array)):
             prediction = self.predict(data)
         elif isinstance(data, Table):
             backmappers, n_values = self.get_backmappers(data)
