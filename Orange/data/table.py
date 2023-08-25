@@ -553,6 +553,8 @@ class Table(Sequence, Storage):
                 setattr(self, "Y", no_view(state.pop("_Y")))  # state["_Y"] is a 2d array
             self.__dict__.update(state)
 
+        self._init_ids(self)
+
     def __getstate__(self):
         # Compatibility with pickles before table locking:
         # return the same state as before table lock
