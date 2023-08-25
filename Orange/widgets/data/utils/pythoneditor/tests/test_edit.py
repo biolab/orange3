@@ -40,7 +40,6 @@ class Test(EditorTest):
             QTest.keyClick(self.qpart, Qt.Key_Backspace)
         self.assertEqual(self.qpart.text, 'a  d')
 
-    @base.in_main_loop
     def test_overwrite_undo(self):
         self.qpart.show()
         self.qpart.text = 'abcd'
