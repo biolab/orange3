@@ -7,55 +7,15 @@ Originally licensed under the terms of GNU Lesser General Public License
 as published by the Free Software Foundation, version 2.1 of the license.
 This is compatible with Orange3's GPL-3.0 license.
 """  # pylint: disable=duplicate-code
-import time
-
-from AnyQt.QtCore import QTimer
 from AnyQt.QtGui import QKeySequence
 from AnyQt.QtTest import QTest
-from AnyQt.QtCore import Qt, QCoreApplication
+from AnyQt.QtCore import Qt
 
 from orangewidget.utils import enum_as_int
 
 from Orange.widgets.data.utils.pythoneditor.editor import PythonEditor
 from Orange.widgets.data.utils.pythoneditor.vim import key_code
 from Orange.widgets.tests.base import GuiTest
-
-
-def _processPendingEvents(app):
-    """Process pending application events.
-    Timeout is used, because on Windows hasPendingEvents() always returns True
-    """
-    t = time.time()
-    while time.time() - t < 0.1:
-        app.processEvents()
-
-
-def in_main_loop(func, *_):
-    """Decorator executes test method in the QApplication main loop.
-    QAction shortcuts doesn't work, if main loop is not running.
-    Do not use for tests, which doesn't use main loop, because it slows down execution.
-    """
-    def wrapper(*args):
-        app = QCoreApplication.instance()
-        self = args[0]
-
-        def execWithArgs():
-            self.qpart.show()
-            QTest.qWaitForWindowExposed(self.qpart)
-            _processPendingEvents(app)
-
-            try:
-                func(*args)
-            finally:
-                _processPendingEvents(app)
-                app.quit()
-
-        QTimer.singleShot(0, execWithArgs)
-
-        app.exec_()
-
-    wrapper.__name__ = func.__name__  # for unittest test runner
-    return wrapper
 
 
 class EditorTest(GuiTest):
