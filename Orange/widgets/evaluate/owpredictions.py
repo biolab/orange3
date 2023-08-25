@@ -325,7 +325,9 @@ class OWPredictions(OWWidget):
         self.score_opt_box.setVisible(bool(self.class_var))
 
     def _reg_error_changed(self):
-        self.predictionsview.model().setRegErrorType(self.show_reg_errors)
+        model = self.predictionsview.model()
+        if model is not None:
+            model.setRegErrorType(self.show_reg_errors)
         self._update_prediction_delegate()
 
     def _update_errors_visibility(self):

@@ -1157,6 +1157,13 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(delegate.span, max(3 / 2, 6 / 11))
         self.assertFalse(delegate.centered)
 
+    def test_regression_error_no_model(self):
+        data = self.housing[:5]
+        self.send_signal(self.widget.Inputs.data, data)
+        combo = self.widget.controls.show_reg_errors
+        with excepthook_catch(raise_on_exit=True):
+            simulate.combobox_activate_index(combo, 1)
+
     def test_report(self):
         widget = self.widget
 
