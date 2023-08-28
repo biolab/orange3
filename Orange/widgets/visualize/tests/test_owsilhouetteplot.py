@@ -26,7 +26,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         WidgetOutputsTestMixin.init(cls)
         cls.same_input_output_domain = False
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWSilhouettePlot.Inputs.data
         cls.signal_data = cls.data
         cls.scorename = "Silhouette ({})".format(cls.data.domain.class_var.name)
 

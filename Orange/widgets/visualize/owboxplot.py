@@ -1,6 +1,7 @@
 import math
 from collections import namedtuple
 from itertools import chain, count
+
 import numpy as np
 
 from AnyQt.QtWidgets import (
@@ -70,10 +71,63 @@ class BoxData:
 
 
 class FilterGraphicsRectItem(QGraphicsRectItem):
-    def __init__(self, data_range, *args):
+    def __init__(self, data_range, *args, add_lpad=True, add_rpad=True):
         super().__init__(*args)
         self.data_range = data_range
+        self.__add_lpad = add_lpad
+        self.__add_rpad = add_rpad
+        self.__is_hovered = False
         self.setFlag(QGraphicsItem.ItemIsSelectable)
+        self.setAcceptHoverEvents(True)
+
+    def set_right_padding(self, add_rpad: bool):
+        self.__add_rpad = add_rpad
+
+    def hoverEnterEvent(self, _) -> None:
+        self.__is_hovered = True
+        self.update()
+
+    def hoverLeaveEvent(self, _) -> None:
+        self.__is_hovered = False
+        self.update()
+
+    def boundingRect(self) -> QRectF:
+        br = super().boundingRect()
+        d = 7
+        return br.adjusted(-d if self.__add_lpad else 0, -d,
+                           d if self.__add_rpad else 0, d)
+
+    def shape(self) -> QPainterPath:
+        sh = QPainterPath()
+        sh.addRect(self.boundingRect())
+        return sh
+
+    def paint(self, painter: QPainter, *_, **__) -> None:
+        if self.__is_hovered:
+            painter.save()
+            brush = self.brush()
+            color = brush.color()
+            color.setAlpha(100)
+            brush.setColor(color)
+            painter.setBrush(brush)
+            painter.setPen(Qt.NoPen)
+            painter.drawRoundedRect(self.boundingRect(), 2, 2)
+            painter.restore()
+
+        painter.save()
+        painter.setBrush(self.brush())
+        painter.setPen(self.pen())
+        painter.drawRect(self.rect())
+        painter.restore()
+
+        if self.isSelected():
+            painter.save()
+            pen = QPen(Qt.black)
+            pen.setStyle(Qt.DashLine)
+            pen.setWidth(2)
+            painter.setPen(pen)
+            painter.drawRect(self.rect())
+            painter.restore()
 
 
 class SortProxyModel(QSortFilterProxyModel):
@@ -89,7 +143,7 @@ class OWBoxPlot(widget.OWWidget):
     description = "Visualize the distribution of feature values in a box plot."
     icon = "icons/BoxPlot.svg"
     priority = 100
-    keywords = ["whisker"]
+    keywords = "box plot, whisker"
 
     class Inputs:
         data = Input("Data", Orange.data.Table)
@@ -146,7 +200,7 @@ class OWBoxPlot(widget.OWWidget):
     _box_brush = QBrush(QColor(0x33, 0x88, 0xff, 0xc0))
     _attr_brush = QBrush(QColor(0x33, 0x00, 0xff))
 
-    graph_name = "box_scene"
+    graph_name = "box_scene"  # QGraphicsScene
 
     def __init__(self):
         super().__init__()
@@ -298,6 +352,7 @@ class OWBoxPlot(widget.OWWidget):
             self.apply_attr_sorting()
             self.apply_group_sorting()
             self.update_graph()
+            self._scroll_to_top()
             self.select_box_items()
 
         self.update_box_visibilities()
@@ -441,6 +496,7 @@ class OWBoxPlot(widget.OWWidget):
             return  # should never come here
         self.group_var = selected.indexes()[0].data(gui.TableVariable)
         self._variables_changed(self.apply_attr_sorting)
+        self._scroll_to_top()
 
     def attr_changed(self, selected):
         if not selected:
@@ -455,6 +511,10 @@ class OWBoxPlot(widget.OWWidget):
         self.update_graph()
         self.update_box_visibilities()
         self.commit()
+
+    def _scroll_to_top(self):
+        scrollbar = self.box_view.verticalScrollBar()
+        scrollbar.setValue(scrollbar.minimum())
 
     def update_graph(self):
         pending_selection = self.selection
@@ -472,14 +532,6 @@ class OWBoxPlot(widget.OWWidget):
             self.selection = pending_selection
             self.draw_stat()
             self.select_box_items()
-
-            if self.attribute.is_continuous:
-                heights = 90 if self.show_annotations else 60
-                self.box_view.centerOn(self.scene_min_x + self.scene_width / 2,
-                                       -30 - len(self.stats) * heights / 2 + 45)
-            else:
-                self.box_view.centerOn(self.scene_width / 2,
-                                       -30 - len(self.boxes) * 40 / 2 + 45)
         finally:
             self.box_scene.selectionChanged.connect(self.on_selection_changed)
 
@@ -1082,6 +1134,7 @@ class OWBoxPlot(widget.OWWidget):
         values = attr.values + ("",)
         colors = attr.palette.qcolors_w_nan
         total = sum(dist)
+        rect = None
         for freq, value, color in zip(dist, values, colors):
             if freq < 1e-6:
                 continue
@@ -1090,7 +1143,8 @@ class OWBoxPlot(widget.OWWidget):
                 v /= ss
             v *= self.scale_x
             cond = DiscDataRange(value, group_val)
-            rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12)
+            kw = {"add_lpad": rect is None, "add_rpad": False}
+            rect = FilterGraphicsRectItem(cond, cum + 1, -6, v - 2, 12, **kw)
             rect.setBrush(QBrush(color))
             rect.setPen(QPen(Qt.NoPen))
             value = value or missing_val_str
@@ -1103,6 +1157,8 @@ class OWBoxPlot(widget.OWWidget):
             box.append(rect)
             box.append(text)
             cum += v
+        if rect is not None:
+            rect.set_right_padding(True)
         return box
 
     def on_selection_changed(self):

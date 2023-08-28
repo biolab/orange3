@@ -654,3 +654,18 @@ class SqlTable(Table):
 
     def checksum(self, include_metas=True):
         return np.nan
+
+    def __get_nan_frequency(self, columns):
+        try:
+            query = self._sql_query([" + ".join([f"COUNT(*) - COUNT({col.to_sql()})"
+                                                 for col in columns])])
+            with self.backend.execute_sql_query(query) as cur:
+                return cur.fetchone()[0] / (len(self) * len(columns))
+        except BackendError:
+            return None
+
+    def get_nan_frequency_attribute(self):
+        return self.__get_nan_frequency(self.domain.attributes)
+
+    def get_nan_frequency_class(self):
+        return self.__get_nan_frequency(self.domain.class_vars)

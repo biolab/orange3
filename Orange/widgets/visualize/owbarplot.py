@@ -370,7 +370,7 @@ class OWBarPlot(OWWidget):
     description = "Visualizes comparisons among categorical variables."
     icon = "icons/BarPlot.svg"
     priority = 190
-    keywords = ["chart"]
+    keywords = "bar plot, chart"
 
     class Inputs:
         data = Input("Data", Table, default=True)
@@ -391,7 +391,7 @@ class OWBarPlot(OWWidget):
     visual_settings = Setting({}, schema_only=True)
 
     graph = SettingProvider(BarPlotGraph)
-    graph_name = "graph.plotItem"
+    graph_name = "graph.plotItem"  # QGraphicsView (pg.PlotWidget -> BarPlotGraph)
 
     class Error(OWWidget.Error):
         no_cont_features = Msg("Plotting requires a numeric feature.")

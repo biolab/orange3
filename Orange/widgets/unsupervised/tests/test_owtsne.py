@@ -33,7 +33,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         WidgetOutputsTestMixin.init(cls)
         cls.same_input_output_domain = False
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWtSNE.Inputs.data
         cls.signal_data = cls.data
 
     def setUp(self):

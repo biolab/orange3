@@ -10,7 +10,6 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
-from orangecanvas.utils.localization import pl
 from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.base import TreeModel, SklModel
@@ -20,6 +19,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
 from Orange.widgets.utils import to_html
+from Orange.widgets.utils.localization import pl
 from Orange.data import Table
 from Orange.util import color_to_hex
 
@@ -169,7 +169,7 @@ class OWTreeGraph(OWTreeViewer2D):
     name = "Tree Viewer"
     icon = "icons/TreeViewer.svg"
     priority = 35
-    keywords = []
+    keywords = "tree viewer"
 
     class Inputs:
         # Had different input names before merging from
@@ -392,7 +392,7 @@ class OWTreeGraph(OWTreeViewer2D):
         elif self.regression_colors != self.COL_DEFAULT:
             items.append(("Color by", self.COL_OPTIONS[self.regression_colors]))
         self.report_items(items)
-        self.report_plot(self.scene)
+        self.report_plot()
 
     def update_node_info(self, node):
         if self.tree_adapter.has_children(node.node_inst) and not self.show_intermediate:

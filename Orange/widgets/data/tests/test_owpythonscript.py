@@ -1,30 +1,25 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, unused-wildcard-import
 # pylint: disable=wildcard-import, protected-access
+import os
 import sys
 import unittest
 from unittest.mock import patch
 
-from AnyQt.QtCore import QMimeData, QUrl, QPoint, Qt
+from AnyQt.QtCore import QMimeData, QPoint, Qt, QUrl
 from AnyQt.QtGui import QDragEnterEvent
 
-from Orange.data import Table
 from Orange.classification import LogisticRegressionLearner
+from Orange.data import Table
 from Orange.tests import named_file
-from Orange.widgets.data.owpythonscript import OWPythonScript, \
-    read_file_content, Script, OWPythonScriptDropHandler
+from Orange.widgets.data.owpythonscript import (
+    OWPythonScript,
+    OWPythonScriptDropHandler,
+    Script,
+    read_file_content,
+)
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.widget import OWWidget, Input
-
-# import tests for python editor
-from Orange.widgets.data.utils.pythoneditor.tests.test_api import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_bracket_highlighter import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_draw_whitespace import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_edit import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_indent import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_indenter.test_python import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_rectangular_selection import *
-from Orange.widgets.data.utils.pythoneditor.tests.test_vim import *
+from Orange.widgets.widget import Input, OWWidget
 
 
 class TestOWPythonScript(WidgetTest):
@@ -39,6 +34,7 @@ class TestOWPythonScript(WidgetTest):
         sys.last_type = sys.last_value = sys.last_traceback = None
         super().tearDown()
 
+    @WidgetTest.skipNonEnglish
     def test_inputs(self):
         """Check widget's inputs"""
         for input_, data in (("Data", self.iris),
@@ -53,6 +49,7 @@ class TestOWPythonScript(WidgetTest):
             self.send_signal(input_, Input.Closed, 1)
             self.assertEqual(getattr(self.widget, input_.lower()), [])
 
+    @WidgetTest.skipNonEnglish
     def test_outputs(self):
         """Check widget's outputs"""
         for signal, data in (
@@ -104,6 +101,7 @@ class TestOWPythonScript(WidgetTest):
     def test_owns_errors(self):
         self.assertIsNot(self.widget.Error, OWWidget.Error)
 
+    @WidgetTest.skipNonEnglish
     def test_multiple_signals(self):
         click = self.widget.execute_button.click
         console_locals = self.widget.console.locals

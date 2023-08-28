@@ -1475,6 +1475,8 @@ class Table(Sequence, Storage):
             self._metas = self._metas.copy()
         if is_view(self._W):
             self._W = self._W.copy()
+        if is_view(self.ids):
+            self.ids = self.ids.copy()
 
     def copy(self):
         """

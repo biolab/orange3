@@ -315,6 +315,7 @@ class TestOWSave(OWSaveTestBase):
                 else:
                     self.assertFalse(items["Type annotations"], msg=msg)
 
+    @WidgetTest.skipNonEnglish
     def test_migration_to_version_2(self):
         const_settings = {
             'add_type_annotations': True, 'auto_save': False,

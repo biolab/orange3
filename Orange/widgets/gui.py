@@ -552,7 +552,7 @@ class CallFrontListView(ControlledCallFront):
         for value in values:
             index = None
             if not isinstance(value, int):
-                if isinstance(value, Variable):
+                if value is None or isinstance(value, Variable):
                     search_role = TableVariable
                 else:
                     search_role = Qt.DisplayRole

@@ -160,8 +160,7 @@ class TestOWPivot(WidgetTest):
                                         self.iris.domain.class_var.name)
         self.assertFalse(self.widget.Warning.cannot_aggregate.is_shown())
         # agg: Count, Majority, feature: None
-        simulate.combobox_activate_item(self.widget.controls.val_feature,
-                                        "(None)")
+        simulate.combobox_activate_index(self.widget.controls.val_feature, 0)
         self.assertTrue(self.widget.Warning.cannot_aggregate.is_shown())
         # agg: Count, Majority, feature: None, row: Continuous
         simulate.combobox_activate_item(self.widget.controls.row_feature,

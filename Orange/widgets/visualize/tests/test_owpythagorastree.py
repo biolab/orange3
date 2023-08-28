@@ -104,7 +104,7 @@ class TestOWPythagorasTree(WidgetTest, WidgetOutputsTestMixin):
         cls.model = tree(cls.data)
         cls.model.instances = cls.data
 
-        cls.signal_name = "Tree"
+        cls.signal_name = OWPythagorasTree.Inputs.tree
         cls.signal_data = cls.model
 
         # Set up for widget tests

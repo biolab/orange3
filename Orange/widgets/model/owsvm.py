@@ -24,7 +24,7 @@ class OWSVM(OWBaseLearner):
         "Orange.widgets.regression.owsvmregression.OWSVMRegression",
     ]
     priority = 50
-    keywords = ["support vector machines"]
+    keywords = "svm, support vector machines"
 
     LEARNER = SVMLearner
 

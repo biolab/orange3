@@ -137,7 +137,7 @@ class OWHeatMap(widget.OWWidget):
     description = "Plot a data matrix heatmap."
     icon = "icons/Heatmap.svg"
     priority = 260
-    keywords = []
+    keywords = "heat map"
 
     class Inputs:
         data = Input("Data", Table)
@@ -187,7 +187,7 @@ class OWHeatMap(widget.OWWidget):
 
     auto_commit = settings.Setting(True)
 
-    graph_name = "scene"
+    graph_name = "scene"  # QGraphicsScene (HeatmapScene)
 
     class Information(widget.OWWidget.Information):
         sampled = Msg("Data has been sampled")

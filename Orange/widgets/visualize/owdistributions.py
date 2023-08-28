@@ -251,7 +251,7 @@ class OWDistributions(OWWidget):
     description = "Display value distributions of a data feature in a graph."
     icon = "icons/Distribution.svg"
     priority = 120
-    keywords = ["histogram"]
+    keywords = "distributions, histogram"
 
     class Inputs:
         data = Input("Data", Table, doc="Set the input dataset")
@@ -287,7 +287,7 @@ class OWDistributions(OWWidget):
 
     auto_apply = settings.Setting(True)
 
-    graph_name = "plot"
+    graph_name = "plot"  # pg.GraphicsItem (pg.ViewBox)
 
     Fitters = (
         ("None", None, (), ()),

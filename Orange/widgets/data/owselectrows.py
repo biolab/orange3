@@ -135,7 +135,7 @@ class OWSelectRows(widget.OWWidget):
     icon = "icons/SelectRows.svg"
     priority = 100
     category = "Transform"
-    keywords = ["filter"]
+    keywords = "select rows, filter"
 
     class Inputs:
         data = Input("Data", Table)
@@ -247,7 +247,8 @@ class OWSelectRows(widget.OWWidget):
 
         box_setting = gui.vBox(self.buttonsArea)
         self.cb_pa = gui.checkBox(
-            box_setting, self, "purge_attributes", "Remove unused features",
+            box_setting, self, "purge_attributes",
+            "Remove unused values and constant features",
             callback=self.conditions_changed)
         self.cb_pc = gui.checkBox(
             box_setting, self, "purge_classes", "Remove unused classes",

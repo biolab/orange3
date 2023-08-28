@@ -14,7 +14,7 @@ class OWTransform(OWWidget):
     category = "Transform"
     icon = "icons/Transform.svg"
     priority = 1230
-    keywords = ["transform"]
+    keywords = "apply domain, transform"
 
     class Inputs:
         data = Input("Data", Table, default=True)

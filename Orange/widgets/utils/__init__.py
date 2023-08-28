@@ -1,13 +1,14 @@
 import inspect
 import sys
 from collections import deque
+from contextlib import contextmanager
 from enum import Enum, IntEnum
 from typing import (
     TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union, Tuple
 )
 from xml.sax.saxutils import escape
 
-from AnyQt.QtCore import QObject
+from AnyQt.QtCore import QObject, Qt
 
 from Orange.data.variable import TimeVariable
 from Orange.util import deepgetattr
@@ -167,7 +168,7 @@ def instance_tooltip(domain, row, skip_attrs=()):
             return ""
         n_vars = len(_vars)
         if n_vars > max_shown:
-            cols[-1] = "... and {} others".format(n_vars - max_shown + 1)
+            cols[-1] = f'... and {n_vars - max_shown + 1} others'
         return \
             "<b>{}</b>:<br/>".format(singular if n_vars < 2 else plural) \
             + "<br/>".join(cols)
@@ -194,3 +195,12 @@ def enum2int(enum: Union[Enum, IntEnum]) -> int:
     Settings transformed to int
     """
     return int(enum) if isinstance(enum, int) else enum.value
+
+
+@contextmanager
+def disconnected(signal, slot, connection_type=Qt.AutoConnection):
+    signal.disconnect(slot)
+    try:
+        yield
+    finally:
+        signal.connect(slot, connection_type)

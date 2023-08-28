@@ -39,10 +39,10 @@ from Orange.widgets.widget import OWWidget
 
 
 class OWPythagorasTree(OWWidget):
-    name = 'Pythagorean Tree'
+    name = "Pythagorean Tree"
     description = 'Pythagorean Tree visualization for tree like-structures.'
     icon = 'icons/PythagoreanTree.svg'
-    keywords = ["fractal"]
+    keywords = "pythagorean tree, fractal"
 
     priority = 1000
 
@@ -54,7 +54,7 @@ class OWPythagorasTree(OWWidget):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     # Enable the save as feature
-    graph_name = 'scene'
+    graph_name = 'scene'  # QGraphicsScene (TreeGraphicsScene)
 
     # Settings
     settingsHandler = settings.ClassValuesContextHandler()

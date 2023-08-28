@@ -1,82 +1,62 @@
 <?xml version='1.0' encoding='utf-8'?>
-<scheme description="Most of visualizations in Orange are interactive. Like Scatter Plot. Double click its icon to open the plot and by click-and-drag select few data instances (points in the plot). Selected data will automatically propagate to Data Table. Double click its widget to check which data was selected. Change selection and observe the change in the Data Table. This works best if both widgets are open." title="Interactive Visualizations" version="2.0">
+<scheme version="2.0" title="Interactive Visualizations" description="Most of visualizations in Orange are interactive. Like Scatter Plot. Double click its icon to open the plot and by click-and-drag select few data instances (points in the plot). Selected data will automatically propagate to Data Table. Double click its widget to check which data was selected. Change selection and observe the change in the Data Table. This works best if both widgets are open.">
 	<nodes>
-		<node id="0" name="File" position="(102.0, 206.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owfile.OWFile" title="File" version="" />
-		<node id="1" name="Scatter Plot" position="(267.0, 205.0)" project_name="Orange3" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" title="Scatter Plot" version="" />
-		<node id="2" name="Data Table" position="(412.0, 205.0)" project_name="Orange3" qualified_name="Orange.widgets.data.owtable.OWDataTable" title="Data Table" version="" />
+		<node id="0" name="File" qualified_name="Orange.widgets.data.owfile.OWFile" project_name="Orange3" version="" title="File" position="(102.0, 206.0)" />
+		<node id="1" name="Scatter Plot" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" project_name="Orange3" version="" title="Scatter Plot" position="(267.0, 205.0)" />
+		<node id="2" name="Data Table" qualified_name="Orange.widgets.data.owtable.OWTable" project_name="Orange3" version="" title="Data Table" position="(424.0, 205.0)" />
 	</nodes>
 	<links>
-		<link enabled="true" id="0" sink_channel="Data" sink_node_id="1" source_channel="Data" source_node_id="0" />
-		<link enabled="true" id="1" sink_channel="Data" sink_node_id="2" source_channel="Selected Data" source_node_id="1" />
+		<link id="0" source_node_id="0" sink_node_id="1" source_channel="Data" sink_channel="Data" enabled="true" source_channel_id="data" sink_channel_id="data" />
+		<link id="1" source_node_id="1" sink_node_id="2" source_channel="Selected Data" sink_channel="Data" enabled="true" source_channel_id="selected_data" sink_channel_id="data" />
 	</links>
 	<annotations>
-		<text font-family="Helvetica" font-size="12" id="0" rect="(26.0, 7.0, 150.0, 112.59375)" type="text/plain">This File widget is set to read the Iris dataset. Double click on the icon to change the input data file and observe how this workflow works for some other datasets such as housing or auto-mpg.</text>
-		<text font-family="Helvetica" font-size="12" id="1" rect="(224.0, 24.0, 150.0, 83.0)" type="text/plain">Double click on the Scatter Plot icon to visualize the data. Then select the data subset by selecting the points from the scatter plot.</text>
-		<text font-family="Helvetica" font-size="12" id="2" rect="(412.0, 55.0, 150.0, 48.0)" type="text/plain">Data Table widget shows the data subset selected in the Scatter Plot.</text>
-		<arrow end="(99.00000000000003, 175.0)" fill="#C1272D" id="3" start="(98.00000000000003, 118.0)" />
-		<arrow end="(270.0, 170.00000000000003)" fill="#C1272D" id="4" start="(271.0, 114.00000000000003)" />
-		<arrow end="(417.0, 173.0)" fill="#C1272D" id="5" start="(465.0, 112.00000000000001)" />
-		<text font-family="Helvetica" font-size="12" id="6" rect="(146.0, 300.0, 301.0, 72.0)" type="text/plain">Try to connect some other widget to the output of the Scatter Plot. Say, a Box Plot widget (toolbox, Visualize pane). Box Plot will display distributions of the data subset selected in the Scatter Plot.</text>
-		<arrow end="(302.0, 221.0)" fill="#39B54A" id="7" start="(335.0, 294.0)" />
+		<text id="0" type="text/plain" rect="(26.0, 7.0, 150.0, 112.59375)" font-family="Helvetica" font-size="12">This File widget is set to read the Iris dataset. Double click on the icon to change the input data file and observe how this workflow works for some other datasets such as housing or auto-mpg.</text>
+		<text id="1" type="text/plain" rect="(224.0, 24.0, 150.0, 83.0)" font-family="Helvetica" font-size="12">Double click on the Scatter Plot icon to visualize the data. Then select the data subset by selecting the points from the scatter plot.</text>
+		<text id="2" type="text/plain" rect="(412.0, 55.0, 150.0, 48.0)" font-family="Helvetica" font-size="12">Data Table widget shows the data subset selected in the Scatter Plot.</text>
+		<arrow id="3" start="(98.00000000000003, 118.0)" end="(99.00000000000003, 175.0)" fill="#C1272D" />
+		<arrow id="4" start="(271.0, 114.00000000000003)" end="(270.0, 170.00000000000003)" fill="#C1272D" />
+		<arrow id="5" start="(465.0, 112.00000000000001)" end="(417.0, 173.0)" fill="#C1272D" />
+		<text id="6" type="text/plain" rect="(146.0, 300.0, 301.0, 72.0)" font-family="Helvetica" font-size="12">Try to connect some other widget to the output of the Scatter Plot. Say, a Box Plot widget (toolbox, Visualize pane). Box Plot will display distributions of the data subset selected in the Scatter Plot.</text>
+		<arrow id="7" start="(335.0, 294.0)" end="(302.0, 221.0)" fill="#39B54A" />
 	</annotations>
 	<thumbnail />
 	<node_properties>
-		<properties format="pickle" node_id="0">gAN9cQAoWBIAAABjb250cm9sQXJlYVZpc2libGVxAYhYDAAAAHJlY2VudF9wYXRoc3ECXXEDY09y
-YW5nZS53aWRnZXRzLnV0aWxzLmZpbGVkaWFsb2dzClJlY2VudFBhdGgKcQQpgXEFfXEGKFgHAAAA
-YWJzcGF0aHEHWDAAAAAvVXNlcnMvYW56ZS9kZXYvb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaXJp
-cy50YWJxCFgGAAAAcHJlZml4cQlYDwAAAHNhbXBsZS1kYXRhc2V0c3EKWAcAAAByZWxwYXRocQtY
-CAAAAGlyaXMudGFicQxYBQAAAHRpdGxlcQ1YAAAAAHEOWAUAAABzaGVldHEPaA5YCwAAAGZpbGVf
-Zm9ybWF0cRBOdWJhWAsAAAByZWNlbnRfdXJsc3ERXXESWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5
-cRNDMgHZ0MsAAgAAAAACEwAAATwAAAQlAAADUgAAAhMAAAFSAAAEJQAAA1IAAAAAAAAAAAWgcRRY
-CwAAAHNoZWV0X25hbWVzcRV9cRZYBgAAAHNvdXJjZXEXSwBYAwAAAHVybHEYaA5YDQAAAGRvbWFp
-bl9lZGl0b3JxGX1xGlgLAAAAX192ZXJzaW9uX19xG0sBWBAAAABjb250ZXh0X3NldHRpbmdzcRxd
-cR1jT3JhbmdlLndpZGdldHMuc2V0dGluZ3MKQ29udGV4dApxHimBcR99cSAoWAQAAAB0aW1lcSFH
-QdanFiOv2ZBYBgAAAHZhbHVlc3EifXEjKFgJAAAAdmFyaWFibGVzcSRdcSVYCQAAAHhsc19zaGVl
-dHEmaA5K/////4ZxJ2gZfXEoaCRdcSkoXXEqKFgMAAAAc2VwYWwgbGVuZ3RocStjT3JhbmdlLmRh
-dGEudmFyaWFibGUKQ29udGludW91c1ZhcmlhYmxlCnEsSwBoDohlXXEtKFgLAAAAc2VwYWwgd2lk
-dGhxLmgsSwBoDohlXXEvKFgMAAAAcGV0YWwgbGVuZ3RocTBoLEsAaA6IZV1xMShYCwAAAHBldGFs
-IHdpZHRocTJoLEsAaA6IZV1xMyhYBAAAAGlyaXNxNGNPcmFuZ2UuZGF0YS52YXJpYWJsZQpEaXNj
-cmV0ZVZhcmlhYmxlCnE1SwFYLAAAAElyaXMtc2V0b3NhLCBJcmlzLXZlcnNpY29sb3IsIElyaXMt
-dmlyZ2luaWNhcTaJZWVzaBtLAXVYCgAAAGF0dHJpYnV0ZXNxNyhYDAAAAHNlcGFsIGxlbmd0aHE4
-SwKGcTlYCwAAAHNlcGFsIHdpZHRocTpLAoZxO1gMAAAAcGV0YWwgbGVuZ3RocTxLAoZxPVgLAAAA
-cGV0YWwgd2lkdGhxPksChnE/dHFAWAUAAABtZXRhc3FBKVgKAAAAY2xhc3NfdmFyc3FCWAQAAABp
-cmlzcUNdcUQoWAsAAABJcmlzLXNldG9zYXFFWA8AAABJcmlzLXZlcnNpY29sb3JxRlgOAAAASXJp
-cy12aXJnaW5pY2FxR2WGcUiFcUlYEgAAAG1vZGlmaWVkX3ZhcmlhYmxlc3FKXXFLdWJhdS4=
+		<properties node_id="0" format="pickle">gASVvAMAAAAAAAB9lCiMEmNvbnRyb2xBcmVhVmlzaWJsZZSIjAxyZWNlbnRfcGF0aHOUXZSMHm9y
+YW5nZXdpZGdldC51dGlscy5maWxlZGlhbG9nc5SMClJlY2VudFBhdGiUk5QpgZR9lCiMB2Fic3Bh
+dGiUjC0vVXNlcnMvamFuZXovb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaXJpcy50YWKUjAZwcmVm
+aXiUjA9zYW1wbGUtZGF0YXNldHOUjAdyZWxwYXRolIwIaXJpcy50YWKUjAV0aXRsZZSMAJSMBXNo
+ZWV0lGgQjAtmaWxlX2Zvcm1hdJROdWJhjAtyZWNlbnRfdXJsc5RdlIwTc2F2ZWRXaWRnZXRHZW9t
+ZXRyeZRDMgHZ0MsAAgAAAAACEwAAATwAAAQlAAADUgAAAhMAAAFSAAAEJQAAA1IAAAAAAAAAAAWg
+lIwLc2hlZXRfbmFtZXOUfZSMBnNvdXJjZZRLAIwDdXJslGgQjA1kb21haW5fZWRpdG9ylH2UjAtf
+X3ZlcnNpb25fX5RLAYwQY29udGV4dF9zZXR0aW5nc5RdlIwVb3Jhbmdld2lkZ2V0LnNldHRpbmdz
+lIwHQ29udGV4dJSTlCmBlH2UKIwEdGltZZRHQdanFiOv2ZCMBnZhbHVlc5R9lCiMCXZhcmlhYmxl
+c5RdlGgbfZRoKF2UKF2UKIwMc2VwYWwgbGVuZ3RolIwUT3JhbmdlLmRhdGEudmFyaWFibGWUjBJD
+b250aW51b3VzVmFyaWFibGWUk5RLAGgQiGVdlCiMC3NlcGFsIHdpZHRolGgwSwBoEIhlXZQojAxw
+ZXRhbCBsZW5ndGiUaDBLAGgQiGVdlCiMC3BldGFsIHdpZHRolGgwSwBoEIhlXZQojARpcmlzlGgu
+jBBEaXNjcmV0ZVZhcmlhYmxllJOUSwGMLElyaXMtc2V0b3NhLCBJcmlzLXZlcnNpY29sb3IsIEly
+aXMtdmlyZ2luaWNhlIllZXNoHUsBdYwKYXR0cmlidXRlc5QojAxzZXBhbCBsZW5ndGiUSwKGlIwL
+c2VwYWwgd2lkdGiUSwKGlIwMcGV0YWwgbGVuZ3RolEsChpSMC3BldGFsIHdpZHRolEsChpR0lIwF
+bWV0YXOUKYwKY2xhc3NfdmFyc5SMBGlyaXOUXZQojAtJcmlzLXNldG9zYZSMD0lyaXMtdmVyc2lj
+b2xvcpSMDklyaXMtdmlyZ2luaWNhlGWGlIWUjBJtb2RpZmllZF92YXJpYWJsZXOUXZR1YmF1Lg==
 </properties>
-		<properties format="pickle" node_id="1">gAN9cQAoWAsAAABhdXRvX3NhbXBsZXEBiFgTAAAAYXV0b19zZW5kX3NlbGVjdGlvbnECiFgSAAAA
-Y29udHJvbEFyZWFWaXNpYmxlcQOIWBMAAABzYXZlZFdpZGdldEdlb21ldHJ5cQRDLgHZ0MsAAQAA
-AAADrQAAAawAAAZsAAAEewAAA60AAAHCAAAGbAAABHsAAAAAAABxBVgPAAAAc2VsZWN0aW9uX2dy
-b3VwcQZOWBEAAAB0b29sYmFyX3NlbGVjdGlvbnEHSwBYBQAAAGdyYXBocQh9cQkoWAsAAABhbHBo
-YV92YWx1ZXEKS4BYDQAAAGNsYXNzX2RlbnNpdHlxC4lYEQAAAGppdHRlcl9jb250aW51b3VzcQyJ
-WAsAAABqaXR0ZXJfc2l6ZXENSwpYEwAAAGxhYmVsX29ubHlfc2VsZWN0ZWRxDolYCwAAAHBvaW50
-X3dpZHRocQ9LClgJAAAAc2hvd19ncmlkcRCJWAsAAABzaG93X2xlZ2VuZHERiFgNAAAAc2hvd19y
-ZWdfbGluZXESiVgRAAAAdG9vbHRpcF9zaG93c19hbGxxE4l1WAsAAABfX3ZlcnNpb25fX3EUSwJY
-EAAAAGNvbnRleHRfc2V0dGluZ3NxFV1xFmNPcmFuZ2Uud2lkZ2V0cy5zZXR0aW5ncwpDb250ZXh0
-CnEXKYFxGH1xGShYCgAAAGF0dHJpYnV0ZXNxGn1xGyhYCwAAAHNlcGFsIHdpZHRocRxLAlgEAAAA
-aXJpc3EdSwFYCwAAAHBldGFsIHdpZHRocR5LAlgMAAAAc2VwYWwgbGVuZ3RocR9LAlgMAAAAcGV0
-YWwgbGVuZ3RocSBLAnVYBAAAAHRpbWVxIUdB1qcWI7zvG1gFAAAAbWV0YXNxIn1xI1gGAAAAdmFs
-dWVzcSR9cSUoWAYAAABhdHRyX3hxJlgMAAAAc2VwYWwgbGVuZ3RocSdLZoZxKFgGAAAAYXR0cl95
-cSlYCwAAAHNlcGFsIHdpZHRocSpLZoZxK2gIfXEsKFgKAAAAYXR0cl9jb2xvcnEtWAQAAABpcmlz
-cS5LZYZxL1gKAAAAYXR0cl9sYWJlbHEwTkr+////hnExWAoAAABhdHRyX3NoYXBlcTJOSv7///+G
-cTNYCQAAAGF0dHJfc2l6ZXE0Tkr+////hnE1dWgUSwJ1WA4AAABvcmRlcmVkX2RvbWFpbnE2XXE3
-KGgfSwKGcThoHEsChnE5aCBLAoZxOmgeSwKGcTtoHUsBhnE8ZXViYXUu
+		<properties node_id="1" format="pickle">gASVEwMAAAAAAAB9lCiMC2F1dG9fY29tbWl0lIiMC2F1dG9fc2FtcGxllIiMEmNvbnRyb2xBcmVh
+VmlzaWJsZZSIjBNzYXZlZFdpZGdldEdlb21ldHJ5lEMuAdnQywABAAAAAAOtAAABrAAABmwAAAR7
+AAADrQAAAcIAAAZsAAAEewAAAAAAAJSMCXNlbGVjdGlvbpROjBF0b29sdGlwX3Nob3dzX2FsbJSI
+jA92aXN1YWxfc2V0dGluZ3OUfZSMBWdyYXBolH2UKIwLYWxwaGFfdmFsdWWUS4CMDWNsYXNzX2Rl
+bnNpdHmUiYwRaml0dGVyX2NvbnRpbnVvdXOUiYwLaml0dGVyX3NpemWUSwqME2xhYmVsX29ubHlf
+c2VsZWN0ZWSUiYwWb3J0aG9ub3JtYWxfcmVncmVzc2lvbpSJjAtwb2ludF93aWR0aJRLCowJc2hv
+d19ncmlklImMC3Nob3dfbGVnZW5klIiMDXNob3dfcmVnX2xpbmWUiXWMC19fdmVyc2lvbl9flEsF
+jBBjb250ZXh0X3NldHRpbmdzlF2UjBVvcmFuZ2V3aWRnZXQuc2V0dGluZ3OUjAdDb250ZXh0lJOU
+KYGUfZQojAphdHRyaWJ1dGVzlH2UKIwLc2VwYWwgd2lkdGiUSwKMBGlyaXOUSwGMC3BldGFsIHdp
+ZHRolEsCjAxzZXBhbCBsZW5ndGiUSwKMDHBldGFsIGxlbmd0aJRLAnWMBHRpbWWUR0HWpxYjvO8b
+jAVtZXRhc5R9lIwGdmFsdWVzlH2UKIwKYXR0cl9jb2xvcpSMBGlyaXOUS2WGlIwKYXR0cl9sYWJl
+bJROSv7///+GlIwKYXR0cl9zaGFwZZROSv7///+GlIwJYXR0cl9zaXpllE5K/v///4aUjAZhdHRy
+X3iUjAxzZXBhbCBsZW5ndGiUS2aGlIwGYXR0cl95lIwLc2VwYWwgd2lkdGiUS2aGlGgKfZRoFksF
+dYwOb3JkZXJlZF9kb21haW6UXZQoaCNLAoaUaCBLAoaUaCRLAoaUaCJLAoaUaCFLAYaUZXViYXUu
 </properties>
-		<properties format="pickle" node_id="2">gAN9cQAoWAsAAABhdXRvX2NvbW1pdHEBiFgOAAAAY29sb3JfYnlfY2xhc3NxAohYEgAAAGNvbnRy
-b2xBcmVhVmlzaWJsZXEDiFgOAAAAZGlzdF9jb2xvcl9SR0JxBChL3EvcS9xL/3RxBVgTAAAAc2F2
-ZWRXaWRnZXRHZW9tZXRyeXEGTlgLAAAAc2VsZWN0X3Jvd3NxB4hYFQAAAHNob3dfYXR0cmlidXRl
-X2xhYmVsc3EIiFgSAAAAc2hvd19kaXN0cmlidXRpb25zcQmJWAsAAABfX3ZlcnNpb25fX3EKSwFY
-EAAAAGNvbnRleHRfc2V0dGluZ3NxC11xDGNPcmFuZ2Uud2lkZ2V0cy5zZXR0aW5ncwpDb250ZXh0
-CnENKYFxDn1xDyhYCgAAAGF0dHJpYnV0ZXNxEH1xEShYCwAAAHNlcGFsIHdpZHRocRJLAlgEAAAA
-aXJpc3ETXXEUKFgLAAAASXJpcy1zZXRvc2FxFVgPAAAASXJpcy12ZXJzaWNvbG9ycRZYDgAAAEly
-aXMtdmlyZ2luaWNhcRdlWAsAAABwZXRhbCB3aWR0aHEYSwJYDAAAAHNlcGFsIGxlbmd0aHEZSwJY
-DAAAAHBldGFsIGxlbmd0aHEaSwJ1WAQAAAB0aW1lcRtHQdXgmRCzIppYBQAAAG1ldGFzcRx9cR1Y
-BgAAAHZhbHVlc3EefXEfKFgOAAAAZGlzdF9jb2xvcl9SR0JxIGgFSv7///+GcSFYEwAAAHNhdmVk
-V2lkZ2V0R2VvbWV0cnlxIk5K/v///4ZxI1gLAAAAc2VsZWN0X3Jvd3NxJIhK/v///4ZxJVgLAAAA
-YXV0b19jb21taXRxJohK/v///4ZxJ1gNAAAAc2VsZWN0ZWRfcm93c3EoXXEpWA4AAABjb2xvcl9i
-eV9jbGFzc3EqiEr+////hnErWA0AAABzZWxlY3RlZF9jb2xzcSxdcS1YEgAAAHNob3dfZGlzdHJp
-YnV0aW9uc3EuiUr+////hnEvWBUAAABzaG93X2F0dHJpYnV0ZV9sYWJlbHNxMIhK/v///4ZxMWgK
-SwF1WA4AAABvcmRlcmVkX2RvbWFpbnEyXXEzKGgZSwKGcTRoEksChnE1aBpLAoZxNmgYSwKGcTdo
-E0sBhnE4ZXViYXUu
-</properties>
+		<properties node_id="2" format="literal">{'auto_commit': True, 'color_by_class': True, 'controlAreaVisible': True, 'savedWidgetGeometry': None, 'select_rows': True, 'show_attribute_labels': True, 'show_distributions': False, 'stored_selection': {'rows': [], 'columns': []}, '__version__': 1}</properties>
 	</node_properties>
+	<session_state>
+		<window_groups />
+	</session_state>
 </scheme>

@@ -651,7 +651,7 @@ class OWNomogram(OWWidget):
                   " and Logistic Regression Classifiers."
     icon = "icons/Nomogram.svg"
     priority = 2000
-    keywords = []
+    keywords = "nomogram"
 
     class Inputs:
         classifier = Input("Classifier", Model)
@@ -674,7 +674,7 @@ class OWNomogram(OWWidget):
     sort_index = Setting(SortBy.ABSOLUTE)
     cont_feature_dim_index = Setting(0)
 
-    graph_name = "scene"
+    graph_name = "scene"  # QGraphicsScene
 
     class Error(OWWidget.Error):
         invalid_classifier = Msg("Nomogram accepts only Naive Bayes and "

@@ -135,7 +135,7 @@ class OWTestAndScore(OWWidget):
     description = "Cross-validation accuracy estimation."
     icon = "icons/TestLearners1.svg"
     priority = 100
-    keywords = ['Cross Validation', 'CV']
+    keywords = "test and score, cross validation, cv"
     replaces = ["Orange.widgets.evaluate.owtestlearners.OWTestLearners"]
 
     class Inputs:

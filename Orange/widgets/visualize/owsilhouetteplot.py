@@ -64,7 +64,7 @@ class OWSilhouettePlot(widget.OWWidget):
 
     icon = "icons/SilhouettePlot.svg"
     priority = 300
-    keywords = []
+    keywords = "silhouette plot"
 
     class Inputs:
         data = Input("Data", (Orange.data.Table, Orange.misc.DistMatrix))
@@ -100,7 +100,7 @@ class OWSilhouettePlot(widget.OWWidget):
                  ("Manhattan", Orange.distance.Manhattan),
                  ("Cosine", Orange.distance.Cosine)]
 
-    graph_name = "scene"
+    graph_name = "scene"  # QGraphicsScene
 
     class Error(widget.OWWidget.Error):
         need_two_clusters = Msg("Need at least two non-empty clusters")

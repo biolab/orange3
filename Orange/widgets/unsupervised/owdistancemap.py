@@ -265,7 +265,7 @@ class OWDistanceMap(widget.OWWidget):
     description = "Visualize a distance matrix."
     icon = "icons/DistanceMap.svg"
     priority = 1200
-    keywords = []
+    keywords = "distance map"
 
     class Inputs:
         distances = Input("Distances", Orange.misc.DistMatrix)
@@ -296,7 +296,7 @@ class OWDistanceMap(widget.OWWidget):
 
     autocommit = settings.Setting(True)
 
-    graph_name = "grid_widget"
+    graph_name = "grid_widget" # pg.GraphicsItem (pg.GraphicsWidget)
 
     # Disable clustering for inputs bigger than this
     _MaxClustering = 25000

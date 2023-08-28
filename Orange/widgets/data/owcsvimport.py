@@ -615,7 +615,7 @@ class OWCSVFileImport(widget.OWWidget):
     icon = "icons/CSVFile.svg"
     priority = 11
     category = "Data"
-    keywords = ["file", "load", "read", "open", "csv"]
+    keywords = "csv file import, file, load, read, open, csv"
 
     class Outputs:
         data = widget.Output(

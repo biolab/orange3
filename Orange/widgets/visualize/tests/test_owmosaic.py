@@ -20,7 +20,7 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         super().setUpClass()
         WidgetOutputsTestMixin.init(cls)
 
-        cls.signal_name = "Data"
+        cls.signal_name = OWMosaicDisplay.Inputs.data
         cls.signal_data = cls.data
 
     def setUp(self):
@@ -200,6 +200,7 @@ class MosaicVizRankTests(WidgetTest):
 
     def setUp(self):
         self.widget = self.create_widget(OWMosaicDisplay)
+        self.widget.vizrank.max_attrs = 0
         self.vizrank = self.widget.vizrank
 
     def tearDown(self):
@@ -343,6 +344,7 @@ class MosaicVizRankTests(WidgetTest):
 
     def test_pause_continue(self):
         data = Table("housing.tab")
+        self.widget.vizrank.max_attrs = 6
         self.send_signal(self.widget.Inputs.data, data)
         self.vizrank.toggle()  # start
         self.process_events(until=lambda: self.vizrank.saved_progress > 5)
@@ -451,7 +453,7 @@ class MosaicVizRankTests(WidgetTest):
             else:
                 self.assertEqual(color, str(discrete_data.domain.class_var))
 
-            output = self.get_output("Data")
+            output = self.get_output(self.widget.Outputs.annotated_data)
             self.assertEqual(output.domain.class_var, table.domain.class_var)
 
             for ma in range(i == 0, 7):
@@ -511,9 +513,13 @@ class MosaicVizRankTests(WidgetTest):
 
     def test_on_manual_change(self):
         data = Table("iris.tab")
+        self.widget.vizrank.max_attrs = 1
         self.send_signal(self.widget.Inputs.data, data)
         self.vizrank.toggle()
-        self.process_events(until=lambda: not self.vizrank.keep_running)
+        # This takes 0.5 s on my M1 Mac (2022), but let us tolerate 20x longer
+        # on CI
+        self.process_events(until=lambda: not self.vizrank.keep_running,
+                            timeout=10000)
 
         model = self.vizrank.rank_model
         attrs = model.data(model.index(3, 0), self.vizrank._AttrRole)

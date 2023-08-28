@@ -336,7 +336,7 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
     description = ""
     category = "Transform"
     icon = "icons/GroupBy.svg"
-    keywords = ["aggregate", "group by"]
+    keywords = "aggregate, group by"
     priority = 1210
 
     class Inputs:

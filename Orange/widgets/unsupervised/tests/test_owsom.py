@@ -5,6 +5,8 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 import scipy.sparse as sp
+from AnyQt.QtWidgets import QComboBox, QPushButton, QCheckBox
+from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain
 from Orange.widgets.tests.base import WidgetTest
@@ -543,24 +545,29 @@ class TestOWSOM(WidgetTest):
         m = selm((0, 0)).astype(int)
         widget.on_selection_change(selm((0, 0)))
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
         widget.redraw_selection.assert_called_once()
         widget.update_output.assert_called_once()
 
         m = selm((0, 1)).astype(int)
         widget.on_selection_change(selm((0, 1)))
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
 
         m[0, 0] = 1
         widget.on_selection_change(selm((0, 0)), SomView.SelectionAddToGroup)
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
 
         m[0, 0] = 0
         widget.on_selection_change(selm((0, 0)), SomView.SelectionRemove)
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
 
         m[0, 0] = 2
         widget.on_selection_change(selm((0, 0)), SomView.SelectionNewGroup)
         np.testing.assert_equal(widget.selection, m)
+        self.assertIsInstance(widget.selection, list)
 
     @_patch_recompute_som
     def test_on_selection_change_on_empty(self):
@@ -640,6 +647,42 @@ class TestOWSOM(WidgetTest):
         self.widget._recompute_som.reset_mock()
         self.send_signal(self.widget.Inputs.data, heart_with_less_features)
         self.widget._recompute_som.assert_called_once()
+
+    def test_modified_info(self):
+        w = self.widget
+        self.assertFalse(w.Information.modified.is_shown())
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertFalse(w.Information.modified.is_shown())
+        restart_button = w.controlArea.findChild(QPushButton)
+
+        # modify grid
+        simulate.combobox_activate_index(w.controlArea.findChild(QComboBox), 1)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
+
+        # modify set dimensions automatically
+        w.controlArea.findChild(QCheckBox).setCheckState(Qt.Unchecked)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
+
+        # modify dimension spins
+        w.spin_x.setValue(7)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
+
+        w.spin_y.setValue(7)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
+
+        # modify initialization
+        simulate.combobox_activate_index(w.controlArea.findChildren(QComboBox)[1], 1)
+        self.assertTrue(w.Information.modified.is_shown())
+        restart_button.click()
+        self.assertFalse(w.Information.modified.is_shown())
 
 
 if __name__ == "__main__":

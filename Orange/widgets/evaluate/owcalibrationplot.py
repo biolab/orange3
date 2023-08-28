@@ -96,7 +96,7 @@ class OWCalibrationPlot(widget.OWWidget):
     description = "Calibration plot based on evaluation of classifiers."
     icon = "icons/CalibrationPlot.svg"
     priority = 1030
-    keywords = []
+    keywords = "calibration plot"
 
     class Inputs:
         evaluation_results = Input("Evaluation Results", Results)
@@ -137,7 +137,7 @@ class OWCalibrationPlot(widget.OWWidget):
     visual_settings = settings.Setting({}, schema_only=True)
     auto_commit = settings.Setting(True)
 
-    graph_name = "plot"
+    graph_name = "plot"  # pg.GraphicsItem (pg.PlotItem)
 
     def __init__(self):
         super().__init__()

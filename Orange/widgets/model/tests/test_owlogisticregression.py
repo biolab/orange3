@@ -57,7 +57,7 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
     def test_output_coefficients(self):
         """Check if coefficients are on output after apply"""
         self.assertIsNone(self.get_output(self.widget.Outputs.coefficients))
-        self.send_signal("Data", self.data)
+        self.send_signal(self.widget.Inputs.data, self.data)
         self.click_apply()
         self.assertIsInstance(self.get_output(self.widget.Outputs.coefficients), Table)
 
@@ -73,7 +73,7 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
                             np.arange(120, 140, dtype=int)))]
         for case in cases:
             data = table[case, :]
-            self.send_signal("Data", data)
+            self.send_signal(self.widget.Inputs.data, data)
             self.click_apply()
 
     def test_coefficients_one_value(self):
@@ -93,7 +93,7 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
                 [0., 1.],
                 ["yes", "no"]))
         )
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         self.click_apply()
         coef = self.get_output(self.widget.Outputs.coefficients)
         self.assertEqual(coef.domain[0].name, "no")
@@ -107,16 +107,16 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         table = Table("iris")
         with table.unlocked():
             table.Y[:5] = np.NaN
-        self.send_signal("Data", table)
-        coef1 = self.get_output("Coefficients")
+        self.send_signal(self.widget.Inputs.data, table)
+        coef1 = self.get_output(self.widget.Outputs.coefficients)
         table = table[5:]
-        self.send_signal("Data", table)
-        coef2 = self.get_output("Coefficients")
+        self.send_signal(self.widget.Inputs.data, table)
+        coef2 = self.get_output(self.widget.Outputs.coefficients)
         self.assertTrue(np.array_equal(coef1, coef2))
 
     def test_class_weights(self):
         table = Table("iris")
-        self.send_signal("Data", table)
+        self.send_signal(self.widget.Inputs.data, table)
         self.assertFalse(self.widget.class_weight)
         self.widget.controls.class_weight.setChecked(True)
         self.assertTrue(self.widget.class_weight)

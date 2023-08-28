@@ -190,15 +190,15 @@ class TestOWTestAndScore(WidgetTest):
         )
         self.widget.n_folds = 0
         self.assertFalse(self.widget.Error.train_data_error.is_shown())
-        self.send_signal("Data", table)
-        self.send_signal("Learner", MajorityLearner(), 0, wait=1000)
+        self.send_signal(self.widget.Inputs.train_data, table)
+        self.send_signal(self.widget.Inputs.learner, MajorityLearner(), 0, wait=1000)
         self.assertTrue(self.widget.Error.train_data_error.is_shown())
 
     def test_data_errors(self):
         """ Test all data_errors """
 
         def assertErrorShown(data, is_shown, message):
-            self.send_signal("Data", data)
+            self.send_signal(self.widget.Inputs.train_data, data)
             self.assertEqual(is_shown, self.widget.Error.train_data_error.is_shown())
             self.assertEqual(message, str(self.widget.Error.train_data_error))
 

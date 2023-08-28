@@ -17,7 +17,7 @@ class OWRandomForest(OWBaseLearner):
         "Orange.widgets.regression.owrandomforestregression.OWRandomForestRegression",
     ]
     priority = 40
-    keywords = []
+    keywords = "random forest"
 
     LEARNER = RandomForestLearner
 

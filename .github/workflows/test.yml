@@ -45,7 +45,7 @@ jobs:
             python-version: '3.10'
             tox_env: orange-latest
             name: Latest
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             python-version: 3.8
             tox_env: orange-oldest
             name: Oldest dependencies
@@ -53,7 +53,6 @@ jobs:
             python-version: 3.9
             tox_env: pyqt6
             name: PyQt6
-
 
     services:
       postgres:
@@ -84,12 +83,18 @@ jobs:
       - name: Install linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0 libxcb-cursor0
 
       - name: Install Tox
         run: |
           python -m pip install --upgrade pip
           python -m pip install --upgrade tox
+
+      - name: Skip testing workflows at coverage
+        if: |
+          matrix.python-version == '3.8' && matrix.tox_env == 'orange-released'
+        run: |
+          echo 'SKIP_EXAMPLE_WORKFLOWS=1' >> $GITHUB_ENV
 
       - name: Run Tox
         run: catchsegv xvfb-run -a -s "$XVFBARGS" tox -e ${{ matrix.tox_env }}
@@ -98,12 +103,10 @@ jobs:
           ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
 
       - name: Upload code coverage
-        if: |
-          matrix.python-version == '3.8' &&  
-          matrix.tox_env == 'orange-released'
-        run: |
-          pip install codecov
-          codecov
+        if: matrix.python-version == '3.8' && matrix.tox_env == 'orange-released'
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
 
   test_on_macos_and_windows:
     runs-on: ${{ matrix.os }}
