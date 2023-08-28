@@ -12,10 +12,10 @@ from unittest.mock import Mock, patch
 
 from Orange import data
 
-from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader
+from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader, ExcelReader
 from Orange.data.io_base import PICKLE_PROTOCOL
 from Orange.data.table import get_sample_datasets_dir
-from Orange.data import Table
+from Orange.data import Table, StringVariable, Domain
 from Orange.tests import test_dirname
 from Orange.util import OrangeDeprecationWarning
 
@@ -205,6 +205,32 @@ class TestReader(unittest.TestCase):
         self.assertGreaterEqual(PICKLE_PROTOCOL, pickle.DEFAULT_PROTOCOL)
         # we should not use a version that is not supported
         self.assertLessEqual(PICKLE_PROTOCOL, pickle.HIGHEST_PROTOCOL)
+
+    def test_update_origin(self):
+        """
+        Test if origin attributes is changed if path doesn't exist. For example
+        when file moved to another computer. It tested only one scenario
+        all other scenarios are tested as part of update_origin function tests.
+        """
+        with tempfile.TemporaryDirectory() as dir_name:
+            os.mkdir(os.path.join(dir_name, "subdir"))
+
+            var = StringVariable("Files")
+            var.attributes["origin"] = "/a/b/c/d/subdir"
+            table = Table.from_list(Domain([], metas=[var]), ["f1", "f2"])
+
+            for reader in (CSVReader, TabReader, PickleReader, ExcelReader):
+                dataset = os.path.join(dir_name, f"dataset{reader.EXTENSIONS[0]}")
+                if reader is PickleReader:
+                    reader.write_file(dataset, table)
+                else:
+                    reader.write_file(dataset, table, with_annotations=True)
+
+                table = Table.from_file(dataset)
+                self.assertEqual(
+                    os.path.join(dir_name, "subdir"),
+                    table.domain["Files"].attributes["origin"],
+                )
 
 
 if __name__ == "__main__":
