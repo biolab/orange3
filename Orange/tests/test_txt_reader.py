@@ -4,7 +4,6 @@ import sys
 import unittest
 from tempfile import NamedTemporaryFile
 import os
-import io
 import warnings
 
 from Orange.data import Table, ContinuousVariable, DiscreteVariable
@@ -80,8 +79,11 @@ class TestTabReader(unittest.TestCase):
         self.read_easy(csv_file_nh, "Feature ")
 
     def test_read_csv_with_na(self):
-        c = io.StringIO(csv_file_missing)
-        table = CSVReader(c).read()
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(csv_file_missing)
+
+        table = CSVReader(tmp.name).read()
+        os.unlink(tmp.name)
         f1, f2 = table.domain.variables
         self.assertIsInstance(f1, ContinuousVariable)
         self.assertIsInstance(f2, DiscreteVariable)
@@ -130,3 +132,7 @@ time
         data = reader.read()
         self.assertEqual(len(data), 8)
         self.assertEqual(len(data.domain.variables) + len(data.domain.metas), 15)
+
+
+if __name__ == "__main__":
+    unittest.main()
