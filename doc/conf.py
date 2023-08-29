@@ -45,3 +45,5 @@ multiproject_projects = {
         "path": "visual-programming/source/"
     },
 }
+
+html_theme = "alabaster"
