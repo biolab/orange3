@@ -164,14 +164,7 @@ class CSVReader(FileFormat, DataTableMixin):
                         skipinitialspace=True,
                     )
                     data = self.data_table(reader)
-
-                    # TODO: Name can be set unconditionally when/if
-                    # self.filename will always be a string with the file name.
-                    # Currently, some tests pass StringIO instead of
-                    # the file name to a reader.
-                    if isinstance(self.filename, str):
-                        data.name = path.splitext(
-                            path.split(self.filename)[-1])[0]
+                    data.name = path.splitext(path.split(self.filename)[-1])[0]
                     if error and isinstance(error, UnicodeDecodeError):
                         pos, endpos = error.args[2], error.args[3]
                         warning = ('Skipped invalid byte(s) in position '
