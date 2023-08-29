@@ -1,7 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-
-import io
 import os
 import pickle
 import shutil
@@ -124,12 +122,13 @@ class TestReader(unittest.TestCase):
         1, 0,
         1, 2,
         """
-        c = io.StringIO(samplefile)
+        with tempfile.NamedTemporaryFile(mode="w+", delete=False) as tmp:
+            tmp.write(samplefile)
         with self.assertWarns(UserWarning) as cm:
-            table = CSVReader(c).read()
+            table = CSVReader(tmp.name).read()
+        os.unlink(tmp.name)
         self.assertEqual(len(table.domain.attributes), 2)
-        self.assertEqual(cm.warning.args[0],
-                         "Columns with no headers were removed.")
+        self.assertEqual(cm.warning.args[0], "Columns with no headers were removed.")
 
     def test_type_annotations(self):
         class FooFormat(FileFormat):
