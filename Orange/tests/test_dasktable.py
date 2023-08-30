@@ -90,7 +90,7 @@ class TableTestCase(unittest.TestCase):
         numpy.testing.assert_equal(dasktable.Y, table.Y)
         numpy.testing.assert_equal(dasktable.metas, table.metas)
 
-    def test_zero_size_dask_arrays(self):
+    def test_zero_width_dask_arrays(self):
         empty = Table.from_numpy(Domain([], [ContinuousVariable("y")]),
                                 X=np.ones((10**5, 0)),
                                 Y=np.ones((10**5, 1)))
@@ -110,6 +110,30 @@ class TableTestCase(unittest.TestCase):
             self.assertIsInstance(data.Y, da.Array)
             self.assertEqual(data.X.shape, (10**5, 1))
             self.assertEqual(data._Y.shape, (10**5, 0))
+
+    def test_zero_len_dask_arrays(self):
+        atts = [ContinuousVariable("x"), ContinuousVariable("y")]
+        empty = Table.from_numpy(Domain([], atts),
+                                 X=np.ones((0, 0)),
+                                 Y=np.ones((0, 2)))
+
+        with open_as_dask(empty) as data:
+            self.assertIsInstance(data, DaskTable)
+            self.assertIsInstance(data.X, da.Array)
+            self.assertIsInstance(data._Y, da.Array)
+            self.assertEqual(data.X.shape, (0, 0))
+            self.assertEqual(data._Y.shape, (0, 2))
+
+        empty = Table.from_numpy(Domain(atts, []),
+                                 X=np.ones((0, 2)),
+                                 Y=np.ones((0, 0)))
+
+        with open_as_dask(empty) as data:
+            self.assertIsInstance(data, DaskTable)
+            self.assertIsInstance(data.X, da.Array)
+            self.assertIsInstance(data._Y, da.Array)
+            self.assertEqual(data.X.shape, (0, 2))
+            self.assertEqual(data._Y.shape, (0, 0))
 
     def test_compute(self):
         zoo = Table('zoo')
