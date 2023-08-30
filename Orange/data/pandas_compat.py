@@ -2,11 +2,11 @@
 from unittest.mock import patch
 
 import numpy as np
+from pandas import SparseDtype
 from scipy import sparse as sp
 from scipy.sparse import csr_matrix
 import pandas as pd
 from pandas.core.arrays import SparseArray
-from pandas.core.arrays.sparse.dtype import SparseDtype
 from pandas.api.types import (
     is_categorical_dtype, is_object_dtype,
     is_datetime64_any_dtype, is_numeric_dtype, is_integer_dtype
