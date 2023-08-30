@@ -85,10 +85,10 @@ class DaskTable(Table):
         assert size is not None
 
         if X is None:
-            X = da.zeros((size, 0), chunks=(size, 0))
+            X = da.zeros((size, len(domain.attributes)), chunks=(size, -1))
 
         if Y is None:
-            Y = da.zeros((size, 0), chunks=(size, 0))
+            Y = da.zeros((size, len(domain.class_vars)), chunks=(size, -1))
 
         if metas is None:
             metas = np.zeros((size, 0))
