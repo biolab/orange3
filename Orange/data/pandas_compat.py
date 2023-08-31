@@ -2,14 +2,15 @@
 from unittest.mock import patch
 
 import numpy as np
-from pandas import SparseDtype
 from scipy import sparse as sp
 from scipy.sparse import csr_matrix
 import pandas as pd
 from pandas.core.arrays import SparseArray
 from pandas.api.types import (
-    is_categorical_dtype, is_object_dtype,
-    is_datetime64_any_dtype, is_numeric_dtype, is_integer_dtype
+    is_object_dtype,
+    is_datetime64_any_dtype,
+    is_numeric_dtype,
+    is_integer_dtype,
 )
 
 from Orange.data import (
@@ -166,9 +167,11 @@ def _reset_index(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _is_discrete(s, force_nominal):
-    return (is_categorical_dtype(s) or
-            is_object_dtype(s) and (force_nominal or
-                                    s.nunique() < s.size ** .666))
+    return (
+        isinstance(s.dtype, pd.CategoricalDtype)
+        or is_object_dtype(s)
+        and (force_nominal or s.nunique() < s.size**0.666)
+    )
 
 
 def _is_datetime(s):
@@ -297,7 +300,7 @@ def vars_from_df(df, role=None, force_nominal=False):
         elif not any(a_expr):
             # if all c in columns table will share memory with dataframe
             a_df = df if all(c in a_cols for c in df.columns) else df[a_cols]
-            if all(isinstance(a, SparseDtype) for a in a_df.dtypes):
+            if all(isinstance(a, pd.SparseDtype) for a in a_df.dtypes):
                 arr = csr_matrix(a_df.sparse.to_coo())
             else:
                 arr = np.asarray(a_df)

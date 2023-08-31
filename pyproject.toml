@@ -1,6 +1,6 @@
 [build-system]
 requires = [
-    "setuptools>=41.0.0,<50.0",
+    "setuptools>=51.0",
     "wheel",
     "cython>=3.0",
     "oldest-supported-numpy",

@@ -19,7 +19,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.9
 
       - name: Install Tox
         run: |
@@ -37,20 +37,20 @@ jobs:
       fail-fast: False
       matrix:
         os: [ubuntu-22.04]
-        python-version: [3.8, 3.9, '3.10', '3.11']
+        python-version: [3.9, '3.10', '3.11']
         tox_env: [orange-released]
         name: [Released]
         include:
           - os: ubuntu-22.04
-            python-version: '3.10'
+            python-version: '3.11'
             tox_env: orange-latest
             name: Latest
           - os: ubuntu-20.04
-            python-version: 3.8
+            python-version: 3.9
             tox_env: orange-oldest
             name: Oldest dependencies
           - os: ubuntu-22.04
-            python-version: 3.9
+            python-version: '3.10'
             tox_env: pyqt6
             name: PyQt6
 
@@ -120,16 +120,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
-        python-version: [3.8, 3.9, '3.10', '3.11']
+        python-version: [3.9, '3.10', '3.11']
         tox_env: [orange-released]
         name: [Released]
         include:
           - os: windows-latest
-            python-version: '3.10'
+            python-version: '3.11'
             tox_env: orange-latest
             name: Latest
           - os: macos-latest
-            python-version: '3.10'
+            python-version: '3.11'
             tox_env: orange-latest
             name: Latest
           - os: windows-latest
