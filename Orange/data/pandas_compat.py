@@ -2,7 +2,6 @@
 from unittest.mock import patch
 
 import numpy as np
-from pandas import SparseDtype
 from scipy import sparse as sp
 from scipy.sparse import csr_matrix
 import pandas as pd
@@ -301,7 +300,7 @@ def vars_from_df(df, role=None, force_nominal=False):
         elif not any(a_expr):
             # if all c in columns table will share memory with dataframe
             a_df = df if all(c in a_cols for c in df.columns) else df[a_cols]
-            if all(isinstance(a, SparseDtype) for a in a_df.dtypes):
+            if all(isinstance(a, pd.SparseDtype) for a in a_df.dtypes):
                 arr = csr_matrix(a_df.sparse.to_coo())
             else:
                 arr = np.asarray(a_df)
