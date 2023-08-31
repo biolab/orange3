@@ -1010,8 +1010,9 @@ class Table(Sequence, Storage):
     @classmethod
     def _init_ids(cls, obj):
         with cls._next_instance_lock:
-            obj.ids = np.array(range(cls._next_instance_id, cls._next_instance_id + obj.X.shape[0]))
+            nid = cls._next_instance_id
             cls._next_instance_id += obj.X.shape[0]
+        obj.ids = np.arange(nid, nid + obj.X.shape[0], dtype=int)
 
     @classmethod
     def new_id(cls):
