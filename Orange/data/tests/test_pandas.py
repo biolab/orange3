@@ -795,7 +795,7 @@ class TestDenseTablePandas(TestTablePandas):
     def test_amend(self):
         with self.table.unlocked():
             df = self.table.X_df
-            df.iloc[0][0] = 0
+            df.iloc[0, 0] = 0
         X = self.table.X
         with self.table.unlocked():
             self.table.X_df = df

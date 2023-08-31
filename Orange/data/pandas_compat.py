@@ -8,8 +8,10 @@ from scipy.sparse import csr_matrix
 import pandas as pd
 from pandas.core.arrays import SparseArray
 from pandas.api.types import (
-    is_categorical_dtype, is_object_dtype,
-    is_datetime64_any_dtype, is_numeric_dtype, is_integer_dtype
+    is_object_dtype,
+    is_datetime64_any_dtype,
+    is_numeric_dtype,
+    is_integer_dtype,
 )
 
 from Orange.data import (
@@ -166,9 +168,11 @@ def _reset_index(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def _is_discrete(s, force_nominal):
-    return (is_categorical_dtype(s) or
-            is_object_dtype(s) and (force_nominal or
-                                    s.nunique() < s.size ** .666))
+    return (
+        isinstance(s.dtype, pd.CategoricalDtype)
+        or is_object_dtype(s)
+        and (force_nominal or s.nunique() < s.size**0.666)
+    )
 
 
 def _is_datetime(s):
