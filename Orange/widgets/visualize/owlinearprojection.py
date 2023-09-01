@@ -63,6 +63,7 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
 
     def initialize(self):
         super().initialize()
+        self.n_attrs_spin.setDisabled(False)
         self.attr_color = self.master.attr_color
 
     def before_running(self):
