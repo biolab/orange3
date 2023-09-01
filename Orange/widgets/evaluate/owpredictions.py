@@ -1004,11 +1004,12 @@ class PredictionsBarItemDelegate(ItemDelegate):
             QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
         bottommargin = min(margin, 1)
         rect = option.rect.adjusted(margin, margin, -margin, -bottommargin)
-        option.text = ""
+
         textrect = style.subElementRect(
             QStyle.SE_ItemViewItemText, option, option.widget)
+
         # Are the margins included in the subElementRect?? -> No!
-        textrect = textrect.adjusted(margin, margin, -margin, -bottommargin)
+        textrect = textrect.adjusted(0, 0, 0, -bottommargin)
         spacing = max(metrics.leading(), 1)
 
         distheight = rect.height() - metrics.height() - spacing
@@ -1025,8 +1026,8 @@ class PredictionsBarItemDelegate(ItemDelegate):
 
         textrect = textrect.adjusted(0, 0, 0, -distheight - spacing)
         distrect = QRect(
-            textrect.bottomLeft() + QPoint(0, spacing),
-            QSize(rect.width(), distheight))
+            textrect.bottomLeft() + QPoint(margin, spacing),
+            QSize(textrect.width() - 2 * margin, distheight))
         painter.setPen(QPen(Qt.lightGray, 0.3))
         self.drawBar(painter, option, index, distrect)
         painter.restore()
