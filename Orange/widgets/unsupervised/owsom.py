@@ -1,10 +1,9 @@
 from collections import defaultdict, namedtuple
 from contextlib import contextmanager
-from typing import Optional
+from typing import Optional, Union
 from xml.sax.saxutils import escape
 
 import numpy as np
-import scipy.sparse as sp
 
 from AnyQt.QtCore import Qt, QRectF, pyqtSignal as Signal, QObject, QThread, \
     pyqtSlot as Slot
@@ -15,8 +14,10 @@ from AnyQt.QtWidgets import \
     QGraphicsItem, QGraphicsRectItem, QGraphicsItemGroup, QSizePolicy, \
     QGraphicsPathItem
 
-from Orange.data import Table, Domain
-from Orange.data.util import array_equal
+from Orange.widgets.utils.signals import lazy_table_transform
+
+from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
+from Orange.data.util import array_equal, SharedComputeValue, get_unique_names
 from Orange.preprocess import decimal_binnings, time_binnings
 from Orange.projection.som import SOM
 
@@ -28,7 +29,8 @@ from Orange.widgets.settings import \
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.utils.annotated_data import \
-    create_annotated_table, create_groups_table, ANNOTATED_DATA_SIGNAL_NAME
+    add_columns, group_values, \
+    ANNOTATED_DATA_SIGNAL_NAME, ANNOTATED_DATA_FEATURE_NAME
 from Orange.widgets.utils.colorpalettes import \
     BinnedContinuousPalette, LimitedDiscretePalette, DiscretePalette
 from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
@@ -184,6 +186,115 @@ def disconnected_spin(spin):
 N_ITERATIONS = 200
 
 
+class SomSharedValueCompute:
+    def __init__(self, domain: Domain, model: SOM,
+                 offsets: Union[np.ndarray, None],
+                 scales: Union[np.ndarray, None]):
+        # offsets and scales are made immutable so that they are hashable
+        def immutable(a):
+            if a is not None:
+                a = a.copy()
+                a.flags.writeable = False
+            return a
+
+        self.domain = domain
+        self.model = model
+        self.offsets = immutable(offsets)
+        self.scales = immutable(scales)
+        self.__hash = None
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state["__hash"] = None
+        return state
+
+    def __call__(self, data):
+        x = data.transform(self.domain).X
+        cont_x, mask, _, _ = SOM.prepare_data(x, self.offsets, self.scales)
+        winners = np.full((len(data), 2), np.nan)
+        distances = np.full(len(data), np.nan)
+        winners[mask], distances[mask] = self.model.winners(cont_x)
+        winners += 1
+        return winners, distances
+
+    # `offsets` and `scales` are ndarray's (and `model` contains ndarray's)
+    # Unless we __eq__ by identity, we can't properly define hash.
+    def __eq__(self, other):
+        return type(self) is type(other) and \
+               self.domain == other.domain \
+               and self.model == other.model \
+               and np.array_equal(self.offsets, other.offsets) \
+               and np.array_equal(self.scales, other.scales)
+
+    def __hash__(self):
+        if self.__hash is None:
+            self.__hash = hash((
+                self.domain, self.model,
+                tuple(self.offsets), tuple(self.scales)))
+        return self.__hash
+
+
+class SomCellCompute(SharedComputeValue):
+    def __init__(self, compute_shared, dim_x, hexagonal):
+        super().__init__(compute_shared)
+        self.dim_x = dim_x
+        self.hexagonal = hexagonal
+
+    def __eq__(self, other):
+        return super().__eq__(other) \
+            and self.dim_x == other.dim_x \
+            and self.hexagonal == other.hexagonal
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.dim_x, self.hexagonal))
+
+    def compute(self, _, shared_data):
+        coords = shared_data[0]
+        # coords are 1-based, subtract 1
+        col = (coords[:, 0] - 1) + (coords[:, 1] - 1) * self.dim_x
+        if self.hexagonal:
+            # 1 cell less after every two rows
+            col -= col // (self.dim_x * 2 - 1)
+        return col
+
+
+class SomCoordsCompute(SharedComputeValue):
+    def __init__(self, shared, column):
+        super().__init__(shared)
+        self.column = column
+
+    def compute(self, _, shared_data):
+        return shared_data[0][:, self.column]
+
+    def __eq__(self, other):
+        return self.column == other.column and super().__eq__(other)
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.column))
+
+
+class SomErrorCompute(SharedComputeValue):
+    InheritEq = True
+
+    def compute(self, _, shared_data):
+        return shared_data[1]
+
+
+class GetGroups:
+    # This assigns instances to selection groups; two instances that are not
+    # same cannot be considered equal, period.
+    InheritEq = True
+
+    def __init__(self, id_to_group, default, offset):
+        self.id_to_group = id_to_group
+        self.default = default + offset
+        self.offset = offset
+
+    def __call__(self, data, *args, **kwargs):
+        return np.array([self.id_to_group.get(id, self.default) - self.offset
+                        for id in data.ids])
+
+
 class OWSOM(OWWidget):
     name = "Self-Organizing Map"
     description = "Computation of self-organizing map."
@@ -246,7 +357,8 @@ class OWSOM(OWWidget):
         self.stop_optimization = False
 
         self.data = self.cont_x = None
-        self.cells = self.member_data = None
+        self.scales = self.offsets = None
+        self.som = self.cells = self.member_data = None
         self.selection = None
 
         # self.colors holds a palette or None when we need to draw same-colored
@@ -335,33 +447,16 @@ class OWSOM(OWWidget):
         self.grid_cells = None
         self.legend = None
 
+    @staticmethod
+    def _cont_domain(data):
+        attrs = data.domain.attributes
+        cont_attrs = [var for var in attrs if var.is_continuous]
+        if not cont_attrs:
+            return None
+        return Domain(cont_attrs)
+
     @Inputs.data
     def set_data(self, data):
-        def prepare_data():
-            if len(cont_attrs) < len(attrs):
-                self.Warning.ignoring_disc_variables()
-            if len(cont_attrs) == 1:
-                self.Warning.single_attribute()
-            x = Table.from_table(Domain(cont_attrs), data).X
-            if sp.issparse(x):
-                self.data = data
-                self.cont_x = x.tocsr()
-            else:
-                mask = np.all(np.isfinite(x), axis=1)
-                if np.sum(mask) <= 1:
-                    self.Error.not_enough_data()
-                else:
-                    if np.all(mask):
-                        self.data = data
-                        self.cont_x = x.copy()
-                    else:
-                        self.data = data[mask]
-                        self.cont_x = x[mask]
-                    self.cont_x -= np.min(self.cont_x, axis=0)[None, :]
-                    sums = np.sum(self.cont_x, axis=0)[None, :]
-                    sums[sums == 0] = 1
-                    self.cont_x /= sums
-
         def set_warnings():
             missing = len(data) - len(self.data)
             if missing:
@@ -370,24 +465,40 @@ class OWSOM(OWWidget):
 
         cont_x = self.cont_x.copy() if self.cont_x is not None else None
         self.data = self.cont_x = None
+        self.offsets = self.scales = None
+        new_cont_x = None
         self.closeContext()
         self.clear_messages()
 
         if data is not None:
-            attrs = data.domain.attributes
-            cont_attrs = [var for var in attrs if var.is_continuous]
-            if not cont_attrs:
+            cont_domain = self._cont_domain(data)
+            if cont_domain is None:
                 self.Error.no_numeric_variables()
             else:
-                prepare_data()
+                cont_attrs = cont_domain.attributes
+                if len(cont_attrs) < len(data.domain.attributes):
+                    self.Warning.ignoring_disc_variables()
+                if len(cont_attrs) == 1:
+                    self.Warning.single_attribute()
 
-        invalidated = cont_x is None or self.cont_x is None \
-            or not array_equal(cont_x, self.cont_x)
+                new_cont_x, mask, self.offsets, self.scales \
+                    = SOM.prepare_data(data.transform(cont_domain).X)
+                rows = np.sum(mask)
+                if rows == len(mask):
+                    self.data = data
+                elif rows > 1:
+                    self.data = data[mask]
+                else:
+                    self.Error.not_enough_data()
+
+        invalidated = cont_x is None or new_cont_x is None \
+            or not array_equal(cont_x, new_cont_x)
         if invalidated:
             self.stop_optimization_and_wait()
             self.clear()
 
         if self.data is not None:
+            self.cont_x = new_cont_x
             self.controls.attr_color.model().set_domain(data.domain)
             self.attr_color = data.domain.class_var
             set_warnings()
@@ -403,6 +514,7 @@ class OWSOM(OWWidget):
             self._redraw()
 
     def clear(self):
+        self.som = self.cont_x = None
         self.cells = self.member_data = None
         self.attr_color = None
         self.colors = self.thresholds = self.bin_labels = None
@@ -721,7 +833,7 @@ class OWSOM(OWWidget):
         if self.cont_x is None:
             return
 
-        som = SOM(
+        self.som = SOM(
             self.size_x, self.size_y,
             hexagonal=self.hexagonal,
             pca_init=self.initialization == 0,
@@ -759,8 +871,9 @@ class OWSOM(OWWidget):
             self._optimizer_thread = None
 
         self.progressBarInit()
+        self.setInvalidated(True)
 
-        self._optimizer = Optimizer(self.cont_x, som)
+        self._optimizer = Optimizer(self.cont_x, self.som)
         self._optimizer_thread = QThread()
         self._optimizer_thread.setStackSize(5 * 2 ** 20)
         self._optimizer.update.connect(self.__update)
@@ -782,6 +895,7 @@ class OWSOM(OWWidget):
     def __done(self, som):
         self.enable_controls(True)
         self.progressBarFinished()
+        self.setInvalidated(False)
         self._assign_instances(som.weights, som.ssum_weights)
         self._redraw()
         # This is the first time we know what was selected (assuming that
@@ -807,7 +921,7 @@ class OWSOM(OWWidget):
     def _assign_instances(self, weights, ssum_weights):
         if self.cont_x is None:
             return  # the widget is shutting down while signals still processed
-        assignments = SOM.winner_from_weights(
+        assignments, _ = SOM.winner_from_weights(
             self.cont_x, weights, ssum_weights, self.hexagonal)
         members = defaultdict(list)
         for i, (x, y) in enumerate(assignments):
@@ -851,30 +965,78 @@ class OWSOM(OWWidget):
                 self.size_y - 0.5 + leg_height / scale)
 
     def update_output(self):
-        if self.data is None:
+        if self.som is None:
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
             return
 
+        ngroups = int(self.selection is not None) and np.max(self.selection)
         indices = np.zeros(len(self.data), dtype=int)
+        id_to_group = {}
         if self.selection is not None and np.any(self.selection):
             for y in range(self.size_y):
                 for x in range(self.size_x):
                     rows = self.get_member_indices(x, y)
-                    indices[rows] = self.selection[x][y]
+                    group = self.selection[x][y]
+                    indices[rows] = group
+                    if group > 0:
+                        for id_ in self.data.ids[rows]:
+                            id_to_group[id_] = group
+
+        cont_domain = self._cont_domain(self.data)
+        shared_compute = SomSharedValueCompute(
+            cont_domain, self.som, self.offsets, self.scales)
+        cell = DiscreteVariable(
+            "som_cell",
+            values=tuple(
+                f"r{row + 1}c{col + 1}"
+                for row in range(self.size_y)
+                for col in range(self.size_x - (self.hexagonal and row % 2))),
+            compute_value=SomCellCompute(shared_compute,
+                                         self.size_x, self.hexagonal))
+        coordx = ContinuousVariable(
+            "som_row",
+            number_of_decimals=0,
+            compute_value=SomCoordsCompute(shared_compute, 1))
+        coordy = ContinuousVariable(
+            "som_col",
+            number_of_decimals=0,
+            compute_value=SomCoordsCompute(shared_compute, 0))
+        error = ContinuousVariable(
+            "som_error",
+            compute_value=SomErrorCompute(shared_compute)
+        )
+        som_attrs = (cell, coordx, coordy, error)
+
+        grp_values, _ = group_values(
+                indices, include_unselected=False, values=None)
+
+        def make_domain(values, default_grp, offset):
+            grp_var = DiscreteVariable(
+                get_unique_names(self.data.domain, ANNOTATED_DATA_FEATURE_NAME),
+                values,
+                compute_value=GetGroups(id_to_group, default_grp, offset))
+
+            if not self.data.domain.class_vars:
+                class_vars, metas = grp_var, som_attrs
+            else:
+                class_vars, metas = (), (grp_var,) + som_attrs
+            return add_columns(self.data.domain, (), class_vars, metas)
 
         if np.any(indices):
-            sel_data = create_groups_table(self.data, indices, False, "Group")
-            self.Outputs.selected_data.send(sel_data)
+            sel_domain = make_domain(grp_values, np.nan, 1)
+            mask = np.flatnonzero(indices)
+            self.Outputs.selected_data.send(
+                lazy_table_transform(sel_domain, self.data[mask]))
         else:
             self.Outputs.selected_data.send(None)
 
-        if np.max(indices) > 1:
-            annotated = create_groups_table(self.data, indices)
+        if ngroups > 1:
+            sel_domain = make_domain(grp_values + ["Unselected", ], ngroups, 1)
         else:
-            annotated = create_annotated_table(
-                self.data, np.flatnonzero(indices))
-        self.Outputs.annotated_data.send(annotated)
+            sel_domain = make_domain(("No", "Yes"), 0, 0)
+        self.Outputs.annotated_data.send(
+            lazy_table_transform(sel_domain, self.data))
 
     def set_color_bins(self):
         self.Warning.no_defined_colors.clear()
