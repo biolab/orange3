@@ -101,14 +101,17 @@ class TestNaiveBayesLearner(unittest.TestCase):
     def test_predictions(self):
         self._test_predictions(sparse=None)
         self._test_predictions_with_absent_class(sparse=None)
+        self._test_predict_missing_attributes(sparse=None)
 
     def test_predictions_csr_matrix(self):
         self._test_predictions(sparse=sp.csr_matrix)
         self._test_predictions_with_absent_class(sparse=sp.csr_matrix)
+        self._test_predict_missing_attributes(sparse=sp.csr_matrix)
 
     def test_predictions_csc_matrix(self):
         self._test_predictions(sparse=sp.csc_matrix)
         self._test_predictions_with_absent_class(sparse=sp.csc_matrix)
+        self._test_predict_missing_attributes(sparse=sp.csc_matrix)
 
     def _test_predictions(self, sparse):
         x = np.array([
@@ -310,6 +313,36 @@ class TestNaiveBayesLearner(unittest.TestCase):
         values, probs = model.predict(test_x)
         np.testing.assert_almost_equal(exp_probs, probs)
         np.testing.assert_equal(values, np.argmax(exp_probs, axis=1))
+
+    def _test_predict_missing_attributes(self, sparse):
+        x = np.array([
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0],
+            [0, 1, 0],
+            [1, 1, 0],
+            [1, 2, 0],
+            [1, 2, np.nan]])
+        if sparse is not None:
+            x = sparse(x)
+        y = np.array([1,0,0,0,1,1,1])
+        domain = Domain(
+            [DiscreteVariable("a", values="ab"),
+             DiscreteVariable("b", values="abc"),
+             DiscreteVariable("c", values="a")],
+            DiscreteVariable("y", values="AB"))
+        data = Table.from_numpy(domain, x, y)
+
+        model = self.learner(data)
+        test_x = np.array([[np.nan, np.nan, np.nan],
+                           [np.nan, 0, np.nan],
+                           [0, np.nan, np.nan]])
+        if sparse is not None and sparse is not sp.csc_matrix:
+            test_x = sparse(test_x)
+        probs = model(test_x, ret=model.Probs)
+        np.testing.assert_almost_equal(probs, [[(3+1)/(7+2), (4+1)/(7+2)],
+                                               [(1+1)/(2+2), (1+1)/(2+2)],
+                                               [(3+1)/(3+2), (0+1)/(3+2)]])
 
     def test_no_attributes(self):
         y = np.array([0, 0, 0, 1, 1, 1, 2, 2])
