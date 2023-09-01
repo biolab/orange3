@@ -723,6 +723,16 @@ class TableTestCase(unittest.TestCase):
         finally:
             os.remove("iris.pickle")
 
+    def test_read_pickle_ids(self):
+        table = data.Table("iris")
+        try:
+            table.save("iris.pickle")
+            table1 = data.Table.from_file("iris.pickle")
+            table2 = data.Table.from_file("iris.pickle")
+            self.assertEqual(len(set(table1.ids) | set(table2.ids)), 300)
+        finally:
+            os.remove("iris.pickle")
+
     def test_from_numpy(self):
         a = np.arange(20, dtype="d").reshape((4, 5)).copy()
         m = np.arange(4, dtype="d").reshape((4, 1)).copy()
