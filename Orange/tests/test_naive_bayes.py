@@ -311,6 +311,32 @@ class TestNaiveBayesLearner(unittest.TestCase):
         np.testing.assert_almost_equal(exp_probs, probs)
         np.testing.assert_equal(values, np.argmax(exp_probs, axis=1))
 
+    def test_predict_missing_attributes(self):
+        x = np.array([
+            [1, 0, 0],
+            [0, 1, 0],
+            [0, 0, 0],
+            [0, 1, 0],
+            [1, 1, 0],
+            [1, 2, 0],
+            [1, 2, np.nan]])
+        y = np.array([1,0,0,0,1,1,1])
+        domain = Domain(
+            [DiscreteVariable("a", values="ab"),
+             DiscreteVariable("b", values="abc"),
+             DiscreteVariable("c", values="a")],
+            DiscreteVariable("y", values="AB"))
+        data = Table.from_numpy(domain, x, y)
+
+        model = self.learner(data)
+        test_x = np.array([[np.nan, np.nan, np.nan],
+                           [np.nan, 0, np.nan],
+                           [0, np.nan, np.nan]])
+        probs = model(test_x, ret=model.Probs)
+        np.testing.assert_almost_equal(probs, [[(3+1)/(7+2), (4+1)/(7+2)],
+                                               [(1+1)/(2+2), (1+1)/(2+2)],
+                                               [(3+1)/(3+2), (0+1)/(3+2)]])
+
     def test_no_attributes(self):
         y = np.array([0, 0, 0, 1, 1, 1, 2, 2])
         domain = Domain([], DiscreteVariable("y", values="abc"))
