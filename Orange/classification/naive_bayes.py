@@ -113,6 +113,7 @@ class NaiveBayesModel(Model):
             p0 = p.T[0].copy()
             probs[:] += p0
             log_prob[i, :p.shape[1]] = p.T - p0
+            log_prob[i, n_vals-1] = -p0
 
         dat = data.data.copy()
         dat[np.isnan(dat)] = n_vals - 1
