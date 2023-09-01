@@ -3,13 +3,13 @@ import warnings
 from contextlib import contextmanager
 from functools import partial
 from operator import itemgetter
-from itertools import chain
+from itertools import chain, product
 from typing import Set, Sequence, Union, Optional, List, NamedTuple
 
 import numpy
 from AnyQt.QtWidgets import (
     QTableView, QSplitter, QToolTip, QStyle, QApplication, QSizePolicy,
-    QPushButton, QStyledItemDelegate)
+    QPushButton, QStyledItemDelegate, QStyleOptionViewItem)
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor, QBrush
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QPointF, QLocale,
@@ -1068,6 +1068,24 @@ class ClassificationItemDelegate(PredictionsItemDelegate):
             self.tooltip = f"p({', '.join(tooltip_probabilities)})"
         else:
             self.tooltip = ""
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+        sh = super().sizeHint(option, index)
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        widget = option.widget
+        style = widget.style() if widget is not None else QApplication.style()
+        # standin for {.2f} format to compute max possible text width
+        pp = [float(f"{x}.{x}{x}") for x in range(10)]
+        maxwidth = 0
+        nclass = max((len(self.class_values), *filter(None, self.shown_probabilities or ())))
+        for pp, cls in product(pp, self.class_values):
+            dist = [pp] * nclass
+            opt.text = self.fmt.format(dist=dist, value=cls)
+            csh = style.sizeFromContents(QStyle.CT_ItemViewItem, opt, QSize(), widget)
+            maxwidth = max(maxwidth, csh.width())
+        sh.setWidth(max(maxwidth, sh.width()))
+        return sh
 
     # pylint: disable=unused-argument
     def helpEvent(self, event, view, option, index):
