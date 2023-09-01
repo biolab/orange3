@@ -679,6 +679,11 @@ class SqlTable(Table):
         # avoid locking magic in Table.__setstate__
         self.__dict__.update(state)
 
+        # if X is defined then it was already downloaded
+        # thus ids exist to, rewrite them
+        if self._X is not None:
+            self._init_ids(self)
+
     # pylint: disable=unused-argument
     def _update_locks(self, *args, **kwargs):
         # avoid locking inherited from Table

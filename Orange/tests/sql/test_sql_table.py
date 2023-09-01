@@ -769,7 +769,8 @@ class TestSqlTable(unittest.TestCase, dbt):
         iris2 = pickle.loads(pickle.dumps(iris))
         self.assertIsNotNone(iris2._X)
         self.assertIsNotNone(iris2._ids)
-        np.testing.assert_equal(iris._X, iris2._X)
+        np.testing.assert_equal(iris.X, iris2.X)
+        self.assertEqual(len(set(iris.ids) | set(iris2.ids)), 300)
 
     @dbt.run_on(["postgres"])
     def test_list_tables_with_schema(self):
