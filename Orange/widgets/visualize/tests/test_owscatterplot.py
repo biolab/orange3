@@ -350,6 +350,38 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertTrue(self.widget.attr_box.isEnabled())
         self.assertTrue(self.widget.vizrank.isEnabled())
 
+    def test_features_and_hidden_data(self):
+        new_domain = self.data.domain.copy()
+        new_domain.attributes[0].attributes["hidden"] = True
+        data = self.data.transform(new_domain)
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.features, AttributeList(data.domain[:2]))
+        self.assertIsNone(self.widget.attr_x)
+        self.assertIsNone(self.widget.attr_y)
+        self.assertFalse(self.widget.attr_box.isEnabled())
+        self.assertFalse(self.widget.vizrank.isEnabled())
+
+        self.send_signal(self.widget.Inputs.features, None)
+        self.assertEqual(self.widget.attr_x, self.data.domain[1])
+        self.assertEqual(self.widget.attr_y, self.data.domain[2])
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.assertTrue(self.widget.vizrank.isEnabled())
+
+        # try with features not in data
+        bad_feat = AttributeList([ContinuousVariable("a"), ContinuousVariable("b")])
+        self.send_signal(self.widget.Inputs.features, bad_feat)
+        self.assertIsNone(self.widget.attr_x)
+        self.assertIsNone(self.widget.attr_y)
+        self.assertFalse(self.widget.attr_box.isEnabled())
+        self.assertFalse(self.widget.vizrank.isEnabled())
+
+        self.send_signal(self.widget.Inputs.features, None)
+        self.assertEqual(self.widget.attr_x, self.data.domain[1])
+        self.assertEqual(self.widget.attr_y, self.data.domain[2])
+        self.assertTrue(self.widget.attr_box.isEnabled())
+        self.assertTrue(self.widget.vizrank.isEnabled())
+
     def test_output_features(self):
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
