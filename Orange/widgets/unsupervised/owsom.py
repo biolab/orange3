@@ -871,6 +871,7 @@ class OWSOM(OWWidget):
             self._optimizer_thread = None
 
         self.progressBarInit()
+        self.setInvalidated(True)
 
         self._optimizer = Optimizer(self.cont_x, self.som)
         self._optimizer_thread = QThread()
@@ -894,6 +895,7 @@ class OWSOM(OWWidget):
     def __done(self, som):
         self.enable_controls(True)
         self.progressBarFinished()
+        self.setInvalidated(False)
         self._assign_instances(som.weights, som.ssum_weights)
         self._redraw()
         # This is the first time we know what was selected (assuming that

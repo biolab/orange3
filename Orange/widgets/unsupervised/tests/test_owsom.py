@@ -127,6 +127,12 @@ class TestOWSOM(WidgetTest):
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(widget.Warning.missing_values.is_shown())
 
+    def test_run_actual_optimization(self):
+        # ther tests that compute something use _patch_recompute_som
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertEqual(len(out), 150)
+
     @_patch_recompute_som
     def test_single_row_data(self):
         widget = self.widget
