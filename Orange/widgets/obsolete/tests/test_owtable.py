@@ -219,6 +219,9 @@ class TestOWDataTableSQL(TestOWDataTable, dbt):
         # pylint: disable=attribute-defined-outside-init
         conn, iris = self.create_iris_sql_table()
         data = SqlTable(conn, iris, inspect_values=True)
+        if self.current_db == "mssql":
+            # when loading data from mssql db, Sql widget returns Table (not SqlTable)
+            data = Table(data)
         self.data = data.transform(Domain(data.domain.attributes[:-1],
                                           data.domain.attributes[-1]))
 
