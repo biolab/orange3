@@ -346,7 +346,7 @@
    },
    {
     "text": "Formula",
-    "doc": "visual-programming/source/widgets/data/featureconstructor.md",
+    "doc": "visual-programming/source/widgets/data/formula.md",
     "icon": "../Orange/widgets/data/icons/FeatureConstructor.svg",
     "background": "#FF9D5E",
     "keywords": [
