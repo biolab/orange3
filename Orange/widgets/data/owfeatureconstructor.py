@@ -509,12 +509,12 @@ class FeatureConstructorHandler(DomainContextHandler):
 
 
 class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
-    name = "Feature Constructor"
+    name = "Formula"
     description = "Construct new features (data columns) from a set of " \
                   "existing features in the input dataset."
     category = "Transform"
     icon = "icons/FeatureConstructor.svg"
-    keywords = "feature constructor, function, lambda"
+    keywords = "feature constructor, function, lambda, calculation"
     priority = 2240
 
     class Inputs:
