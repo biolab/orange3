@@ -29,14 +29,14 @@ except ImportError:
     have_sphinx = False
 
 try:
-    from Cython.Distutils.build_ext import new_build_ext as build_ext
+    from Cython.Build import cythonize
     have_cython = True
 except ImportError:
     have_cython = False
 
 NAME = 'Orange3'
 
-VERSION = '3.35.0'
+VERSION = '3.36.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -434,14 +434,7 @@ def ext_modules():
     if os.name == 'posix':
         libraries.append("m")
 
-    return [
-        # Cython extensions. Will be automatically cythonized.
-        Extension(
-            "*",
-            ["Orange/*/*.pyx"],
-            include_dirs=includes,
-            libraries=libraries,
-        ),
+    modules = [
         Extension(
             "Orange.classification._simple_tree",
             sources=[
@@ -464,6 +457,16 @@ def ext_modules():
         ),
     ]
 
+    if have_cython:
+        modules += cythonize(Extension(
+            "*",
+            ["Orange/*/*.pyx"],
+            include_dirs=includes,
+            libraries=libraries,
+        ))
+
+    return modules
+
 
 def setup_package():
     write_version_py()
@@ -478,17 +481,14 @@ def setup_package():
         # numpy.distutils insist all data files are installed in site-packages
         'install_data': install_data.install_data
     }
-    if have_numpy and have_cython:
-        extra_args = {}
-        cmdclass["build_ext"] = build_ext
-    else:
+    if not (have_numpy and have_cython):
         # substitute a build_ext command with one that raises an error when
         # building. In order to fully support `pip install` we need to
         # survive a `./setup egg_info` without numpy so pip can properly
         # query our install dependencies
-        extra_args = {}
         cmdclass["build_ext"] = build_ext_error
 
+    extra_args = {}
     setup(
         name=NAME,
         version=FULLVERSION,

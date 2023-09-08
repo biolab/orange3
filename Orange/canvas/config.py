@@ -5,14 +5,12 @@ Orange Canvas Configuration
 import random
 import uuid
 import warnings
-
 import os
 import sys
-import itertools
-from distutils.version import LooseVersion
 
 from typing import Dict, Any, Optional, Iterable, List
 
+import packaging.version
 import pkg_resources
 import requests
 
@@ -112,8 +110,8 @@ class Config(config.Config):
 
         version = Config.ApplicationVersion
         if version:
-            version_parsed = LooseVersion(version)
-            version_comp = version_parsed.version
+            version_parsed = packaging.version.Version(version)
+            version_comp = version_parsed.release
             version = ".".join(map(str, version_comp[:2]))
         size = 13
         font = QFont("Helvetica")

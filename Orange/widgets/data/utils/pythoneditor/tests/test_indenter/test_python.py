@@ -9,12 +9,7 @@ This is compatible with Orange3's GPL-3.0 license.
 """  # pylint: disable=duplicate-code
 import unittest
 
-import os.path
-import sys
-
 from Orange.widgets.data.utils.pythoneditor.tests.test_indenter.indenttest import IndentTest
-
-sys.path.append(os.path.abspath(os.path.join(__file__, '..')))
 
 
 class Test(IndentTest):

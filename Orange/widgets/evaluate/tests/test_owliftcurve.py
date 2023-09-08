@@ -1,7 +1,7 @@
 # pylint: disable=protected-access,duplicate-code
 import copy
+import pkg_resources
 import unittest
-from distutils.version import LooseVersion
 from unittest.mock import Mock
 
 import numpy as np
@@ -26,7 +26,8 @@ from Orange.tests import test_filename
 # scikit-learn==1.1.1 does not support read the docs, therefore
 # we can not make it a requirement for now. When the minimum required
 # version is >=1.1.1, delete these exceptions.
-OK_SKLEARN = LooseVersion(sklearn.__version__) >= LooseVersion("1.1.1")
+OK_SKLEARN = pkg_resources.parse_version(sklearn.__version__) >= \
+             pkg_resources.parse_version("1.1.1")
 SKIP_REASON = "Only test precision-recall with scikit-learn>=1.1.1"
 
 

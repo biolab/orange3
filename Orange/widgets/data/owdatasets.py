@@ -204,6 +204,7 @@ class OWDataSets(OWWidget):
 
     #: Selected dataset id
     selected_id = settings.Setting(None)   # type: Optional[str]
+    language = settings.Setting(DEFAULT_LANG)
 
     #: main area splitter state
     splitter_state = settings.Setting(b'')  # type: bytes
@@ -236,7 +237,11 @@ class OWDataSets(OWWidget):
         layout.addSpacing(20)
         layout.addWidget(QLabel("Show data sets in "))
         lang_combo = self.language_combo = QComboBox()
-        lang_combo.addItems([self.DEFAULT_LANG, self.ALL_LANGUAGES])
+        languages = [self.DEFAULT_LANG, self.ALL_LANGUAGES]
+        if self.language is not None and self.language not in languages:
+            languages.insert(1, self.language)
+        lang_combo.addItems(languages)
+        lang_combo.setCurrentText(self.language)
         lang_combo.activated.connect(self._on_language_changed)
         layout.addWidget(lang_combo)
         self.mainArea.layout().addLayout(layout)
@@ -353,7 +358,10 @@ class OWDataSets(OWWidget):
         combo = self.language_combo
         current_language = combo.currentText()
         allkeys = set(self.allinfo_local) | set(self.allinfo_remote)
-        languages = sorted({self._parse_info(key).language for key in allkeys})
+        languages = {self._parse_info(key).language for key in allkeys}
+        if self.language is not None:
+            languages.add(self.language)
+        languages = sorted(languages)
         combo.clear()
         if self.DEFAULT_LANG not in languages:
             combo.addItem(self.DEFAULT_LANG)
@@ -408,10 +416,10 @@ class OWDataSets(OWWidget):
     def _on_language_changed(self):
         combo = self.language_combo
         if combo.currentIndex() == combo.count() - 1:
-            language = None
+            self.language = None
         else:
-            language = combo.currentText()
-        self.view.model().setLanguage(language)
+            self.language = combo.currentText()
+        self.view.model().setLanguage(self.language)
 
     @Slot(object)
     def __set_index(self, f):

@@ -7,29 +7,21 @@ Originally licensed under the terms of GNU Lesser General Public License
 as published by the Free Software Foundation, version 2.1 of the license.
 This is compatible with Orange3's GPL-3.0 license.
 """  # pylint: disable=duplicate-code
-import sys
-import os
 
 from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest
 
-from Orange.widgets.data.utils.pythoneditor.tests.base import SimpleWidget
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.data.utils.pythoneditor.tests.base import EditorTest
 
 # pylint: disable=protected-access
 
-topLevelPath = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-sys.path.insert(0, topLevelPath)
-sys.path.insert(0, os.path.join(topLevelPath, 'tests'))
 
-
-class IndentTest(WidgetTest):
+class IndentTest(EditorTest):
     """Base class for tests
     """
 
     def setUp(self):
-        self.widget = self.create_widget(SimpleWidget)
-        self.qpart = self.widget.qpart
+        super().setUp()
         if hasattr(self, 'INDENT_WIDTH'):
             self.qpart.indentWidth = self.INDENT_WIDTH
 

@@ -14,22 +14,10 @@ from AnyQt.QtGui import QKeySequence
 from AnyQt.QtTest import QTest
 
 from Orange.widgets.data.utils.pythoneditor.tests import base
-from Orange.widgets.data.utils.pythoneditor.tests.base import SimpleWidget
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.data.utils.pythoneditor.tests.base import EditorTest
 
 
-class Test(WidgetTest):
-    """Base class for tests
-    """
-    def setUp(self):
-        super().setUp()
-        self.widget = self.create_widget(SimpleWidget)
-        self.qpart = self.widget.qpart
-
-    def tearDown(self):
-        self.qpart.terminate()
-        super().tearDown()
-
+class Test(EditorTest):
     def test_overwrite_edit(self):
         self.qpart.show()
         self.qpart.text = 'abcd'
@@ -52,7 +40,6 @@ class Test(WidgetTest):
             QTest.keyClick(self.qpart, Qt.Key_Backspace)
         self.assertEqual(self.qpart.text, 'a  d')
 
-    @base.in_main_loop
     def test_overwrite_undo(self):
         self.qpart.show()
         self.qpart.text = 'abcd'

@@ -98,7 +98,7 @@ class NaiveBayesModel(Model):
         zeros = np.zeros((1, probs.shape[1]))
         for col, attr_prob in zip(data.T, self.log_cont_prob):
             col = col.copy()
-            col[np.isnan(col)] = attr_prob.shape[1] - 1
+            col[np.isnan(col)] = attr_prob.shape[1]
             col = col.astype(int)
             probs0 = np.vstack((attr_prob.T, zeros))
             probs += probs0[col]
@@ -113,6 +113,7 @@ class NaiveBayesModel(Model):
             p0 = p.T[0].copy()
             probs[:] += p0
             log_prob[i, :p.shape[1]] = p.T - p0
+            log_prob[i, n_vals-1] = -p0
 
         dat = data.data.copy()
         dat[np.isnan(dat)] = n_vals - 1

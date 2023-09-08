@@ -18,11 +18,10 @@ from AnyQt.QtWidgets import (
     QCheckBox,
     QGridLayout,
     QHeaderView,
-    QListView,
     QTableView,
 )
 from orangewidget.settings import ContextSetting, Setting
-from orangewidget.utils.listview import ListViewSearch
+from orangewidget.utils.listview import ListViewFilter
 from orangewidget.utils.signals import Input, Output
 from orangewidget.utils import enum_as_int
 from orangewidget.widget import Msg
@@ -40,7 +39,6 @@ from Orange.data import (
 from Orange.data.aggregate import OrangeTableGroupBy
 from Orange.util import wrap_callback
 from Orange.widgets import gui
-from Orange.widgets.data.oweditdomain import disconnected
 from Orange.widgets.settings import DomainContextHandler
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 from Orange.widgets.utils.itemmodels import DomainModel
@@ -246,7 +244,7 @@ class VarTableModel(QAbstractTableModel):
         return super().headerData(i, orientation, role)
 
 
-class AggregateListViewSearch(ListViewSearch):
+class AggregateListViewSearch(ListViewFilter):
     """ListViewSearch that disables unselecting all items in the list"""
 
     def selectionCommand(
@@ -372,13 +370,16 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
 
     def __init_control_area(self) -> None:
         """Init all controls in the control area"""
-        box = gui.vBox(self.controlArea, "Group by")
-        self.gb_attrs_view = AggregateListViewSearch(
-            selectionMode=QListView.ExtendedSelection
+        gui.listView(
+            self.controlArea,
+            self,
+            "gb_attrs",
+            box="Group by",
+            model=self.gb_attrs_model,
+            viewType=AggregateListViewSearch,
+            callback=self.__gb_changed,
+            selectionMode=ListViewFilter.ExtendedSelection,
         )
-        self.gb_attrs_view.setModel(self.gb_attrs_model)
-        self.gb_attrs_view.selectionModel().selectionChanged.connect(self.__gb_changed)
-        box.layout().addWidget(self.gb_attrs_view)
 
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
@@ -434,14 +435,7 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
                 )
 
     def __gb_changed(self) -> None:
-        """
-        Callback for Group-by attributes selection change; update attribute
-        and call commit
-        """
-        rows = self.gb_attrs_view.selectionModel().selectedRows()
-        values = self.gb_attrs_view.model()[:]
-        self.gb_attrs = [values[row.row()] for row in sorted(rows)]
-        # everything cached in result should be recomputed on gb change
+        """Callback for Group-by attributes selection change"""
         self.result = Result()
         self.commit.deferred()
 
@@ -471,7 +465,7 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
         self.result = Result()
         self.Outputs.data.send(None)
         self.gb_attrs_model.set_domain(data.domain if data else None)
-        self.gb_attrs = data.domain[:1] if data else []
+        self.gb_attrs = self.gb_attrs_model[:1] if self.gb_attrs_model else []
         self.aggregations = (
             {
                 attr: DEFAULT_AGGREGATIONS[type(attr)].copy()
@@ -526,14 +520,16 @@ class OWGroupBy(OWWidget, ConcurrentWidgetMixin):
         return [vars_[index.row()] for index in sel_rows]
 
     def _set_gb_selection(self) -> None:
-        """Set selection in groupby list according to self.gb_attrs"""
-        sm = self.gb_attrs_view.selectionModel()
+        """
+        Update selected attributes. When context includes variable hidden in
+        data, it will match and gb_attrs may include hidden attribute. Remove it
+        since otherwise widget groups by attribute that is not present in view.
+        """
         values = self.gb_attrs_model[:]
-        with disconnected(sm.selectionChanged, self.__gb_changed):
-            for val in self.gb_attrs:
-                index = values.index(val)
-                model_index = self.gb_attrs_model.index(index, 0)
-                sm.select(model_index, QItemSelectionModel.Select)
+        self.gb_attrs = [var_ for var_ in self.gb_attrs if var_ in values]
+        if not self.gb_attrs and self.gb_attrs_model:
+            # if gb_attrs empty select first
+            self.gb_attrs = self.gb_attrs_model[:1]
 
     @staticmethod
     def __aggregation_compatible(agg, attr):

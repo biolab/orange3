@@ -3,13 +3,13 @@ import warnings
 from contextlib import contextmanager
 from functools import partial
 from operator import itemgetter
-from itertools import chain
+from itertools import chain, product
 from typing import Set, Sequence, Union, Optional, List, NamedTuple
 
 import numpy
 from AnyQt.QtWidgets import (
     QTableView, QSplitter, QToolTip, QStyle, QApplication, QSizePolicy,
-    QPushButton, QAbstractItemDelegate)
+    QPushButton, QStyledItemDelegate, QStyleOptionViewItem)
 from AnyQt.QtGui import QPainter, QStandardItem, QPen, QColor, QBrush
 from AnyQt.QtCore import (
     Qt, QSize, QRect, QRectF, QPoint, QPointF, QLocale,
@@ -325,7 +325,9 @@ class OWPredictions(OWWidget):
         self.score_opt_box.setVisible(bool(self.class_var))
 
     def _reg_error_changed(self):
-        self.predictionsview.model().setRegErrorType(self.show_reg_errors)
+        model = self.predictionsview.model()
+        if model is not None:
+            model.setRegErrorType(self.show_reg_errors)
         self._update_prediction_delegate()
 
     def _update_errors_visibility(self):
@@ -1002,11 +1004,12 @@ class PredictionsBarItemDelegate(ItemDelegate):
             QStyle.PM_FocusFrameHMargin, option, option.widget) + 1
         bottommargin = min(margin, 1)
         rect = option.rect.adjusted(margin, margin, -margin, -bottommargin)
-        option.text = ""
+
         textrect = style.subElementRect(
             QStyle.SE_ItemViewItemText, option, option.widget)
+
         # Are the margins included in the subElementRect?? -> No!
-        textrect = textrect.adjusted(margin, margin, -margin, -bottommargin)
+        textrect = textrect.adjusted(0, 0, 0, -bottommargin)
         spacing = max(metrics.leading(), 1)
 
         distheight = rect.height() - metrics.height() - spacing
@@ -1023,8 +1026,8 @@ class PredictionsBarItemDelegate(ItemDelegate):
 
         textrect = textrect.adjusted(0, 0, 0, -distheight - spacing)
         distrect = QRect(
-            textrect.bottomLeft() + QPoint(0, spacing),
-            QSize(rect.width(), distheight))
+            textrect.bottomLeft() + QPoint(margin, spacing),
+            QSize(textrect.width() - 2 * margin, distheight))
         painter.setPen(QPen(Qt.lightGray, 0.3))
         self.drawBar(painter, option, index, distrect)
         painter.restore()
@@ -1065,6 +1068,24 @@ class ClassificationItemDelegate(PredictionsItemDelegate):
             self.tooltip = f"p({', '.join(tooltip_probabilities)})"
         else:
             self.tooltip = ""
+
+    def sizeHint(self, option: QStyleOptionViewItem, index: QModelIndex) -> QSize:
+        sh = super().sizeHint(option, index)
+        opt = QStyleOptionViewItem(option)
+        self.initStyleOption(opt, index)
+        widget = option.widget
+        style = widget.style() if widget is not None else QApplication.style()
+        # standin for {.2f} format to compute max possible text width
+        pp = [float(f"{x}.{x}{x}") for x in range(10)]
+        maxwidth = 0
+        nclass = max((len(self.class_values), *filter(None, self.shown_probabilities or ())))
+        for pp, cls in product(pp, self.class_values):
+            dist = [pp] * nclass
+            opt.text = self.fmt.format(dist=dist, value=cls)
+            csh = style.sizeFromContents(QStyle.CT_ItemViewItem, opt, QSize(), widget)
+            maxwidth = max(maxwidth, csh.width())
+        sh.setWidth(max(maxwidth, sh.width()))
+        return sh
 
     # pylint: disable=unused-argument
     def helpEvent(self, event, view, option, index):
@@ -1117,13 +1138,15 @@ class ErrorDelegate(PredictionsBarItemDelegate):
         return cls.__size_hint
 
 
-class NoopItemDelegate(QAbstractItemDelegate):
+class NoopItemDelegate(QStyledItemDelegate):
     def paint(self, *_):
         pass
 
-    @staticmethod
-    def sizeHint(*_):
+    def sizeHint(self, *_):
         return QSize(0, 0)
+
+    def displayText(self, *_):
+        return ""
 
 
 class ClassificationErrorDelegate(ErrorDelegate):

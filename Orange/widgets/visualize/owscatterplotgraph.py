@@ -293,8 +293,8 @@ class AxisItem(AxisItem):
         # Remove ticks that will later be removed in AxisItem.generateDrawSpecs
         # because they are out of range. Removing them here is needed so that
         # they do not affect spaces and label format
-        ticks = ticks[(ticks[0] < minVal)
-                      :len(ticks) - (ticks[-1] > maxVal)]
+        ticks = ticks[int((ticks[0] < minVal))
+                      :len(ticks) - int((ticks[-1] > maxVal))]
 
         max_steps = max(int(size / self._label_width), 1)
         if len(ticks) > max_steps:
@@ -1269,7 +1269,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                 mask = None
 
         self._signal_too_many_labels(
-            mask is not None and mask.sum() > self.MAX_VISIBLE_LABELS)
+            bool(mask is not None and mask.sum() > self.MAX_VISIBLE_LABELS))
         if self._too_many_labels or mask is None or not np.any(mask):
             return
 

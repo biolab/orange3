@@ -753,6 +753,26 @@ class TestSqlTable(unittest.TestCase, dbt):
         self.assertEqual(iris[0], iris2[0])
 
     @dbt.run_on(["postgres"])
+    def test_pickling_respects_downloaded_state(self):
+        iris = SqlTable(self.conn, self.iris, inspect_values=True)
+        iris2 = pickle.loads(pickle.dumps(iris))
+        # pylint: disable=protected-access
+        self.assertIsNone(iris._X)
+        self.assertIsNone(iris2._X)
+        self.assertIsNone(iris._ids)
+        self.assertIsNone(iris2._ids)
+
+        # trigger download into X, Y, metas
+        iris.X.shape[0]  # pylint: disable=pointless-statement
+        self.assertIsNotNone(iris._X)
+        self.assertIsNotNone(iris._ids)
+        iris2 = pickle.loads(pickle.dumps(iris))
+        self.assertIsNotNone(iris2._X)
+        self.assertIsNotNone(iris2._ids)
+        np.testing.assert_equal(iris.X, iris2.X)
+        self.assertEqual(len(set(iris.ids) | set(iris2.ids)), 300)
+
+    @dbt.run_on(["postgres"])
     def test_list_tables_with_schema(self):
         with self.backend.execute_sql_query("DROP SCHEMA IF EXISTS orange_tests CASCADE") as cur:
             cur.execute("CREATE SCHEMA orange_tests")

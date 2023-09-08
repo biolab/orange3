@@ -79,7 +79,6 @@ class OWNNLearner(OWBaseLearner):
     solver = ["lbfgs", "sgd", "adam"]
     solv_lbl = ["L-BFGS-B", "SGD", "Adam"]
 
-    learner_name = Setting("Neural Network")
     hidden_layers_input = Setting("100,")
     activation_index = Setting(3)
     solver_index = Setting(2)

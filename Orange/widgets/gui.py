@@ -503,14 +503,14 @@ class CallBackListView(ControlledCallback):
         if isinstance(self.view.model(), QSortFilterProxyModel):
             selection = self.view.model().mapSelectionToSource(selection)
         values = [i.row() for i in selection.indexes()]
-        if values:
-            # FIXME: irrespective of PyListModel check, this might/should always
-            # callback with values!
-            if isinstance(self.model, PyListModel):
-                values = [self.model[i] for i in values]
-            if self.view.selectionMode() == self.view.SingleSelection:
-                values = values[0]
-            self.acyclic_setattr(values)
+
+        # set attribute's values
+        if isinstance(self.model, PyListModel):
+            values = [self.model[i] for i in values]
+        if self.view.selectionMode() == self.view.SingleSelection:
+            assert len(values) <= 1
+            values = values[0] if values else None
+        self.acyclic_setattr(values)
 
 
 class CallBackListBox:

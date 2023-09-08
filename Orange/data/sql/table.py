@@ -1,6 +1,7 @@
 """
 Support for example tables wrapping data stored on a PostgreSQL server.
 """
+import contextlib
 import functools
 import logging
 import threading
@@ -669,3 +670,26 @@ class SqlTable(Table):
 
     def get_nan_frequency_class(self):
         return self.__get_nan_frequency(self.domain.class_vars)
+
+    def __getstate__(self):
+        # avoids locking magic in Table.__getstate__
+        return self.__dict__
+
+    def __setstate__(self, state):
+        # avoid locking magic in Table.__setstate__
+        self.__dict__.update(state)
+
+        # if X is defined then it was already downloaded
+        # thus ids exist to, rewrite them
+        if self._X is not None:
+            self._init_ids(self)
+
+    # pylint: disable=unused-argument
+    def _update_locks(self, *args, **kwargs):
+        # avoid locking inherited from Table
+        return
+
+    # pylint: disable=unused-argument
+    def unlocked(self, *parts):
+        # avoid locking inherited from Table
+        return contextlib.nullcontext()

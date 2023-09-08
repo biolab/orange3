@@ -63,6 +63,7 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
 
     def initialize(self):
         super().initialize()
+        self.n_attrs_spin.setDisabled(False)
         self.attr_color = self.master.attr_color
 
     def before_running(self):
@@ -229,7 +230,7 @@ class OWLinProjGraph(OWGraphWithAnchors):
                 anchor.setFont(self.parameter_setter.anchor_font)
 
                 visible = self.always_show_axes or np.linalg.norm(point) > r
-                anchor.setVisible(visible)
+                anchor.setVisible(bool(visible))
                 anchor.setPen(pg.mkPen((100, 100, 100)))
                 self.plot_widget.addItem(anchor)
                 self.anchor_items.append(anchor)
@@ -237,7 +238,7 @@ class OWLinProjGraph(OWGraphWithAnchors):
             for anchor, point, label in zip(self.anchor_items, points, labels):
                 anchor.setLine(QLineF(0, 0, *point))
                 visible = self.always_show_axes or np.linalg.norm(point) > r
-                anchor.setVisible(visible)
+                anchor.setVisible(bool(visible))
                 anchor.setFont(self.parameter_setter.anchor_font)
 
     def update_circle(self):

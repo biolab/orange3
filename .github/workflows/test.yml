@@ -19,7 +19,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.9
 
       - name: Install Tox
         run: |
@@ -36,21 +36,21 @@ jobs:
     strategy:
       fail-fast: False
       matrix:
-        os: [ubuntu-20.04]
-        python-version: [3.8, 3.9, '3.10']
+        os: [ubuntu-22.04]
+        python-version: [3.9, '3.10', '3.11']
         tox_env: [orange-released]
         name: [Released]
         include:
-          - os: ubuntu-20.04
-            python-version: '3.10'
+          - os: ubuntu-22.04
+            python-version: '3.11'
             tox_env: orange-latest
             name: Latest
           - os: ubuntu-20.04
-            python-version: 3.8
+            python-version: 3.9
             tox_env: orange-oldest
             name: Oldest dependencies
-          - os: ubuntu-20.04
-            python-version: 3.9
+          - os: ubuntu-22.04
+            python-version: '3.10'
             tox_env: pyqt6
             name: PyQt6
 
@@ -85,6 +85,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0 libxcb-cursor0
 
+      - name: Install glibc-tools dependency on Ubuntu-22.04
+        if: matrix.os == 'ubuntu-22.04'
+        run: sudo apt-get install -y glibc-tools  # required for catchsegv
+
       - name: Install Tox
         run: |
           python -m pip install --upgrade pip
@@ -116,16 +120,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
-        python-version: [3.8, 3.9, '3.10']
+        python-version: [3.9, '3.10', '3.11']
         tox_env: [orange-released]
         name: [Released]
         include:
           - os: windows-latest
-            python-version: '3.10'
+            python-version: '3.11'
             tox_env: orange-latest
             name: Latest
           - os: macos-latest
-            python-version: '3.10'
+            python-version: '3.11'
             tox_env: orange-latest
             name: Latest
           - os: windows-latest

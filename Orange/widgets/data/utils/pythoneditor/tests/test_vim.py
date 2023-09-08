@@ -12,21 +12,18 @@ import unittest
 from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest
 
-from Orange.widgets.data.utils.pythoneditor.tests.base import SimpleWidget
+from Orange.widgets.data.utils.pythoneditor.tests.base import EditorTest
 from Orange.widgets.data.utils.pythoneditor.vim import _globalClipboard
-from Orange.widgets.tests.base import WidgetTest
 
 # pylint: disable=too-many-lines
 
 
-class _Test(WidgetTest):
+class _Test(EditorTest):
     """Base class for tests
     """
 
     def setUp(self):
         super().setUp()
-        self.widget = self.create_widget(SimpleWidget)
-        self.qpart = self.widget.qpart
         self.qpart.lines = ['The quick brown fox',
                             'jumps over the',
                             'lazy dog',
@@ -38,8 +35,6 @@ class _Test(WidgetTest):
 
     def tearDown(self):
         self.qpart.hide()
-        self.qpart.terminate()
-        del self.qpart
         super().tearDown()
 
     def _onVimModeChanged(self, _, mode):
