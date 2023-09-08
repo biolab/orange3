@@ -546,8 +546,11 @@ class TestTableModel(unittest.TestCase, dbt):
     @dbt.run_on(["postgres", "mssql"])
     def test_dense_data(self):
         table = SqlTable(self.conn, self.iris, inspect_values=True)
-        table.domain = Domain(table.domain.attributes[:-1],
-                              table.domain.attributes[-1])
+        if self.current_db == "mssql":
+            # when loading data from mssql db, Sql widget returns Table (not SqlTable)
+            table = Table(table)
+        new_domain = Domain(table.domain.attributes[:-1], table.domain.attributes[-1])
+        table = table.transform(new_domain)
         model = TableModel(table)
 
         self._dense_data(table, model.data, model.index)
