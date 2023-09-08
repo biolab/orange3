@@ -9,3 +9,22 @@ requires = [
 ]
 
 build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+# Restrict the set of builds to mirror the wheels available in Orange3.
+skip = ["cp36-*", "cp37-*", "cp38-*", "pp*", "*-musllinux_*"]
+build-verbosity = 2
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+
+[tool.cibuildwheel.macos]
+# https://cibuildwheel.readthedocs.io/en/stable/faq/#what-to-provide suggests to provide
+# x86_64 and one of universal2 or amr64 wheels, since unviversal pack what is already in
+# x86_64, currently universal2 is not built but arm64 is built instead
+# x86_64 is still reuqired because of older pips, when remcomendation changes we can
+# build only universal2
+archs = ["x86_64", "arm64"]
