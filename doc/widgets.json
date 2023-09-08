@@ -345,14 +345,15 @@
     ]
    },
    {
-    "text": "Feature Constructor",
+    "text": "Formula",
     "doc": "visual-programming/source/widgets/data/featureconstructor.md",
     "icon": "../Orange/widgets/data/icons/FeatureConstructor.svg",
     "background": "#FF9D5E",
     "keywords": [
      "feature constructor",
      "function",
-     "lambda"
+     "lambda",
+     "calculation"
     ]
    },
    {
