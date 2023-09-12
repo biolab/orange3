@@ -21,7 +21,7 @@ class FreeViz(LinearProjector):
     projection = FreeVizModel
 
     def __init__(self, weights=None, center=True, scale=True, dim=2, p=1,
-                 initial=None, maxiter=500, alpha=0.1,
+                 initial=None, maxiter=500, alpha=0.1, gravity=None,
                  atol=1e-5, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
         self.weights = weights
@@ -33,6 +33,7 @@ class FreeViz(LinearProjector):
         self.maxiter = maxiter
         self.alpha = alpha
         self.atol = atol
+        self.gravity = gravity
         self.is_class_discrete = False
         self.components_ = None
 
@@ -50,6 +51,7 @@ class FreeViz(LinearProjector):
             X, Y, weights=self.weights, center=self.center, scale=self.scale,
             dim=self.dim, p=self.p, initial=self.initial,
             maxiter=self.maxiter, alpha=self.alpha, atol=self.atol,
+            gravity=self.gravity,
             is_class_discrete=self.is_class_discrete)[1].T
 
     @classmethod
@@ -104,7 +106,7 @@ class FreeViz(LinearProjector):
         return F
 
     @classmethod
-    def forces_classification(cls, distances, y, p=1):
+    def forces_classification(cls, distances, y, p=1, gravity=None):
         diffclass = scipy.spatial.distance.pdist(y.reshape(-1, 1), "hamming") != 0
         # handle attractive force
         if p == 1:
@@ -120,6 +122,8 @@ class FreeViz(LinearProjector):
             F[mask] = 1 / distances[mask]
         else:
             F[mask] = 1 / (distances[mask] ** p)
+        if gravity is not None:
+            F[mask] *= -np.sum(F[~mask]) / np.sum(F[mask]) / gravity
         return F
 
     @classmethod
@@ -180,7 +184,8 @@ class FreeViz(LinearProjector):
         return G
 
     @classmethod
-    def freeviz_gradient(cls, X, y, embedding, p=1, weights=None, is_class_discrete=False):
+    def freeviz_gradient(cls, X, y, embedding, p=1, weights=None,
+                         gravity=None, is_class_discrete=False):
         """
         Return the gradient for the FreeViz [1]_ projection.
 
@@ -214,7 +219,7 @@ class FreeViz(LinearProjector):
         assert X.ndim == 2 and X.shape[0] == y.shape[0] == embedding.shape[0]
         D = scipy.spatial.distance.pdist(embedding)
         if is_class_discrete:
-            forces = cls.forces_classification(D, y, p=p)
+            forces = cls.forces_classification(D, y, p=p, gravity=gravity)
         else:
             forces = cls.forces_regression(D, y, p=p)
         G = cls.gradient(X, embedding, forces, embedding_dist=D, weights=weights)
@@ -234,7 +239,8 @@ class FreeViz(LinearProjector):
 
     @classmethod
     def freeviz(cls, X, y, weights=None, center=True, scale=True, dim=2, p=1,
-                initial=None, maxiter=500, alpha=0.1, atol=1e-5, is_class_discrete=False):
+                initial=None, maxiter=500, alpha=0.1, atol=1e-5, gravity=None,
+                is_class_discrete=False):
         """
         FreeViz
 
@@ -341,6 +347,7 @@ class FreeViz(LinearProjector):
         step_i = 0
         while step_i < maxiter:
             G = cls.freeviz_gradient(X, y, embeddings, p=p, weights=weights,
+                                     gravity=gravity,
                                      is_class_discrete=is_class_discrete)
 
             # Scale the changes (the largest anchor move is alpha * radius)
