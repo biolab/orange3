@@ -96,6 +96,25 @@ class TestOWDataSets(WidgetTest):
         # select the only dataset
         sel_type = QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
         w.view.selectionModel().select(w.view.model().index(0, 0), sel_type)
+        self.assertEqual(w.selected_id, "core/iris.tab")
+        w.commit()
+        iris = self.get_output(w.Outputs.data, w)
+        self.assertEqual(len(iris), 150)
+
+    @patch("Orange.widgets.data.owdatasets.list_remote",
+           Mock(return_value={('dir1', 'dir2', 'foo.tab'): {}}))
+    @patch("Orange.widgets.data.owdatasets.list_local",
+           Mock(return_value={}))
+    @patch("Orange.widgets.data.owdatasets.ensure_local",
+           Mock(return_value="iris.tab"))
+    @WidgetTest.skipNonEnglish
+    def test_download_multidir(self):
+        w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
+        # select the only dataset
+        sel_type = QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
+        w.view.selectionModel().select(w.view.model().index(0, 0), sel_type)
+        self.assertEqual(w.selected_id, "dir1/dir2/foo.tab")
         w.commit()
         iris = self.get_output(w.Outputs.data, w)
         self.assertEqual(len(iris), 150)
@@ -111,6 +130,23 @@ class TestOWDataSets(WidgetTest):
         w = self.create_widget(OWDataSets)  # type: OWDataSets
         self.wait_until_stop_blocking(w)
         self.assertEqual(w.view.model().rowCount(), 2)
+
+    def test_migrate_selected_id(self):
+        settings = {}
+        OWDataSets.migrate_settings(settings, 0)
+        self.assertNotIn("selected_id", settings)
+
+        settings = {"selected_id": None}
+        OWDataSets.migrate_settings(settings, 0)
+        self.assertEqual(settings["selected_id"], None)
+
+        settings = {"selected_id": "dir1\\bar"}
+        OWDataSets.migrate_settings(settings, 0)
+        self.assertEqual(settings["selected_id"], "dir1/bar")
+
+        settings = {"selected_id": "dir1/bar"}
+        OWDataSets.migrate_settings(settings, 0)
+        self.assertEqual(settings["selected_id"], "dir1/bar")
 
 
 if __name__ == "__main__":
