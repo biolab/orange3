@@ -26,7 +26,8 @@ from serverfiles import LocalFiles, ServerFiles, sizeformat
 
 import Orange.data
 from Orange.misc.environ import data_dir
-from Orange.widgets import settings, gui
+from Orange.widgets import  gui
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg
@@ -203,12 +204,12 @@ class OWDataSets(OWWidget):
         data = Output("Data", Orange.data.Table)
 
     #: Selected dataset id
-    selected_id = settings.Setting(None)   # type: Optional[str]
-    language = settings.Setting(DEFAULT_LANG)
+    selected_id = Setting(None)   # type: Optional[str]
+    language = Setting(DEFAULT_LANG)
 
     #: main area splitter state
-    splitter_state = settings.Setting(b'')  # type: bytes
-    header_state = settings.Setting(b'')    # type: bytes
+    splitter_state = Setting(b'')  # type: bytes
+    header_state = Setting(b'')    # type: bytes
 
     def __init__(self):
         super().__init__()
