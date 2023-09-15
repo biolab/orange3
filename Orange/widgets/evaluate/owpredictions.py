@@ -265,6 +265,12 @@ class OWPredictions(OWWidget):
     def is_discrete_class(self):
         return bool(self.class_var) and self.class_var.is_discrete
 
+    @property
+    def shown_errors(self):
+        return self.class_var and (
+            self.show_probability_errors if self.is_discrete_class
+            else self.show_reg_errors != NO_ERR)
+
     @Inputs.predictors
     def set_predictor(self, index, predictor: Model):
         item = self.predictors[index]
@@ -331,15 +337,14 @@ class OWPredictions(OWWidget):
         self._update_prediction_delegate()
 
     def _update_errors_visibility(self):
-        shown = self.class_var and (
-             self.show_probability_errors if self.is_discrete_class
-             else self.show_reg_errors != NO_ERR)
+        shown = self.shown_errors
         view = self.predictionsview
         for col, slot in enumerate(self.predictors):
             view.setColumnHidden(
                 2 * col + 1,
                 not shown or
                 self.is_discrete_class is not slot.predictor.domain.has_discrete_class)
+        self._commit_predictions()
 
     def _set_class_values(self):
         self.class_values = []
@@ -814,12 +819,12 @@ class OWPredictions(OWWidget):
 
         newmetas = []
         newcolumns = []
-        for slot in self._non_errored_predictors():
+        for i, slot in enumerate(self._non_errored_predictors()):
             target = slot.predictor.domain.class_var
             if target and target.is_discrete:
-                self._add_classification_out_columns(slot, newmetas, newcolumns)
+                self._add_classification_out_columns(slot, newmetas, newcolumns, i)
             else:
-                self._add_regression_out_columns(slot, newmetas, newcolumns)
+                self._add_regression_out_columns(slot, newmetas, newcolumns, i)
 
         attrs = list(self.data.domain.attributes)
         metas = list(self.data.domain.metas)
@@ -857,7 +862,7 @@ class OWPredictions(OWWidget):
             predictions = predictions[datamodel.mapToSourceRows(...)]
         self.Outputs.predictions.send(predictions)
 
-    def _add_classification_out_columns(self, slot, newmetas, newcolumns):
+    def _add_classification_out_columns(self, slot, newmetas, newcolumns, index):
         pred = slot.predictor
         name = pred.name
         values = pred.domain.class_var.values
@@ -877,10 +882,21 @@ class OWPredictions(OWWidget):
             else:
                 newcolumns.append(numpy.zeros(probs.shape[0]))
 
-    @staticmethod
-    def _add_regression_out_columns(slot, newmetas, newcolumns):
+        # Column with error
+        self._add_error_out_columns(slot, newmetas, newcolumns, index)
+
+    def _add_regression_out_columns(self, slot, newmetas, newcolumns, index):
         newmetas.append(ContinuousVariable(name=slot.predictor.name))
         newcolumns.append(slot.results.unmapped_predicted)
+        self._add_error_out_columns(slot, newmetas, newcolumns, index)
+
+    def _add_error_out_columns(self, slot, newmetas, newcolumns, index):
+        if self.shown_errors:
+            name = f"{slot.predictor.name} (error)"
+            newmetas.append(ContinuousVariable(name=name))
+            err = self.predictionsview.model().errorColumn(index)
+            err[err == 2] = numpy.nan
+            newcolumns.append(err)
 
     def send_report(self):
         def merge_data_with_predictions():

@@ -869,6 +869,7 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(widget.Inputs.predictors, bayes01, 0)
         self.send_signal(widget.Inputs.predictors, bayes12, 1)
         self.send_signal(widget.Inputs.predictors, bayes012, 2)
+        widget.controls.show_probability_errors.setChecked(False)
 
         for i, pred in enumerate(widget.predictors):
             p = pred.results.unmapped_probabilities
@@ -918,6 +919,7 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(widget.Inputs.data, iris012)
         self.send_signal(widget.Inputs.predictors, bayes01, 0)
         self.send_signal(widget.Inputs.predictors, bayes012, 1)
+        widget.controls.show_probability_errors.setChecked(False)
 
         for i, pred in enumerate(widget.predictors):
             p = pred.results.unmapped_probabilities
@@ -968,7 +970,7 @@ class TestOWPredictions(WidgetTest):
                          MeanLearner()(self.housing), 1)
         out = self.get_output(widget.Outputs.predictions)
         np.testing.assert_equal(
-            out.metas,
+            out.metas[:, [0, 2]],
             np.hstack([pred.results.predicted.T for pred in widget.predictors]))
 
     def test_classless(self):
@@ -1187,6 +1189,43 @@ class TestOWPredictions(WidgetTest):
         settings = {"score_table": {"shown_scores": {"Sensitivity"}}}
         self.widget.migrate_settings(settings, 1)
         self.assertTrue(settings["score_table"]["show_score_hints"]["Sensitivity"])
+
+    def test_output_error_reg(self):
+        data = self.housing
+        lin_reg = LinearRegressionLearner()
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.predictors, lin_reg(data), 0)
+        self.send_signal(self.widget.Inputs.predictors,
+                         LinearRegressionLearner(fit_intercept=False)(data), 1)
+        pred = self.get_output(self.widget.Outputs.predictions)
+
+        names = ["", " (error)"]
+        names = [f"{n}{i}" for i in ("", " (1)") for n in names]
+        names = [f"{lin_reg.name}{x}" for x in names]
+        self.assertEqual(names, [m.name for m in pred.domain.metas])
+        self.assertAlmostEqual(pred.metas[0, 1], 6.0, 1)
+        self.assertAlmostEqual(pred.metas[0, 3], 5.1, 1)
+
+    def test_output_error_cls(self):
+        data = self.iris
+        log_reg = LogisticRegressionLearner()
+        self.send_signal(self.widget.Inputs.predictors, log_reg(data), 0)
+        self.send_signal(self.widget.Inputs.predictors,
+                         LogisticRegressionLearner(penalty="l1")(data), 1)
+        with data.unlocked(data.Y):
+            data.Y[1] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        pred = self.get_output(self.widget.Outputs.predictions)
+
+        names = [""] + [f" ({v})" for v in
+                        list(data.domain.class_var.values) + ["error"]]
+        names = [f"{n}{i}" for i in ("", " (1)") for n in names]
+        names = [f"{log_reg.name}{x}" for x in names]
+        self.assertEqual(names, [m.name for m in pred.domain.metas])
+        self.assertAlmostEqual(pred.metas[0, 4], 0.018, 3)
+        self.assertAlmostEqual(pred.metas[0, 9], 0.113, 3)
+        self.assertTrue(np.isnan(pred.metas[1, 4]))
+        self.assertTrue(np.isnan(pred.metas[1, 9]))
 
 
 class SelectionModelTest(unittest.TestCase):
