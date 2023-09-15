@@ -69,6 +69,8 @@ requirements:
     - cachecontrol >=0.12.6
     - qtconsole >=4.7.2
     - pygments >=2.8.0
+    - catboost >=1.0.1
+    - xgboost >=1.7.4
 
 test:
   # Python imports
