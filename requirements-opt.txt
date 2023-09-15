@@ -1,2 +1,0 @@
-catboost>=1.0.1
-xgboost>=1.5.0

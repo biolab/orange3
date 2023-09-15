@@ -36,6 +36,14 @@ from Orange.widgets.tests.base import WidgetTest, ParameterMapping, \
 from Orange.widgets.widget import OWWidget
 
 
+def get_tree_train_params(model):
+    ln = json.loads(model.skl_model.get_booster().save_config())["learner"]
+    try:
+        return ln["gradient_booster"]["tree_train_param"]
+    except KeyError:
+        return ln["gradient_booster"]["updater"]["grow_colmaker"]["train_param"]
+
+
 def create_parent(editor_class):
     class DummyWidget(OWWidget):
         name = "Mock"
@@ -158,9 +166,7 @@ class TestXGBLearnerEditor(BaseEditorTest):
         booster = XGBClassifier()
         model = booster(data)
         params = model.skl_model.get_params()
-        booster_params = json.loads(model.skl_model.get_booster().save_config())
-        updater = booster_params["learner"]["gradient_booster"]["updater"]
-        tp = updater["grow_colmaker"]["train_param"]
+        tp = get_tree_train_params(model)
         self.assertEqual(params["n_estimators"], self.editor.n_estimators)
         self.assertEqual(
             round(float(tp["learning_rate"]), 1), self.editor.learning_rate
@@ -178,9 +184,7 @@ class TestXGBLearnerEditor(BaseEditorTest):
         booster = XGBRegressor()
         model = booster(data)
         params = model.skl_model.get_params()
-        booster_params = json.loads(model.skl_model.get_booster().save_config())
-        updater = booster_params["learner"]["gradient_booster"]["updater"]
-        tp = updater["grow_colmaker"]["train_param"]
+        tp = get_tree_train_params(model)
         self.assertEqual(params["n_estimators"], self.editor.n_estimators)
         self.assertEqual(
             round(float(tp["learning_rate"]), 1), self.editor.learning_rate
@@ -223,9 +227,7 @@ class TestXGBRFLearnerEditor(BaseEditorTest):
         booster = XGBRFClassifier()
         model = booster(data)
         params = model.skl_model.get_params()
-        booster_params = json.loads(model.skl_model.get_booster().save_config())
-        updater = booster_params["learner"]["gradient_booster"]["updater"]
-        tp = updater["grow_colmaker"]["train_param"]
+        tp = get_tree_train_params(model)
         self.assertEqual(params["n_estimators"], self.editor.n_estimators)
         self.assertEqual(
             round(float(tp["learning_rate"]), 1), self.editor.learning_rate
@@ -243,9 +245,7 @@ class TestXGBRFLearnerEditor(BaseEditorTest):
         booster = XGBRFRegressor()
         model = booster(data)
         params = model.skl_model.get_params()
-        booster_params = json.loads(model.skl_model.get_booster().save_config())
-        updater = booster_params["learner"]["gradient_booster"]["updater"]
-        tp = updater["grow_colmaker"]["train_param"]
+        tp = get_tree_train_params(model)
         self.assertEqual(params["n_estimators"], self.editor.n_estimators)
         self.assertEqual(
             round(float(tp["learning_rate"]), 1), self.editor.learning_rate
