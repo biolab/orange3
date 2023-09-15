@@ -26,7 +26,8 @@ from serverfiles import LocalFiles, ServerFiles, sizeformat
 
 import Orange.data
 from Orange.misc.environ import data_dir
-from Orange.widgets import settings, gui
+from Orange.widgets import  gui
+from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg
@@ -203,12 +204,12 @@ class OWDataSets(OWWidget):
         data = Output("Data", Orange.data.Table)
 
     #: Selected dataset id
-    selected_id = settings.Setting(None)   # type: Optional[str]
-    language = settings.Setting(DEFAULT_LANG)
+    selected_id = Setting(None)   # type: Optional[str]
+    language = Setting(DEFAULT_LANG)
 
     #: main area splitter state
-    splitter_state = settings.Setting(b'')  # type: bytes
-    header_state = settings.Setting(b'')    # type: bytes
+    splitter_state = Setting(b'')  # type: bytes
+    header_state = Setting(b'')    # type: bytes
 
     def __init__(self):
         super().__init__()
@@ -408,7 +409,8 @@ class OWDataSets(OWWidget):
             row = [item1, item2, item3, item4, item5, item6, item7]
             model.appendRow(row)
 
-            if os.path.join(*file_path) == self.selected_id:
+            # for settings do not use os.path.join (Windows separator is different)
+            if "/".join(file_path) == self.selected_id:
                 current_index = i
 
         return model, current_index
@@ -524,7 +526,8 @@ class OWDataSets(OWWidget):
             di = current.data(Qt.UserRole)
             text = description_html(di)
             self.descriptionlabel.setText(text)
-            self.selected_id = os.path.join(di.prefix, di.filename)
+            # for settings do not use os.path.join (Windows separator is different)
+            self.selected_id = "/".join(di.file_path)
         else:
             self.descriptionlabel.setText("")
             self.selected_id = None
@@ -639,6 +642,12 @@ class OWDataSets(OWWidget):
     @staticmethod
     def load_data(path):
         return Orange.data.Table(path)
+
+    @classmethod
+    def migrate_settings(cls, settings, _):
+        # until including 3.36.0 selected dataset was saved with \ on Windows
+        if "selected_id" in settings and isinstance(settings["selected_id"], str):
+            settings["selected_id"] = settings["selected_id"].replace("\\", "/")
 
 
 class FutureWatcher(QObject):
