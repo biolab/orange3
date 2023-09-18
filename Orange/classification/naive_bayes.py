@@ -1,8 +1,11 @@
 import numpy as np
 import scipy.sparse as sp
+import dask.array as da
+from dask import delayed, compute
 
 from Orange.classification import Learner, Model
 from Orange.data import Instance, Storage, Table
+from Orange.data.dask import DaskTable
 from Orange.statistics import contingency
 from Orange.preprocess import Discretize, RemoveNaNColumns
 
@@ -63,7 +66,7 @@ class NaiveBayesModel(Model):
     def predict_storage(self, data):
         if isinstance(data, Instance):
             data = Table.from_numpy(None, np.atleast_2d(data.x))
-        if type(data) is Table:  # pylint: disable=unidiomatic-typecheck
+        if type(data) in (Table, DaskTable):  # pylint: disable=unidiomatic-typecheck
             return self.predict(data.X)
 
         if not len(data) or not len(data[0]):
@@ -86,6 +89,8 @@ class NaiveBayesModel(Model):
         if self.log_cont_prob is not None:
             if sp.issparse(X):
                 self._sparse_probs(X, probs)
+            elif isinstance(X, da.Array):
+                probs = self._dask_probs(X, probs)
             else:
                 self._dense_probs(X, probs)
         np.exp(probs, probs)
@@ -103,6 +108,17 @@ class NaiveBayesModel(Model):
             probs0 = np.vstack((attr_prob.T, zeros))
             probs += probs0[col]
         return probs
+
+    def _dask_probs(self, data, probs):
+        @delayed
+        def map_probs(col, attr_prob):
+            col[np.isnan(col)] = attr_prob.shape[1]
+            return np.vstack((attr_prob.T, zeros))[col.astype(int)]
+
+        zeros = np.zeros((1, probs.shape[1]))
+        probs = sum(map_probs(col, attr_prob)
+                    for col, attr_prob in zip(data.T, self.log_cont_prob))
+        return compute(probs)[0]
 
     def _sparse_probs(self, data, probs):
         n_vals = max(p.shape[1] for p in self.log_cont_prob) + 1
