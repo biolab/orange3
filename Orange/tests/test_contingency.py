@@ -8,10 +8,10 @@ import numpy as np
 import scipy.sparse as sp
 from scipy.sparse import csr_matrix, csc_matrix
 
-from Orange.data import DiscreteVariable, Table, Domain
+from Orange.data import DiscreteVariable, ContinuousVariable, Table, Domain
 from Orange.statistics import contingency
-from Orange import data
 from Orange.tests import test_filename
+from Orange.tests.test_dasktable import temp_dasktable
 
 
 def assert_dist_equal(dist, expected):
@@ -22,11 +22,12 @@ def assert_dist_almost_equal(dist, expected):
     np.testing.assert_array_almost_equal(np.asarray(dist), expected)
 
 
-class TestDiscrete(unittest.TestCase):
+class TestContingency(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.zoo = data.Table("zoo")
-        cls.test9 = data.Table(test_filename("datasets/test9.tab"))
+        cls.zoo = Table("zoo")
+        cls.iris = Table("iris")
+        cls.test9 = Table(test_filename("datasets/test9.tab"))
 
     def test_discrete(self):
         cont = contingency.Discrete(self.zoo, 0)
@@ -47,7 +48,7 @@ class TestDiscrete(unittest.TestCase):
         self.assertEqual(sum(cont.row_unknowns), 0)
 
     def test_discrete_missing(self):
-        d = data.Table("zoo")
+        d = self.zoo.copy()
         with d.unlocked():
             d.Y[25] = float("nan")
             d[0][0] = float("nan")
@@ -60,7 +61,7 @@ class TestDiscrete(unittest.TestCase):
         np.testing.assert_almost_equal(cont.row_unknowns,
                                        [1, 0])
 
-        d = data.Table("zoo")
+        d = self.zoo.copy()
         with d.unlocked():
             d.Y[2] = float("nan")
             d[2]["predator"] = float("nan")
@@ -81,7 +82,7 @@ class TestDiscrete(unittest.TestCase):
         self.assertEqual(dc.row_variable, cont.row_variable)
 
     def test_array_with_unknowns(self):
-        d = data.Table("zoo")
+        d = self.zoo.copy()
         with d.unlocked():
             d.Y[2] = float("nan")
             d.Y[6] = float("nan")
@@ -93,12 +94,12 @@ class TestDiscrete(unittest.TestCase):
                            [2, 8, 0], [18, 21, 1], [1, 4, 0], [1, 0, 1]])
 
     def test_discrete_with_fallback(self):
-        d = data.Table("zoo")
+        d = self.zoo.copy()
         with d.unlocked():
-            d.Y[25] = None
-            d.Y[24] = None
-            d.X[0, 0] = None
-            d.X[24, 0] = None
+            d.Y[25] = float("nan")
+            d.Y[24] = float("nan")
+            d.X[0, 0] = float("nan")
+            d.X[24, 0] = float("nan")
         default = contingency.Discrete(d, 0)
 
         d._compute_contingency = Mock(side_effect=NotImplementedError)
@@ -113,7 +114,7 @@ class TestDiscrete(unittest.TestCase):
             fallback.col_unknowns, default.col_unknowns)
 
     def test_continuous(self):
-        d = data.Table("iris")
+        d = self.iris
         cont = contingency.Continuous(d, "sepal width")
         correct = [[2.3, 2.9, 3.0, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7,
                     3.8, 3.9, 4.0, 4.1, 4.2, 4.4],
@@ -133,7 +134,7 @@ class TestDiscrete(unittest.TestCase):
         self.assertEqual(cont.unknowns, 0)
 
     def test_continuous_missing(self):
-        d = data.Table("iris")
+        d = self.iris.copy()
         with d.unlocked():
             d[1][1] = float("nan")
         cont = contingency.Continuous(d, "sepal width")
@@ -180,12 +181,11 @@ class TestDiscrete(unittest.TestCase):
              3., 4., 2., 1., 1., 1., 1.])
         self.assertEqual(cont.unknowns, 1)
 
-    @staticmethod
-    def test_continuous_array_with_unknowns():
+    def test_continuous_array_with_unknowns(self):
         """
         Test array_with_unknowns function
         """
-        d = data.Table("iris")
+        d = self.iris.copy()
         with d.unlocked():
             d.Y[:50] = np.zeros(50) * float("nan")
         cont = contingency.Continuous(d, "sepal width")
@@ -208,10 +208,9 @@ class TestDiscrete(unittest.TestCase):
             np.testing.assert_almost_equal(v1, v2)
 
     def test_mixedtype_metas(self):
-        import Orange
-        zoo = Orange.data.Table("zoo")
-        dom = Orange.data.Domain(zoo.domain.attributes[2:], zoo.domain.class_var,
-                                 zoo.domain.metas + zoo.domain.attributes[:2])
+        zoo = self.zoo.copy()
+        dom = Domain(zoo.domain.attributes[2:], zoo.domain.class_var,
+                     zoo.domain.metas + zoo.domain.attributes[:2])
         t = zoo.transform(dom)
         cont = contingency.get_contingency(zoo, 2, t.domain.metas[1])
         assert_dist_equal(cont["1"], [38, 5])
@@ -228,11 +227,11 @@ class TestDiscrete(unittest.TestCase):
 
     @staticmethod
     def _construct_sparse():
-        domain = data.Domain(
-            [data.DiscreteVariable("d%i" % i, values=tuple("abc"))
+        domain = Domain(
+            [DiscreteVariable("d%i" % i, values=tuple("abc"))
              for i in range(10)] +
-            [data.ContinuousVariable("c%i" % i) for i in range(10)],
-            data.DiscreteVariable("y", values=tuple("abc")))
+            [ContinuousVariable("c%i" % i) for i in range(10)],
+            DiscreteVariable("y", values=tuple("abc")))
 
         #  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19
         #------------------------------------------------------------
@@ -254,7 +253,7 @@ class TestDiscrete(unittest.TestCase):
         X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
         X.data = X.data.copy()  # make it the owner of it's data
         Y = np.array([[1, 2, 1, 0, 0]]).T
-        return data.Table.from_numpy(domain, X, Y)
+        return Table.from_numpy(domain, X, Y)
 
     def test_sparse(self):
         d = self._construct_sparse()
@@ -284,7 +283,6 @@ class TestDiscrete(unittest.TestCase):
         assert_dist_equal(cont[0], [[], []])
         assert_dist_equal(cont["b"], [[], []])
         assert_dist_equal(cont[2], [[], []])
-
 
     def test_get_contingency(self):
         d = self._construct_sparse()
@@ -375,15 +373,13 @@ class TestDiscrete(unittest.TestCase):
                                  [0, 0, 0, 0, 1, 1, 1, 1]])
 
     def test_compute_contingency_invalid(self):
-        rstate = np.random.RandomState(0xFFFF)
-        X = data.ContinuousVariable("X")
-        C = data.DiscreteVariable("C", values=["C{}".format(i + 1) for i in range(1024)])
-        domain = data.Domain([X], [C])
-        d = data.Table.from_numpy(
-            domain,
-            rstate.uniform(size=(20, 1)).round(1),
-            rstate.randint(0, 1024, size=(20, 1)),
-        )
+        rng = np.random.default_rng(0xFFFF)
+        X = ContinuousVariable("X")
+        C = DiscreteVariable("C", values=[str(i) for i in range(1024)])
+        domain = Domain([X], [C])
+        d = Table.from_numpy(domain,
+                             rng.uniform(size=(20, 1)).round(1),
+                             rng.integers(0, 1024, size=(20, 1)))
         c = contingency.get_contingency(d, X, C)
         self.assertEqual(c.counts.shape[0], 1024)
 
@@ -411,6 +407,42 @@ class TestDiscrete(unittest.TestCase):
             TypeError, contingency.Continuous, self.zoo, 0, col_unknowns=0)
 
         # data with no class
-        zoo_ = Table.from_table(Domain(self.zoo.domain.attributes), self.zoo)
+        zoo_ = self.zoo.transform(Domain(self.zoo.domain.attributes))
         self.assertRaises(ValueError, contingency.Discrete, zoo_, 0)
         self.assertRaises(ValueError, contingency.Continuous, zoo_, 0)
+
+
+class TestContingencyOnDask(TestContingency):
+    @classmethod
+    def setUpClass(cls):
+        cls.zoo = temp_dasktable(Table("zoo"))
+        cls.iris = temp_dasktable(Table("iris"))
+        cls.test9 = temp_dasktable(Table(test_filename("datasets/test9.tab")))
+
+    @unittest.skip("Contingencies of Continuous attributes not supported")
+    def test_continuous(self):
+        super().test_continuous()
+
+    @unittest.skip("Contingencies of Continuous attributes not supported")
+    def test_continuous_missing(self):
+        super().test_continuous_missing()
+
+    @unittest.skip("Contingencies of Continuous attributes not supported")
+    def test_continuous_array_with_unknowns(self):
+        super().test_continuous_array_with_unknowns()
+
+    @unittest.skip("Already tested")
+    def test_compute_contingency_invalid(self):
+        super().test_compute_contingency_invalid()
+
+    @unittest.skip("Metas of type object not supported")
+    def test_compute_contingency_metas(self):
+        super().test_compute_contingency_metas()
+
+    @unittest.skip("Metas of type object not supported")
+    def test_compute_contingency_row_attribute_sparse(self):
+        super().test_compute_contingency_row_attribute_sparse()
+
+    @unittest.skip("Sparse matrices not supported")
+    def test_sparse(self):
+        super().test_sparse()
