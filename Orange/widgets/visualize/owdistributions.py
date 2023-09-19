@@ -77,7 +77,6 @@ class DistributionBarItem(pg.GraphicsObject):
         self.padding = padding
         self.stacked = stacked
         self.expanded = expanded
-        self.__picture = None
         self.polygon = None
         self.hovered = False
         self._tooltip = tooltip
@@ -498,6 +497,7 @@ class OWDistributions(OWWidget):
         self.plot.update()
 
     def _set_smoothing_visibility(self):
+        # false positive, pylint: disable=invalid-sequence-index
         self.smoothing_box.setDisabled(
             self.Fitters[self.fitted_distribution][1] is not AshCurve)
 
@@ -791,6 +791,7 @@ class OWDistributions(OWWidget):
 
         if not y.size:
             return None, None
+        # false positive, pylint: disable=invalid-sequence-index
         _, dist, names, str_names = self.Fitters[self.fitted_distribution]
         fitted = dist.fit(y)
         params = dict(zip(names, fitted))
@@ -803,6 +804,7 @@ class OWDistributions(OWWidget):
         for y, (fitter, _) in zip(ys, fitters):
             if fitter is None:
                 continue
+            # false positive, pylint: disable=invalid-sequence-index
             if self.Fitters[self.fitted_distribution][1] is AshCurve:
                 y[:] = fitter(x, sigma=(22 - self.kde_smoothing) / 40)
             else:
@@ -1226,6 +1228,7 @@ class OWDistributions(OWWidget):
         return group_indices, values
 
     def _get_histogram_table(self):
+        # bar is OK; pylint: disable=disallowed-name
         var_bin = DiscreteVariable("Bin", [bar.desc for bar in self.bar_items])
         var_freq = ContinuousVariable("Count")
         X = []
