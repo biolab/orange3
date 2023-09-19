@@ -271,10 +271,12 @@ class OWDistributions(OWWidget):
         ignored_nans = Msg("Data instances with missing values are ignored")
 
     settingsHandler = settings.DomainContextHandler()
+    settings_version = 2
+
     var = settings.ContextSetting(None)
     cvar = settings.ContextSetting(None)
-    selection = settings.ContextSetting(set(), schema_only=True)
-    # number_of_bins must be a context setting because selection depends on it
+    selected_bars = settings.ContextSetting(set(), schema_only=True)
+    # number_of_bins must be a context setting because selected_bars depends on it
     number_of_bins = settings.ContextSetting(5, schema_only=True)
 
     fitted_distribution = settings.Setting(0)
@@ -942,12 +944,12 @@ class OWDistributions(OWWidget):
         def add_or_remove(value, add):
             self.drag_operation = [self.DragRemove, self.DragAdd][add]
             if add:
-                self.selection.add(value)
+                self.selected_bars.add(value)
             else:
-                if value in self.selection:
+                if value in self.selected_bars:
                     # This can be False when removing with dragging and the
                     # mouse crosses unselected items
-                    self.selection.remove(value)
+                    self.selected_bars.remove(value)
 
         def add_range(add):
             if self.last_click_idx is None:
@@ -959,9 +961,9 @@ class OWDistributions(OWWidget):
                              for idx in range(from_idx, to_idx + 1)}
             self.drag_operation = [self.DragRemove, self.DragAdd][add]
             if add:
-                self.selection |= idx_range
+                self.selected_bars |= idx_range
             else:
-                self.selection -= idx_range
+                self.selected_bars -= idx_range
 
         self.key_operation = None
         if item is None:
@@ -977,15 +979,15 @@ class OWDistributions(OWWidget):
             if modifiers & Qt.ShiftModifier:
                 add_range(self.drag_operation == self.DragAdd)
             elif modifiers & Qt.ControlModifier:
-                add_or_remove(value, add=value not in self.selection)
+                add_or_remove(value, add=value not in self.selected_bars)
             else:
-                if self.selection == {value}:
+                if self.selected_bars == {value}:
                     # Clicking on a single selected bar deselects it,
                     # but dragging from here will select
                     add_or_remove(value, add=False)
                     self.drag_operation = self.DragAdd
                 else:
-                    self.selection.clear()
+                    self.selected_bars.clear()
                     add_or_remove(value, add=True)
         self.last_click_idx = idx
 
@@ -995,7 +997,7 @@ class OWDistributions(OWWidget):
         self.reset_select()
 
     def reset_select(self):
-        self.selection.clear()
+        self.selected_bars.clear()
         self.last_click_idx = None
         self.drag_operation = None
         self.key_operation = None
@@ -1056,13 +1058,13 @@ class OWDistributions(OWWidget):
     def grouped_selection(self):
         return [[g[1] for g in group]
                 for _, group in groupby(enumerate(sorted(map(self.ordered_values.index,
-                                                             self.selection))),
+                                                             self.selected_bars))),
                                         key=lambda x: x[1] - x[0])]
         # Alternative:
         # groups = []
         # last = None
         # for idx, value in enumerate(self.ordered_values):
-        #     if value in self.selection:
+        #     if value in self.selected_bars:
         #         if last is None:
         #             groups.append(last := [])
         #         last.append(idx)
@@ -1076,53 +1078,53 @@ class OWDistributions(OWWidget):
                 self.last_click_idx = len(self.bar_items) - 1
             else:
                 self.last_click_idx = 0
-            self.selection.add(self.ordered_values[self.last_click_idx])
+            self.selected_bars.add(self.ordered_values[self.last_click_idx])
 
         def on_key_left():
             if e.modifiers() & Qt.ShiftModifier:
                 if self.key_operation == Qt.Key_Right and first != last:
-                    self.selection.remove(self.ordered_values[last])
+                    self.selected_bars.remove(self.ordered_values[last])
                     self.last_click_idx = last - 1
                 elif first:
                     self.key_operation = Qt.Key_Left
-                    self.selection.add(self.ordered_values[first - 1])
+                    self.selected_bars.add(self.ordered_values[first - 1])
                     self.last_click_idx = first - 1
             else:
-                self.selection.clear()
+                self.selected_bars.clear()
                 self.last_click_idx = max(first - 1, 0)
-                self.selection.add(self.ordered_values[self.last_click_idx])
+                self.selected_bars.add(self.ordered_values[self.last_click_idx])
 
         def on_key_right():
             if e.modifiers() & Qt.ShiftModifier:
                 if self.key_operation == Qt.Key_Left and first != last:
-                    self.selection.remove(self.ordered_values[first])
+                    self.selected_bars.remove(self.ordered_values[first])
                     self.last_click_idx = first + 1
                 elif not self._is_last_bar(last):
                     self.key_operation = Qt.Key_Right
-                    self.selection.add(self.ordered_values[last + 1])
+                    self.selected_bars.add(self.ordered_values[last + 1])
                     self.last_click_idx = last + 1
             else:
-                self.selection.clear()
+                self.selected_bars.clear()
                 self.last_click_idx = min(last + 1, len(self.bar_items) - 1)
-                self.selection.add(self.ordered_values[self.last_click_idx])
+                self.selected_bars.add(self.ordered_values[self.last_click_idx])
 
         if not self.is_valid or not self.bar_items \
                 or e.key() not in (Qt.Key_Left, Qt.Key_Right):
             super().keyPressEvent(e)
             return
 
-        prev_selection = self.selection.copy()
-        if not self.selection:
+        prev_selection = self.selected_bars.copy()
+        if not self.selected_bars:
             on_nothing_selected()
         else:
-            sel_indices = list(map(self.ordered_values.index, self.selection))
+            sel_indices = list(map(self.ordered_values.index, self.selected_bars))
             first, last = min(sel_indices), max(sel_indices)
             if e.key() == Qt.Key_Left:
                 on_key_left()
             else:
                 on_key_right()
 
-        if self.selection != prev_selection:
+        if self.selected_bars != prev_selection:
             self.drag_operation = self.DragAdd
             self.show_selection()
             self.apply.deferred()
@@ -1143,15 +1145,25 @@ class OWDistributions(OWWidget):
 
         This function also migrates from previous settings, which stored ints
         instead of values. This migration requires bar labels and cannot be
-        done before plotting.
+        (easily) done before plotting.
         """
-        if self.selection and isinstance(next(iter(self.selection)), int):
-            self.selection = {
-                self.ordered_values[idx] for idx in self.selection
+        if self.selected_bars \
+                and isinstance(next(iter(self.selected_bars)), int):
+            self.selected_bars = {
+                self.ordered_values[idx] for idx in self.selected_bars
                 if idx < len(self.ordered_values)}
         else:
-            self.selection = {value for value in self.selection
-                              if value in self.ordered_values}
+            self.selected_bars = {value for value in self.selected_bars
+                                  if value in self.ordered_values}
+
+    @classmethod
+    def migrate_context(cls, context, version):
+        # settings_version 2 has `selected_bars: set[str]` instead of
+        # `selection: set[int]`. Actual migration can only be done after
+        # plotting (see `_reduce_selection`), but we need to rename the setting
+        # so that handler assigns it to the widget instance
+        if "selection" in context.values:
+            context.values["selected_bars"] = context.values["selection"]
 
     # -----------------------------
     # Output
@@ -1186,10 +1198,10 @@ class OWDistributions(OWWidget):
         col = self.data.get_column(self.var)
         group_idx = 1
         values = []
-        # self.selection is a set, so its order is random;
+        # self.selected_bars is a set, so its order is random;
         # we iterate through ordered_value to get the same order as in chart
         for value in self.ordered_values:
-            if value not in self.selection:
+            if value not in self.selected_bars:
                 continue
             group_indices[col == self.var.to_val(value)] = group_idx
             group_idx += 1
