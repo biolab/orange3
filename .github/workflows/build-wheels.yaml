@@ -58,9 +58,6 @@ jobs:
         uses: pypa/cibuildwheel@v2.15.0
         with:
           only: ${{ matrix.only }}
-        env:
-          CIBW_REPAIR_WHEEL_COMMAND_LINUX: ""
-          #CIBW_REPAIR_WHEEL_COMMAND_LINUX: "auditwheel --verbose repair -w {dest_dir} {wheel}"
 
       - uses: actions/upload-artifact@v3
         with:
