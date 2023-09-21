@@ -539,6 +539,11 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self.__pending_selection = self.selection or self.__pending_selection
         self.apply_selection()
 
+        # reset view range on data change
+        x, y = self.get_coordinates_data()
+        if x is not None and y is not None:
+            self.graph._reset_view(x, y)
+
     # Selection
     def apply_selection(self):
         pending = self.__pending_selection
