@@ -17,7 +17,7 @@ pip>=18.0
 python-louvain>=0.13
 pyyaml
 requests
-scikit-learn>=1.1.0,<1.2.0
+scikit-learn>=1.1.0,!=1.2.*  # ignoring 1.2.*: scikit-learn/issues/26241
 scipy>=1.9
 serverfiles		# for Data Sets synchronization
 setuptools>=51.0.0
