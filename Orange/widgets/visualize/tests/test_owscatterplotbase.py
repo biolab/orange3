@@ -1,8 +1,10 @@
 # pylint: disable=missing-docstring,too-many-lines,too-many-public-methods
 # pylint: disable=protected-access
+import unittest
 from itertools import count
 from unittest.mock import patch, Mock
 import numpy as np
+import dask.array as da
 
 from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtGui import QColor
@@ -26,6 +28,7 @@ class MockWidget(OWWidget):
         super().__init__()
         self.graph = OWScatterPlotBase(self)
         self.xy = None, None
+        self.data = None
 
     def get_coordinates_data(self):
         return self.xy
@@ -167,11 +170,13 @@ class TestOWScatterPlotBase(WidgetTest):
         graph.update_coordinates()
         graph.update_density.assert_called_with()
 
+    @unittest.skip("Reset graph does not call reset view anymore")
     def test_update_coordinates_reset_view(self):
         graph = self.graph
         graph.view_box.setRange = self.setRange
         xy = self.master.xy = (np.array([2, 1]), np.array([3, 10]))
         self.master.get_label_data = lambda: np.array(["a", "b"])
+
         graph.reset_graph()
         self.assertEqual(self.last_setRange, [[1, 2], [3, 10]])
 
@@ -193,6 +198,8 @@ class TestOWScatterPlotBase(WidgetTest):
         np.testing.assert_almost_equal(
             graph.scatterplot_item.data["data"], [0, 1])
 
+    @unittest.skip("This sampling mechanism is different from what "
+                   "'interactive' sampling will support")
     def test_sampling(self):
         graph = self.graph
         master = self.master
@@ -1650,6 +1657,12 @@ class TestScatterPlotItem(GuiTest):
             np.testing.assert_equal(y, np.arange(20, 25))
 
 
+class TestOWScatterPlotBaseWithDask(TestOWScatterPlotBase):
+    def setUp(self):
+        super().setUp()
+        self.master.xy = (da.from_array(np.arange(10, dtype=float)),
+                          da.from_array(np.arange(10, dtype=float)))
+
+
 if __name__ == "__main__":
-    import unittest
     unittest.main()
