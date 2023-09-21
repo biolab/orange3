@@ -125,7 +125,7 @@ class RegEditor(BaseEditor):
         self._set_lambda_label()
 
     def _set_lambda_label(self):
-        self.lambda_label.setText("Lambda: {}".format(self.lambda_))
+        self.lambda_label.setText(f"Lambda: {self.lambda_}")
 
     def get_arguments(self) -> Dict:
         params = super().get_arguments()
