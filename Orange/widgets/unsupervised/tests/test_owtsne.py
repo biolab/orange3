@@ -350,14 +350,23 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         # set global structure "on" (after the embedding is computed)
         w.controls.multiscale.setChecked(False)
         self.send_signal(w.Inputs.data, self.data)
+
+        # By default, t-SNE is smart and disables PCA preprocessing if the
+        # number of features is too low. Since we are testing with the iris
+        # data set, we want to force t-SNE to use PCA preprocessing.
+        w.controls.use_pca_preprocessing.setChecked(True)
+        self.widget.run_button.click()
+
         self.wait_until_finished()
         self.assertFalse(self.widget.Information.modified.is_shown())
         # All the embedding components should be computed
+        self.assertIsNotNone(w.preprocessed_data)
         self.assertIsNotNone(w.normalized_data)
         self.assertIsNotNone(w.pca_projection)
         self.assertIsNotNone(w.affinities)
         self.assertIsNotNone(w.tsne_embedding)
         # All the invalidation flags should be set to false
+        self.assertFalse(w._invalidated.preprocessed_data)
         self.assertFalse(w._invalidated.normalized_data)
         self.assertFalse(w._invalidated.pca_projection)
         self.assertFalse(w._invalidated.affinities)
@@ -368,6 +377,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.assertTrue(self.widget.Information.modified.is_shown())
         # Setting `multiscale` to true should set the invalidate flags for
         # the affinities and embedding, but not the pca_projection
+        self.assertFalse(w._invalidated.preprocessed_data)
         self.assertFalse(w._invalidated.normalized_data)
         self.assertFalse(w._invalidated.pca_projection)
         self.assertTrue(w._invalidated.affinities)
@@ -375,6 +385,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
 
         # The flags should now be set, but the embedding should still be
         # available when selecting a subset of data and such
+        self.assertIsNotNone(w.preprocessed_data)
         self.assertIsNotNone(w.normalized_data)
         self.assertIsNotNone(w.pca_projection)
         self.assertIsNotNone(w.affinities)
@@ -470,6 +481,9 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.assertFalse(w.Error.distance_matrix_not_symmetric.is_shown())
 
         self.send_signal(w.Inputs.distances, DistMatrix([[1, 2, 3], [4, 5, 6]]))
+        self.assertTrue(w.Error.distance_matrix_not_symmetric.is_shown())
+
+        self.send_signal(w.Inputs.distances, DistMatrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]))
         self.assertTrue(w.Error.distance_matrix_not_symmetric.is_shown())
 
         self.send_signal(w.Inputs.distances, None)
@@ -813,6 +827,64 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.assertTrue(w.perplexity_spin.isEnabled())
         self.assertEqual(w.perplexity_spin.value(), 42)
 
+    def test_controls_are_properly_disabled_with_sparse_matrix(self):
+        w = self.widget
+
+        # Normalizing sparse matrix is disabled, since this would require
+        # centering
+        disabled_fields = ["normalize"]
+        # PCA preprocessing and supported distance metrics are enable for sparse
+        # matrices
+        enabled_fields = [
+            "use_pca_preprocessing", "distance_metric_idx", "initialization_method_idx"
+        ]
+
+        self.send_signal(w.Inputs.data, self.iris.to_sparse())
+        self.wait_until_finished()
+
+        for field in disabled_fields:
+            self.assertFalse(getattr(w.controls, field).isEnabled())
+        for field in enabled_fields:
+            self.assertTrue(getattr(w.controls, field).isEnabled())
+
+        # Send dense table, shoule enable disabled fields
+        self.send_signal(w.Inputs.data, self.iris)
+        self.wait_until_finished()
+
+        for field in disabled_fields:
+            self.assertTrue(getattr(w.controls, field).isEnabled())
+        for field in enabled_fields:
+            self.assertTrue(getattr(w.controls, field).isEnabled())
+
+    def test_data_containing_nans(self):
+        x = np.random.normal(0, 1, size=(150, 50))
+        # Randomly sprinkle a few NaNs into the matrix
+        num_nans = 20
+        x[np.random.randint(0, 150, num_nans), np.random.randint(0, 50, num_nans)] = np.nan
+
+        nan_data = Table.from_numpy(Domain.from_numpy(x), x)
+
+        w = self.widget
+
+        self.send_signal(w.Inputs.data, nan_data)
+        self.assertTrue(w.controls.normalize.isChecked())
+        self.assertTrue(w.controls.use_pca_preprocessing.isChecked())
+        self.widget.run_button.click(), self.wait_until_finished()
+
+        # Disable only normalization
+        w.controls.normalize.setChecked(False)
+        self.widget.run_button.click(), self.wait_until_finished()
+
+        # Disable only PCA preprocessing
+        w.controls.normalize.setChecked(True)
+        w.controls.use_pca_preprocessing.setChecked(False)
+        self.widget.run_button.click(), self.wait_until_finished()
+
+        # Disable both normalization and PCA preprocessing
+        w.controls.normalize.setChecked(False)
+        w.controls.use_pca_preprocessing.setChecked(False)
+        self.widget.run_button.click(), self.wait_until_finished()
+
 
 class TestTSNERunner(unittest.TestCase):
     @classmethod
@@ -834,8 +906,9 @@ class TestTSNERunner(unittest.TestCase):
         )
         task = TSNERunner.run(task, state)
 
-        self.assertEqual(len(state.set_status.mock_calls), 5)
+        self.assertEqual(len(state.set_status.mock_calls), 6)
         state.set_status.assert_has_calls([
+            call("Preprocessing data..."),
             call("Normalizing data..."),
             call("Computing PCA..."),
             call("Finding nearest neighbors..."),
@@ -862,8 +935,9 @@ class TestTSNERunner(unittest.TestCase):
         )
         task = TSNERunner.run(task, state)
 
-        self.assertEqual(len(state.set_status.mock_calls), 4)
+        self.assertEqual(len(state.set_status.mock_calls), 5)
         state.set_status.assert_has_calls([
+            call("Preprocessing data..."),
             call("Normalizing data..."),
             call("Finding nearest neighbors..."),
             call("Preparing initialization..."),
@@ -890,8 +964,9 @@ class TestTSNERunner(unittest.TestCase):
         )
         task = TSNERunner.run(task, state)
 
-        self.assertEqual(len(state.set_status.mock_calls), 4)
+        self.assertEqual(len(state.set_status.mock_calls), 5)
         state.set_status.assert_has_calls([
+            call("Preprocessing data..."),
             call("Computing PCA..."),
             call("Finding nearest neighbors..."),
             call("Preparing initialization..."),
@@ -949,7 +1024,6 @@ class TestTSNERunner(unittest.TestCase):
         task = Task(
             normalize=False,
             use_pca_preprocessing=False,
-            # data=self.data,
             distance_matrix=self.distances,
             perplexity=30,
             initialization_method="spectral",
@@ -1060,6 +1134,34 @@ class TestTSNERunner(unittest.TestCase):
 
         self.assertIsNone(task.normalized_data)
         self.assertIsNone(task.pca_projection)
+        self.assertIsInstance(task.initialization, np.ndarray)
+        self.assertIsInstance(task.tsne, TSNE)
+        self.assertIsInstance(task.tsne_embedding, TSNEModel)
+
+    def test_run_with_sparse_matrix_ignores_normalization(self):
+        state = Mock()
+        state.is_interruption_requested = Mock(return_value=False)
+
+        task = Task(
+            normalize=False,
+            use_pca_preprocessing=True,
+            data=self.data.to_sparse(),
+            perplexity=30,
+            initialization_method="spectral",
+            distance_metric="cosine",
+        )
+        task = TSNERunner.run(task, state)
+        self.assertEqual(len(state.set_status.mock_calls), 5)
+        state.set_status.assert_has_calls([
+            call("Preprocessing data..."),
+            call("Computing PCA..."),
+            call("Finding nearest neighbors..."),
+            call("Preparing initialization..."),
+            call("Running optimization..."),
+        ])
+
+        self.assertIsNone(task.normalized_data)
+        self.assertIsInstance(task.pca_projection, Table)
         self.assertIsInstance(task.initialization, np.ndarray)
         self.assertIsInstance(task.tsne, TSNE)
         self.assertIsInstance(task.tsne_embedding, TSNEModel)

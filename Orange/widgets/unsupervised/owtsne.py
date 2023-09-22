@@ -98,6 +98,10 @@ class Task(namespace):
                     "distance matrix is provided"
                 )
 
+        if self.data is not None and self.data.is_sparse():
+            if self.normalize:
+                error("Data normalization is not supported for sparse data")
+
         return self
 
 
@@ -446,6 +450,23 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.iterations_done = 0          # type: int
 
     @property
+    def normalize_(self):
+        should_normalize = self.normalize
+        if self.distance_matrix is not None:
+            should_normalize = False
+        if self.data is not None:
+            if self.data.is_sparse():
+                should_normalize = False
+        return should_normalize
+
+    @property
+    def use_pca_preprocessing_(self):
+        should_use_pca_preprocessing = self.use_pca_preprocessing
+        if self.distance_matrix is not None:
+            should_use_pca_preprocessing = False
+        return should_use_pca_preprocessing
+
+    @property
     def effective_data(self):
         return self.data.transform(Domain(self.effective_variables))
 
@@ -457,7 +478,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.preprocessing_box = gui.vBox(self.controlArea, box="Preprocessing")
         self.normalize_cbx = gui.checkBox(
             self.preprocessing_box, self, "normalize", "Normalize data",
-            callback=self._invalidate_normalized_data, stateWhenDisabled=False,
+            callback=self._normalize_data_changed, stateWhenDisabled=False,
         )
         self.pca_preprocessing_cbx = gui.checkBox(
             self.preprocessing_box, self, "use_pca_preprocessing", "Apply PCA preprocessing",
@@ -519,10 +540,10 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     # GUI control callbacks
     def _normalize_data_changed(self):
         # We only care about the normalization checkbox if there is no distance
-        # matrix provided. This is not user-settable anyway, but is triggered
-        # when we programmatically enable/disable the checkbox in
-        # `enable_controls`
-        if self.distance_matrix is None:
+        # matrix provided and if the data are not sparse. This is not user-
+        # settable anyway, but is triggered when we programmatically
+        # enable/disable the checkbox in`enable_controls`
+        if self.distance_matrix is None and not self.data.is_sparse():
             self._invalidate_normalized_data()
 
     def _pca_preprocessing_changed(self):
@@ -856,7 +877,7 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             )
 
         # Disable slider parent, because we want to disable the labels too
-        self.pca_component_slider.parent().setEnabled(self.use_pca_preprocessing)
+        self.pca_component_slider.parent().setEnabled(self.use_pca_preprocessing_)
 
         # Disable the perplexity spin box if multiscale is turned on
         self.perplexity_spin.setDisabled(self.multiscale)
@@ -904,10 +925,10 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
             # Preprocessed data
             preprocessed_data=self.preprocessed_data,
             # Normalization
-            normalize=self.normalize,
+            normalize=self.normalize_,
             normalized_data=self.normalized_data,
             # PCA preprocessing
-            use_pca_preprocessing=self.use_pca_preprocessing,
+            use_pca_preprocessing=self.use_pca_preprocessing_,
             pca_components=self.pca_components,
             pca_projection=self.pca_projection,
             # t-SNE parameters
@@ -931,14 +952,14 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
                 len(task.preprocessed_data) == len(self.data)
 
     def __ensure_task_same_for_normalization(self, task: Task):
-        assert task.normalize == self.normalize
+        assert task.normalize == self.normalize_
         if task.normalize and task.distance_metric != "precomputed":
             assert task.data is self.data
             assert isinstance(task.normalized_data, Table) and \
                 len(task.normalized_data) == len(self.data)
 
     def __ensure_task_same_for_pca(self, task: Task):
-        assert task.use_pca_preprocessing == self.use_pca_preprocessing
+        assert task.use_pca_preprocessing == self.use_pca_preprocessing_
         if task.use_pca_preprocessing and task.distance_metric != "precomputed":
             assert task.data is self.data
             assert task.pca_components == self.pca_components
