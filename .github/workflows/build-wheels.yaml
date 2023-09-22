@@ -1,0 +1,138 @@
+name: Build
+
+on:
+  release:
+    types: [published]
+  # Enable manual run
+  workflow_dispatch:
+
+jobs:
+  generate-wheels-matrix:
+    # Create a matrix of all architectures & versions to build.
+    # This enables the next step to run cibuildwheel in parallel.
+    # From https://iscinumpy.dev/post/cibuildwheel-2-10-0/#only-210
+    name: Generate wheels matrix
+    runs-on: ubuntu-latest
+    outputs:
+      include: ${{ steps.set-matrix.outputs.include }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install cibuildwheel
+        # Nb. keep cibuildwheel version pin consistent with job below
+        run: pipx install cibuildwheel==2.14.1
+      - id: set-matrix
+        run: |
+          MATRIX=$(
+            {
+              cibuildwheel --print-build-identifiers --platform linux \
+              | jq -nRc '{"only": inputs, "os": "ubuntu-latest"}' \
+              && cibuildwheel --print-build-identifiers --platform macos \
+              | jq -nRc '{"only": inputs, "os": "macos-latest"}' \
+              && cibuildwheel --print-build-identifiers --platform windows \
+              | jq -nRc '{"only": inputs, "os": "windows-latest"}'
+            } | jq -sc
+          )
+          echo "include=$MATRIX" >> $GITHUB_OUTPUT
+
+  build_wheels:
+    name: Build wheels on ${{ matrix.only }}
+    needs: generate-wheels-matrix
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.generate-wheels-matrix.outputs.include) }}
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        if: runner.os == 'Linux'
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: all
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.15.0
+        with:
+          only: ${{ matrix.only }}
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheelhouse/*.whl
+          name: Orange3-wheels
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+
+      - name: Build sdist (pep517)
+        run: |
+          python -m pip install pep517 numpy cython
+          python -m pep517.build -s .
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v3
+        with:
+          name: Orange3-source
+          path: dist/*.tar.gz
+
+  upload_release_assets:
+    name: Upload Release Assets
+    needs: [ build_wheels ]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags')
+
+    steps:
+      - name: Download bdist files
+        id: download_artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: Orange3-wheels
+          path: ~/downloads
+
+      - name: List downloaded artifacts
+        run: ls -la ~/downloads
+
+      - name: Upload to release
+        uses: shogo82148/actions-upload-release-asset@v1.2.3
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ${{ steps.download_artifact.outputs.download-path }}/*.whl
+
+  pypi_publish:
+    name: PyPI Publish
+    needs: [ build_wheels, build_sdist ]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # this permission is mandatory for trusted publishing
+    if: startsWith(github.ref, 'refs/tags')
+
+    steps:
+      - name: Download bdist files
+        uses: actions/download-artifact@v2
+        with:
+          name: Orange3-wheels
+          path: downloads/
+
+      - name: Download sdist files
+        uses: actions/download-artifact@v2
+        with:
+          name: Orange3-source
+          path: downloads/
+
+      - name: Display structure of downloaded files
+        run: ls -R downloads/
+
+      - name: Publish packages to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages_dir: downloads/

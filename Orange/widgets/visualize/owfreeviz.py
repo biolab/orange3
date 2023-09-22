@@ -5,7 +5,7 @@ from types import SimpleNamespace as namespace
 import numpy as np
 
 from AnyQt.QtCore import Qt, QRectF, QLineF, QPoint
-from AnyQt.QtGui import QPalette
+from AnyQt.QtGui import QPalette, QFontMetrics
 from AnyQt.QtWidgets import QSizePolicy
 
 import pyqtgraph as pg
@@ -137,8 +137,12 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
 
     settings_version = 3
     initialization = settings.Setting(InitType.Circular)
+    balance = settings.Setting(False)
+    gravity_index = settings.Setting(4)
     GRAPH_CLASS = OWFreeVizGraph
     graph = settings.SettingProvider(OWFreeVizGraph)
+
+    GravityValues = [0.1, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
 
     class Error(OWAnchorProjectionWidget.Error):
         no_class_var = widget.Msg("Data must have a target variable.")
@@ -159,6 +163,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
     def __init__(self):
         OWAnchorProjectionWidget.__init__(self)
         ConcurrentWidgetMixin.__init__(self)
+        self.__optimized = False
 
     def _add_controls(self):
         self.__add_controls_start_box()
@@ -177,6 +182,20 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
             callback=self.__init_combo_changed,
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         )
+        box2 = gui.hBox(box)
+        gui.checkBox(
+            box2, self, "balance", "Gravity",
+            callback=self.__gravity_changed)
+        self.grav_slider = gui.hSlider(
+            box2, self, "gravity_index",
+            minValue=0, maxValue=len(self.GravityValues) - 1,
+            callback=self.__gravity_dragged, createLabel=False)
+        self.gravity_label = gui.widgetLabel(box2)
+        self.gravity_label.setFixedWidth(
+            max(QFontMetrics(self.font()).horizontalAdvance(str(x))
+                for x in self.GravityValues))
+        self.gravity_label.setAlignment(Qt.AlignRight)
+        self.__update_gravity_label()
         self.run_button = gui.button(box, self, "Start", self._toggle_run)
 
     @property
@@ -188,6 +207,21 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
     def effective_data(self):
         return self.data.transform(Domain(self.effective_variables,
                                           self.data.domain.class_vars))
+
+    def __gravity_dragged(self):
+        self.balance = True
+        self.__gravity_changed()
+
+    def __update_gravity_label(self):
+        self.gravity_label.setText(str(self.GravityValues[self.gravity_index]))
+
+    def __gravity_changed(self):
+        gravity = self.GravityValues[self.gravity_index]
+        if self.projector is not None:
+            self.projector.gravity = gravity if self.balance else None
+        self.__update_gravity_label()
+        if self.task is None and self.__optimized:
+            self._run()
 
     def __radius_slider_changed(self):
         self.graph.update_radius()
@@ -232,6 +266,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
         self.projection = result.projection
         self.graph.set_sample_size(None)
         self.run_button.setText("Start")
+        self.__optimized = True
         self.commit.deferred()
 
     def on_exception(self, ex: Exception):
@@ -253,14 +288,19 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
         anchors = FreeViz.init_radial(len(self.effective_variables)) \
             if self.initialization == InitType.Circular \
             else FreeViz.init_random(len(self.effective_variables), 2)
+        if self.balance:
+            gravity = self.GravityValues[self.gravity_index]
+        else:
+            gravity = None
         self.projector = FreeViz(scale=False, center=False,
-                                 initial=anchors, maxiter=10)
+                                 initial=anchors, maxiter=10, gravity=gravity)
         data = self.projector.preprocess(self.effective_data)
         self.projector.domain = data.domain
         self.projector.components_ = anchors.T
         self.projection = FreeVizModel(self.projector, self.projector.domain, 2)
         self.projection.pre_domain = data.domain
         self.projection.name = self.projector.name
+        self.__optimized = False
 
     def check_data(self):
         def error(err):

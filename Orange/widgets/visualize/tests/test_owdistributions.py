@@ -1,11 +1,14 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring,protected-access
+from functools import partial
+
 import os
 import unittest
 from unittest.mock import Mock
 
 import numpy as np
-from AnyQt.QtCore import QItemSelection, Qt
+from AnyQt.QtCore import QItemSelection, Qt, QEvent
+from AnyQt.QtGui import QKeyEvent
 from AnyQt.QtWidgets import QCheckBox
 
 from orangewidget.utils.combobox import qcombobox_emit_activated
@@ -21,6 +24,7 @@ class TestOWDistributions(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWDistributions)  #: OWDistributions
         self.iris = Table("iris")
+        self.heart = Table("heart_disease")
 
     def _set_cvar(self, cvar):
         combo = self.widget.controls.cvar
@@ -76,7 +80,7 @@ class TestOWDistributions(WidgetTest):
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
 
         # Data gone: clean up
-        widget.selection.add(0)
+        widget.selected_bars.add(widget.ordered_values[0])
         widget._clear_plot = Mock()
         self.send_signal(widget.Inputs.data, None)
         self.assertEqual(len(var_model), 0)
@@ -84,7 +88,7 @@ class TestOWDistributions(WidgetTest):
         self.assertIsNone(widget.var)
         self.assertIsNone(widget.cvar)
 
-        self.assertEqual(widget.selection, set())
+        self.assertEqual(widget.selected_bars, set())
         self.assertIsNone(widget.valid_data)
         self.assertIsNone(widget.valid_group_data)
         self.assertIsNone(self.get_output(widget.Outputs.histogram_data))
@@ -184,7 +188,7 @@ class TestOWDistributions(WidgetTest):
         self._set_var(self.iris.domain["sepal length"])
         self._set_cvar(self.iris.domain["iris"])
         hist = self.get_output(widget.Outputs.histogram_data)
-        self.assertTrue(len(hist)>0 and len(hist)%3==0)
+        self.assertTrue(len(hist) > 0 and len(hist) % 3 == 0)
 
     def test_switch_var(self):
         """Widget reset and recomputes when changing var"""
@@ -193,7 +197,7 @@ class TestOWDistributions(WidgetTest):
         self.send_signal(widget.Inputs.data, self.iris)
         binnings = widget.binnings.copy()
         valid_data = widget.valid_data.copy()
-        widget.selection.add(1)
+        widget.selected_bars.add(widget.ordered_values[1])
         widget._clear_plot = Mock()
         widget.apply.now = widget.apply.deferred = Mock()
 
@@ -204,7 +208,7 @@ class TestOWDistributions(WidgetTest):
         )
         self.assertFalse(valid_data.shape == widget.valid_data.shape
                          and np.allclose(valid_data, widget.valid_data))
-        self.assertEqual(widget.selection, set())
+        self.assertEqual(widget.selected_bars, set())
         widget._clear_plot.assert_called()
         widget.apply.now.assert_called()
 
@@ -225,7 +229,7 @@ class TestOWDistributions(WidgetTest):
 
         binnings = widget.binnings
         valid_data = widget.valid_data.copy()
-        widget.selection.add(1)
+        widget.selected_bars.add(widget.ordered_values[1])
         widget._clear_plot = Mock()
         widget.apply.now = widget.apply.deferred = Mock()
 
@@ -235,7 +239,7 @@ class TestOWDistributions(WidgetTest):
         self.assertIs(binnings, widget.binnings)
         np.testing.assert_equal(valid_data[:120], widget.valid_data)
         self.assertEqual(len(widget.valid_group_data), 120)
-        self.assertEqual(widget.selection, {1})
+        self.assertEqual(widget.selected_bars, {widget.ordered_values[1]})
         widget._clear_plot.assert_called()
         widget.apply.now.assert_called()
         widget._clear_plot.reset_mock()
@@ -245,7 +249,7 @@ class TestOWDistributions(WidgetTest):
         self.assertIs(binnings, widget.binnings)
         np.testing.assert_equal(valid_data, widget.valid_data)
         self.assertIsNone(widget.valid_group_data)
-        self.assertEqual(widget.selection, {1})
+        self.assertEqual(widget.selected_bars, {widget.ordered_values[1]})
         widget._clear_plot.assert_called()
         widget.apply.now.assert_called()
 
@@ -255,12 +259,12 @@ class TestOWDistributions(WidgetTest):
         self.send_signal(widget.Inputs.data, self.iris)
 
         self._set_slider(0)
-        widget.selection.add(1)
+        widget.selected_bars.add(widget.ordered_values[1])
         n_bars = len(widget.bar_items)
         widget.apply.now = widget.apply.deferred = Mock()
 
         self._set_slider(1)
-        self.assertEqual(widget.selection, set())
+        self.assertEqual(widget.selected_bars, set())
         self.assertGreater(n_bars, len(widget.bar_items))
         widget.apply.now.assert_called_once()
 
@@ -463,7 +467,8 @@ class TestOWDistributions(WidgetTest):
         widget = self.widget
         self.send_signal(widget.Inputs.data, self.iris)
         self._set_slider(0)
-        widget.selection = {1, 2, 3, 5, 6, 9}
+        widget.selected_bars = {widget.ordered_values[x]
+                                for x in [1, 2, 3, 5, 6, 9]}
         widget.plot_mark.addItem = Mock()
         widget.show_selection()
         widget._on_end_selecting()
@@ -526,11 +531,10 @@ class TestOWDistributions(WidgetTest):
         widget.send_report()
 
     def test_sort_by_freq_no_split(self):
-        data = Table("heart_disease")
-        domain = data.domain
+        domain = self.heart.domain
         sort_by_freq = self.widget.controls.sort_by_freq
 
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self._set_var(domain["gender"])
         self._set_cvar(None)
 
@@ -549,11 +553,10 @@ class TestOWDistributions(WidgetTest):
         self.assertEqual(out[1][1], 97)
 
     def test_sort_by_freq_split(self):
-        data = Table("heart_disease")
-        domain = data.domain
+        domain = self.heart.domain
         sort_by_freq = self.widget.controls.sort_by_freq
 
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.data, self.heart)
         self._set_var(domain["gender"])
         self._set_cvar(domain["rest ECG"])
 
@@ -574,6 +577,124 @@ class TestOWDistributions(WidgetTest):
         self.assertEqual(out[4][0], "female")
         self.assertEqual(out[4][1], "left vent hypertrophy")
         self.assertEqual(out[4][2], 45)
+
+    def test_sort_by_freq_output_selection(self):
+        widget = self.widget
+        sort_by_freq = self.widget.controls.sort_by_freq
+        var = self.heart.domain["chest pain"]
+
+        self.send_signal(self.widget.Inputs.data, self.heart)
+        self._set_var(var)
+
+        sort_by_freq.setChecked(False)
+        assert not widget.sort_by_freq
+
+        # Select value[1]
+        widget._on_item_clicked(widget.bar_items[1], Qt.NoModifier, False)
+        widget._on_end_selecting()
+        cp = self.get_output(widget.Outputs.selected_data).get_column(var)
+        self.assertTrue(np.all(cp == 1))
+
+        sort_by_freq.setChecked(True)
+        assert widget.sort_by_freq
+
+        # Select value[2] (because of reordering)
+        # value[1] remains selected
+        widget._on_item_clicked(widget.bar_items[1], Qt.ControlModifier, False)
+        widget._on_end_selecting()
+        cp = self.get_output(widget.Outputs.selected_data).get_column(var)
+        self.assertFalse(np.any(cp == 0))
+        self.assertTrue(np.any(cp == 1))
+        self.assertTrue(np.any(cp == 2))
+        self.assertFalse(np.any(cp == 3))
+
+        # deselect value[1]
+        widget._on_item_clicked(widget.bar_items[2], Qt.ControlModifier, False)
+        widget._on_end_selecting()
+        cp = self.get_output(widget.Outputs.selected_data).get_column(var)
+        self.assertTrue(np.all(cp == 2))
+
+        # Select value[0] and also value[1] (!), because it's in between
+        # This tests checks that shift-selecting works with ordered values
+        widget._on_item_clicked(widget.bar_items[2], Qt.NoModifier, False)
+        widget._on_item_clicked(widget.bar_items[0], Qt.ShiftModifier, False)
+        widget._on_end_selecting()
+        cp = self.get_output(widget.Outputs.selected_data).get_column(var)
+        self.assertTrue(np.any(cp == 0))
+        self.assertTrue(np.any(cp == 1))
+        self.assertTrue(np.any(cp == 2))
+        self.assertFalse(np.any(cp == 3))
+
+    def test_keyboard_interaction_unsorted(self):
+        press = partial(QKeyEvent, QEvent.KeyPress)
+        left, right = Qt.Key_Left, Qt.Key_Right
+
+        widget = self.widget
+        sort_by_freq = self.widget.controls.sort_by_freq
+        widget.sort_by_freq = False
+        var = self.heart.domain["chest pain"]
+
+        for ordered in [False, True]:
+            with self.subTest(ordered=ordered):
+                sort_by_freq.setChecked(ordered)
+                assert widget.sort_by_freq is ordered
+                assert not ordered or list(widget.ordered_values) != list(var.values)
+
+                values = widget.ordered_values if ordered else var.values
+
+                self.send_signal(self.widget.Inputs.data, self.heart)
+                self._set_var(var)
+
+                # Start selecting by pressing right
+                for i in [0, 1, 2, 3, 3, 3]:
+                    widget.keyPressEvent(press(right, Qt.NoModifier))
+                    self.assertEqual(widget.selected_bars, {values[i]}, f"at i={i}")
+
+                # Going left
+                for i in [2, 1, 0, 0, 0]:
+                    widget.keyPressEvent(press(left, Qt.NoModifier))
+                    self.assertEqual(widget.selected_bars, {values[i]}, f"at i={i}")
+
+                # Deselect first item (= clear selection)
+                widget._on_item_clicked(widget.bar_items[0], Qt.NoModifier, False)
+                assert not widget.selected_bars
+
+                # Going left from clear
+                for i in [3, 2, 1, 0, 0, 0]:
+                    widget.keyPressEvent(press(left, Qt.NoModifier))
+                    self.assertEqual(widget.selected_bars, {values[i]}, f"at i={i}")
+
+                widget.keyPressEvent(press(right, Qt.NoModifier))
+                assert widget.selected_bars == {values[1]}
+
+                # Shift selecting to the right
+                widget.keyPressEvent(press(right, Qt.ShiftModifier))
+                assert widget.selected_bars == {values[1], values[2]}
+
+                widget.keyPressEvent(press(right, Qt.ShiftModifier))
+                assert widget.selected_bars == {values[1], values[2], values[3]}
+
+                widget.keyPressEvent(press(right, Qt.ShiftModifier))
+                assert widget.selected_bars == {values[1], values[2], values[3]}
+
+                # Shift deselecting to the left
+                widget.keyPressEvent(press(left, Qt.ShiftModifier))
+                assert widget.selected_bars == {values[1], values[2]}
+
+                widget.keyPressEvent(press(left, Qt.ShiftModifier))
+                assert widget.selected_bars == {values[1]}
+
+                # Now we have a single item, so going left should select the one to the left
+                widget.keyPressEvent(press(left, Qt.ShiftModifier))
+                assert widget.selected_bars == {values[0], values[1]}
+
+                # Right deselects it
+                widget.keyPressEvent(press(right, Qt.ShiftModifier))
+                assert widget.selected_bars == {values[1]}
+
+                # Right again selects the item to the right of the single itsm
+                widget.keyPressEvent(press(right, Qt.ShiftModifier))
+                assert widget.selected_bars == {values[1], values[2]}
 
 
 if __name__ == "__main__":
