@@ -302,6 +302,8 @@ class TestNaivebayesLearnerOnDask(TestNaiveBayesLearner):
         cls.learner = NaiveBayesLearner()
         cls.data = temp_dasktable(data)
         cls.table = temp_dasktable(data[::20])
+        cls.iris = temp_dasktable(Table("iris"))
+        cls.lenses = temp_dasktable(Table(test_filename("datasets/lenses.tab")))
 
     @unittest.skip("sparse matrices not supported")
     def test_predictions_csr_matrix(self):
