@@ -151,3 +151,6 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         skl_clf = lr._initialize_wrapped()
         self.assertEqual(skl_clf.solver, "liblinear")
         self.assertEqual(skl_clf.penalty, "l1")
+
+    def test_supports_weights(self):
+        self.assertTrue(LogisticRegressionLearner().supports_weights)

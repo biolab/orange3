@@ -34,6 +34,9 @@ class TestSGDRegressionLearner(unittest.TestCase):
         mod = lrn(Table("housing"))
         self.assertEqual(len(mod.coefficients), len(mod.domain.attributes))
 
+    def test_supports_weights(self):
+        self.assertTrue(SGDRegressionLearner().supports_weights)
+
 
 class TestSGDClassificationLearner(unittest.TestCase):
     @classmethod
@@ -72,3 +75,6 @@ class TestSGDClassificationLearner(unittest.TestCase):
         mod = lrn(self.iris)
         self.assertTupleEqual((50, 3), mod(self.iris[:50], mod.Probs).shape)
         self.assertTupleEqual((50,), mod(self.iris[:50], mod.Value).shape)
+
+    def test_supports_weights(self):
+        self.assertTrue(SGDClassificationLearner().supports_weights)

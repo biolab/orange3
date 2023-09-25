@@ -276,6 +276,9 @@ class TestNaiveBayesLearner(unittest.TestCase):
         data = Table.from_numpy(domain, x, y)
         self.assertRaises(ValueError, self.learner, data)
 
+    def test_supports_weights(self):
+        self.assertFalse(NaiveBayesLearner().supports_weights)
+
 
 if __name__ == "__main__":
     unittest.main()

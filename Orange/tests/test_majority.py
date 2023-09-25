@@ -86,3 +86,6 @@ class TestMajorityLearner(unittest.TestCase):
                 break
         else:
             self.fail("Majority always returns the same value.")
+
+    def test_supports_weights(self):
+        self.assertFalse(MajorityLearner().supports_weights)

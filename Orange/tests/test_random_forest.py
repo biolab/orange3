@@ -133,6 +133,10 @@ class RandomForestTest(unittest.TestCase):
         diff = np.sum(np.abs(model_1(data[:1]) - model_2(data[:1])))
         self.assertGreater(diff, 1.2)
 
+    def test_supports_weights(self):
+        self.assertTrue(RandomForestRegressionLearner().supports_weights)
+        self.assertTrue(RandomForestLearner().supports_weights)
+
 
 if __name__ == "__main__":
     unittest.main()
