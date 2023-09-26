@@ -74,7 +74,7 @@ def with_dasktable(test_case):
         test_case(self, lambda table: table)
         self.tearDown()
         self.setUp()
-        test_case(self, lambda table: temp_dasktable(table))
+        test_case(self, temp_dasktable)
 
     return _wrapper
 
