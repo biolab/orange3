@@ -2,17 +2,20 @@ import contextlib
 import pickle
 import warnings
 from numbers import Integral
+from os import path
+import json
 
 import h5py
 import dask.delayed
 import dask.array as da
 import numpy as np
 import pandas
-from os import path
 
-from Orange.data import Table, RowInstance
+from Orange.data import Table, RowInstance, Domain, \
+    ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable
 from Orange.data.table import _FromTableConversion, _ArrayConversion
 from Orange.statistics.util import contingency
+from Orange.util import OrangeDeprecationWarning
 
 
 class DaskRowInstance(RowInstance):
@@ -63,6 +66,9 @@ class DaskTable(Table):
 
     _array_interface = da
     _from_table_conversion_class = _FromTableConversionDask
+
+    # dask requires file to remain open
+    __h5file: h5py.File
 
     def __new__(cls, *args, **kwargs):
         if not args and not kwargs:
@@ -122,24 +128,62 @@ class DaskTable(Table):
         """
         h5file = f = h5py.File(filename, "r")
 
-        def read_format_da(name):
+        def read_domain(sub):
+            subdomain = f[f'domain_{sub}'].asstr() if f'domain_{sub}' in f else []
+            subdomain_args = f[f'domain_{sub}_args'].asstr() \
+                if f'domain_{sub}_args' in f else ['{}'] * len(subdomain)
+            for attr, args in zip(subdomain, subdomain_args):
+                yield attr[0], attr[1], json.loads(args)
+
+        def make_var(name, header, args):
+            var_cls = [var for var in (ContinuousVariable,
+                                       DiscreteVariable,
+                                       StringVariable,
+                                       TimeVariable) if header in var.TYPE_HEADERS][0]
+            new_var = var_cls(name, **{key: val for key, val in args.items()
+                                       if key != "attributes"})
+            new_var.attributes = args.get("attributes", {})
+            return new_var
+
+        def read_format_da(name, as_str=False):
             # dask's automatic chunking has problems with 0-dimension arrays
-            if name in f and 0 not in f[name].shape:
-                return da.from_array(f[name])
+            if name in f:
+                chunks = 'auto' if 0 not in f[name].shape else f[name].shape
+                if as_str:
+                    return da.from_array(f[name].asstr()[:], chunks=f[name].shape)
+                return da.from_array(f[name], chunks=chunks)
             return None
+
+        if 'domain' in f and f['domain'].shape == tuple():
+            domain = pickle.loads(np.array(f['domain']).tobytes())
+            warnings.warn("Use the newer DaskTable format (perhaps just run save() again).",
+                          OrangeDeprecationWarning, stacklevel=2)
+        else:
+            domain = Domain(*[[make_var(*args) for args in read_domain(subdomain)]
+                            for subdomain in ['attributes', 'class_vars', 'metas']])
 
         X = read_format_da("X")
         Y = read_format_da("Y")
 
-        # metas are in memory
-        if "metas" in f:
+        if len(domain.metas) and 'metas' in f and not isinstance(f['metas'], h5py.Group):
             metas = pickle.loads(np.array(f['metas']).tobytes())
+            warnings.warn("Use the newer DaskTable format (perhaps just run save() again).",
+                          OrangeDeprecationWarning, stacklevel=2)
         else:
-            metas = None
+            if len(domain.metas) > 1:
+                metas = np.hstack([read_format_da(f'metas/{i}',
+                                                  isinstance(attr, StringVariable))
+                                   for i, attr in enumerate(domain.metas)])
+                # metas are in memory
+                metas = metas.compute()
+            elif len(domain.metas) == 1:
+                metas = read_format_da('metas/0',
+                                       isinstance(domain.metas[0], StringVariable)
+                                       ).compute()
+            else:
+                metas = None
 
-        domain = pickle.loads(np.array(f['domain']).tobytes())
-
-        self = DaskTable(domain, X, Y, metas)
+        self = DaskTable.from_arrays(domain, X, Y, metas)
         self.__h5file = h5file
         if isinstance(filename, str):
             self.name = path.splitext(path.split(filename)[-1])[0]
@@ -160,9 +204,24 @@ class DaskTable(Table):
 
     def save(self, filename):
         # the following code works with both Table and DaskTable
+        def parse(attr):
+            params = (attr.name, attr.TYPE_HEADERS[1], {"attributes": attr.attributes})
+            if isinstance(attr, DiscreteVariable):
+                params[2].update(values=attr.values)
+            elif isinstance(attr, TimeVariable):
+                params[2].update(have_date=attr.have_date,
+                                 have_time=attr.have_time)
+            elif isinstance(attr, ContinuousVariable):
+                params[2].update(number_of_decimals=attr.number_of_decimals)
+            return params
+
         with h5py.File(filename, 'w') as f:
-            f.create_dataset("domain", data=np.void(pickle.dumps(self.domain)))
-            f.create_dataset("metas", data=np.void(pickle.dumps(self.metas)))
+            for subdomain in ['attributes', 'class_vars', 'metas']:
+                parsed = [parse(feature) for feature in getattr(self.domain, subdomain)]
+                domain = np.array([[name, header] for name, header, _ in parsed], 'S')
+                domain_args = np.array([json.dumps(args) for *_, args in parsed], 'S')
+                f.create_dataset(f'domain_{subdomain}', data=domain)
+                f.create_dataset(f'domain_{subdomain}_args', data=domain_args)
 
         if isinstance(self.X, da.Array):
             da.to_hdf5(filename, '/X', self.X)
@@ -176,6 +235,19 @@ class DaskTable(Table):
             else:
                 with h5py.File(filename, 'r+') as f:
                     f.create_dataset("Y", data=self.Y)
+
+        if self.metas.size:
+            if isinstance(self.metas, da.Array):
+                for i, attr in enumerate(self.domain.metas):
+                    col_type = 'S' if isinstance(attr, StringVariable) else 'f'
+                    col_data = self.metas[:, [i]].astype(col_type)
+                    da.to_hdf5(filename, f'/metas/{i}', col_data)
+            else:
+                with h5py.File(filename, 'r+') as f:
+                    for i, attr in enumerate(self.domain.metas):
+                        col_type = 'S' if isinstance(attr, StringVariable) else 'f'
+                        col_data = self.metas[:, [i]].astype(col_type)
+                        f.create_dataset(f'metas/{i}', data=col_data)
 
     def has_missing_attribute(self):
         raise NotImplementedError()
