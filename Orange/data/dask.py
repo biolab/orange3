@@ -4,7 +4,7 @@ import warnings
 from numbers import Integral
 
 import h5py
-import dask
+import dask.delayed
 import dask.array as da
 import numpy as np
 import pandas
