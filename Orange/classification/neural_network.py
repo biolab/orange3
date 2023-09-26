@@ -25,6 +25,7 @@ class MLPClassifierWCallback(skl_nn.MLPClassifier, NIterCallbackMixin):
 
 class NNClassificationLearner(NNBase, SklLearner):
     __wraps__ = MLPClassifierWCallback
+    supports_weights = False
 
     def _initialize_wrapped(self):
         clf = SklLearner._initialize_wrapped(self)

@@ -7,6 +7,7 @@ from Orange.base import SklLearner, Learner, Model
 from Orange.data import Domain, Table
 from Orange.preprocess import Discretize, Randomize, Continuize
 from Orange.regression import LinearRegressionLearner
+from Orange.util import OrangeDeprecationWarning
 
 
 class DummyLearner(Learner):
@@ -102,7 +103,8 @@ class TestSklLearner(unittest.TestCase):
         class DummyLearner(SklLearner):
             __wraps__ = DummySklLearner
 
-        self.assertTrue(DummyLearner().supports_weights)
+        with self.assertWarns(OrangeDeprecationWarning):
+            self.assertTrue(DummyLearner().supports_weights)
 
         class DummySklLearner:
             def fit(self, X, y):
@@ -111,7 +113,8 @@ class TestSklLearner(unittest.TestCase):
         class DummyLearner(SklLearner):
             __wraps__ = DummySklLearner
 
-        self.assertFalse(DummyLearner().supports_weights)
+        with self.assertWarns(OrangeDeprecationWarning):
+            self.assertFalse(DummyLearner().supports_weights)
 
     def test_linreg(self):
         self.assertTrue(

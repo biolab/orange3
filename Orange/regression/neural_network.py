@@ -12,6 +12,7 @@ class MLPRegressorWCallback(skl_nn.MLPRegressor, NIterCallbackMixin):
 
 class NNRegressionLearner(NNBase, SklLearner):
     __wraps__ = MLPRegressorWCallback
+    supports_weights = False
 
     def _initialize_wrapped(self):
         clf = SklLearner._initialize_wrapped(self)

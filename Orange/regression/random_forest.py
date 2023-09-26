@@ -38,6 +38,7 @@ class RandomForestRegressor(SklModel, RandomForestModel):
 class RandomForestRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_ensemble.RandomForestRegressor
     __returns__ = RandomForestRegressor
+    supports_weights = True
 
     def __init__(self,
                  n_estimators=10,
