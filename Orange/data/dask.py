@@ -188,7 +188,7 @@ class DaskTable(Table):
         return self[selection.compute()]
 
     def compute(self) -> Table:
-        X, Y = dask.compute(self.X, self.Y)
+        X, Y = da.compute(self.X, self.Y)
         table = Table.from_numpy(self.domain, X, Y,
                                  metas=self.metas, W=self.W,
                                  attributes=self.attributes, ids=self.ids)
@@ -308,7 +308,7 @@ class DaskTable(Table):
                         max_y=len(row_var.values) - 1,
                         weights=self.W if self.has_weights() else None)
 
-        return dask.compute(contingencies)[0]
+        return da.compute(contingencies)[0]
 
 
 def dask_stats(X, compute_variance=False):
