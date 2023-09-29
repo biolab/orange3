@@ -598,7 +598,8 @@ class SklLearner(Learner, metaclass=WrapperMeta):
         """Indicates whether this learner supports weighted instances.
         """
         warnings.warn('SklLearner.supports_weights property is deprecated. All '
-                      'subclasses should redefine the supports_weights attribute.',
+                      'subclasses should redefine the supports_weights attribute. '
+                      'The property will be removed in 3.39.',
                       OrangeDeprecationWarning)
         varnames = self.__wraps__.fit.__code__.co_varnames
         # scikit-learn often uses decorators on fit()
