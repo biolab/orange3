@@ -662,7 +662,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                 if len(mask_new) < self.sample_size:
                     return
 
-                if not diff:
+                if diff.size == 0:
                     # do nothing
                     if len(intersect_sampled_points) == self.sample_size:
                         return
