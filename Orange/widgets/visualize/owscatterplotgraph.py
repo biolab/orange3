@@ -662,7 +662,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                 if len(mask_new) < self.sample_size:
                     return
 
-                if not diff:
+                if diff.size == 0:
                     # do nothing
                     if len(intersect_sampled_points) == self.sample_size:
                         return
@@ -974,7 +974,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                 and self.sample_indices is None \
                 and self.n_valid != self.n_shown:
 
-            random = np.random.RandomState(seed=0)
+            random = np.random.RandomState()
             self.sample_indices = random.choice(
                 mask if mask is not None else self.n_valid, self.n_shown, replace=False)
 
