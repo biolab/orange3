@@ -63,3 +63,7 @@ class TestNNLearner(unittest.TestCase):
         clf = lrn(self.housing)
         for ins in self.housing[::20]:
             clf(ins)
+
+    def test_supports_weights(self):
+        self.assertFalse(NNRegressionLearner().supports_weights)
+        self.assertFalse(NNClassificationLearner().supports_weights)

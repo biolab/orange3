@@ -19,6 +19,7 @@ from Orange.statistics.util import all_nan
 from Orange.util import Reprable, OrangeDeprecationWarning, wrap_callback, \
     dummy_callback
 
+
 __all__ = ["Learner", "Model", "SklLearner", "SklModel",
            "ReprableWithPreprocessors"]
 
@@ -596,7 +597,15 @@ class SklLearner(Learner, metaclass=WrapperMeta):
     def supports_weights(self):
         """Indicates whether this learner supports weighted instances.
         """
-        return 'sample_weight' in self.__wraps__.fit.__code__.co_varnames
+        warnings.warn('SklLearner.supports_weights property is deprecated. All '
+                      'subclasses should redefine the supports_weights attribute. '
+                      'The property will be removed in 3.39.',
+                      OrangeDeprecationWarning)
+        varnames = self.__wraps__.fit.__code__.co_varnames
+        # scikit-learn often uses decorators on fit()
+        if hasattr(self.__wraps__.fit, "__wrapped__"):
+            varnames = varnames + self.__wraps__.fit.__wrapped__.__code__.co_varnames
+        return 'sample_weight' in varnames
 
     def __getattr__(self, item):
         try:

@@ -89,6 +89,7 @@ class OneClassSVMLearner(_OutlierLearner):
     name = "One class SVM"
     __wraps__ = OneClassSVM
     preprocessors = SklLearner.preprocessors + [AdaptiveNormalize()]
+    supports_weights = True
 
     def __init__(self, kernel='rbf', degree=3, gamma="auto", coef0=0.0,
                  tol=0.001, nu=0.5, shrinking=True, cache_size=200,
@@ -100,6 +101,7 @@ class OneClassSVMLearner(_OutlierLearner):
 class LocalOutlierFactorLearner(_OutlierLearner):
     __wraps__ = LocalOutlierFactor
     name = "Local Outlier Factor"
+    supports_weights = False
 
     def __init__(self, n_neighbors=20, algorithm="auto", leaf_size=30,
                  metric="minkowski", p=2, metric_params=None,
@@ -112,6 +114,7 @@ class LocalOutlierFactorLearner(_OutlierLearner):
 class IsolationForestLearner(_OutlierLearner):
     __wraps__ = IsolationForest
     name = "Isolation Forest"
+    supports_weights = True
 
     def __init__(self, n_estimators=100, max_samples='auto',
                  contamination='auto', max_features=1.0, bootstrap=False,
@@ -156,6 +159,7 @@ class EllipticEnvelopeLearner(_OutlierLearner):
     __wraps__ = EllipticEnvelope
     __returns__ = EllipticEnvelopeClassifier
     name = "Covariance Estimator"
+    supports_weights = False
 
     def __init__(self, store_precision=True, assume_centered=False,
                  support_fraction=None, contamination=0.1,
