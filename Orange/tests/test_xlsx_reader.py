@@ -143,6 +143,25 @@ class TestExcelHeader1(unittest.TestCase):
                                                  [0, 0, np.nan, 0]]))
         np.testing.assert_equal(table.Y, np.array([]).reshape(3, 0))
 
+    def test_hash(self):
+        table = Table.from_file(get_dataset("header_1_hash.xlsx"))
+        domain = table.domain
+        self.assertEqual(len(domain.metas), 0)
+        self.assertEqual(len(domain.attributes), 3)
+        self.assertEqual(len(domain.class_vars), 1)
+        self.assertIsInstance(domain[0], DiscreteVariable)
+        self.assertIsInstance(domain[1], ContinuousVariable)
+        self.assertIsInstance(domain[2], ContinuousVariable)
+        self.assertIsInstance(domain[3], DiscreteVariable)
+        self.assertEqual([v.name for v in domain.variables],
+                         ["#", "b#", "d", "Feature 1"])
+        self.assertEqual(domain[0].values, ("green", "red"))
+        np.testing.assert_almost_equal(table.X, np.array([[1, 0.5, 21],
+                                                          [1, 0.1, 123],
+                                                          [0, 0, 0]]))
+        np.testing.assert_equal(table.Y, [0, 0, np.nan])
+
+
     @test_xlsx_xls
     def test_flags(self, reader: Callable[[str], io.FileFormat]):
         table = read_file(reader, "header_1_flags")
