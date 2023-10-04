@@ -256,6 +256,16 @@ class LinProjVizRankTests(WidgetTest):
         c2 = self.get_output(self.widget.Outputs.components)
         self.assertNotEqual(c1.domain.attributes, c2.domain.attributes)
 
+    def test_vizrank_n_attrs(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.vizrank.n_attrs_spin.setValue(4)
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        widget = self.create_widget(OWLinearProjection,
+                                    stored_settings=settings)
+        self.send_signal(widget.Inputs.data, self.data, widget=widget)
+        self.assertEqual(widget.vizrank.n_attrs_spin.value(),
+                         self.vizrank.n_attrs_spin.value())
+
 
 if __name__ == "__main__":
     import unittest
