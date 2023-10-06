@@ -24,7 +24,7 @@ import xlrd
 import xlsxwriter
 import openpyxl
 
-from Orange.data import _io, Table, Domain, ContinuousVariable
+from Orange.data import _io, Table, Domain, ContinuousVariable, update_origin
 from Orange.data import Compression, open_compressed, detect_encoding, \
     isnastr, guess_data_type, sanitize_variable
 from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PROTOCOL
@@ -164,14 +164,7 @@ class CSVReader(FileFormat, DataTableMixin):
                         skipinitialspace=True,
                     )
                     data = self.data_table(reader)
-
-                    # TODO: Name can be set unconditionally when/if
-                    # self.filename will always be a string with the file name.
-                    # Currently, some tests pass StringIO instead of
-                    # the file name to a reader.
-                    if isinstance(self.filename, str):
-                        data.name = path.splitext(
-                            path.split(self.filename)[-1])[0]
+                    data.name = path.splitext(path.split(self.filename)[-1])[0]
                     if error and isinstance(error, UnicodeDecodeError):
                         pos, endpos = error.args[2], error.args[3]
                         warning = ('Skipped invalid byte(s) in position '
@@ -179,6 +172,7 @@ class CSVReader(FileFormat, DataTableMixin):
                                                   ('-' + str(endpos)) if (endpos - pos) > 1 else '')
                         warnings.warn(warning)
                     self.set_table_metadata(self.filename, data)
+                    update_origin(data, self.filename)
                     return data
                 except Exception as e:
                     error = e
@@ -215,6 +209,7 @@ class PickleReader(FileFormat):
             if not isinstance(table, Table):
                 raise TypeError("file does not contain a data table")
             else:
+                update_origin(table, self.filename)
                 return table
 
     @classmethod
@@ -264,6 +259,7 @@ class _BaseExcelReader(FileFormat, DataTableMixin):
         try:
             cells = self.get_cells()
             table = self.data_table(cells)
+            update_origin(table, self.filename)
             table.name = path.splitext(path.split(self.filename)[-1])[0]
             if self.sheet and len(self.sheets) > 1:
                 table.name = '-'.join((table.name, self.sheet))

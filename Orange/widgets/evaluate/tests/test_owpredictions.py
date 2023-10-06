@@ -1,8 +1,9 @@
 """Tests for OWPredictions"""
 # pylint: disable=protected-access
-import io
+import os
 import unittest
 from functools import partial
+from tempfile import NamedTemporaryFile
 from typing import Optional
 from unittest.mock import Mock, patch
 
@@ -206,8 +207,10 @@ class TestOWPredictions(WidgetTest):
         child\tmale\tyes
         child\tfemale\tyes
         """
-        file1 = io.StringIO(filestr1)
-        table = TabReader(file1).read()
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(filestr1)
+        table = TabReader(tmp.name).read()
+        os.unlink(tmp.name)
         learner = TreeLearner()
         tree = learner(table)
 
@@ -220,9 +223,11 @@ class TestOWPredictions(WidgetTest):
         child\tmale\tyes
         child\tfemale\tunknown
         """
-        file2 = io.StringIO(filestr2)
-        bad_table = TabReader(file2).read()
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(filestr2)
 
+        bad_table = TabReader(tmp.name).read()
+        os.unlink(tmp.name)
         self.send_signal(self.widget.Inputs.predictors, tree, 1)
 
         with excepthook_catch():
