@@ -50,6 +50,9 @@ requirements:
     - bottleneck >=1.3.4
     - catboost >=1.0.1
     - chardet >=3.0.2
+    - dask >=2022.2.0
+    - dask-ml >=2022.5.27
+    - h5py >=3.0
     - httpx >=0.21
     - joblib >=1.0.0
     - keyring
