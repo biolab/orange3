@@ -1325,7 +1325,7 @@ class Table(Sequence, Storage):
         return s
 
     @classmethod
-    def concatenate(cls, tables, axis=0):
+    def concatenate(cls, tables, axis=0, *, ignore_domains=None):
         """
         Concatenate tables into a new table, either vertically or horizontally.
 
@@ -1346,14 +1346,15 @@ class Table(Sequence, Storage):
         """
         if axis not in (0, 1):
             raise ValueError("invalid axis")
+        if ignore_domains is not None and axis != 0:
+            raise ValueError("'ignore_domains' is incompatible with 'axis=1'")
         if not tables:
             raise ValueError('need at least one table to concatenate')
 
         if len(tables) == 1:
             return tables[0].copy()
-
         if axis == 0:
-            conc = cls._concatenate_vertical(tables)
+            conc = cls._concatenate_vertical(tables, bool(ignore_domains))
         else:
             conc = cls._concatenate_horizontal(tables)
 
@@ -1368,7 +1369,7 @@ class Table(Sequence, Storage):
         return conc
 
     @classmethod
-    def _concatenate_vertical(cls, tables):
+    def _concatenate_vertical(cls, tables, ignore_domains=False):
         def vstack(arrs):
             return [np, sp][any(sp.issparse(arr) for arr in arrs)].vstack(arrs)
 
@@ -1387,7 +1388,8 @@ class Table(Sequence, Storage):
             return [getattr(arr, attr) for arr in tables]
 
         domain = tables[0].domain
-        if any(table.domain != domain for table in tables):
+        if not ignore_domains \
+                and any(table.domain != domain for table in tables):
             raise ValueError('concatenated tables must have the same domain')
 
         conc = cls.from_numpy(
