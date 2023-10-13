@@ -99,6 +99,7 @@ like, for instance, discretization, feature construction, PCA etc.
 
     def on_exception(self, ex):
         self.Error.error(ex)
+        self.Outputs.transformed_data.send(None)
 
     def onDeleteWidget(self):
         self.shutdown()
