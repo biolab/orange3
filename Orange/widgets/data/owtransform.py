@@ -11,14 +11,17 @@ from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 
 class TransformRunner:
     @staticmethod
-    def run(data: Table, template_data: Table, state: TaskState) -> Table:
+    def run(
+            data: Table,
+            template_data: Table,
+            state: TaskState
+    ) -> Optional[Table]:
         if data is None or template_data is None:
             return None
 
         state.set_status("Transforming...")
         transformed_data = data.transform(template_data.domain)
         return transformed_data
-
 
 
 class OWTransform(OWWidget, ConcurrentWidgetMixin):
@@ -44,7 +47,7 @@ class OWTransform(OWWidget, ConcurrentWidgetMixin):
     buttons_area_orientation = None
 
     def __init__(self):
-        super().__init__()
+        OWWidget.__init__(self)
         ConcurrentWidgetMixin.__init__(self)
         self.data = None  # type: Optional[Table]
         self.template_data = None  # type: Optional[Table]
@@ -76,18 +79,8 @@ like, for instance, discretization, feature construction, PCA etc.
 
     def apply(self):
         self.clear_messages()
-        transformed_data = None
         self.cancel()
-        if self.data and self.template_data:
-            self.start(
-                TransformRunner.run,
-                self.data,
-                self.template_data
-            )
-
-        data = transformed_data
-        self.transformed_info = describe_data(data)
-        self.Outputs.transformed_data.send(data)
+        self.start(TransformRunner.run, self.data, self.template_data)
 
     def send_report(self):
         if self.data:
@@ -100,7 +93,7 @@ like, for instance, discretization, feature construction, PCA etc.
     def on_partial_result(self, _):
         pass
 
-    def on_done(self, result: Table):
+    def on_done(self, result: Optional[Table]):
         self.transformed_info = describe_data(result)
         self.Outputs.transformed_data.send(result)
 
