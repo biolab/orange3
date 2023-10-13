@@ -648,7 +648,7 @@ class TestTableGetColumn(TableColumnViewTests):
         np.testing.assert_equal(col, data.metas[:, 0])
         self.assertIs(col.base, data.metas)
 
-    def test_index_by_int(self):
+    def test_index_by_str(self):
         data = self.data
 
         col = data.get_column("y")
