@@ -6,9 +6,22 @@ from Orange.widgets.report.report import describe_data
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
+from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 
 
-class OWTransform(OWWidget):
+class TransformRunner:
+    @staticmethod
+    def run(data: Table, template_data: Table, state: TaskState) -> Table:
+        if data is None or template_data is None:
+            return None
+
+        state.set_status("Transforming...")
+        transformed_data = data.transform(template_data.domain)
+        return transformed_data
+
+
+
+class OWTransform(OWWidget, ConcurrentWidgetMixin):
     name = "Apply Domain"
     description = "Applies template domain on data table."
     category = "Transform"
@@ -32,6 +45,7 @@ class OWTransform(OWWidget):
 
     def __init__(self):
         super().__init__()
+        ConcurrentWidgetMixin.__init__(self)
         self.data = None  # type: Optional[Table]
         self.template_data = None  # type: Optional[Table]
         self.transformed_info = describe_data(None)  # type: OrderedDict
@@ -63,11 +77,13 @@ like, for instance, discretization, feature construction, PCA etc.
     def apply(self):
         self.clear_messages()
         transformed_data = None
+        self.cancel()
         if self.data and self.template_data:
-            try:
-                transformed_data = self.data.transform(self.template_data.domain)
-            except Exception as ex:  # pylint: disable=broad-except
-                self.Error.error(ex)
+            self.start(
+                TransformRunner.run,
+                self.data,
+                self.template_data
+            )
 
         data = transformed_data
         self.transformed_info = describe_data(data)
@@ -80,6 +96,20 @@ like, for instance, discretization, feature construction, PCA etc.
             self.report_domain("Template data", self.template_data.domain)
         if self.transformed_info:
             self.report_items("Transformed data", self.transformed_info)
+
+    def on_partial_result(self, _):
+        pass
+
+    def on_done(self, result: Table):
+        self.transformed_info = describe_data(result)
+        self.Outputs.transformed_data.send(result)
+
+    def on_exception(self, ex):
+        self.Error.error(ex)
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
 
 if __name__ == "__main__":  # pragma: no cover
