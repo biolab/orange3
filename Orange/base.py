@@ -466,10 +466,9 @@ class Model(Reprable):
         elif prediction.ndim == 2 + multitarget:
             value, probs = None, prediction
         else:
-            raise TypeError("model returned a %i-dimensional array",
-                            prediction.ndim)
+            raise TypeError(f"model returned a {prediction.ndim}-dimensional array")
 
-        # Ensure that we have what we need to return; backmapp everything
+        # Ensure that we have what we need to return; backmap everything
         if probs is None and (ret != Model.Value or backmappers is not None):
             probs = one_hot_probs(value)
         if probs is not None:
