@@ -35,9 +35,13 @@ class TestOWDistanceFile(WidgetTest):
 
 class TestOWDistanceFileDropHandler(unittest.TestCase):
     def test_canDropFile(self):
+        def ren(name):
+            return os.path.join(os.path.split(Orange.tests.__file__)[0], name)
+
         handler = OWDistanceFileDropHandler()
-        self.assertTrue(handler.canDropFile("test.dst"))
-        self.assertTrue(handler.canDropFile("test.xlsx"))
+        self.assertTrue(handler.canDropFile(ren("xlsx_files/distances_with_nans.xlsx")))
+        self.assertFalse(handler.canDropFile(ren("xlsx_files/distances_nonsquare.xlsx")))
+        self.assertFalse(handler.canDropFile(ren("datasets/lenses.tab")))
         self.assertFalse(handler.canDropFile("test.bin"))
 
     def test_parametersFromFile(self):

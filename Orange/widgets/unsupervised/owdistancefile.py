@@ -124,6 +124,8 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
                 err = str(exc)
                 self.Error.invalid_file(" \n"[len(err) > 40] + err)
             else:
+                # If you add any other checks before accepting the file,
+                # you should probably mirror them in canDropFile
                 if distances.shape[0] != distances.shape[1]:
                     self.Error.non_square_matrix()
                 else:
@@ -158,7 +160,14 @@ class OWDistanceFileDropHandler(SingleFileDropHandler):
         return {"recent_paths": stored_recent_paths_prepend(self.WIDGET, r)}
 
     def canDropFile(self, path: str) -> bool:
-        return os.path.splitext(path)[1].lower() in (".dst", ".xlsx")
+        if os.path.splitext(path)[0] == ".dst":
+            return True
+        try:
+            distances = DistMatrix.from_file(path)
+        except Exception:  # pylint: disable=broad-except
+            return False
+        else:
+            return distances.shape[0] == distances.shape[1]
 
 
 if __name__ == "__main__":  # pragma: no cover
