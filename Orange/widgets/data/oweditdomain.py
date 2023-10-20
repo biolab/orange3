@@ -107,8 +107,7 @@ class Categorical(
     _DataType, NamedTuple("Categorical", [
         ("name", str),
         ("categories", Tuple[str, ...]),
-        ("annotations", AnnotationsType),
-        ("linked", bool)
+        ("annotations", AnnotationsType)
     ])): pass
 
 
@@ -117,24 +116,21 @@ class Real(
         ("name", str),
         # a precision (int, and a format specifier('f', 'g', or '')
         ("format", Tuple[int, str]),
-        ("annotations", AnnotationsType),
-        ("linked", bool)
+        ("annotations", AnnotationsType)
     ])): pass
 
 
 class String(
     _DataType, NamedTuple("String", [
         ("name", str),
-        ("annotations", AnnotationsType),
-        ("linked", bool)
+        ("annotations", AnnotationsType)
     ])): pass
 
 
 class Time(
     _DataType, NamedTuple("Time", [
         ("name", str),
-        ("annotations", AnnotationsType),
-        ("linked", bool)
+        ("annotations", AnnotationsType)
     ])): pass
 
 
@@ -248,7 +244,7 @@ class AsString(_DataType, NamedTuple("AsString", [])):
         if isinstance(var, String):
             return vector
         return StringVector(
-            String(var.name, var.annotations, False),
+            String(var.name, var.annotations),
             lambda: as_string(vector.data()),
         )
 
@@ -268,11 +264,11 @@ class AsContinuous(_DataType, NamedTuple("AsContinuous", [])):
                 a = categorical_to_string_vector(d, var.values)
                 return MArray(as_float_or_nan(a, where=a.mask), mask=a.mask)
             return RealVector(
-                Real(var.name, (6, 'g'), var.annotations, var.linked), data
+                Real(var.name, (6, 'g'), var.annotations), data
             )
         elif isinstance(var, Time):
             return RealVector(
-                Real(var.name, (6, 'g'), var.annotations, var.linked),
+                Real(var.name, (6, 'g'), var.annotations),
                 lambda: vector.data().astype(float)
             )
         elif isinstance(var, String):
@@ -280,7 +276,7 @@ class AsContinuous(_DataType, NamedTuple("AsContinuous", [])):
                 s = vector.data()
                 return MArray(as_float_or_nan(s, where=s.mask), mask=s.mask)
             return RealVector(
-                Real(var.name, (6, "g"), var.annotations, var.linked), data
+                Real(var.name, (6, "g"), var.annotations), data
             )
         raise AssertionError
 
@@ -296,7 +292,7 @@ class AsCategorical(_DataType, namedtuple("AsCategorical", [])):
         if isinstance(var, (Real, Time, String)):
             data, values = categorical_from_vector(vector.data())
             return CategoricalVector(
-                Categorical(var.name, values, var.annotations, var.linked),
+                Categorical(var.name, values, var.annotations),
                 lambda: data
             )
         raise AssertionError
@@ -310,7 +306,7 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
             return vector
         elif isinstance(var, Real):
             return TimeVector(
-                Time(var.name, var.annotations, var.linked),
+                Time(var.name, var.annotations),
                 lambda: vector.data().astype("M8[us]")
             )
         elif isinstance(var, Categorical):
@@ -320,7 +316,7 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
                 dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
                 return MArray(dt, mask=d.mask)
             return TimeVector(
-                Time(var.name, var.annotations, var.linked), data
+                Time(var.name, var.annotations), data
             )
         elif isinstance(var, String):
             def data():
@@ -328,7 +324,7 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
                 dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
                 return MArray(dt, mask=s.mask)
             return TimeVector(
-                Time(var.name, var.annotations, var.linked), data
+                Time(var.name, var.annotations), data
             )
         raise AssertionError
 
@@ -2033,7 +2029,7 @@ class OWEditDomain(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         duplicate_var_name = widget.Msg("A variable name is duplicated.")
 
-    settings_version = 3
+    settings_version = 4
 
     _domain_change_hints = Setting({}, schema_only=True)
     _merge_dialog_settings = Setting({}, schema_only=True)
@@ -2475,6 +2471,13 @@ class OWEditDomain(widget.OWWidget):
             settings["_domain_change_hints"] = hints
             del settings["context_settings"]
 
+        if version < 4 and "_domain_change_hints" in settings:
+            settings["_domain_change_hints"] = {
+                (name, desc[:-1]): trs
+                for (name, desc), trs in settings["_domain_change_hints"].items()
+            }
+
+
 def enumerate_columns(
         table: Orange.data.Table
 ) -> Iterable[Tuple[int, str, Orange.data.Variable, Callable[[], ndarray]]]:
@@ -2648,15 +2651,14 @@ def abstract(var):
         (key, str(value))
         for key, value in var.attributes.items()
     ))
-    linked = var.compute_value is not None
     if isinstance(var, Orange.data.DiscreteVariable):
-        return Categorical(var.name, tuple(var.values), annotations, linked)
+        return Categorical(var.name, tuple(var.values), annotations)
     elif isinstance(var, Orange.data.TimeVariable):
-        return Time(var.name, annotations, linked)
+        return Time(var.name, annotations)
     elif isinstance(var, Orange.data.ContinuousVariable):
-        return Real(var.name, (var.number_of_decimals, 'f'), annotations, linked)
+        return Real(var.name, (var.number_of_decimals, 'f'), annotations)
     elif isinstance(var, Orange.data.StringVariable):
-        return String(var.name, annotations, linked)
+        return String(var.name, annotations)
     else:
         raise TypeError
 
@@ -2686,8 +2688,8 @@ def apply_transform(var, table, trs):
 
 
 def requires_unlink(var: Orange.data.Variable, trs: List[Transform]) -> bool:
-    # Variable is only unlinked if it has compute_value  or if it has other
-    # transformations (that might had added compute_value)
+    # Variable is only unlinked if it has compute_value or if it has other
+    # transformations (that might have added compute_value)
     return trs is not None \
            and any(isinstance(tr, Unlink) for tr in trs) \
            and (var.compute_value is not None or len(trs) > 1)

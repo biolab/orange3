@@ -48,26 +48,26 @@ MArray = np.ma.MaskedArray
 
 class TestReport(TestCase):
     def test_rename(self):
-        var = Real("X", (-1, ""), (), False)
+        var = Real("X", (-1, ""), ())
         tr = Rename("Y")
         val = report_transform(var, [tr])
         self.assertIn("X", val)
         self.assertIn("Y", val)
 
     def test_annotate(self):
-        var = Real("X", (-1, ""), (("a", "1"), ("b", "z")), False)
+        var = Real("X", (-1, ""), (("a", "1"), ("b", "z")))
         tr = Annotate((("a", "2"), ("j", "z")))
         r = report_transform(var, [tr])
         self.assertIn("a", r)
         self.assertIn("b", r)
 
     def test_unlinke(self):
-        var = Real("X", (-1, ""), (("a", "1"), ("b", "z")), True)
+        var = Real("X", (-1, ""), (("a", "1"), ("b", "z")))
         r = report_transform(var, [Unlink()])
         self.assertIn("unlinked", r)
 
     def test_categories_mapping(self):
-        var = Categorical("C", ("a", "b", "c"), (), False)
+        var = Categorical("C", ("a", "b", "c"), ())
         tr = CategoriesMapping(
             (("a", "aa"),
              ("b", None),
@@ -81,7 +81,7 @@ class TestReport(TestCase):
         self.assertIn("<s>", r)
 
     def test_categorical_merge_mapping(self):
-        var = Categorical("C", ("a", "b1", "b2"), (), False)
+        var = Categorical("C", ("a", "b1", "b2"), ())
         tr = CategoriesMapping(
             (("a", "a"),
              ("b1", "b"),
@@ -92,7 +92,7 @@ class TestReport(TestCase):
         self.assertIn('b', r)
 
     def test_reinterpret(self):
-        var = String("T", (), False)
+        var = String("T", ())
         for tr in (AsContinuous(), AsCategorical(), AsTime()):
             t = report_transform(var, [tr])
             self.assertIn("→ (", t)
@@ -344,8 +344,7 @@ class TestOWEditDomain(WidgetTest):
         iris = self.iris
         viris = (
             "Categorical",
-            ("iris", ("Iris-setosa", "Iris-versicolor", "Iris-virginica"), (),
-             False)
+            ("iris", ("Iris-setosa", "Iris-versicolor", "Iris-virginica"), ())
         )
         w = self.widget
 
@@ -514,7 +513,7 @@ class TestOWEditDomain(WidgetTest):
         self.assertEqual([var.name for var in outp.domain.attributes],
                          ["v0", "v1", "v2", "xv3", "v4"])
 
-    def test_migrate_settings_hints_2_to_3(self):
+    def test_migrate_settings_hints_2_to_4(self):
         settings = {
             '__version__': 2,
             'context_settings':
@@ -544,11 +543,11 @@ class TestOWEditDomain(WidgetTest):
                       '__version__': 2}),
                 ]}
         migrated_hints = {
-            ('Categorical', ('b', ('mir4', 'mir1', 'mir2'), (), False)):
+            ('Categorical', ('b', ('mir4', 'mir1', 'mir2'), ())):
                 [('Rename', ('disease bmir',))],
-            ('Categorical', ('c', ('mir4', 'mir1', 'mir2'), (), False)):
+            ('Categorical', ('c', ('mir4', 'mir1', 'mir2'), ())):
                 [('Rename', ('disease mirs',))],
-            ('Categorical', ('a', ('mir1', 'mir4', 'mir2'), (), False)):
+            ('Categorical', ('a', ('mir1', 'mir4', 'mir2'), ())):
                  [('Rename', ('disease mir',))],
         }
         widget = self.create_widget(OWEditDomain, stored_settings=settings)
@@ -557,7 +556,7 @@ class TestOWEditDomain(WidgetTest):
         self.assertEqual(list(widget._domain_change_hints), list(migrated_hints))
         self.assertEqual(widget.output_table_name, "far")
 
-    def test_migrate_settings_2_to_3_realworld(self):
+    def test_migrate_settings_2_to_4_realworld(self):
         settings = {
             'controlAreaVisible': True,
             '__version__': 2,
@@ -582,12 +581,12 @@ class TestOWEditDomain(WidgetTest):
         widget = self.create_widget(OWEditDomain, stored_settings=settings)
         self.assertEqual(
             widget._domain_change_hints,
-            {('Real', ('sepal length', (1, 'f'), (), False)):
+            {('Real', ('sepal length', (1, 'f'), ())):
                  [('AsString', ())],
-             ('Real', ('sepal width', (1, 'f'), (), False)):
+             ('Real', ('sepal width', (1, 'f'), ())):
                  [('AsTime', ()),
                   ('StrpTime', ('Detect automatically', None, 1, 1))],
-             ('Real', ('petal width', (1, 'f'), (), False)):
+             ('Real', ('petal width', (1, 'f'), ())):
                  [('Annotate', ((('a', 'b'),),))]}
         )
 
@@ -615,13 +614,39 @@ class TestOWEditDomain(WidgetTest):
         widget = self.create_widget(OWEditDomain, stored_settings=settings)
         self.assertEqual(widget.output_table_name, "far")
 
+    def test_migrate_settings_3_to_4(self):
+        settings = {
+            '_domain_change_hints': {
+                ('Real', ('age', (0, 'f'), (), False)):
+                    [('Unlink', ())],
+                ('Categorical', ('gender', ('female', 'male'), (), False)):
+                    [('CategoriesMapping', ([('female', 'woman'), ('male', 'man')],))],
+                ('Categorical', ('chest pain', ('asymptomatic', 'atypical ang',
+                                                'non-anginal', 'typical ang'), (), False)):
+                    [('AsString', ())]},
+            '_merge_dialog_settings': {},
+            'controlAreaVisible': True}
+
+        widget = self.create_widget(OWEditDomain, stored_settings=settings)
+        self.assertEqual(
+            widget._domain_change_hints,
+            {('Real', ('age', (0, 'f'), ())):
+                    [('Unlink', ())],
+             ('Categorical', ('gender', ('female', 'male'), ())):
+                    [('CategoriesMapping',
+                      ([('female', 'woman'), ('male', 'man')],))],
+             ('Categorical', ('chest pain', ('asymptomatic', 'atypical ang',
+                                             'non-anginal', 'typical ang'), ())):
+                    [('AsString', ())]}
+        )
+
 
 class TestEditors(GuiTest):
     def test_variable_editor(self):
         w = VariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = String("S", (("A", "1"), ("B", "b")), False)
+        v = String("S", (("A", "1"), ("B", "b")))
         w.set_data(v, [])
 
         self.assertEqual(w.name_edit.text(), v.name)
@@ -646,7 +671,7 @@ class TestEditors(GuiTest):
         w = ContinuousVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), False)
+        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")))
         w.set_data(v, [])
 
         self.assertEqual(w.name_edit.text(), v.name)
@@ -661,7 +686,7 @@ class TestEditors(GuiTest):
         w = DiscreteVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = Categorical("C", ("a", "b", "c"), (("A", "1"), ("B", "b")), False)
+        v = Categorical("C", ("a", "b", "c"), (("A", "1"), ("B", "b")))
         values = [0, 0, 0, 1, 1, 2]
         w.set_data_categorical(v, values)
 
@@ -713,7 +738,7 @@ class TestEditors(GuiTest):
     def test_discrete_editor_add_remove_action(self):
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
-                        (("A", "1"), ("B", "b")), False)
+                        (("A", "1"), ("B", "b")))
         values = [0, 0, 0, 1, 1, 2]
         w.set_data_categorical(v, values)
         action_add = w.add_new_item
@@ -761,7 +786,7 @@ class TestEditors(GuiTest):
         """
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
-                        (("A", "1"), ("B", "b")), False)
+                        (("A", "1"), ("B", "b")))
 
         w.set_data_categorical(
             v, [0, 0, 0, 1, 1, 2],
@@ -791,7 +816,7 @@ class TestEditors(GuiTest):
     def test_discrete_editor_rename_selected_items_action(self):
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
-                        (("A", "1"), ("B", "b")), False)
+                        (("A", "1"), ("B", "b")))
         w.set_data_categorical(v, [])
         action = w.rename_selected_items
         view = w.values_edit
@@ -818,7 +843,7 @@ class TestEditors(GuiTest):
     def test_discrete_editor_context_menu(self):
         w = DiscreteVariableEditor()
         v = Categorical("C", ("a", "b", "c"),
-                        (("A", "1"), ("B", "b")), False)
+                        (("A", "1"), ("B", "b")))
         w.set_data_categorical(v, [])
         view = w.values_edit
         model = view.model()
@@ -836,7 +861,7 @@ class TestEditors(GuiTest):
         w = TimeVariableEditor()
         self.assertEqual(w.get_data(), (None, []))
 
-        v = Time("T", (("A", "1"), ("B", "b")), False)
+        v = Time("T", (("A", "1"), ("B", "b")))
         w.set_data(v,)
 
         self.assertEqual(w.name_edit.text(), v.name)
@@ -849,19 +874,19 @@ class TestEditors(GuiTest):
 
     DataVectors = [
         CategoricalVector(
-            Categorical("A", ("a", "aa"), (), False), lambda:
+            Categorical("A", ("a", "aa"), ()), lambda:
                 MArray([0, 1, 2], mask=[False, False, True])
         ),
         RealVector(
-            Real("B", (6, "f"), (), False), lambda:
+            Real("B", (6, "f"), ()), lambda:
                 MArray([0.1, 0.2, 0.3], mask=[True, False, True])
         ),
         TimeVector(
-            Time("T", (), False), lambda:
+            Time("T", ()), lambda:
                 MArray([0, 100, 200], dtype="M8[us]", mask=[True, False, True])
         ),
         StringVector(
-            String("S", (), False), lambda:
+            String("S", ()), lambda:
                 MArray(["0", "1", "2"], dtype=object, mask=[True, False, True])
         ),
     ]
@@ -1074,14 +1099,14 @@ class TestEditors(GuiTest):
         cbox = w.unlink_var_cb
         self.assertEqual(w.get_data(), (None, []))
 
-        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), False)
+        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")))
         w.set_data(v, [])
 
-        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), True)
+        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")))
         w.set_data(v, [Unlink()])
         self.assertTrue(cbox.isChecked())
 
-        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), True)
+        v = Real("X", (-1, ""), (("A", "1"), ("B", "b")))
         w.set_data(v, [])
         self.assertFalse(cbox.isChecked())
 
@@ -1117,8 +1142,8 @@ class TestModels(GuiTest):
             model.setData(model.index(row), data, role)
 
         model[:] = [
-            RealVector(Real("A", (3, "g"), (), False), lambda: MArray([])),
-            RealVector(Real("B", (3, "g"), (), False), lambda: MArray([])),
+            RealVector(Real("A", (3, "g"), ()), lambda: MArray([])),
+            RealVector(Real("B", (3, "g"), ()), lambda: MArray([])),
         ]
         self.assertEqual(data(0, Qt.DisplayRole), "A")
         self.assertEqual(data(1, Qt.DisplayRole), "B")
@@ -1144,7 +1169,7 @@ class TestDelegates(GuiTest):
             delegate.initStyleOption(opt, model.index(row))
             return opt
 
-        set_item(0, {Qt.EditRole: Categorical("a", (), (), False)})
+        set_item(0, {Qt.EditRole: Categorical("a", (), ())})
         delegate = VariableEditDelegate()
         opt = get_style_option(0)
         self.assertEqual(opt.text, "a")
@@ -1159,7 +1184,7 @@ class TestDelegates(GuiTest):
         self.assertIn("reinterpreted", opt.text)
         self.assertTrue(opt.font.italic())
         set_item(1, {
-            Qt.EditRole: String("b", (), False),
+            Qt.EditRole: String("b", ()),
             TransformRole: [Rename("a")]
         })
         opt = get_style_option(1)
@@ -1576,7 +1601,7 @@ class TestLookupMappingTransform(TestCase):
 class TestGroupLessFrequentItemsDialog(GuiTest):
     def setUp(self) -> None:
         self.v = Categorical("C", ("a", "b", "c"),
-                        (("A", "1"), ("B", "b")), False)
+                        (("A", "1"), ("B", "b")))
         self.data = [0, 0, 0, 1, 1, 2]
 
     def test_dialog_open(self):
