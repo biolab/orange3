@@ -35,6 +35,8 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
+from orangewidget.utils.listview import ListViewSearch
+
 import Orange.data
 
 from Orange.preprocess.transformation import (
@@ -2051,7 +2053,7 @@ class OWEditDomain(widget.OWWidget):
         box = gui.vBox(main, "Variables")
 
         self.variables_model = VariableListModel(parent=self)
-        self.variables_view = self.domain_view = QListView(
+        self.variables_view = self.domain_view = ListViewSearch(
             selectionMode=QListView.ExtendedSelection,
             uniformItemSizes=True,
         )
