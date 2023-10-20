@@ -636,7 +636,7 @@ class VariableEditor(BaseEditor):
         else:
             self.add_label_action.actionGroup().setEnabled(False)
 
-        self.unlink_var_cb.setDisabled(var is None or not var.linked)
+        self.unlink_var_cb.setDisabled(var is None)
 
     def get_data(self):
         """Retrieve the modified variable.
@@ -650,7 +650,7 @@ class VariableEditor(BaseEditor):
             tr.append(Rename(name))
         if self.var.annotations != labels:
             tr.append(Annotate(labels))
-        if self.var.linked and self.unlink_var_cb.isChecked():
+        if self.unlink_var_cb.isChecked():
             tr.append(Unlink())
         return self.var, tr
 
@@ -2324,8 +2324,7 @@ class OWEditDomain(widget.OWWidget):
         state = [state(i) for i in range(model.rowCount())]
         input_vars = data.domain.variables + data.domain.metas
         if self.output_table_name in ("", data.name) \
-                and not any(requires_transform(var, trs)
-                            for var, (_, trs) in zip(input_vars, state)):
+                and all(tr is None or not tr for _, tr in state):
             self.Outputs.data.send(data)
             return
 
@@ -2692,16 +2691,6 @@ def requires_unlink(var: Orange.data.Variable, trs: List[Transform]) -> bool:
     return trs is not None \
            and any(isinstance(tr, Unlink) for tr in trs) \
            and (var.compute_value is not None or len(trs) > 1)
-
-
-def requires_transform(var: Orange.data.Variable, trs: List[Transform]) -> bool:
-    # Unlink is treated separately: Unlink is required only if the variable
-    # has compute_value. Hence tranform is required if it has any
-    # transformations other than Unlink, or if unlink is indeed required.
-    return trs is not None and (
-        not all(isinstance(tr, Unlink) for tr in trs)
-        or requires_unlink(var, trs)
-    )
 
 
 @singledispatch

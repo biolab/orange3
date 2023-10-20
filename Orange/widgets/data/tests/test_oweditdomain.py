@@ -274,7 +274,7 @@ class TestOWEditDomain(WidgetTest):
         output = self.get_output(self.widget.Outputs.data)
         self.assertIsInstance(output, Table)
 
-    def test_unlink(self):
+    def test_unlink_inherited(self):
         var0, var1, var2 = [ContinuousVariable("x", compute_value=Mock()),
                             ContinuousVariable("y", compute_value=Mock()),
                             ContinuousVariable("z")]
@@ -286,7 +286,6 @@ class TestOWEditDomain(WidgetTest):
         for i in range(3):
             self.widget.domain_view.setCurrentIndex(index(i))
             editor = self.widget.findChild(ContinuousVariableEditor)
-            self.assertIs(editor.unlink_var_cb.isEnabled(), i < 2)
             editor._set_unlink(i == 1)
 
         self.widget.commit()
@@ -299,6 +298,31 @@ class TestOWEditDomain(WidgetTest):
         self.assertIsNotNone(out0.compute_value)
         self.assertIsNone(out1.compute_value)
         self.assertIsNone(out2.compute_value)
+
+    def test_unlink_forward(self):
+        var0, var1, var2, var3 = [ContinuousVariable("x", compute_value=Mock()),
+                                  ContinuousVariable("y", compute_value=Mock()),
+                                  ContinuousVariable("z"),
+                                  ContinuousVariable("w")]
+        domain = Domain([var0, var1, var2, var3], None)
+        table = Table.from_numpy(domain, np.zeros((5, 4)), np.zeros((5, 0)))
+        self.send_signal(self.widget.Inputs.data, table)
+
+        index = self.widget.domain_view.model().index
+        for i in [0, 2, 3]:
+            self.widget.domain_view.setCurrentIndex(index(i))
+            editor = self.widget.findChild(ContinuousVariableEditor)
+            editor.name_edit.setText(f"v{i}")
+            editor.on_name_changed()
+            editor._set_unlink(i != 3)
+
+        self.widget.commit()
+        out = self.get_output(self.widget.Outputs.data)
+        out0, out1, out2, out3 = out.domain.variables
+        self.assertIsNone(out0.compute_value)
+        self.assertIsNotNone(out1.compute_value)
+        self.assertIsNone(out2.compute_value)
+        self.assertIsNotNone(out3.compute_value)
 
     def test_time_variable_preservation(self):
         """Test if time variables preserve format specific attributes"""
@@ -1052,16 +1076,13 @@ class TestEditors(GuiTest):
 
         v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), False)
         w.set_data(v, [])
-        self.assertFalse(cbox.isEnabled())
 
         v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), True)
         w.set_data(v, [Unlink()])
-        self.assertTrue(cbox.isEnabled())
         self.assertTrue(cbox.isChecked())
 
         v = Real("X", (-1, ""), (("A", "1"), ("B", "b")), True)
         w.set_data(v, [])
-        self.assertTrue(cbox.isEnabled())
         self.assertFalse(cbox.isChecked())
 
         cbox.setChecked(True)
