@@ -22,9 +22,9 @@ To handle large databases, Orange attempts to execute a part of the computation 
 6. Press the blue button to connect to the database. Then select the table in the dropdown.
 7. *Auto-discover categorical variables* will cast INT and CHAR columns with less than 20 distinct values as categorical variables (finding all distinct values can be slow on large tables). When not selected, INT will be treated as numeric and CHAR as text. *Download to local memory* downloads the selected table to your local machine.
 
-##Installation Instructions
+## Installation Instructions
 
-###PostgreSQL
+### PostgreSQL
 
 Install the backend.
 
@@ -40,7 +40,7 @@ Note: `psycopg2-binary` comes with own versions of a few C libraries, among whic
 
 [Install the extensions](https://github.com/biolab/orange3/wiki/Installation-of-SQL-extensions). [optional]
 
-###MSSQL
+### MSSQL
 
 Install the backend.
 
@@ -48,7 +48,7 @@ Install the backend.
 
 If you are encountering issues, follow [these instructions](https://github.com/biolab/orange3/wiki/Installation-of-SQL-extensions#mssql).
 
-##Example
+## Example
 
 Here is a simple example on how to use the **SQL Table** widget. Place the widget on the canvas, enter your database credentials and connect to your database. Then select the table you wish to analyse.
 
