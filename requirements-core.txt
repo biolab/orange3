@@ -24,7 +24,6 @@ scikit-learn>=1.1.0,!=1.2.*,<1.4  # ignoring 1.2.*: scikit-learn/issues/26241
 scipy>=1.9
 serverfiles		# for Data Sets synchronization
 setuptools>=51.0.0
-xgboost>=1.7.4
 # Reading Excel files
 xlrd>=1.2.0
 # Writing Excel Files

@@ -71,7 +71,6 @@ requirements:
     - scipy >=1.9
     - serverfiles
     - setuptools >=51.0.0
-    - xgboost >=1.7.4
     - xlsxwriter
     - xlrd >=1.2.0
 
