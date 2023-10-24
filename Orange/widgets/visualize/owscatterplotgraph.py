@@ -674,9 +674,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
                         replace=False,
                     )
                     self.sample_indices = np.union1d(
-                        intersect_sampled_points, new_sample_candidates,
-                        assume_unique=True
-                    )
+                        intersect_sampled_points, new_sample_candidates)
 
                 else:
                     # size ratio between arrays

@@ -468,6 +468,8 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     @OWDataProjectionWidget.Inputs.data
     def set_data(self, data):
+        self.cached_x_data = None
+        self.cached_y_data = None
         super().set_data(data)
         self._vizrank_color_change()
 
@@ -616,8 +618,6 @@ class OWScatterPlot(OWDataProjectionWidget):
                 self.attr_x, self.attr_y = None, None
         self._invalidated = self._invalidated or self._xy_invalidated
         self._xy_invalidated = False
-        self.cached_x_data = None
-        self.cached_y_data = None
         super().handleNewSignals()
         if self._domain_invalidated:
             self.graph.update_axes()
