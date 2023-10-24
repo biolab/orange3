@@ -509,8 +509,7 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         if not self.subset_indices:
             return None
         valid_data = self.data[self.valid_data]
-        return np.fromiter((ex.id in self.subset_indices for ex in valid_data),
-                           dtype=bool, count=len(valid_data))
+        return np.isin(valid_data.ids, list(self.subset_indices))
 
     # Plot
     def get_embedding(self):
