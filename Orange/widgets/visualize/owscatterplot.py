@@ -611,6 +611,8 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
 
     @OWDataProjectionWidget.Inputs.data
     def set_data(self, data):
+        self.cached_x_data = None
+        self.cached_y_data = None
         super().set_data(data)
         self.init_vizrank()
 
@@ -794,8 +796,6 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
             self.attr_y_upper, self.attr_y_lower = None, None
         self._invalidated = self._invalidated or self._xy_invalidated
         self._xy_invalidated = False
-        self.cached_x_data = None
-        self.cached_y_data = None
         super().handleNewSignals()
         if self._domain_invalidated:
             self.graph.update_axes()
@@ -809,6 +809,9 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
 
     @Inputs.features
     def set_shown_attributes(self, attributes):
+        self.cached_x_data = None
+        self.cached_y_data = None
+
         if attributes and len(attributes) >= 2:
             self.attribute_selection_list = attributes[:2]
             self._xy_invalidated = self._xy_invalidated \
