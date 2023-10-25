@@ -129,9 +129,10 @@ class DaskTable(Table):
         h5file = f = h5py.File(filename, "r")
 
         def read_domain(sub):
-            subdomain = f[f'domain_{sub}'].asstr() if f'domain_{sub}' in f else []
-            subdomain_args = f[f'domain_{sub}_args'].asstr() \
-                if f'domain_{sub}_args' in f else ['{}'] * len(subdomain)
+            d = f['domain']
+            subdomain = d[sub].asstr() if sub in d else []
+            subdomain_args = d[f'{sub}_args'].asstr() \
+                if f'{sub}_args' in d else ['{}'] * len(subdomain)
             for attr, args in zip(subdomain, subdomain_args):
                 yield attr[0], attr[1], json.loads(args)
 
@@ -154,7 +155,9 @@ class DaskTable(Table):
                 return da.from_array(f[name], chunks=chunks)
             return None
 
-        if 'domain' in f and f['domain'].shape == tuple():
+        assert 'domain' in f
+
+        if not isinstance(f['domain'], h5py.Group):
             domain = pickle.loads(np.array(f['domain']).tobytes())
             warnings.warn("Use the newer DaskTable format (perhaps just run save() again).",
                           OrangeDeprecationWarning, stacklevel=2)
@@ -220,8 +223,8 @@ class DaskTable(Table):
                 parsed = [parse(feature) for feature in getattr(self.domain, subdomain)]
                 domain = np.array([[name, header] for name, header, _ in parsed], 'S')
                 domain_args = np.array([json.dumps(args) for *_, args in parsed], 'S')
-                f.create_dataset(f'domain_{subdomain}', data=domain)
-                f.create_dataset(f'domain_{subdomain}_args', data=domain_args)
+                f.create_dataset(f'domain/{subdomain}', data=domain)
+                f.create_dataset(f'domain/{subdomain}_args', data=domain_args)
 
         if isinstance(self.X, da.Array):
             da.to_hdf5(filename, '/X', self.X)
