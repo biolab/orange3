@@ -69,8 +69,9 @@ class PCA(SklProjector, _FeatureScorerMixin):
             else:
                 if params["iterated_power"] == "auto":
                     params["iterated_power"] = 0
+                params.pop("tol")
 
-                return dask_decomposition.PCA(**params)
+                return dask_decomposition.IncrementalPCA(**params)
 
         return self.__wraps__(**params)
 
