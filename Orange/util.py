@@ -1,11 +1,14 @@
 """Various small utilities that might be useful everywhere"""
 import logging
 import os
+import time
 import inspect
 import datetime
 import math
+import functools
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Union, Optional
+from weakref import WeakKeyDictionary
 
 import pkg_resources
 from enum import Enum as _Enum
@@ -178,6 +181,135 @@ def deprecated(obj):
         return wrapper
 
     return decorator if alternative else decorator(obj)
+
+
+# This should look like decorator, not a class, pylint: disable=invalid-name
+class allot:
+    """
+    Decorator that allows a function only a specified portion of time per call.
+
+    Usage:
+
+    ```
+    @allot(0.2, overflow=of)
+    def f(x):
+       ...
+    ```
+
+    The above function is allotted 0.2 second per second. If it runs for 0.2 s,
+    all subsequent calls in the next second (after the start of the call) are
+    ignored. If it runs for 0.1 s, subsequent calls in the next 0.5 s are
+    ignored. If it runs for a second, subsequent calls are ignored for 5 s.
+
+    An optional overflow function can be given as a keyword argument
+    `overflow`. This function must have the same signature as the wrapped
+    function and is called instead of the original when the call is blocked.
+
+    If the overflow function is not given, the wrapped function must not return
+    result. This is because without the overflow function, the wrapper has no
+    value to return when the call is skipped.
+
+    The decorator adds a method `call` to force the call, e.g. by calling
+    f.call(5), in the above case. The used up time still counts for the
+    following (non-forced) calls.
+
+    The decorator also adds two attributes:
+
+    - f.last_call_duration is the duration of the last call (in seconds)
+    - f.no_call_before contains the time (time.perf_counter) when the next
+        call will be made.
+
+    The decorator can be used for functions and for methods.
+
+    A non-parametrized decorator doesn't block any calls and only adds
+    last_call_duration, so that it can be used for timing.
+    """
+    def __new__(cls: type, arg: Union[None, float, Callable], *,
+                overflow: Optional[Callable] = None,
+                _bound_methods: Optional[WeakKeyDictionary] = None):
+        self = super().__new__(cls)
+
+        if arg is None or isinstance(arg, float):
+            # Parametrized decorator
+            if arg is not None:
+                assert arg > 0
+
+            def set_func(func):
+                self.__init__(func,
+                              overflow=overflow,
+                              _bound_methods=_bound_methods)
+                self.allotted_time = arg
+                return self
+
+            return set_func
+
+        else:
+            # Non-parametrized decorator
+            self.allotted_time = None
+            return self
+
+    def __init__(self,
+                 func: Callable, *,
+                 overflow: Optional[Callable] = None,
+                 _bound_methods: Optional[WeakKeyDictionary] = None):
+        assert callable(func)
+        self.func = func
+        self.overflow = overflow
+        functools.update_wrapper(self, func)
+
+        self.no_call_before = 0
+        self.last_call_duration = None
+
+        # Used by __get__; see a comment there
+        if _bound_methods is None:
+            self.__bound_methods = WeakKeyDictionary()
+        else:
+            self.__bound_methods = _bound_methods
+
+    # If we are wrapping a method, __get__ is called to bind it.
+    # Create a wrapper for each instance and store it, so that each instance's
+    # method gets its share of time.
+    def __get__(self, inst, cls):
+        if inst is None:
+            return self
+
+        if inst not in self.__bound_methods:
+            # __bound_methods caches bound methods per instance. This is not
+            # done for perfoamnce. Bound methods can be rebound, even to
+            # different instances or even classes, e.g.
+            # >>> x = f.__get__(a, A)
+            # >>> y = x.__get__(b, B)
+            # >>> z = x.__get__(a, A)
+            # After this, we want `x is z`, there shared caching. This looks
+            # bizarre, but let's keep it safe. At least binding to the same
+            # instance, f.__get__(a, A),__get__(a, A), sounds reasonably
+            # possible.
+            cls = type(self)
+            bound_overflow = self.overflow and self.overflow.__get__(inst, cls)
+            decorator = cls(
+                self.allotted_time,
+                overflow=bound_overflow,
+                _bound_methods=self.__bound_methods)
+            self.__bound_methods[inst] = decorator(self.func.__get__(inst, cls))
+
+        return self.__bound_methods[inst]
+
+    def __call__(self, *args, **kwargs):
+        if time.perf_counter() < self.no_call_before:
+            if self.overflow is None:
+                return None
+            return self.overflow(*args, **kwargs)
+        return self.call(*args, **kwargs)
+
+    def call(self, *args, **kwargs):
+        start = time.perf_counter()
+        result = self.func(*args, **kwargs)
+        self.last_call_duration = time.perf_counter() - start
+        if self.allotted_time is not None:
+            if self.overflow is None:
+                assert result is None, "skippable function cannot return a result"
+            self.no_call_before = start + self.last_call_duration / self.allotted_time
+        return result
 
 
 def literal_eval(literal):

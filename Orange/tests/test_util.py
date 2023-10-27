@@ -1,6 +1,8 @@
 from itertools import count
+import time
 import os
 import unittest
+from unittest.mock import Mock
 import warnings
 
 import numpy as np
@@ -11,7 +13,7 @@ from Orange.util import export_globals, flatten, deprecated, try_, deepgetattr, 
 from Orange.data.util import vstack, hstack, array_equal
 from Orange.statistics.util import stats
 from Orange.tests.test_statistics import dense_sparse
-from Orange.util import wrap_callback, get_entry_point
+from Orange.util import wrap_callback, get_entry_point, allot
 
 SOMETHING = 0xf00babe
 
@@ -25,7 +27,7 @@ class TestUtil(unittest.TestCase):
 
     def test_export_globals(self):
         self.assertEqual(sorted(export_globals(globals(), __name__)),
-                         ['SOMETHING', 'TestUtil'])
+                         ['SOMETHING', 'TestAllot', 'TestUtil'])
 
     def test_flatten(self):
         self.assertEqual(list(flatten([[1, 2], [3]])), [1, 2, 3])
@@ -239,6 +241,153 @@ class TestUtil(unittest.TestCase):
 
         self.assertEqual([name for name, _ in zip(namegen("foo ", 2, spec_count=count), range(3))],
                          ["foo 2", "foo 3", "foo 4"])
+
+
+class TestAllot(unittest.TestCase):
+    # names of functions within tests don't matter, pylint: disable=invalid-name
+    def test_duration(self):
+        @allot
+        def f(x, y):
+            self.assertEqual(x, 5)
+            self.assertEqual(y, 6)
+            time.sleep(0.2)
+
+        f(5, y=6)
+        self.assertGreaterEqual(f.last_call_duration, 0.2)
+
+        class A:
+            def __init__(self):
+                self.x = self.y = 0
+
+            @allot
+            def f(self, x, y):
+                self.x = x
+                self.y = y
+                time.sleep(0.2)
+
+        a = A()
+        a.f(5, y=6)
+        self.assertEqual(a.x, 5)
+        self.assertEqual(a.y, 6)
+        self.assertGreaterEqual(f.last_call_duration, 0.2)
+
+    def test_skipping(self):
+        uf = Mock()
+
+        @allot(0.5)
+        def f(x, y):
+            uf()
+            self.assertEqual(x, 5)
+            self.assertEqual(y, 6)
+            time.sleep(0.2)
+
+        f(5, y=6)
+        uf.assert_called_once()
+        uf.reset_mock()
+        self.assertGreaterEqual(f.last_call_duration, 0.2)
+        f(5, y=6)
+        uf.assert_not_called()
+        self.assertGreaterEqual(f.last_call_duration, 0.2)
+        time.sleep(0.35)
+        f(5, y=6)
+        uf.assert_called_once()
+        self.assertGreaterEqual(f.last_call_duration, 0.2)
+
+        class A:
+            def __init__(self):
+                self.x = self.y = 0
+
+            @allot(0.5)
+            def f(self, x, y):
+                self.x = x
+                self.y = y
+                time.sleep(0.2)
+
+        a = A()
+        a2 = A()
+        a.f(5, y=6)
+        self.assertEqual(a.x, 5)
+        self.assertEqual(a.y, 6)
+        self.assertGreaterEqual(f.last_call_duration, 0.2)
+
+        a.f(7, y=8)
+        self.assertEqual(a.x, 5)  # no call, `a` is unchanged
+        self.assertGreaterEqual(f.last_call_duration, 0.2)
+
+        time.sleep(0.35)
+        a.f(9, y=10)
+        a2.f(11, y=12)
+        self.assertEqual(a.x, 9)
+        self.assertGreaterEqual(f.last_call_duration, 0.2)
+        # a2.f is not being skipped because of a.f - bound methods for different
+        # instance are separate
+        self.assertEqual(a2.x, 11)
+
+        # forced calls work
+        a.f.call(11, 12)
+        self.assertEqual(a.x, 11)
+
+        # forced calls block later non-forced calls
+        a = A()
+        a.f.call(13, y=14)
+        self.assertEqual(a.x, 13)
+        a.f(15, y=16)
+        self.assertEqual(a.x, 13)
+
+    def test_overflow(self):
+        uf = Mock()
+        of = Mock(return_value=13)
+
+        @allot(0.1, overflow=of)
+        def f(*_, **__):
+            uf()
+            time.sleep(0.1)
+            return 42
+
+        self.assertEqual(f(5, y=6), 42)
+        uf.assert_called()
+        uf.reset_mock()
+        of.assert_not_called()
+
+        self.assertEqual(f(7, y=8), 13)
+        uf.assert_not_called()
+        of.assert_called_with(7, y=8)
+
+    def test_assert_no_result(self):
+        # pylint: disable=function-redefined
+        @allot(0.1)
+        def f():
+            return 42
+
+        self.assertRaises(AssertionError, f)
+
+        @allot(0.05, overflow=lambda x: 3 * x)
+        def f(x):
+            time.sleep(0.6)
+            return 2 * x
+
+        self.assertEqual(f(3), 6)
+        self.assertEqual(f(3), 9)
+
+        @allot
+        def f():
+            return 42
+
+        self.assertEqual(f(), 42)
+
+    def test_assertion(self):
+        self.assertRaises(AssertionError, allot, "foo")
+        self.assertRaises(AssertionError, allot, 0.0)
+        self.assertRaises(AssertionError, allot, -1.0)
+
+    def test_getter(self):
+        class A:
+            @allot
+            def f(self):
+                pass
+
+        # getter for class must not do anything with the method
+        self.assertIs(A.f, A.__dict__["f"])
 
 
 if __name__ == "__main__":
