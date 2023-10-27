@@ -16,6 +16,7 @@ from Orange.projection.manifold import TSNEModel
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin, ProjectionWidgetTestMixin
 )
+from Orange.widgets.tests.utils import simulate
 from Orange.widgets.unsupervised.owtsne import OWtSNE, TSNERunner, Task, prepare_tsne_obj
 
 
@@ -779,25 +780,29 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         table signals."""
         w = self.widget
 
+        # SEND IRIS DATA
+        # Set some parameters
         self.send_signal(w.Inputs.data, self.iris)
-        w.normalize_cbx.setChecked(True)
+        w.normalize_cbx.setChecked(False)
         w.pca_preprocessing_cbx.setChecked(True)
         w.pca_component_slider.setValue(3)
-        w.initialization_combo.setCurrentIndex(0)
-        w.distance_metric_combo.setCurrentIndex(2)
+        simulate.combobox_activate_index(w.initialization_combo, 0)
+        simulate.combobox_activate_index(w.distance_metric_combo, 2)
         w.perplexity_spin.setValue(42)
-        # Disconnect data, save context settings
+
+        # Disconnect data
         self.send_signal(w.Inputs.data, None)
 
-        # Send distances signal
+        # SEND IRIS DISTANCES
         self.send_signal(w.Inputs.distances, self.iris_distances)
-
+        # Check that distance-related controls are disabled
         self.assertFalse(w.normalize_cbx.isEnabled())
 
         self.assertFalse(w.pca_preprocessing_cbx.isEnabled())
         self.assertFalse(w.pca_component_slider.isEnabled())
 
         self.assertFalse(w.initialization_combo.isEnabled())
+        # Only spectral layout is supported when we have distances
         self.assertEqual(w.initialization_combo.currentText(), "Spectral")
 
         self.assertFalse(w.distance_metric_combo.isEnabled())
@@ -805,14 +810,19 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
 
         self.assertTrue(w.perplexity_spin.isEnabled())
         self.assertEqual(w.perplexity_spin.value(), 42)
-        # Disconnect signal, the context settings should not be overridden
+
+        # Disconnect distances
         self.send_signal(w.Inputs.distances, None)
 
-        # Send data signal, the data-only settings should be restored
+        # SEND IRIS DATA
+        # The distance-related settings should be restored from when we sent in
+        # the data, and not overridden by the settings automatically set by the
+        # widget when we passed in the distances signal
         self.send_signal(w.Inputs.data, self.iris)
 
+        # Check that the parameters are restored
         self.assertTrue(w.normalize_cbx.isEnabled())
-        self.assertTrue(w.normalize_cbx.isChecked())
+        self.assertFalse(w.normalize_cbx.isChecked())
 
         self.assertTrue(w.pca_preprocessing_cbx.isEnabled())
         self.assertTrue(w.pca_preprocessing_cbx.isChecked())
