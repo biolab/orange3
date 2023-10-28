@@ -13,7 +13,7 @@ from functools import wraps, partial
 from operator import attrgetter
 from itertools import chain, count, repeat
 
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 import warnings
 
 # Exposed here for convenience. Prefer patching to try-finally blocks
@@ -161,18 +161,18 @@ def deprecated(obj):
     ...         return 'new behavior'
     >>> C().old() # doctest: +SKIP
     /... OrangeDeprecationWarning: Call to deprecated ... C.old ...
-      Instead, use C.new() ...
+      use use C.new() instead ...
     'old behavior'
     """
-    alternative = ('; Instead, use ' + obj) if isinstance(obj, str) else ''
+    alternative = f'; use {obj} instead' if isinstance(obj, str) else ''
 
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            name = '{}.{}'.format(
-                func.__self__.__class__,
-                func.__name__) if hasattr(func, '__self__') else func
-            warnings.warn('Call to deprecated {}{}'.format(name, alternative),
+            name = func.__name__
+            if hasattr(func, "__self__"):
+                name = f'{func.__self__.__class__}.{name}'
+            warnings.warn(f'Call to deprecated {name}{alternative}',
                           OrangeDeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)
         return wrapper
@@ -181,7 +181,7 @@ def deprecated(obj):
 
 
 def literal_eval(literal):
-    import ast
+    import ast  # pylint: disable=import-outside-toplevel
     # ast.literal_eval does not parse empty set ¯\_(ツ)_/¯
 
     if literal == "set()":
@@ -225,11 +225,11 @@ def requirementsSatisfied(required_state, local_state, req_type=None):
     for req_string in required_state:
         # parse requirement
         req = None
-        for op_str in op_map:
+        for op_str, op in op_map.items():
             split = req_string.split(op_str)
             # if operation is not in req_string, continue
             if len(split) == 2:
-                req = _Requirement(split[0], op_map[op_str], split[1])
+                req = _Requirement(split[0], op, split[1])
                 break
 
         if req is None:
@@ -269,7 +269,7 @@ class Registry(type):
     def __new__(mcs, name, bases, attrs):
         cls = type.__new__(mcs, name, bases, attrs)
         if not hasattr(cls, 'registry'):
-            cls.registry = OrderedDict()
+            cls.registry = {}
         else:
             cls.registry[name] = cls
         return cls
@@ -280,11 +280,14 @@ class Registry(type):
     def __str__(cls):
         if cls in cls.registry.values():
             return cls.__name__
-        return '{}({{{}}})'.format(cls.__name__, ', '.join(cls.registry))
+        return f'{cls.__name__}({{{", ".join(cls.registry)}}})'
 
 
+# it is what it is, we keep for compatibility:
+# pylint: disable=keyword-arg-before-vararg
 def namegen(prefix='_', *args, spec_count=count, **kwargs):
     """Continually generate names with `prefix`, e.g. '_1', '_2', ..."""
+    # pylint: disable=stop-iteration-return
     spec_count = iter(spec_count(*args, **kwargs))
     while True:
         yield prefix + str(next(spec_count))
@@ -325,6 +328,7 @@ def deepgetattr(obj, attr, default=_NOTSET):
 
 
 def color_to_hex(color):
+    # pylint: disable=consider-using-f-string
     return "#{:02X}{:02X}{:02X}".format(*color)
 
 
@@ -337,9 +341,9 @@ def inherit_docstrings(cls):
     for method in cls.__dict__.values():
         if inspect.isfunction(method) and method.__doc__ is None:
             for parent in cls.__mro__[1:]:
-                __doc__ = getattr(parent, method.__name__, None).__doc__
-                if __doc__:
-                    method.__doc__ = __doc__
+                doc = getattr(parent, method.__name__, None).__doc__
+                if doc:
+                    method.__doc__ = doc
                     break
     return cls
 
@@ -379,7 +383,7 @@ def interleave(seq1, seq2):
 def Reprable_repr_pretty(name, itemsiter, printer, cycle):
     # type: (str, Iterable[Tuple[str, Any]], Ipython.lib.pretty.PrettyPrinter, bool) -> None
     if cycle:
-        printer.text("{0}(...)".format("name"))
+        printer.text(f"{name}(...)")
     else:
         def printitem(field, value):
             printer.text(field + "=")
@@ -392,8 +396,9 @@ def Reprable_repr_pretty(name, itemsiter, printer, cycle):
         itemsiter = (partial(printitem, *item) for item in itemsiter)
         sepiter = repeat(printsep)
 
-        with printer.group(len(name) + 1, "{0}(".format(name), ")"):
+        with printer.group(len(name) + 1, f"{name}(", ")"):
             for part in interleave(itemsiter, sepiter):
+                part()
                 part()
 
 
@@ -458,6 +463,7 @@ class Reprable:
                     param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
                 yield param.name, param.default
 
+    # pylint: disable=unused-argument
     def _reprable_omit_param(self, name, default, value):
         if default is value:
             return True
@@ -503,9 +509,9 @@ class Reprable:
         nameparts = (([str(module)] if module else []) +
                      [self.__class__.__name__])
         name = ".".join(nameparts)
-        return "{}({})".format(
-            name, ", ".join("{}={!r}".format(f, v) for f, _, v in self._reprable_items())
-        )
+        items = ", ".join(f"{f}={repr(v)}"
+                          for f, _, v in self._reprable_items())
+        return f"{name}({items})"
 
 
 def wrap_callback(progress_callback, start=0, end=1):
