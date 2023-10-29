@@ -115,6 +115,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
         self.keep_running = False
         self.scheduled_call = None
         self.saved_state = None
+        self.done = False
         self.saved_progress = 0
         self.scores = []
         self.add_to_model = Queue()
@@ -224,6 +225,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
         self.keep_running = False
         self.scheduled_call = None
         self.saved_state = None
+        self.done = False
         self.saved_progress = 0
         self.progressBarFinished()
         self.scores = []
@@ -329,6 +331,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
         self.button.setEnabled(False)
         self.keep_running = False
         self.saved_state = None
+        self.done = True
         self._stopped()
 
     def _stopped(self):
@@ -361,20 +364,27 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
 
     def toggle(self):
         """Start or pause the computation."""
-        self.keep_running = not self.keep_running
-        if self.keep_running:
-            self.button.setText("Pause")
-            self.button.repaint()
-            self.progressBarInit()
-            self.before_running()
-            self.start(run_vizrank, self.compute_score,
-                       self.iterate_states, self.saved_state, self.scores,
-                       self.saved_progress, self.state_count())
+        if not self.keep_running:
+            self.start_computation()
         else:
-            self.button.setText("Continue")
-            self.button.repaint()
-            self.cancel()
-            self._stopped()
+            self.pause_computation()
+
+    def start_computation(self):
+        self.keep_running = True
+        self.button.setText("Pause")
+        self.button.repaint()
+        self.progressBarInit()
+        self.before_running()
+        self.start(run_vizrank, self.compute_score,
+                   self.iterate_states, self.saved_state, self.scores,
+                   self.saved_progress, self.state_count())
+
+    def pause_computation(self):
+        self.keep_running = False
+        self.button.setText("Continue")
+        self.button.repaint()
+        self.cancel()
+        self._stopped()
 
     def before_running(self):
         """Code that is run before running vizrank in its own thread"""

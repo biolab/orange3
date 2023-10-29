@@ -52,24 +52,27 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         OWComponent.__init__(self, master)
 
         box = gui.hBox(self)
-        max_n_attrs = len(master.model_selected)
         self.n_attrs_spin = gui.spin(
-            box, self, "n_attrs", 3, max_n_attrs, label="Number of variables: ",
-            controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
+            box, self, None, 3, 8, label="Number of variables: ",
+            controlWidth=50, alignment=Qt.AlignRight,
+            callback=self.on_attrs_changed)
         gui.rubber(box)
+
         self.last_run_n_attrs = None
         self.attr_color = master.attr_color
         self.attrs = []
 
     def initialize(self):
         super().initialize()
-        self.n_attrs_spin.setDisabled(False)
         self.attr_color = self.master.attr_color
+        n_cont = sum(v is not self.attr_color
+                     for v in self.master.continuous_variables)
+        self.n_attrs_spin.setValue(min(self.n_attrs, n_cont))
+        self.n_attrs_spin.setMaximum(n_cont)
 
     def before_running(self):
         """
-        Disable the spin for number of attributes before running and
-        enable afterwards. Also, if the number of attributes is different than
+        If the number of attributes is different than
         in the last run, reset the saved state (if it was paused).
         """
         if self.n_attrs != self.last_run_n_attrs:
@@ -79,22 +82,10 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
             self.scores = []
             self.rank_model.clear()
         self.last_run_n_attrs = self.n_attrs
-        self.n_attrs_spin.setDisabled(True)
-
-    def stopped(self):
-        self.n_attrs_spin.setDisabled(False)
 
     def check_preconditions(self):
-        master = self.master
-        if not super().check_preconditions():
-            return False
-        elif not master.btn_vizrank.isEnabled():
-            return False
-        n_cont_var = len([v for v in master.continuous_variables
-                          if v is not master.attr_color])
-        self.n_attrs_spin.setMaximum(n_cont_var)
-        self.n_attrs_spin.setValue(self.n_attrs)
-        return True
+        return super().check_preconditions() \
+               and self.master.btn_vizrank.isEnabled()
 
     def state_count(self):
         n_all_attrs = len(self.attrs)
@@ -178,12 +169,35 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         attrs = selected.indexes()[0].data(self._AttrRole)
         self.selectionChanged.emit([attrs])
 
-    def _n_attrs_changed(self):
-        if self.n_attrs != self.last_run_n_attrs or self.saved_state is None:
+    def on_attrs_changed(self):
+        if self.keep_running:
+            self.pause_computation()
+        if self.rank_model.rowCount() == 0:
             self.button.setText("Start")
+            self.button.setDisabled(False)
+        elif (new_attrs := self.n_attrs_spin.value()) != self.n_attrs:
+            self.button.setText(f"Restart with {new_attrs} variables")
+            self.button.setDisabled(False)
         else:
-            self.button.setText("Continue")
-        self.button.setEnabled(self.check_preconditions())
+            self.button.setText("Continue" if not self.done else "Finished")
+            self.button.setDisabled(self.done)
+
+    def start_computation(self):
+        self.n_attrs_spin.setValue(self.n_attrs)
+        self.n_attrs_spin.lineEdit().deselect()
+        self.rank_table.setFocus(Qt.FocusReason.OtherFocusReason)
+        super().start_computation()
+
+    def toggle(self):
+        if self.n_attrs != self.n_attrs_spin.value():
+            self.n_attrs = self.n_attrs_spin.value()
+            self.initialize()
+        super().toggle()
+
+    def closeEvent(self, event):
+        self.pause_computation()
+        self.n_attrs_spin.setValue(self.n_attrs)
+        super().closeEvent(event)
 
 
 class OWLinProjGraph(OWGraphWithAnchors):
@@ -309,6 +323,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
             self.__model_selected_changed)
         self.vizrank, self.btn_vizrank = LinearProjectionVizRank.add_vizrank(
             None, self, "Suggest Features", self.__vizrank_set_attrs)
+        self.btn_vizrank.pressed.connect(self.start_vizrank)
         box.layout().addWidget(self.btn_vizrank)
 
     def _add_controls_placement(self, box):
@@ -432,6 +447,9 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         if is_enabled:
             self.vizrank.initialize()
 
+    def start_vizrank(self):
+        self.vizrank.start_computation()
+
     def check_data(self):
         def error(err):
             err()
@@ -471,6 +489,22 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         norm_emb = normalized(embedding[self.valid_data])
         return (norm_emb.ravel(), np.zeros(len(norm_emb), dtype=float)) \
             if embedding.shape[1] == 1 else norm_emb.T
+
+    def closeEvent(self, event):
+        if self.vizrank is not None:
+            self.vizrank.close()
+        super().closeEvent(event)
+
+    def hideEvent(self, event):
+        if self.vizrank is not None:
+            self.vizrank.hide()
+        super().hideEvent(event)
+
+    def deleteEvent(self):
+        if self.vizrank is not None:
+            self.vizrank.keep_running = False
+            self.vizrank.shutdown()
+        super().deleteEvent()
 
     def _get_send_report_caption(self):
         def projection_name():

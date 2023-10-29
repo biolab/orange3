@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import numpy as np
 
 from AnyQt.QtCore import QItemSelectionModel
@@ -256,15 +256,57 @@ class LinProjVizRankTests(WidgetTest):
         c2 = self.get_output(self.widget.Outputs.components)
         self.assertNotEqual(c1.domain.attributes, c2.domain.attributes)
 
-    def test_vizrank_n_attrs(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
+    @patch.object(LinearProjectionVizRank, "start")
+    @patch.object(LinearProjectionVizRank, "initialize")
+    def test_vizrank_n_attrs(self, initialize, start):
+        widget = self.widget
+        vizrank = widget.vizrank
+        self.send_signal(widget.Inputs.data, self.data)
+        start.assert_not_called()
+
+        # Start computation
+        widget.vizrank.button.click()
+        start.assert_called_once()
+        start.reset_mock()
+        self.assertTrue(vizrank.keep_running)
+        self.assertEqual(vizrank.n_attrs, 3)
+        self.assertEqual(vizrank.n_attrs_spin.value(), 3)
+
+        initialize.reset_mock()
+
+        # Changing the spin value stops computations
         self.vizrank.n_attrs_spin.setValue(4)
-        settings = self.widget.settingsHandler.pack_data(self.widget)
-        widget = self.create_widget(OWLinearProjection,
-                                    stored_settings=settings)
-        self.send_signal(widget.Inputs.data, self.data, widget=widget)
-        self.assertEqual(widget.vizrank.n_attrs_spin.value(),
-                         self.vizrank.n_attrs_spin.value())
+        self.assertFalse(vizrank.keep_running)
+        initialize.assert_not_called()
+
+        # Restart runs with a different number of attributes
+        widget.vizrank.button.click()
+        start.assert_called_once()
+        initialize.assert_called_once()
+        self.assertEqual(widget.vizrank.n_attrs, 4)
+        self.assertEqual(widget.vizrank.n_attrs_spin.value(), 4)
+
+    @patch.object(LinearProjectionVizRank, "start")
+    @patch.object(LinearProjectionVizRank, "initialize")
+    def test_vizrank_close_and_open(self, initialize, start):
+        widget = self.widget
+        vizrank = widget.vizrank
+        self.send_signal(widget.Inputs.data, self.data)
+
+        # Start computation
+        widget.vizrank.button.click()
+        start.assert_called_once()
+        start.reset_mock()
+        self.assertTrue(vizrank.keep_running)
+
+        initialize.reset_mock()
+        vizrank.close()
+        self.assertFalse(vizrank.keep_running)
+
+        widget.vizrank.button.click()
+        initialize.assert_not_called()
+        start.assert_called_once()
+        self.assertTrue(vizrank.keep_running)
 
 
 if __name__ == "__main__":
