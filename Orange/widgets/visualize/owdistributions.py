@@ -311,6 +311,7 @@ class OWDistributions(OWWidget):
         super().__init__()
         self.data = None
         self.valid_data = self.valid_group_data = None
+        self.var_column = None  # cache active column for faster Dask access
         self.bar_items = []
         self.curve_items = []
         self.curve_descriptions = None
@@ -548,6 +549,7 @@ class OWDistributions(OWWidget):
         column = self.data.get_column(self.var)
         if isinstance(self.data, DaskTable):
             column = dask.compute(column)[0]
+        self.var_column = column  # cache column because of slow Dask
 
         valid_mask = np.isfinite(column)
         if not np.any(valid_mask):
@@ -900,9 +902,7 @@ class OWDistributions(OWWidget):
     def recompute_binnings(self):
         if self.is_valid and self.var.is_continuous:
             # binning is computed on valid var data, ignoring any cvar nans
-            column = self.data.get_column(self.var)
-            if isinstance(self.data, DaskTable):
-                column = dask.compute(column)[0]
+            column = self.var_column
 
             if np.any(np.isfinite(column)):
                 if self.var.is_time:
@@ -1209,7 +1209,7 @@ class OWDistributions(OWWidget):
 
     def _get_output_indices_disc(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column(self.var)
+        col = self.var_column
         group_idx = 1
         values = []
         # self.selected_bars is a set, so its order is random;
@@ -1224,7 +1224,7 @@ class OWDistributions(OWWidget):
 
     def _get_output_indices_cont(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column(self.var)
+        col = self.var_column
         values = []
         for group_idx, group in enumerate(self.grouped_selection(), start=1):
             x0 = x1 = None
@@ -1257,7 +1257,7 @@ class OWDistributions(OWWidget):
 
     def _get_histogram_indices(self):
         group_indices = np.zeros(len(self.data), dtype=np.int32)
-        col = self.data.get_column(self.var)
+        col = self.var_column
         values = []
         for bar_idx in range(len(self.bar_items)):
             x0, x1, mask = self._get_cont_baritem_indices(col, bar_idx)
