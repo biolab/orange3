@@ -1,0 +1,53 @@
+name: Check translations
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+
+      - name: Install Trubar
+        run: |
+          pip install trubar
+
+      - name: Collect translations
+        run: |
+          cd i18n
+          trubar collect -s ../Orange new.jaml
+          trubar merge -u Obsolete.jaml si.jaml new.jaml
+          trubar missing -o Missing.jaml new.jaml
+          if [ ! -s Missing.jaml ]
+          then
+              rm Missing.jaml
+          fi
+
+      - name: Check translations
+        run: |
+          cd i18n
+          for fn in Obsolete Missing
+          do
+            if [ -f $fn.jaml ]
+            then
+                echo "::group::$fn translations"
+                cat $fn.jaml
+                echo "::endgroup::"
+            fi
+          done
+          trubar stat new.jaml
+          if [ -f Missing.jaml ] || [ -f Obsolete.jaml ]
+          then
+              echo "Run 'trubar collect -s Orange i18n/si.jaml'"
+              echo "and see the changes in the message file, i18n/si.jaml"
+              exit 1
+          fi
