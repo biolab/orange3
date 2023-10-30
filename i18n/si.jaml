@@ -63,7 +63,7 @@ base.py:
             invalid value of argument 'ret': false
             cannot predict continuous distributions: false
             Unrecognized argument (instance of '{}'): false
-            model returned a {prediction.ndim}-dimensional array: null
+            model returned a {prediction.ndim}-dimensional array: false
         def `__getstate__`:
             original_data: false
     class `SklModel`:
@@ -136,12 +136,12 @@ util.py:
     def `resource_filename`:
         Orange: false
     def `deprecated`:
-        '; Instead, use ': false
+        ; use {obj} instead: false
         def `decorator`:
             def `wrapper`:
-                {}.{}: false
                 __self__: false
-                Call to deprecated {}{}: false
+                {func.__self__.__class__}.{name}: false
+                Call to deprecated {name}{alternative}: false
     def `literal_eval`:
         set(): false
     ==: false
@@ -163,8 +163,7 @@ util.py:
         def `__new__`:
             registry: false
         def `__str__`:
-            {}({{{}}}): false
-            ', ': false
+            {cls.__name__}({{{", ".join(cls.registry)}}}): false
     def `namegen`:
         _: false
     def `export_globals`:
@@ -173,13 +172,12 @@ util.py:
     def `color_to_hex`:
         '#{:02X}{:02X}{:02X}': false
     def `Reprable_repr_pretty`:
-        {0}(...): false
-        name: false
+        {name}(...): false
         def `printitem`:
             =: false
         def `printsep`:
             ,: false
-        {0}(: false
+        {name}(: false
         ): false
     class `_Undef`:
         def `__repr__`:
@@ -193,17 +191,17 @@ util.py:
             .: false
         def `__repr__`:
             .: false
-            {}({}): false
             ', ': false
-            {}={!r}: false
+            {f}={repr(v)}: false
+            {name}({items}): false
     def `frompyfunc`:
         DTypeLike: false
         def `funcv`:
             unsafe: false
 version.py:
-    3.36.0: null
-    3.36.0.dev0+c9a59d2: null
-    c9a59d2a26298235720f6d87e241d47d745bfb0a: null
+    3.36.0: false
+    3.36.0.dev0+c9a59d2: false
+    c9a59d2a26298235720f6d87e241d47d745bfb0a: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -1158,7 +1156,7 @@ data/io_util.py:
     isnastr: false
     guess_data_type: false
     sanitize_variable: false
-    update_origin: null
+    update_origin: false
     class `Compression`:
         .gz: false
         .bz2: false
@@ -1192,9 +1190,9 @@ data/io_util.py:
             unsafe: false
         _: false
     def `_extract_new_origin`:
-        origin: null
+        origin: false
     def `update_origin`:
-        origin: null
+        origin: false
 data/pandas_compat.py:
     table_from_frame: false
     table_to_frame: false
@@ -1384,7 +1382,7 @@ data/table.py:
             \n]: false
         def `concatenate`:
             invalid axis: false
-            "'ignore_domains' is incompatible with 'axis=1'": null
+            "'ignore_domains' is incompatible with 'axis=1'": false
             need at least one table to concatenate: false
             attributes: false
             untitled: nepoimenovano
@@ -2207,8 +2205,6 @@ misc/_distmatrix_xlsx.py:
     def `_non_empty_cells`:
         def `raise_empty`:
             empty sheet: prazen zavihek
-        X: null
-        Y: null
     def `_get_labels`:
         ?: false
     def `_matrix_from_cells`:
@@ -2400,8 +2396,10 @@ misc/utils/embedder_utils.py:
         {:s}_embeddings.pickle: false
         def `save_pickle`:
             wb: false
+            Can't save embedding to %s due to %s.: false
         def `load_pickle`:
             rb: false
+            Can't load embedding from %s due to %s.: false
     def `get_proxies`:
         def `add_scheme`:
             ://: false
@@ -2832,6 +2830,12 @@ projection/base.py:
             Fitting...: Prileganje...
         def `__getstate__`:
             _Projector__tls: false
+    class `TransformDomain`:
+        def `__getstate__`:
+            _hash: false
+    class `ComputeValueProjector`:
+        def `__init__`:
+            Argument projection is unused and will be removed.: false
     class `DomainProjection`:
         C: false
         def `__init__`:
@@ -2934,6 +2938,8 @@ projection/manifold.py:
         def `__init__`:
             nearest_neighbors: false
     class `TSNEModel`:
+        def `__init__`:
+            TSNE: false
         def `transform`:
             'A sparse matrix was passed, but dense data is required. Use ': false
             X.toarray() to convert to a dense numpy array.: false
@@ -4375,7 +4381,7 @@ widgets/data/owconcatenate.py:
             Data: Podatki
         class `Error`:
             Inputs must be of the same type.: Podatki morajo biti enake vrste.
-            Ignoring column names requires matching column types: null
+            Ignoring column names requires matching column types: Ignoriranje imen zahteva, da se tipi stolpcev ujemajo.
         class `Warning`:
             Variables with duplicated names have been renamed.: Spremenljivk s podvojenimi imeni so preimenovane.
             'Some variables may not be concatenated correctly due ': 'Nekatere spremenljivke morda ne bodo pravilno združene zaradi '
@@ -4387,16 +4393,16 @@ widgets/data/owconcatenate.py:
         Attribute: Spremenljivka
         Meta attribute: Meta spremenljivka
         def `__init__`:
-            Variable Sets Merging: null
+            Variable Sets Merging: Združevanje stolpcev
             'When there is no primary table, ': 'Kadar ni podana osnovna tabela, '
-            the output should contain: null
+            the output should contain: naj izhodna tabela vsebuje
             merge_type: true
             'The resulting table will have a class only if there ': 'Ciljna spremenljivka bo ohranjena le, če imajo '
             is no conflict between input classes.: vse vhodne tabele isto ciljno spremenljivko.
-            Variable matching: null
-            ignore_names: null
-            Use column names from the primary table,\n: null
-            and ignore names in other tables.: null
+            Variable matching: Ujemanje spremenljivk
+            ignore_names: false
+            Use column names from the primary table,\n: Uporabi imena stolpcev iz osnovne tabele,\n
+            and ignore names in other tables.: in ignoriraj imena v ostalih tabelah.
             ignore_compute_value: false
             Treat variables with the same name as the same variable,\n: Obravnavaj spremenljivke z enakimi imeni kot isto spremenljivko,\n
             even if they are computed using different formulae.: četudi so izračunane z različnimi formulami oz. iz različnih izvornih spremenljivk.
@@ -4992,6 +4998,7 @@ widgets/data/owdatainfo.py:
             Features: Značilke
             Targets: Ciljne spremenljivke
             Metas: Meta atributi
+            Missing data: Manjkajoči podatki
             def `set_exact_length`:
                 Size: Velikost
         def `update_info`:
@@ -5032,6 +5039,14 @@ widgets/data/owdatainfo.py:
             {disc_class} categorical {pl(disc_class, 'target')}: " {z_besedo(disc_class, 1, 'f')} {plsi(disc_class, '|kategorični ciljni spremenljivki|kategorične ciljne spremenljivke|kategoričnih ciljnih spremenljivk')}"
             {cont_class} numeric {pl(cont_class, 'target')}: " {z_besedo(cont_class, 1, 'f')} {plsi(cont_class, '|številski ciljni spremenljivki|številske ciljne spremenljivke|številskih ciljnih spremenljivk')}"
             multi-target data,<br/>: več ciljnih spremenljivk,<br/>
+        def `_p_missing`:
+            (not checked for SQL data): (neznano, podatki iz SQL)
+            feature: značilkah
+            targets: ciljni spremenljivki
+            meta variable: meta atributih
+            {n_miss} ({n_miss / np.prod(part.shape):.1%}) in {name}: {n_miss} ({n_miss / np.prod(part.shape):.1%}) v {name}
+            none: ni
+            ', ': true
         def `_pack_var_counts`:
             categorical: kategorične
             numeric: numerične
@@ -8017,7 +8032,7 @@ widgets/data/owtable.py:
 widgets/data/owtransform.py:
     class `TransformRunner`:
         def `run`:
-            Transforming...: null
+            Transforming...: Spreminjam...
     class `OWTransform`:
         Apply Domain: Spremeni domeno
         Applies template domain on data table.: Spremeni vhodne podatke glede na domeno iz vzorca.
@@ -8699,13 +8714,6 @@ widgets/evaluate/owcalibrationplot.py:
             <td>{curve[ind]:.3f}</td>: false
             </tr>: false
             <table>: false
-        def `commit`:
-            each training data sample produces a different model: vsaka podmnožica učnih podatkov sestavi drug model
-            'test results do not contain stored models - try testing ': 'rezultati vrednotenja ne vsebujejo modelov - poskusite testirati '
-            on separate data or on training data: na ločenih podatkih ali na učni množici.
-            select a single model - the widget can output only one: izberite posamični model
-            cannot calibrate non-binary classes: ne morem kalibrirati ne-binarnih modelov
-            \n - {problem}: true
         def `send_report`:
             Target class: Ciljni razred
             Output model calibration: Kalibracija izhodnega modela
@@ -8883,12 +8891,6 @@ widgets/evaluate/owliftcurve.py:
             <span>{round(threshold, 3)}</span>: false
             </div>: false
         def `commit`:
-            each training data sample produces a different model: vsaka podmnožica učnih podatkov sestavi drug model
-            'test results do not contain stored models - try testing ': 'rezultati vrednotenja ne vsebujejo modelov - poskusite testirati '
-            on separate data or on training data: na ločenih podatkih ali na učni množici.
-            select a single model - the widget can output only one: izberite posamični model
-            cannot calibrate non-binary classes: ne morem kalibrirati ne-binarnih modelov
-            \n - {problem}: true
             data: false
         def `send_report`:
             Target class: Ciljni razred
@@ -9073,6 +9075,10 @@ widgets/evaluate/owrocanalysis.py:
         roc analysis, analyse: roc analysis, analyse
         class `Inputs`:
             Evaluation Results: Rezultati vrednotenja
+        class `Outputs`:
+            Calibrated Model: Kalibriran model
+        class `Information`:
+            "Can't output a model: {}": Ne morem sestaviti modela: {}
         plot: false
         def `__init__`:
             Plot: Krivulja
@@ -9307,10 +9313,16 @@ widgets/evaluate/owtestandscore.py:
 widgets/evaluate/utils.py:
     def `check_results_adequacy`:
         invalid_results: false
-        Results do not include information on test data.: Rezultati vrednotenja ne vsebujejo testnih podatkov.
         Categorical target variable is required.: Potrebna je kategorična spremenljivka.
         Empty result on input. Nothing to display.: Prazni rezultati vrednotenja.
         Results contain invalid values.: Rezultati vrednotenja vsebujejo neveljavne vrednosti
+    def `check_can_calibrate`:
+        each training data sample produces a different model: vsaka podmnožica učnih podatkov sestavi drug model
+        'test results do not contain stored models - try testing ': 'rezultati vrednotenja ne vsebujejo modelov - poskusite testirati '
+        on separate data or on training data: na ločenih podatkih ali na učni množici.
+        select a single model - the widget can output only one: izberite posamični model
+        cannot calibrate non-binary models: ne morem kalibrirati nebinarnih modelov
+        \n - {problem}: true
     def `results_for_preview`:
         heart_disease: false
         l2: false
@@ -9354,7 +9366,16 @@ widgets/evaluate/utils.py:
             shown_scores: false
 widgets/evaluate/tests/base.py:
     class `EvaluateTest`:
+        def `setUp`:
+            y: false
+            a: false
+            b: false
+            datasets/lenses.tab: false
+            majority: false
+            knn-3: false
+            knn-1: false
         def `test_many_evaluation_results`:
+            widget: false
             iris: false
             Evaluation Results: Rezultati vrednotenja
 widgets/model/__init__.py:
@@ -13578,12 +13599,13 @@ widgets/visualize/owlinearprojection.py:
     class `LinearProjectionVizRank`:
         Score Plots: Oceni projekcije
         def `__init__`:
-            Restart with: null
-            variables: null
+            n_attrs: false
+            'Number of variables: ': 'Število spremenljivk: '
         def `row_for_state`:
             ', ': false
-        def `on_attrs_changed`:
-            Continue with {self.n_attrs} variables: null
+        def `_n_attrs_changed`:
+            Start: Začni
+            Continue: Nadaljuj
     class `OWLinProjGraph`:
         def `update_anchors`:
             <b>{label}</b>: false
@@ -13663,7 +13685,7 @@ widgets/visualize/owlinearprojection.py:
             attr_label: false
             selected_vars: false
     __main__: false
-    brown-selected: null
+    iris: false
 widgets/visualize/owlineplot.py:
     class `ParameterSetter`:
         Mean: Srednja vrednost
@@ -14824,10 +14846,9 @@ widgets/visualize/utils/__init__.py:
             Start: Začni
         def `on_done`:
             Finished: Končano
-        def `start_computation`:
-            Pause: null
-        def `pause_computation`:
-            Continue: null
+        def `toggle`:
+            Pause: Počakaj
+            Continue: Nadaljuj
     def `run_vizrank`:
         Getting combinations...: Sestavljam kombinacije...
         Getting scores...: Ocenjujem...
