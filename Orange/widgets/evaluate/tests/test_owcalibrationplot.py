@@ -395,7 +395,7 @@ class TestOWCalibrationPlot(WidgetTest, EvaluateTest):
             multiple_selected:
                 "select a single model - the widget can output only one",
             non_binary_class:
-                "cannot calibrate non-binary classes"}
+                "cannot calibrate non-binary models"}
 
         def test_shown(shown):
             widget_msg = widget.Information.no_output
