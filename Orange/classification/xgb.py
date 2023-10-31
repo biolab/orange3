@@ -25,6 +25,7 @@ class _FeatureScorerMixin(LearnerScorer):
 class XGBClassifier(XGBBase, Learner, _FeatureScorerMixin):
     __wraps__ = xgboost.XGBClassifier
     __returns__ = SklModel
+    supports_weights = True
 
     def __init__(self,
                  max_depth=None,
@@ -88,6 +89,7 @@ class XGBClassifier(XGBBase, Learner, _FeatureScorerMixin):
 class XGBRFClassifier(XGBBase, Learner, _FeatureScorerMixin):
     __wraps__ = xgboost.XGBRFClassifier
     __returns__ = SklModel
+    supports_weights = True
 
     def __init__(self,
                  max_depth=None,

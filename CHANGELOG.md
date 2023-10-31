@@ -4,6 +4,18 @@ Change Log
 [next] - TBA
 ------------
 
+
+[3.36.2] - 2023-10-31
+--------------------
+##### Enhancements
+* oweditdomain: Add variable filter ([#6603](../../pull/6603))
+* IO - Change origin attribute when not find on system ([#6555](../../pull/6555))
+* Predictions: Output errors ([#6577](../../pull/6577))
+
+##### Bugfixes
+* EmbedderCache - Handle cache persisting when no permissions ([#6611](../../pull/6611))
+
+
 [3.36.1] - 2023-09-22
 --------------------
 ##### Bugfixes
@@ -1829,7 +1841,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.36.1..HEAD
+[next]: https://github.com/biolab/orange3/compare/3.36.2..HEAD
+[3.36.2]: https://github.com/biolab/orange3/compare/3.36.1...3.36.2
 [3.36.1]: https://github.com/biolab/orange3/compare/3.36.0...3.36.1
 [3.36.0]: https://github.com/biolab/orange3/compare/3.35.0...3.36.0
 [3.35.0]: https://github.com/biolab/orange3/compare/3.34.1...3.35.0

@@ -2,12 +2,13 @@
 # pylint: disable=missing-docstring
 
 import io
+import os
 from os import path, remove
 import unittest
-import tempfile
 import shutil
 import time
 from collections import OrderedDict
+from tempfile import NamedTemporaryFile, mkdtemp
 
 import numpy as np
 
@@ -34,8 +35,10 @@ class TestTabReader(unittest.TestCase):
         2.0      \tM        \t4      \t
         """
 
-        file = io.StringIO(simplefile)
-        table = read_tab_file(file)
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(simplefile)
+        table = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
 
         f1, f2, c1, c2 = table.domain.variables
         self.assertIsInstance(f1, DiscreteVariable)
@@ -60,15 +63,24 @@ class TestTabReader(unittest.TestCase):
         """c\td"""\tk
         '''
         expected = ['"a"', '"b"', '"c\td"']
-        f = io.StringIO(quoted)
-        table = read_tab_file(f)
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(quoted)
+        table = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
         self.assertSequenceEqual(table.metas[:, 0].tolist(), expected)
 
-        f = io.StringIO()
-        f.close = lambda: None
-        TabReader.write_file(f, table)
-        saved = f.getvalue()
-        table1 = read_tab_file(io.StringIO(saved))
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            pass
+        TabReader.write_file(tmp.name, table)
+        with open(tmp.name, encoding="utf-8") as f:
+            saved = f.read()
+        os.unlink(tmp.name)
+
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(saved)
+        table1 = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
+
         self.assertSequenceEqual(table1.metas[:, 0].tolist(), expected)
 
     def test_read_and_save_attributes(self):
@@ -78,8 +90,10 @@ class TestTabReader(unittest.TestCase):
                  \ta=1 b=2 \tclass x=a\\ longer\\ string \tclass
         1.0      \tM        \t5      \trich
         """
-        file = io.StringIO(samplefile)
-        table = read_tab_file(file)
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(samplefile)
+        table = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
 
         _, f2, c1, _ = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
@@ -89,13 +103,18 @@ class TestTabReader(unittest.TestCase):
         self.assertIsInstance(c1, DiscreteVariable)
         self.assertEqual(c1.name, "Class 1")
         self.assertEqual(c1.attributes, {'x': 'a longer string'})
-        outf = io.StringIO()
-        outf.close = lambda: None
-        TabReader.write_file(outf, table)
-        saved = outf.getvalue()
 
-        file = io.StringIO(saved)
-        table = read_tab_file(file)
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            pass
+        TabReader.write_file(tmp.name, table)
+        with open(tmp.name, encoding="utf-8") as f:
+            saved = f.read()
+        os.unlink(tmp.name)
+
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(saved)
+        table = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
 
         _, f2, c1, _ = table.domain.variables
         self.assertIsInstance(f2, DiscreteVariable)
@@ -108,12 +127,11 @@ class TestTabReader(unittest.TestCase):
 
         spath = "/path/to/somewhere"
         c1.attributes["path"] = spath
-        outf = io.StringIO()
-        outf.close = lambda: None
-        TabReader.write_file(outf, table)
-        outf.seek(0)
-
-        table = read_tab_file(outf)
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            pass
+        TabReader.write_file(tmp.name, table)
+        table = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
         _, _, c1, _ = table.domain.variables
         self.assertEqual(c1.attributes["path"], spath)
 
@@ -123,8 +141,10 @@ class TestTabReader(unittest.TestCase):
         0.1\t0.2\t0.3
         1.1\t1.2\t1.5
         """
-        file = io.StringIO(samplefile)
-        table = read_tab_file(file)
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(samplefile)
+        table = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
 
         self.assertEqual(len(table), 2)
         self.assertEqual(len(table.domain.variables), 3)
@@ -135,8 +155,10 @@ class TestTabReader(unittest.TestCase):
         0.1\t0.2\t0.3
         1.1\t1.2\t1.5
         """
-        file = io.StringIO(samplefile)
-        table = read_tab_file(file)
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(samplefile)
+        table = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
 
         self.assertEqual(len(table), 2)
         self.assertEqual(len(table.domain.variables), 3)
@@ -148,10 +170,14 @@ class TestTabReader(unittest.TestCase):
         0.1\t0.2\t0.3
         1.1\t1.2\t1.5
         """
-        file = io.StringIO(samplefile)
-        t1 = read_tab_file(file)
-        file = io.StringIO(samplefile)
-        t2 = read_tab_file(file)
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(samplefile)
+        t1 = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(samplefile)
+        t2 = read_tab_file(tmp.name)
+        os.unlink(tmp.name)
         self.assertEqual(t1.domain[0], t2.domain[0])
 
     def test_renaming(self):
@@ -160,7 +186,7 @@ class TestTabReader(unittest.TestCase):
             c\t  c\t  c\t  c\t  c\t     c\t     c\t  c\t c
              \t   \t  \t   \t   class\t class\t  \t  \t  meta
             0\t  0\t  0\t  0\t  0\t     0\t     0\t  0 """
-        file = tempfile.NamedTemporaryFile("wt", delete=False, suffix=".tab")
+        file = NamedTemporaryFile("wt", delete=False, suffix=".tab")
         filename = file.name
         try:
             file.write(simplefile)
@@ -198,7 +224,7 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(reader.sheets, [])
 
     def test_attributes_saving(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = mkdtemp()
         try:
             self.assertEqual(self.data.attributes, {})
             self.data.attributes[1] = "test"
@@ -209,7 +235,7 @@ class TestTabReader(unittest.TestCase):
             shutil.rmtree(tempdir)
 
     def test_attributes_saving_as_txt(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = mkdtemp()
         try:
             self.data.attributes = OrderedDict()
             self.data.attributes["a"] = "aa"
@@ -229,7 +255,7 @@ class TestTabReader(unittest.TestCase):
         self.assertEqual(table2.name, 'iris')
 
     def test_metadata(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = mkdtemp()
         try:
             self.data.attributes = OrderedDict()
             self.data.attributes["a"] = "aa"
@@ -241,7 +267,7 @@ class TestTabReader(unittest.TestCase):
             shutil.rmtree(tempdir)
 
     def test_no_metadata(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = mkdtemp()
         try:
             self.data.attributes = OrderedDict()
             fname = path.join(tempdir, "out.tab")
@@ -251,7 +277,7 @@ class TestTabReader(unittest.TestCase):
             shutil.rmtree(tempdir)
 
     def test_had_metadata_now_there_is_none(self):
-        tempdir = tempfile.mkdtemp()
+        tempdir = mkdtemp()
         try:
             self.data.attributes["a"] = "aa"
             fname = path.join(tempdir, "out.tab")
@@ -275,11 +301,16 @@ class TestTabReader(unittest.TestCase):
 
     @staticmethod
     def test_many_discrete():
-        b = io.StringIO()
-        b.write("Poser\nd\n\n")
-        b.writelines("K" + str(i) + "\n" for i in range(30000))
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write("Poser\nd\n\n")
+            tmp.writelines("K" + str(i) + "\n" for i in range(30000))
         start = time.time()
-        _ = TabReader(b).read()
+        _ = TabReader(tmp.name).read()
         elapsed = time.time() - start
+        os.unlink(tmp.name)
         if elapsed > 2:
             raise AssertionError()
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -28,6 +28,10 @@ class TestSklTreeLearner(unittest.TestCase):
         pred = model(table)
         self.assertTrue(np.all(table.Y.flatten() == pred))
 
+    def test_supports_weights(self):
+        self.assertTrue(SklTreeRegressionLearner().supports_weights)
+        self.assertTrue(SklTreeLearner().supports_weights)
+
 
 class TestTreeLearner(unittest.TestCase):
     def test_uses_preprocessors(self):
@@ -37,6 +41,9 @@ class TestTreeLearner(unittest.TestCase):
         tree = TreeLearner(preprocessors=[mock_preprocessor])
         tree(iris)
         mock_preprocessor.assert_called_with(iris)
+
+    def test_supports_weights(self):
+        self.assertFalse(TreeLearner().supports_weights)
 
 
 class TestDecisionTreeClassifier(unittest.TestCase):

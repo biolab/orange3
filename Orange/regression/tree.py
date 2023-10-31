@@ -184,6 +184,7 @@ class SklTreeRegressionLearner(SklLearner):
     __wraps__ = skl_tree.DecisionTreeRegressor
     __returns__ = SklTreeRegressor
     name = 'regression tree'
+    supports_weights = True
 
     def __init__(self, criterion="squared_error", splitter="best", max_depth=None,
                  min_samples_split=2, min_samples_leaf=1,

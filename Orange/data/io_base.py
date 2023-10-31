@@ -48,7 +48,7 @@ class Flags:
         ('weight', 'w'),
         ('.+?=.*?', ''),  # general key=value attributes
     ))
-    _RE_ALL = re.compile(r'^({})$'.format('|'.join(
+    RE_ALL = re.compile(r'^({})$'.format('|'.join(
         filter(None, flatten(ALL.items())))))
 
     def __init__(self, flags):
@@ -57,7 +57,7 @@ class Flags:
         self.attributes = {}
         for flag in flags or []:
             flag = flag.strip()
-            if self._RE_ALL.match(flag):
+            if self.RE_ALL.match(flag):
                 if '=' in flag:
                     k, v = flag.split('=', 1)
                     if not Flags._RE_ATTR_UNQUOTED_STR(v):
@@ -167,8 +167,15 @@ class _TableHeader:
           2) -||- with type and flags prepended, separated by #,
              e.g. d#sex,c#age,cC#IQ
         """
+
+        def is_flag(x):
+            return bool(Flags.RE_ALL.match(cls._type_from_flag([x])[0]) or
+                        Flags.RE_ALL.match(cls._flag_from_flag([x])[0]))
+
         flags, names = zip(*[i.split(cls.HEADER1_FLAG_SEP, 1)
-                             if cls.HEADER1_FLAG_SEP in i else ('', i)
+                             if cls.HEADER1_FLAG_SEP in i and
+                             is_flag(i.split(cls.HEADER1_FLAG_SEP)[0])
+                             else ('', i)
                              for i in headers[0]])
         names = list(names)
         return names, cls._type_from_flag(flags), cls._flag_from_flag(flags)

@@ -200,6 +200,16 @@ class TestTableInit(unittest.TestCase):
         joined = Table.concatenate((tab1, tab2, tab3), axis=1)
         self.assertEqual(joined.name, "tab2")
 
+    def test_concatenate_check_domain(self):
+        a, b, c, d, e, f = map(ContinuousVariable, "abcdef")
+        tables = (self._new_table((a, b), (c, ), (d, e), 5),
+                 self._new_table((a, b), (c, ), (d, e), 5),
+                 self._new_table((a, b), (f, ), (d, e), 5))
+
+        with self.assertRaises(ValueError):
+            Table.concatenate(tables, axis=0)
+        Table.concatenate(tables, axis=0, ignore_domains=True)
+
     def test_with_column(self):
         a, b, c, d, e, f, g = map(ContinuousVariable, "abcdefg")
         col = np.arange(9, 14)
@@ -638,7 +648,7 @@ class TestTableGetColumn(TableColumnViewTests):
         np.testing.assert_equal(col, data.metas[:, 0])
         self.assertIs(col.base, data.metas)
 
-    def test_index_by_int(self):
+    def test_index_by_str(self):
         data = self.data
 
         col = data.get_column("y")

@@ -1,17 +1,27 @@
+import os.path
 import subprocess
 from collections import defaultdict
+from typing import Tuple, Optional
 
 import numpy as np
+import pandas as pd
 from chardet.universaldetector import UniversalDetector
 
 from Orange.data import (
     is_discrete_values, MISSING_VALUES, Variable,
-    DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable,
+    DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable, Table,
 )
 from Orange.misc.collections import natural_sorted
 
-__all__ = ["Compression", "open_compressed", "detect_encoding", "isnastr",
-           "guess_data_type", "sanitize_variable"]
+__all__ = [
+    "Compression",
+    "open_compressed",
+    "detect_encoding",
+    "isnastr",
+    "guess_data_type",
+    "sanitize_variable",
+    "update_origin",
+]
 
 
 class Compression:
@@ -207,3 +217,69 @@ def sanitize_variable(valuemap, values, orig_values, coltype, coltype_kwargs,
         values = [_var.parse(i) for i in orig_values]
 
     return values, var
+
+
+def _extract_new_origin(attr: Variable, table: Table, lookup_dirs: Tuple[str]) -> Optional[str]:
+    # origin exists
+    if os.path.exists(attr.attributes["origin"]):
+        return attr.attributes["origin"]
+
+    # last dir of origin in lookup dirs
+    dir_ = os.path.basename(os.path.normpath(attr.attributes["origin"]))
+    for ld in lookup_dirs:
+        new_dir = os.path.join(ld, dir_)
+        if os.path.isdir(new_dir):
+            return new_dir
+
+    # all column paths in lookup dirs
+    for ld in lookup_dirs:
+        if all(
+            os.path.exists(os.path.join(ld, attr.str_val(v)))
+            for v in table.get_column(attr)
+            if v and not pd.isna(v)
+        ):
+            return ld
+
+    return None
+
+
+def update_origin(table: Table, file_path: str):
+    """
+    When a dataset with file paths in the column is moved to another computer,
+    the absolute path may not be correct. This function updates the path for all
+    columns with an "origin" attribute.
+
+    The process consists of two steps. First, we identify directories to search
+    for files, and in the second step, we check if paths exist.
+
+    Lookup directories:
+    1. The directory where the file from file_path is placed
+    2. The parent directory of 1. The situation when the user places dataset
+       file in the directory with files (for example, workflow in a directory
+       with images)
+
+    Possible situations for file search:
+    1. The last directory of origin (basedir) is in one of the lookup directories
+    2. Origin doesn't exist in any lookup directories, but paths in a column can
+       be found in one of the lookup directories. This is usually a situation
+       when paths in a column are complex (e.g. a/b/c/d/file.txt).
+
+    Note: This function updates the existing table
+
+    Parameters
+    ----------
+    table
+        Orange Table to be updated if origin exits in any column
+    file_path
+        Path of the loaded dataset for reference. Only paths inside datasets
+        directory or its parent directory will be considered for new origin.
+    """
+    file_dir = os.path.dirname(file_path)
+    parent_dir = os.path.dirname(file_dir)
+    # if file_dir already root file_dir == parent_dir
+    lookup_dirs = tuple({file_dir: 0, parent_dir: 0})
+    for attr in table.domain.metas:
+        if "origin" in attr.attributes and (attr.is_string or attr.is_discrete):
+            new_orig = _extract_new_origin(attr, table, lookup_dirs)
+            if new_orig:
+                attr.attributes["origin"] = new_orig

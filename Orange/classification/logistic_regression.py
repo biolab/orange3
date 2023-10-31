@@ -33,6 +33,7 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LogisticRegression
     __returns__ = LogisticRegressionClassifier
     preprocessors = SklLearner.preprocessors
+    supports_weights = True
 
     def __init__(self, penalty="l2", dual=False, tol=0.0001, C=1.0,
                  fit_intercept=True, intercept_scaling=1, class_weight=None,

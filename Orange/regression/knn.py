@@ -7,3 +7,4 @@ __all__ = ["KNNRegressionLearner"]
 
 class KNNRegressionLearner(KNNBase, SklLearner):
     __wraps__ = skl_neighbors.KNeighborsRegressor
+    supports_weights = False

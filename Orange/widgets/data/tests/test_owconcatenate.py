@@ -379,6 +379,101 @@ class TestOWConcatenate(WidgetTest):
 
         self.assertIs(S1, uS1)
 
+    def test_ignore_domain(self):
+        widget = self.widget
+
+        a, b, c, d, e, f, g, h, i = (ContinuousVariable(x) for x in "abcdefghi")
+        j, k, l = (DiscreteVariable(x, values=tuple("xyz")) for x in "jkl")
+        m = DiscreteVariable("m", values=tuple("xyzu"))
+
+        abcj = Table.from_list(Domain([a, b], c, [j]), [[0, 1, 2, 0], [4, 5, 6, 2]])
+        defk = Table.from_list(Domain([d, e], f, [k]), [[3, 4, 5, 1], [6, 7, 8, 2]])
+        ghil = Table.from_list(Domain([g, h], i, [l]), [[7, 8, 9, 0]])
+
+        widget.ignore_names = True
+        widget.append_source_column = True
+        widget.source_column_role = widget.AttributeRole
+        self.send_signal(widget.Inputs.primary_data, abcj)
+        self.send_signal(widget.Inputs.additional_data, defk, 1)
+        self.send_signal(widget.Inputs.additional_data, ghil, 2)
+
+        self.assertTrue(widget.controls.ignore_names.isEnabled())
+        self.assertFalse(widget.controls.ignore_compute_value.isEnabled())
+        self.assertFalse(widget.Error.incompatible_domains.is_shown())
+        out = self.get_output()
+        self.assertEqual(out.domain.attributes[:2], (a, b))
+        self.assertIs(out.domain.class_var, c)
+        self.assertEqual(out.domain.metas, (j, ))
+        np.testing.assert_equal(out.X, [[0, 1, 0],
+                                        [4, 5, 0],
+                                        [3, 4, 1],
+                                        [6, 7, 1],
+                                        [7, 8, 2]])
+        np.testing.assert_equal(out.Y, [2, 6, 5, 8, 9])
+        np.testing.assert_equal(out.metas, [[0], [2], [1], [2], [0]])
+
+        self.send_signal(widget.Inputs.primary_data, None)
+        self.assertFalse(widget.controls.ignore_names.isEnabled())
+        self.assertTrue(widget.controls.ignore_compute_value.isEnabled())
+        self.assertFalse(widget.Error.incompatible_domains.is_shown())
+        self.assertIsNotNone(self.get_output())
+
+        self.send_signal(widget.Inputs.primary_data, abcj)
+        self.assertTrue(widget.controls.ignore_names.isEnabled())
+        self.assertFalse(widget.Error.incompatible_domains.is_shown())
+        out = self.get_output()
+        self.assertEqual(out.domain.attributes[:2], (a, b))
+        self.assertIs(out.domain.class_var, c)
+        self.assertEqual(out.domain.metas, (j, ))
+
+        self.send_signal(widget.Inputs.additional_data, None, 1)
+        self.assertFalse(widget.Error.incompatible_domains.is_shown())
+        out = self.get_output()
+        self.assertEqual(out.domain.attributes[:2], (a, b))
+        self.assertIs(out.domain.class_var, c)
+        self.assertEqual(out.domain.metas, (j, ))
+        np.testing.assert_equal(out.X, [[0, 1, 0],
+                                        [4, 5, 0],
+                                        [7, 8, 1]])
+        np.testing.assert_equal(out.Y, [2, 6, 9])
+        np.testing.assert_equal(out.metas, [[0], [2], [0]])
+
+        self.send_signal(widget.Inputs.additional_data, None, 2)
+        self.assertFalse(widget.Error.incompatible_domains.is_shown())
+        out = self.get_output()
+        self.assertEqual(out.domain.attributes[:2], (a, b))
+        self.assertIs(out.domain.class_var, c)
+        self.assertEqual(out.domain.metas, (j, ))
+        np.testing.assert_equal(out.X, [[0, 1, 0],
+                                        [4, 5, 0]])
+        np.testing.assert_equal(out.Y, [2, 6])
+        np.testing.assert_equal(out.metas, [[0], [2]])
+
+        self.send_signal(widget.Inputs.primary_data, None)
+        self.assertFalse(widget.Error.incompatible_domains.is_shown())
+        self.assertIsNone(self.get_output())
+
+        self.send_signal(widget.Inputs.primary_data, abcj)
+        self.send_signal(widget.Inputs.additional_data, defk, 1)
+        self.assertFalse(widget.Error.incompatible_domains.is_shown())
+        self.assertIsNotNone(self.get_output())
+
+        self.send_signal(widget.Inputs.additional_data,
+                         Table.from_list(Domain([a, b]), [[1, 2]]),
+                         2)
+        self.assertTrue(widget.Error.incompatible_domains.is_shown())
+        self.assertIsNone(self.get_output())
+
+        self.send_signal(widget.Inputs.additional_data,
+                         Table.from_list(Domain([a, b], c, [m]), [[1, 2]]),
+                         2)
+        self.assertTrue(widget.Error.incompatible_domains.is_shown())
+        self.assertIsNone(self.get_output())
+
+        self.send_signal(widget.Inputs.primary_data, None)
+        self.assertFalse(widget.Error.incompatible_domains.is_shown())
+        self.assertIsNotNone(self.get_output())
+
     def test_different_number_decimals(self):
         widget = self.widget
 

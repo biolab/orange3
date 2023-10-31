@@ -93,6 +93,7 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
         n_cont_var = len([v for v in master.continuous_variables
                           if v is not master.attr_color])
         self.n_attrs_spin.setMaximum(n_cont_var)
+        self.n_attrs_spin.setValue(self.n_attrs)
         return True
 
     def state_count(self):

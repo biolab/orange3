@@ -233,6 +233,7 @@ class SklTreeLearner(SklLearner):
     __wraps__ = skl_tree.DecisionTreeClassifier
     __returns__ = SklTreeClassifier
     name = 'tree'
+    supports_weights = True
 
     def __init__(self, criterion="gini", splitter="best", max_depth=None,
                  min_samples_split=2, min_samples_leaf=1,
