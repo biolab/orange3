@@ -31,10 +31,7 @@ def check_results_adequacy(results, error_group, check_nan=True):
 
     if results is None:
         return None
-    if results.data is None:
-        error_group.invalid_results(
-            "Results do not include information on test data.")
-    elif not results.data.domain.has_discrete_class:
+    elif not results.domain.has_discrete_class:
         error_group.invalid_results(
             "Categorical target variable is required.")
     elif not results.actual.size:

@@ -268,7 +268,7 @@ class OWLiftCurve(widget.OWWidget):
             item = self.classifiers_list_box.item(i)
             item.setIcon(colorpalettes.ColorIcon(color))
 
-        class_values = results.data.domain.class_var.values
+        class_values = results.domain.class_var.values
         self.target_cb.addItems(class_values)
         if class_values:
             self.target_index = 0

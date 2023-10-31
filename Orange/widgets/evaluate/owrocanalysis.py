@@ -466,7 +466,7 @@ class OWROCAnalysis(widget.OWWidget):
             listitem = self.classifiers_list_box.item(i)
             listitem.setIcon(colorpalettes.ColorIcon(self.colors[i]))
 
-        class_var = results.data.domain.class_var
+        class_var = results.domain.class_var
         self.target_cb.addItems(class_var.values)
         self.target_index = 0
         self._set_target_prior()
