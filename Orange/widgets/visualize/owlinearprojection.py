@@ -16,7 +16,7 @@ from AnyQt.QtCore import Qt, QRectF, QLineF, pyqtSignal as Signal
 
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, IsDefined
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.projection import PCA, LDA, LinearProjector
@@ -118,20 +118,24 @@ class LinearProjectionVizRank(VizRankDialog, OWComponent):
 
     def compute_score(self, state):
         master = self.master
-        data = master.data
-        domain = Domain([self.attrs[i] for i in state], data.domain.class_vars)
-        projection = master.projector(data.transform(domain))
-        ec = projection(data).X
-        y = column_data(data, self.attr_color, dtype=float)
-        if ec.shape[0] < self.minK:
+        domain = Domain([self.attrs[i] for i in state], [self.attr_color])
+        reduced = IsDefined()(master.data.transform(domain))
+        if len(reduced) < self.minK:  # cancel early if not enough data
+            return None
+        projection = master.projector(reduced)
+        ec = projection(reduced).X
+        if ec.shape[0] < self.minK:  # projection preprocessors can remove data(?)
             return None
         n_neighbors = min(self.minK, len(ec) - 1)
         knn = NearestNeighbors(n_neighbors=n_neighbors).fit(ec)
         ind = knn.kneighbors(return_distance=False)
-        # pylint: disable=invalid-unary-operand-type
+        y = reduced.get_column(self.attr_color)
         if self.attr_color.is_discrete:
-            return -np.sum(y[ind] == y.reshape(-1, 1)) / n_neighbors / len(y)
-        return -r2_score(y, np.mean(y[ind], axis=1)) * (len(y) / len(data))
+            score = -np.sum(y[ind] == y.reshape(-1, 1)) / n_neighbors
+        else:
+            score = -r2_score(y, np.mean(y[ind], axis=1))
+        # treat missing data as misclassified
+        return score * len(reduced) / len(master.data)
 
     def bar_length(self, score):
         return max(0, -score)
@@ -573,16 +577,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     # for backward compatibility with settings < 6, pull the enum from global
     # namespace into class
     Placement = Placement
-
-
-def column_data(table, var, dtype):
-    dtype = np.dtype(dtype)
-    col = table.get_column(var)
-    if dtype != col.dtype:
-        col = col.astype(dtype)
-    if col.base is not None:
-        col = col.copy()
-    return col
 
 
 class CircularPlacement(LinearProjector):
