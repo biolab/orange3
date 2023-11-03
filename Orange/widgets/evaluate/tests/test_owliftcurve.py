@@ -31,7 +31,7 @@ OK_SKLEARN = pkg_resources.parse_version(sklearn.__version__) >= \
 SKIP_REASON = "Only test precision-recall with scikit-learn>=1.1.1"
 
 
-class TestOWLiftCurve(WidgetTest, EvaluateTest):
+class TestOWLiftCurve(EvaluateTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
