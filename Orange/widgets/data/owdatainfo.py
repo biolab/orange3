@@ -11,6 +11,8 @@ from Orange.widgets.widget import Input
 from Orange.data import \
     Table, StringVariable, DiscreteVariable, ContinuousVariable
 
+from Orange.data.dask import DaskTable
+
 try:
     from Orange.data.sql.table import SqlTable
 except ImportError:
@@ -166,6 +168,8 @@ class OWDataInfo(widget.OWWidget):
     def _p_missing(data: Table):
         if is_sql(data):
             return "(not checked for SQL data)"
+        if isinstance(data, DaskTable):
+            return "(not checked for on-disk data)"
 
         counts = []
         for name, part, n_miss in ((pl(len(data.domain.attributes), "feature"),
