@@ -221,15 +221,19 @@ class DomainProjection(Projection):
         return model
 
     def __eq__(self, other):
+        # see comment in __hash__() about .domain
         if self is other:
             return True
         return super().__eq__(other) \
             and self.n_components == other.n_components \
             and self.orig_domain == other.orig_domain \
-            and self.domain == other.domain
+            and self.var_prefix == other.var_prefix
 
     def __hash__(self):
-        return hash((super().__hash__(), self.n_components, self.orig_domain, self.domain))
+        # hashing self.domain would cause infinite recursion;
+        # because it is only constructed from .orig_domain, .n_components
+        # and .proj (dealt with in the superclass), we do not need it
+        return hash((super().__hash__(), self.n_components, self.orig_domain, self.var_prefix))
 
 
 class LinearProjector(Projector):
