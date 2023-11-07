@@ -107,7 +107,8 @@ class Projector(ReprableWithPreprocessors):
 
 class Projection:
     def __init__(self, proj):
-        self.__dict__.update(proj.__dict__)
+        if proj is not None:
+            self.__dict__.update(proj.__dict__)
         self.proj = proj
 
     def transform(self, X):
