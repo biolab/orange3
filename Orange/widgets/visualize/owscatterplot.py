@@ -409,7 +409,8 @@ class OWScatterPlot(OWDataProjectionWidget):
         )
         vizrank_box = gui.hBox(self.attr_box)
         self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
-            vizrank_box, self, "Find Informative Projections", self.set_attr)
+            vizrank_box, self, "Find Informative Projections", self.set_attr,
+            auto_start=True)
 
     def _add_controls_sampling(self):
         self.sampling = gui.auto_commit(

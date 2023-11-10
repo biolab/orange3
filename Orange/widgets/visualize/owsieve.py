@@ -119,7 +119,8 @@ class OWSieveDiagram(OWWidget):
         gui.widgetLabel(self.attr_box, "\u2717", sizePolicy=fixed_size)
         gui.comboBox(value="attr_y", **combo_args)
         self.vizrank, self.vizrank_button = SieveRank.add_vizrank(
-            self.attr_box, self, "Score Combinations", self.set_attr)
+            self.attr_box, self, "Score Combinations", self.set_attr,
+            auto_start=True)
         self.vizrank_button.setSizePolicy(*fixed_size)
 
         self.canvas = QGraphicsScene(self)
