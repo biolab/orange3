@@ -142,6 +142,9 @@ util.py:
                 __self__: false
                 {func.__self__.__class__}.{name}: false
                 Call to deprecated {name}{alternative}: false
+    class `allot`:
+        def `call`:
+            skippable function cannot return a result: false
     def `literal_eval`:
         set(): false
     ==: false
