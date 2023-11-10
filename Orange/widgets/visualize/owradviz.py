@@ -8,7 +8,7 @@ from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
 from AnyQt.QtGui import QStandardItem, QColor, QPalette
-from AnyQt.QtCore import Qt, QRectF, QPoint, pyqtSignal as Signal
+from AnyQt.QtCore import Qt, QRectF, QPoint
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
@@ -17,12 +17,12 @@ from Orange.data import Table, Domain
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.projection import RadViz
 from Orange.widgets import widget, gui
-from Orange.widgets.gui import OWComponent
-from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
+from Orange.widgets.settings import ContextSetting, SettingProvider
 from Orange.widgets.utils.plot.owplotgui import VariableSelectionModel, \
     variables_selection
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.visualize.utils import VizRankDialog
+from Orange.widgets.visualize.utils import VizRankDialogNAttrs, \
+    CloseVizrankMixin
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import TextItem
 from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
@@ -32,32 +32,14 @@ MAX_DISPLAYED_VARS = 20
 MAX_LABEL_LEN = 16
 
 
-class RadvizVizRank(VizRankDialog, OWComponent):
+class RadvizVizRank(VizRankDialogNAttrs):
     captionTitle = "Score Plots"
-    n_attrs = Setting(3)
     minK = 10
 
-    attrsSelected = Signal([])
-    _AttrRole = next(gui.OrangeUserRole)
-
-    percent_data_used = Setting(100)
-
     def __init__(self, master):
-        """Add the spin box for maximal number of attributes"""
-        VizRankDialog.__init__(self, master)
-        OWComponent.__init__(self, master)
-
-        self.master = master
+        super().__init__(master)
         self.n_neighbors = 10
 
-        box = gui.hBox(self)
-        max_n_attrs = min(MAX_DISPLAYED_VARS, len(master.model_selected))
-        self.n_attrs_spin = gui.spin(
-            box, self, "n_attrs", 3, max_n_attrs, label="Maximum number of variables: ",
-            controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
-        gui.rubber(box)
-        self.last_run_n_attrs = None
-        self.attr_color = master.attr_color
         self.attr_ordering = None
         self.data = None
         self.valid_data = None
@@ -66,9 +48,9 @@ class RadvizVizRank(VizRankDialog, OWComponent):
         self.rank_table.verticalHeader().sectionClicked.connect(
             self.on_header_clicked)
 
-    def initialize(self):
-        super().initialize()
-        self.attr_color = self.master.attr_color
+    def max_attrs(self):
+        return sum(v is not self.attr_color
+                   for v in self.master.primitive_variables)
 
     def _compute_attr_order(self):
         """
@@ -88,53 +70,23 @@ class RadvizVizRank(VizRankDialog, OWComponent):
 
     def _evaluate_projection(self, x, y):
         """
-        kNNEvaluate - evaluate class separation in the given projection using a k-NN method
-        Parameters
-        ----------
-        x - variables to evaluate
-        y - class
-
-        Returns
-        -------
-        scores
+        kNNEvaluate - evaluate class separation in the given projection with k-NN
         """
-        if self.percent_data_used != 100:
-            rand = np.random.choice(len(x), int(len(x) * self.percent_data_used / 100),
-                                    replace=False)
-            x = x[rand]
-            y = y[rand]
-        neigh = KNeighborsClassifier(n_neighbors=3) if self.attr_color.is_discrete else \
-            KNeighborsRegressor(n_neighbors=3)
-        assert ~(np.isnan(x).any(axis=None) | np.isnan(x).any(axis=None))
+        assert not np.any(np.isnan(x)) and not np.any(np.isnan(y))
+        neigh = (KNeighborsClassifier if self.attr_color.is_discrete else
+                 KNeighborsRegressor)(n_neighbors=3)
         neigh.fit(x, y)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=UserWarning)
             scores = cross_val_score(neigh, x, y, cv=3)
         return scores.mean()
 
-    def _n_attrs_changed(self):
-        """
-        Change the button label when the number of attributes changes. The method does not reset
-        anything so the user can still see the results until actually restarting the search.
-        """
-        if self.n_attrs != self.last_run_n_attrs or self.saved_state is None:
-            self.button.setText("Start")
-        else:
-            self.button.setText("Continue")
-        self.button.setEnabled(self.check_preconditions())
-
-    def progressBarSet(self, value):
-        self.setWindowTitle(self.captionTitle + " Evaluated {} permutations".format(value))
-
-    def check_preconditions(self):
-        master = self.master
-        if not super().check_preconditions():
-            return False
-        elif not master.btn_vizrank.isEnabled():
-            return False
-        self.n_attrs_spin.setMaximum(min(MAX_DISPLAYED_VARS,
-                                         len(master.model_selected)))
-        return True
+    def state_count(self):
+        n_all_attrs = len(self.attrs)
+        if not n_all_attrs:
+            return 0
+        n_attrs = self.n_attrs
+        return factorial(n_all_attrs) // (2 * factorial(n_all_attrs - n_attrs) * n_attrs)
 
     def on_selection_changed(self, selected, _):
         self.on_row_clicked(selected.indexes()[0])
@@ -185,30 +137,12 @@ class RadvizVizRank(VizRankDialog, OWComponent):
 
     def row_for_state(self, score, state):
         attrs = [self.attrs[s] for s in state]
-        item = QStandardItem("[{:0.6f}] ".format(-score) + ", ".join(a.name for a in attrs))
+        item = QStandardItem(', '.join(a.name for a in attrs))
         item.setData(attrs, self._AttrRole)
         return [item]
 
     def _update_progress(self):
         self.progressBarSet(int(self.saved_progress))
-
-    def before_running(self):
-        """
-        Disable the spin for number of attributes before running and
-        enable afterwards. Also, if the number of attributes is different than
-        in the last run, reset the saved state (if it was paused).
-        """
-        if self.n_attrs != self.last_run_n_attrs:
-            self.saved_state = None
-            self.saved_progress = 0
-        if self.saved_state is None:
-            self.scores = []
-            self.rank_model.clear()
-        self.last_run_n_attrs = self.n_attrs
-        self.n_attrs_spin.setDisabled(True)
-
-    def stopped(self):
-        self.n_attrs_spin.setDisabled(False)
 
 
 class OWRadvizGraph(OWGraphWithAnchors):
@@ -309,7 +243,7 @@ class OWRadvizGraph(OWGraphWithAnchors):
         self.plot_widget.addItem(self.indicator_item)
 
 
-class OWRadviz(OWAnchorProjectionWidget):
+class OWRadviz(OWAnchorProjectionWidget, CloseVizrankMixin):
     name = "Radviz"
     description = "Display Radviz projection"
     icon = "icons/Radviz.svg"
@@ -338,8 +272,12 @@ class OWRadviz(OWAnchorProjectionWidget):
             self.__model_selected_changed)
         self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
             None, self, "Suggest features", self.vizrank_set_attrs)
+        self.btn_vizrank.pressed.connect(self.start_vizrank)
         box.layout().addWidget(self.btn_vizrank)
         super()._add_controls()
+
+    def start_vizrank(self):
+        self.vizrank.start_computation()
 
     def _add_buttons(self):
         self.gui.box_zoom_select(self.buttonsArea)
