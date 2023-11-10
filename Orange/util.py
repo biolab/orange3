@@ -216,14 +216,20 @@ class allot:
     The decorator also adds two attributes:
 
     - f.last_call_duration is the duration of the last call (in seconds)
-    - f.no_call_before contains the time (time.perf_counter) when the next
-        call will be made.
+    - f.no_call_before contains the time stamp when the next call will be made.
 
     The decorator can be used for functions and for methods.
 
     A non-parametrized decorator doesn't block any calls and only adds
     last_call_duration, so that it can be used for timing.
     """
+
+    try:
+        __timer = time.thread_time
+    except AttributeError:
+        # thread_time is not available on macOS
+        __timer = time.process_time
+
     def __new__(cls: type, arg: Union[None, float, Callable], *,
                 overflow: Optional[Callable] = None,
                 _bound_methods: Optional[WeakKeyDictionary] = None):
@@ -295,16 +301,16 @@ class allot:
         return self.__bound_methods[inst]
 
     def __call__(self, *args, **kwargs):
-        if time.perf_counter() < self.no_call_before:
+        if self.__timer() < self.no_call_before:
             if self.overflow is None:
                 return None
             return self.overflow(*args, **kwargs)
         return self.call(*args, **kwargs)
 
     def call(self, *args, **kwargs):
-        start = time.perf_counter()
+        start = self.__timer()
         result = self.func(*args, **kwargs)
-        self.last_call_duration = time.perf_counter() - start
+        self.last_call_duration = self.__timer() - start
         if self.allotted_time is not None:
             if self.overflow is None:
                 assert result is None, "skippable function cannot return a result"

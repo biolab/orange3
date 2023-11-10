@@ -2,7 +2,7 @@ from itertools import count
 import time
 import os
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 import warnings
 
 import numpy as np
@@ -245,6 +245,14 @@ class TestUtil(unittest.TestCase):
 
 class TestAllot(unittest.TestCase):
     # names of functions within tests don't matter, pylint: disable=invalid-name
+
+    def setUp(self):
+        # patch the object to user perf_counter, which will include the time
+        # when tests `sleep`
+        patcher = patch.object(allot, "_allot__timer", new=time.perf_counter)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_duration(self):
         @allot
         def f(x, y):
