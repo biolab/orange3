@@ -10,7 +10,7 @@ from scipy.special import comb
 from AnyQt.QtCore import Qt, QSize, pyqtSignal as Signal
 from AnyQt.QtGui import QColor, QPainter, QPen, QStandardItem
 from AnyQt.QtWidgets import (
-    QGraphicsScene, QGraphicsLineItem, QGraphicsItemGroup)
+    QGraphicsScene, QGraphicsLineItem, QGraphicsItemGroup, QLabel, QComboBox)
 
 from Orange.data import Table, filter, Variable, Domain, DiscreteVariable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
@@ -28,7 +28,8 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import (
-    CanvasText, CanvasRectangle, ViewWithPress, VizRankDialog)
+    CanvasText, CanvasRectangle, ViewWithPress, VizRankDialog,
+    CloseVizrankMixin)
 from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 
@@ -42,17 +43,28 @@ class MosaicVizRank(VizRankDialog, OWComponent):
     _AttrRole = next(gui.OrangeUserRole)
 
     def __init__(self, master):
-        """Add the spin box for maximal number of attributes"""
         VizRankDialog.__init__(self, master)
         OWComponent.__init__(self, master)
 
         box = gui.hBox(self)
-        self.max_attr_combo = gui.comboBox(
-            box, self, "max_attrs",
-            label="Number of variables:", orientation=Qt.Horizontal,
-            items=["one", "two", "three", "four",
-                   "at most two", "at most three", "at most four"],
-            callback=self.max_attr_changed)
+        label = QLabel("Score combinations of")
+
+        def update_combo_label():
+            label.setText(
+                "Score Mosaics with" if self.attrs_combo.currentIndex() == 0
+                else "Score combinations of")
+
+        self.attrs_combo = QComboBox()
+        self.attrs_combo.addItems(
+            ["a single variable", "two variables", "three variables",
+             "four variables", "at most two variables",
+             "at most three variables", "at most four variables"])
+        self.attrs_combo.activated.connect(self.on_attrs_changed)
+        self.attrs_combo.currentIndexChanged.connect(update_combo_label)
+        self.attrs_combo.setCurrentIndex(self.max_attrs)
+        update_combo_label()
+        box.layout().addWidget(label)
+        box.layout().addWidget(self.attrs_combo)
         gui.rubber(box)
         self.layout().addWidget(self.button)
         self.attr_ordering = None
@@ -60,9 +72,6 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         self.last_run_max_attr = None
 
         self.master.attrs_changed_manually.connect(self.on_manual_change)
-
-    def sizeHint(self):
-        return QSize(400, 512)
 
     def initialize(self):
         """Clear the ordering to trigger recomputation when needed"""
@@ -75,9 +84,8 @@ class MosaicVizRank(VizRankDialog, OWComponent):
 
     def before_running(self):
         """
-        Disable the spin for maximal number of attributes before running and
-        enable afterwards. Also, if the number of attributes is different than
-        in the last run, reset the saved state (if it was paused).
+        If the number of attributes is different from before,
+        reset the saved state (if it was paused).
         """
         if self.max_attrs != self.last_run_max_attr:
             self.saved_state = None
@@ -87,26 +95,22 @@ class MosaicVizRank(VizRankDialog, OWComponent):
             self.rank_model.clear()
         self.compute_attr_order()
         self.last_run_max_attr = self.max_attrs
-        self.max_attr_combo.setDisabled(True)
 
-    def stopped(self):
-        self.max_attr_combo.setDisabled(False)
-
-    def max_attr_changed(self):
-        """
-        Change the button label when the maximal number of attributes changes.
-
-        The method does not reset anything so the user can still see the
-        results until actually restarting the search.
-        """
-        if self.max_attrs != self.last_run_max_attr or self.saved_state is None:
+    def on_attrs_changed(self):
+        if self.keep_running:
+            self.pause_computation()
+        if self.rank_model.rowCount() == 0:
             self.button.setText("Start")
+            self.button.setDisabled(False)
+        elif self.attrs_combo.currentIndex() != self.max_attrs:
+            self.button.setText(f"Restart with new settings")
+            self.button.setDisabled(False)
         else:
-            self.button.setText("Continue")
-        self.button.setEnabled(self.check_preconditions())
+            self.button.setText("Continue" if not self.done else "Finished")
+            self.button.setDisabled(self.done)
 
     def coloring_changed(self):
-        item = self.max_attr_combo.model().item(0)
+        item = self.attrs_combo.model().item(0)
         actflags = Qt.ItemIsSelectable | Qt.ItemIsEnabled
         if self._compute_class_dists():
             item.setFlags(item.flags() | actflags)
@@ -128,6 +132,16 @@ class MosaicVizRank(VizRankDialog, OWComponent):
             self.Information.no_attributes()
             return False
         return True
+
+    def start_computation(self):
+        self.attrs_combo.setCurrentIndex(self.max_attrs)
+        super().start_computation()
+
+    def toggle(self):
+        if self.max_attrs != self.attrs_combo.currentIndex():
+            self.max_attrs = self.attrs_combo.currentIndex()
+            self.initialize()
+        super().toggle()
 
     def compute_attr_order(self):
         """
@@ -286,8 +300,12 @@ class MosaicVizRank(VizRankDialog, OWComponent):
         item.setData(attrs, self._AttrRole)
         return [item]
 
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        self.attrs_combo.setCurrentIndex(self.max_attrs)
 
-class OWMosaicDisplay(OWWidget):
+
+class OWMosaicDisplay(OWWidget, CloseVizrankMixin):
     name = "Mosaic Display"
     description = "Display data in a mosaic plot."
     icon = "icons/MosaicDisplay.svg"
@@ -368,7 +386,8 @@ class OWMosaicDisplay(OWWidget):
                 model=self.model_1 if i == 1 else self.model_234)
             for i in range(1, 5)]
         self.vizrank, self.vizrank_button = MosaicVizRank.add_vizrank(
-            box, self, "Find Informative Mosaics", self.set_attr)
+            box, self, "Find Informative Mosaics", self.set_attr,
+            auto_start=True)
 
         box2 = gui.vBox(self.controlArea, box="Interior Coloring")
         self.color_model = DomainModel(

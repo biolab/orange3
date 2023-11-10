@@ -363,7 +363,7 @@ class MosaicVizRankTests(WidgetTest):
     def test_max_attr_combo_1_disabling(self):
         widget = self.widget
         vizrank = widget.vizrank
-        combo = vizrank.max_attr_combo
+        combo = vizrank.attrs_combo
         model = combo.model()
         enabled = Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
