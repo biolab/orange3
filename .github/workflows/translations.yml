@@ -16,6 +16,8 @@ jobs:
 
       - name: Setup Python
         uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
       - name: Install Trubar
         run: |
@@ -44,10 +46,16 @@ jobs:
                 echo "::endgroup::"
             fi
           done
+          echo "-------------------------------"
           trubar stat new.jaml
+          echo "-------------------------------"
           if [ -f Missing.jaml ] || [ -f Obsolete.jaml ]
           then
+              echo "### Missing or obsolete translations" >> $GITHUB_STEP_SUMMARY
+              echo "::error::Missing or obsolete translations"
               echo "Run 'trubar collect -s Orange i18n/si.jaml'"
               echo "and see the changes in the message file, i18n/si.jaml"
               exit 1
+          else
+              echo "### All translations are up to date" >> $GITHUB_STEP_SUMMARY
           fi
