@@ -5,7 +5,6 @@ import unittest
 from unittest.mock import MagicMock
 
 import numpy as np
-from sklearn import __version__ as sklearn_version
 from sklearn.utils import check_random_state
 
 from Orange.data import Table, Domain
@@ -155,8 +154,6 @@ class TestPCA(unittest.TestCase):
             pca.singular_values_, rpca.singular_values_, decimal=8
         )
 
-    @unittest.skipIf(sklearn_version.startswith('0.20'),
-                     "https://github.com/scikit-learn/scikit-learn/issues/12234")
     def test_incremental_pca(self):
         data = self.ionosphere
         self.__ipca_test_helper(data, n_com=3, min_xpl_var=0.49)

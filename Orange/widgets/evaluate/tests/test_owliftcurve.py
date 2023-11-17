@@ -1,11 +1,9 @@
 # pylint: disable=protected-access,duplicate-code
 import copy
-import pkg_resources
 import unittest
 from unittest.mock import Mock
 
 import numpy as np
-import sklearn
 
 from AnyQt.QtGui import QFont, QPen
 
@@ -21,14 +19,6 @@ from Orange.widgets.evaluate.owliftcurve import OWLiftCurve, cumulative_gains, \
     cumulative_gains_from_results, CurveTypes, precision_recall_from_results, \
     points_from_results, compute_area
 from Orange.tests import test_filename
-
-
-# scikit-learn==1.1.1 does not support read the docs, therefore
-# we can not make it a requirement for now. When the minimum required
-# version is >=1.1.1, delete these exceptions.
-OK_SKLEARN = pkg_resources.parse_version(sklearn.__version__) >= \
-             pkg_resources.parse_version("1.1.1")
-SKIP_REASON = "Only test precision-recall with scikit-learn>=1.1.1"
 
 
 class TestOWLiftCurve(EvaluateTest):
@@ -304,7 +294,6 @@ class UtilsTest(unittest.TestCase):
         assert_almost_equal(thresholds, [])
 
     @staticmethod
-    @unittest.skipUnless(OK_SKLEARN, SKIP_REASON)
     def test_precision_recall_from_results():
         y_true = np.array([1, 0, 1, 0, 0, 1])
         y_scores = np.array([0.6, 0.5, 0.9, 0.4, 0.2, 0.4])
@@ -324,7 +313,6 @@ class UtilsTest(unittest.TestCase):
                                 np.array([0.2, 0.4, 0.5, 0.6, 0.9, 1]))
 
     @staticmethod
-    @unittest.skipUnless(OK_SKLEARN, SKIP_REASON)
     def test_precision_recall_from_results_one():
         y_true = np.array([1, 0, 1, 0, 0, 1])
         y_scores = np.array([0.6, 0.5, 1, 0.4, 0.2, 0.4])
@@ -344,7 +332,6 @@ class UtilsTest(unittest.TestCase):
                                 np.array([0.2, 0.4, 0.5, 0.6, 1]))
 
     @staticmethod
-    @unittest.skipUnless(OK_SKLEARN, SKIP_REASON)
     def test_precision_recall_from_results_multiclass():
         y_true = np.array([1, 0, 1, 0, 2, 2])
         y_scores = np.array([[0.3, 0.3, 0.4],
