@@ -2010,14 +2010,18 @@ distance/distance.py:
         def `compute_distances`:
             hamming: false
 ensembles/ada_boost.py:
+    def `base_estimator_deprecation`:
+        '`base_estimator` is deprecated (to be removed in 3.39): use `estimator` instead.': false
     SklAdaBoostClassificationLearner: false
     SklAdaBoostRegressionLearner: false
     class `SklAdaBoostClassificationLearner`:
         def `__init__`:
             SAMME.R: false
+            deprecated: false
     class `SklAdaBoostRegressionLearner`:
         def `__init__`:
             linear: false
+            deprecated: false
 ensembles/stack.py:
     StackedLearner: false
     StackedClassificationLearner: false
