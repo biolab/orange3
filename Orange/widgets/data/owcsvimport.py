@@ -47,6 +47,7 @@ from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 import numpy as np
 import pandas.errors
 import pandas as pd
+from pandas import CategoricalDtype
 from pandas.api import types as pdtypes
 
 from orangewidget.utils import enum_as_int
@@ -1770,7 +1771,7 @@ def pandas_to_table(df):
     columns = []  # type: List[Tuple[Orange.data.Variable, np.ndarray]]
 
     for header, series in df.items():  # type: (Any, pd.Series)
-        if pdtypes.is_categorical_dtype(series):
+        if isinstance(series.dtype, CategoricalDtype):
             coldata = series.values  # type: pd.Categorical
             categories = natural_sorted(str(c) for c in coldata.categories)
             var = Orange.data.DiscreteVariable.make(
