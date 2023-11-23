@@ -328,7 +328,7 @@ class OWRuleLearner(OWBaseLearner):
             except MemoryError:
                 self.Error.out_of_memory()
             else:
-                self.model.name = self.learner_name
+                self.model.name = self.effective_learner_name()
                 self.model.instances = self.data
                 self.valid_data = True
         self.Outputs.model.send(self.model)
