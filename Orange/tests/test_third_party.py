@@ -1,11 +1,11 @@
 from unittest import TestCase
 
-from pkg_resources import parse_version
+from packaging.version import Version
 
 
 class TestPkgResources(TestCase):
     def test_parse_version(self):
-        self.assertGreater(parse_version('3.4.1'), parse_version('3.4.0'))
-        self.assertGreater(parse_version('3.4.1'), parse_version('3.4.dev'))
-        self.assertGreater(parse_version('3.4.1'), parse_version('3.4.1.dev'))
-        self.assertLess(parse_version('3.4.1'), parse_version('3.4.2.dev'))
+        self.assertGreater(Version('3.4.1'), Version('3.4.0'))
+        self.assertGreater(Version('3.4.1'), Version('3.4.dev'))
+        self.assertGreater(Version('3.4.1'), Version('3.4.1.dev'))
+        self.assertLess(Version('3.4.1'), Version('3.4.2.dev'))

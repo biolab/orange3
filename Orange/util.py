@@ -6,11 +6,11 @@ import inspect
 import datetime
 import math
 import functools
+import importlib.resources
 from contextlib import contextmanager
+from importlib.metadata import distribution
 from typing import TYPE_CHECKING, Callable, Union, Optional
 from weakref import WeakKeyDictionary
-
-import pkg_resources
 from enum import Enum as _Enum
 from functools import wraps, partial
 from operator import attrgetter
@@ -115,20 +115,18 @@ def resource_filename(path):
     """
     Return the resource filename path relative to the Orange package.
     """
-    return pkg_resources.resource_filename("Orange", path)
+    path = importlib.resources.files("Orange").joinpath(path)
+    return str(path)
 
 
 def get_entry_point(dist, group, name):
     """
     Load and return the entry point from the distribution.
-
-    Unlike `pkg_resources.load_entry_point`, this function does not check
-    for requirements. Calling this function is preferred because of developers
-    who experiment with different versions and have inconsistent configurations.
     """
-    dist = pkg_resources.get_distribution(dist)
-    ep = dist.get_entry_info(group, name)
-    return ep.resolve()
+    dist = distribution(dist)
+    eps = dist.entry_points.select(group=group, name=name)
+    ep = next(iter(eps))
+    return ep.load()
 
 
 def deprecated(obj):
