@@ -2,7 +2,11 @@
 # pylint: disable=missing-docstring
 
 import unittest
+from distutils.version import LooseVersion
+
 import numpy as np
+
+import Orange
 from Orange.data import Table
 from Orange.classification import SklTreeLearner
 from Orange.regression import SklTreeRegressionLearner
@@ -11,6 +15,7 @@ from Orange.ensembles import (
     SklAdaBoostRegressionLearner,
 )
 from Orange.evaluation import CrossValidation, CA, RMSE
+from Orange.util import OrangeDeprecationWarning
 
 
 class TestSklAdaBoostLearner(unittest.TestCase):
@@ -27,14 +32,14 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         self.assertGreater(ca, 0.9)
         self.assertLess(ca, 0.99)
 
-    def test_adaboost_base_estimator(self):
+    def test_adaboost_estimator(self):
         np.random.seed(0)
         stump_estimator = SklTreeLearner(max_depth=1)
         tree_estimator = SklTreeLearner()
         stump = SklAdaBoostClassificationLearner(
-            base_estimator=stump_estimator, n_estimators=5)
+            estimator=stump_estimator, n_estimators=5)
         tree = SklAdaBoostClassificationLearner(
-            base_estimator=tree_estimator, n_estimators=5)
+            estimator=tree_estimator, n_estimators=5)
         cv = CrossValidation(k=4)
         results = cv(self.iris, [stump, tree])
         ca = CA(results)
@@ -68,12 +73,12 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         results = cv(self.housing, [learn])
         _ = RMSE(results)
 
-    def test_adaboost_reg_base_estimator(self):
+    def test_adaboost_reg_estimator(self):
         np.random.seed(0)
         stump_estimator = SklTreeRegressionLearner(max_depth=1)
         tree_estimator = SklTreeRegressionLearner()
-        stump = SklAdaBoostRegressionLearner(base_estimator=stump_estimator)
-        tree = SklAdaBoostRegressionLearner(base_estimator=tree_estimator)
+        stump = SklAdaBoostRegressionLearner(estimator=stump_estimator)
+        tree = SklAdaBoostRegressionLearner(estimator=tree_estimator)
         cv = CrossValidation(k=3)
         results = cv(self.housing, [stump, tree])
         rmse = RMSE(results)
@@ -103,3 +108,15 @@ class TestSklAdaBoostLearner(unittest.TestCase):
     def test_adaboost_adequacy_reg(self):
         learner = SklAdaBoostRegressionLearner()
         self.assertRaises(ValueError, learner, self.iris)
+
+    def test_remove_deprecation(self):
+        if LooseVersion(Orange.__version__) >= LooseVersion("3.39"):
+            self.fail(
+                "`base_estimator` was deprecated in "
+                "version 3.37. Please remove everything related to it."
+            )
+        stump_estimator = SklTreeLearner(max_depth=1)
+        with self.assertWarns(OrangeDeprecationWarning):
+            SklAdaBoostClassificationLearner(base_estimator=stump_estimator)
+        with self.assertWarns(OrangeDeprecationWarning):
+            SklAdaBoostClassificationLearner(base_estimator=stump_estimator)
