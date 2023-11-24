@@ -234,7 +234,7 @@ class OWBaseLearner(OWWidget, metaclass=OWBaseLearnerMeta, openclass=True):
             except BaseException as exc:
                 self.show_fitting_failed(exc)
             else:
-                self.model.name = self.learner_name or self.captionTitle
+                self.model.name = self.effective_learner_name()
                 self.model.instances = self.data
         self._send_model()
 
