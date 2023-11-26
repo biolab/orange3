@@ -281,7 +281,7 @@ class OWNNLearner(OWBaseLearner):
             self.model = None
             self.show_fitting_failed(ex)
         else:
-            self.model.name = self.learner_name
+            self.model.name = self.effective_learner_name()
             self.model.instances = self.data
             self.model.skl_model.orange_callback = None  # remove unpicklable callback
             self.Outputs.model.send(self.model)
