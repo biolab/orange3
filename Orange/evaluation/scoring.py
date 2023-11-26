@@ -11,6 +11,7 @@ Examples
 """
 
 import math
+import warnings
 
 import numpy as np
 import sklearn.metrics as skl_metrics
@@ -18,6 +19,8 @@ from sklearn.metrics import confusion_matrix
 
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.misc.wrapper_meta import WrapperMeta
+from Orange.util import OrangeDeprecationWarning
+
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
            "MSE", "RMSE", "MAE", "MAPE", "R2", "LogLoss", "MatthewsCorrCoefficient"]
@@ -302,12 +305,20 @@ class LogLoss(ClassificationScore):
     long_name = "Logistic loss"
     default_visible = False
 
-    def compute_score(self, results, eps=1e-15, normalize=True,
+    def compute_score(self, results, eps="auto", normalize=True,
                       sample_weight=None):
+        if eps != "auto":
+            # eps argument will be removed in scikit-learn 1.5
+            warnings.warn(
+                (
+                    "`LogLoss.compute_score`: eps parameter is unused. "
+                    "It will always have value of `np.finfo(y_pred.dtype).eps`."
+                ),
+                OrangeDeprecationWarning,
+            )
         return np.fromiter(
             (skl_metrics.log_loss(results.actual,
                                   probabilities,
-                                  eps=eps,
                                   normalize=normalize,
                                   sample_weight=sample_weight)
              for probabilities in results.probabilities),

@@ -2104,6 +2104,10 @@ evaluation/scoring.py:
     class `LogLoss`:
         LogLoss: Log Izguba
         Logistic loss: Logistična izguba
+        def `compute_score`:
+            auto: False
+            '`LogLoss.compute_score`: eps parameter is unused. ': False
+            It will always have value of `np.finfo(y_pred.dtype).eps`.: False
     class `Specificity`:
         Spec: true
         Specificity: Specifičnost
