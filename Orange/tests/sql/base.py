@@ -332,24 +332,13 @@ class DataBaseTest:
 
     @classmethod
     def _check_db(cls, db):
+        ver = None
         if ">" in db:
             i = db.find(">")
-            if db[:i] in cls.db_conn and \
-                    cls.db_conn[db[:i]].version <= int(db[i + 1:]):
-                raise unittest.SkipTest(
-                    "This test is only run database version higher then {}"
-                    .format(db[i + 1:]))
-            else:
-                db = db[:i]
+            db, ver = db[:i], db[i:]
         elif "<" in db:
             i = db.find("<")
-            if db[:i] in cls.db_conn and \
-                    cls.db_conn[db[:i]].version >= int(db[i + 1:]):
-                raise unittest.SkipTest(
-                    "This test is only run on database version lower then {}"
-                    .format(db[i + 1:]))
-            else:
-                db = db[:i]
+            db, ver = db[:i], db[i:]
 
         if db in cls.db_conn:
             if not cls.db_conn[db].is_module:
@@ -364,6 +353,16 @@ class DataBaseTest:
                 raise unittest.SkipTest("No connection provided for {}".format(db))
             else:
                 raise Exception("Unsupported database")
+
+        if ver is not None:
+            if ver[0] == ">" and cls.db_conn[db].version <= int(ver[1:]):
+                raise unittest.SkipTest(
+                    "This test is only run database version higher then {}"
+                    .format(ver[1:]))
+            if ver[0] == "<" and cls.db_conn[db].version >= int(ver[1:]):
+                raise unittest.SkipTest(
+                    "This test is only run on database version lower then {}"
+                    .format(ver[1:]))
 
         return db
 
