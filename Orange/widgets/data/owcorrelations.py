@@ -70,7 +70,7 @@ class KMeansCorrelationHeuristic:
         :return: generator of attributes grouped by cluster
         """
         data = Normalize()(self.data).X.T
-        kmeans = KMeans(n_clusters=self.n_clusters, random_state=0).fit(data)
+        kmeans = KMeans(n_clusters=self.n_clusters, random_state=0, n_init=1).fit(data)
         labels_attrs = sorted([(l, i) for i, l in enumerate(kmeans.labels_)])
         return [Cluster(instances=list(pair[1] for pair in group),
                         centroid=kmeans.cluster_centers_[l])
