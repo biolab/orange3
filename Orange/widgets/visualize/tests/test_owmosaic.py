@@ -6,12 +6,14 @@ import numpy as np
 
 from AnyQt.QtCore import QEvent, QPointF, Qt
 from AnyQt.QtGui import QMouseEvent
+from AnyQt.QtTest import QSignalSpy
 
 from Orange.data import Table, DiscreteVariable, Domain, ContinuousVariable, \
     StringVariable
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
 from Orange.widgets.visualize.owmosaic import OWMosaicDisplay
 from Orange.widgets.tests.utils import simulate
+from Orange.widgets.visualize.utils.vizrank import RunState
 
 
 class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
@@ -128,8 +130,8 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output(self.widget.Outputs.annotated_data)
         np.testing.assert_array_equal(output.X, self.data[:1].X)
 
-    @patch('Orange.widgets.visualize.owmosaic.MosaicVizRank.on_manual_change')
-    def test_vizrank_receives_manual_change(self, on_manual_change):
+    @patch('Orange.widgets.visualize.owmosaic.MosaicVizRank.auto_select')
+    def test_vizrank_receives_manual_change(self, auto_select):
         # Recreate the widget so the patch kicks in
         self.widget = self.create_widget(OWMosaicDisplay)
         data = Table("iris.tab")
@@ -138,7 +140,7 @@ class TestOWMosaicDisplay(WidgetTest, WidgetOutputsTestMixin):
         self.widget.variable2 = data.domain[1]
         simulate.combobox_activate_index(self.widget.controls.variable2, 3)
         self.assertEqual(self.widget.variable2, data.domain[2])
-        call_args = on_manual_change.call_args[0][0]
+        call_args = auto_select.call_args[0][0]
         self.assertEqual(len(call_args), 2)
         self.assertEqual(call_args[0].name, data.domain[0].name)
         self.assertEqual(call_args[1].name, data.domain[2].name)
@@ -200,8 +202,7 @@ class MosaicVizRankTests(WidgetTest):
 
     def setUp(self):
         self.widget = self.create_widget(OWMosaicDisplay)
-        self.widget.vizrank.max_attrs = 0
-        self.vizrank = self.widget.vizrank
+        self.widget.vizrank_attr_range_index = 0
 
     def tearDown(self):
         self.widget.onDeleteWidget()
@@ -209,206 +210,182 @@ class MosaicVizRankTests(WidgetTest):
 
     def test_count(self):
         """MosaicVizrank correctly computes the number of combinations"""
-        vizrank = self.vizrank
 
         data = self.iris
         attributes = [v for v in data.domain.attributes[1:]]
         metas = [data.domain.attributes[0]]
         domain = Domain(attributes, data.domain.class_var, metas)
         new_data = data.from_table(domain, data)
-        self.send_signal(self.widget.Inputs.data, new_data)
 
         for data in [self.iris, new_data]:
             self.send_signal(self.widget.Inputs.data, data)
 
             simulate.combobox_activate_index(self.widget.controls.variable_color, 0, 0)
-            vizrank.max_attrs = 1
+            vizrank = self.widget.vizrank_dialog
+            vizrank.attr_range_index = 1
             self.assertEqual(vizrank.state_count(), 10)  # 5x4 / 2
-            vizrank.max_attrs = 2
+            vizrank.attr_range_index = 2
             self.assertEqual(vizrank.state_count(), 10)  # 5x4x3 / 2x3
-            vizrank.max_attrs = 3
+            vizrank.attr_range_index = 3
             self.assertEqual(vizrank.state_count(), 5)  # 5x4x3x2 / 2x3x4
-            vizrank.max_attrs = 4
+            vizrank.attr_range_index = 4
             self.assertEqual(vizrank.state_count(), 10)  # 5x4 / 2
-            vizrank.max_attrs = 5
+            vizrank.attr_range_index = 5
             self.assertEqual(vizrank.state_count(), 20)  # above + 5x4x3 / 2x3
-            vizrank.max_attrs = 6
+            vizrank.attr_range_index = 6
             self.assertEqual(vizrank.state_count(), 25)  # above + 5x4x3x2 / 2x3x4
 
             simulate.combobox_activate_index(self.widget.controls.variable_color, 2, 0)
-            vizrank.max_attrs = 0
+            vizrank = self.widget.vizrank_dialog
+            vizrank.attr_range_index = 0
             self.assertEqual(vizrank.state_count(), 4)  # 4
-            vizrank.max_attrs = 1
+            vizrank.attr_range_index = 1
             self.assertEqual(vizrank.state_count(), 6)  # 4x3 / 2
-            vizrank.max_attrs = 2
+            vizrank.attr_range_index = 2
             self.assertEqual(vizrank.state_count(), 4)  # 4x3x2 / 3x2
-            vizrank.max_attrs = 3
+            vizrank.attr_range_index = 3
             self.assertEqual(vizrank.state_count(), 1)  # 4x3x2x1 / 2x3x4
-            vizrank.max_attrs = 4
+            vizrank.attr_range_index = 4
             self.assertEqual(vizrank.state_count(), 10)  # 4 + 4x3 / 2
-            vizrank.max_attrs = 5
+            vizrank.attr_range_index = 5
             self.assertEqual(vizrank.state_count(), 14)  # above + 4x3x2 / 3x2
-            vizrank.max_attrs = 6
+            vizrank.attr_range_index = 6
             self.assertEqual(vizrank.state_count(), 15)  # above + 4x3x2x1 / 2x3x4
 
             self.send_signal(self.widget.Inputs.data, self.iris_no_class)
             simulate.combobox_activate_index(self.widget.controls.variable_color, 0, 0)
-            vizrank.max_attrs = 1
+            vizrank = self.widget.vizrank_dialog
+            vizrank.attr_range_index = 1
             self.assertEqual(vizrank.state_count(), 6)  # 4x3 / 2
-            vizrank.max_attrs = 2
+            vizrank.attr_range_index = 2
             self.assertEqual(vizrank.state_count(), 4)  # 4x3x2 / 3x2
-            vizrank.max_attrs = 3
+            vizrank.attr_range_index = 3
             self.assertEqual(vizrank.state_count(), 1)  # 4x3x2x1 / 2x3x4
-            vizrank.max_attrs = 4
+            vizrank.attr_range_index = 4
             self.assertEqual(vizrank.state_count(), 6)  # 4x3 / 2
-            vizrank.max_attrs = 5
+            vizrank.attr_range_index = 5
             self.assertEqual(vizrank.state_count(), 10)  # above + 4x3x2 / 3x2
-            vizrank.max_attrs = 6
+            vizrank.attr_range_index = 6
             self.assertEqual(vizrank.state_count(), 11)  # above + 4x3x2x1 / 2x3x4
 
     def test_iteration(self):
         """MosaicVizrank correctly iterates through states"""
         widget = self.widget
-        vizrank = self.vizrank
+        widget.vizrank_attr_range_index = 1
         self.send_signal(self.widget.Inputs.data, self.iris)
-        vizrank.compute_attr_order()
+        vizrank = self.widget.vizrank_dialog
 
-        vizrank.max_attrs = 1
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states(None)],
-                         [[0, 1], [0, 2], [1, 2], [0, 3], [1, 3], [2, 3]])
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states([0, 3])],
-                         [[0, 3], [1, 3], [2, 3]])
+        self.assertEqual(set(vizrank.state_generator()),
+                         {(0, 1), (0, 2), (1, 2), (0, 3), (1, 3), (2, 3)})
 
-        vizrank.max_attrs = 6
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states(None)],
-                         [[0], [1], [2], [3],
-                          [0, 1], [0, 2], [1, 2], [0, 3], [1, 3], [2, 3],
-                          [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3],
-                          [0, 1, 2, 3]])
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states([0, 3])],
-                         [[0, 3], [1, 3], [2, 3],
-                          [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3],
-                          [0, 1, 2, 3]])
+        vizrank.attr_range_index = 6
+        self.assertEqual(set(vizrank.state_generator()),
+                         {(0, ), (1, ), (2, ), (3, ),
+                          (0, 1), (0, 2), (1, 2), (0, 3), (1, 3), (2, 3),
+                          (0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3),
+                          (0, 1, 2, 3)})
 
-        vizrank.max_attrs = 4
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states(None)],
-                         [[0], [1], [2], [3],
-                          [0, 1], [0, 2], [1, 2], [0, 3], [1, 3], [2, 3]])
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states([0, 3])],
-                         [[0, 3], [1, 3], [2, 3]])
+        vizrank.attr_range_index = 4
+        self.assertEqual(set(vizrank.state_generator()),
+                         {(0, ), (1, ), (2, ), (3, ),
+                          (0, 1), (0, 2), (1, 2), (0, 3), (1, 3), (2, 3)})
 
+        widget.vizrank_attr_range_index = 6
         widget.variable_color = None
-        vizrank.max_attrs = 6
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states(None)],
-                         [[0, 1], [0, 2], [1, 2], [0, 3], [1, 3], [2, 3],
-                          [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3],
-                          [0, 1, 2, 3]])
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states([0, 3])],
-                         [[0, 3], [1, 3], [2, 3],
-                          [0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3],
-                          [0, 1, 2, 3]])
+        self.widget.cb_attr_color.setCurrentIndex(0)
+        simulate.combobox_activate_index(self.widget.controls.variable_color, 0, 0)
+        vizrank = self.widget.vizrank_dialog
+        self.assertEqual(set(vizrank.state_generator()),
+                         {(0, 1), (0, 2), (0, 3), (0, 4),
+                          (1, 2), (1, 3), (1, 4),
+                          (2, 3), (2, 4),
+                          (3, 4),
+                          (0, 1, 2), (0, 1, 3), (0, 1, 4), (0, 2, 3), (0, 2, 4), (0, 3, 4),
+                          (1, 2, 3), (1, 2, 4), (1, 3, 4),
+                          (2, 3, 4),
+                          (0, 1, 2, 3), (0, 1, 3, 4), (0, 1, 2, 4), (0, 2, 3, 4), (1, 2, 3, 4)})
 
-        vizrank.max_attrs = 4
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states(None)],
-                         [[0, 1], [0, 2], [1, 2], [0, 3], [1, 3], [2, 3]])
-        self.assertEqual([state.copy()
-                          for state in vizrank.iterate_states([0, 3])],
-                         [[0, 3], [1, 3], [2, 3]])
+        vizrank.attr_range_index = 4
+        self.assertEqual(set(vizrank.state_generator()),
+                         {(0, 1), (0, 2), (0, 3), (0, 4),
+                          (1, 2), (1, 3), (1, 4),
+                          (2, 3), (2, 4),
+                          (3, 4)})
 
     def test_row_for_state(self):
         """MosaicVizrank returns table row corresponding to the state"""
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.vizrank.attr_ordering = [DiscreteVariable(n) for n in "abcd"]
-        items = self.vizrank.row_for_state(0, [1, 3, 0])
+        vizrank = self.widget.vizrank_dialog
+        vizrank._attr_order = [DiscreteVariable(n) for n in "abcd"]
+        items = vizrank.row_for_state(0, [1, 3, 0])
         self.assertEqual(len(items), 1)
         item = items[0]
         self.assertEqual(item.text(), "a, b, d")
         self.assertEqual(
-            item.data(self.vizrank._AttrRole),
-            tuple(self.vizrank.attr_ordering[i] for i in [0, 1, 3]))
+            item.data(vizrank._AttrRole),
+            tuple(vizrank.attr_order[i] for i in [0, 1, 3]))
 
     def test_does_not_crash_cont_class(self):
         """MosaicVizrank computes rankings without crashing"""
         data = Table("housing.tab")
         self.send_signal(self.widget.Inputs.data, data)
-        self.vizrank.toggle()
-
-    def test_pause_continue(self):
-        data = Table("housing.tab")
-        self.widget.vizrank.max_attrs = 6
-        self.send_signal(self.widget.Inputs.data, data)
-        self.vizrank.toggle()  # start
-        self.process_events(until=lambda: self.vizrank.saved_progress > 5)
-        self.vizrank.toggle()  # stop
-        self.process_events(until=lambda: not self.vizrank.keep_running)
-        self.vizrank.toggle()  # continue
-        self.process_events(until=lambda: self.vizrank.saved_progress > 20)
-
-    def test_finished(self):
-        data = Table("iris.tab")
-        self.send_signal(self.widget.Inputs.data, data)
-        self.vizrank.toggle()
-        self.process_events(until=lambda: not self.vizrank.keep_running)
-        self.assertEqual(len(self.vizrank.scores), self.vizrank.state_count())
+        self.widget.vizrank_button().click()
 
     def test_max_attr_combo_1_disabling(self):
         widget = self.widget
-        vizrank = widget.vizrank
-        combo = vizrank.max_attr_combo
-        model = combo.model()
         enabled = Qt.ItemIsSelectable | Qt.ItemIsEnabled
 
         data = Table("iris.tab")
         self.send_signal(self.widget.Inputs.data, data)
+        vizrank = widget.vizrank_dialog
+        combo = vizrank.attrs_combo
+        model = combo.model()
         self.assertEqual(model.item(0).flags() & enabled, enabled)
 
-        vizrank.max_attrs = 0
+        vizrank.attr_range_index = 0
         simulate.combobox_activate_index(self.widget.controls.variable_color, 0)
-        self.assertEqual(vizrank.max_attrs, 1)
+        vizrank = widget.vizrank_dialog
+        combo = vizrank.attrs_combo
+        model = combo.model()
+        self.assertEqual(vizrank.attr_range_index, 1)
         self.assertEqual(model.item(0).flags() & enabled, Qt.NoItemFlags)
 
         simulate.combobox_activate_index(self.widget.controls.variable_color, 1)
-        self.assertEqual(vizrank.max_attrs, 1)
+        vizrank = widget.vizrank_dialog
+        combo = vizrank.attrs_combo
+        model = combo.model()
         self.assertEqual(model.item(0).flags() & enabled, enabled)
 
     def test_attr_range(self):
-        vizrank = self.widget.vizrank
         data = Table("iris.tab")
         domain = data.domain
 
         self.send_signal(self.widget.Inputs.data, data)
-        for vizrank.max_attrs, rge in (
-                (0, (1, 1)), (1, (2, 2)), (2, (3, 3)), (3, (4, 4)),
-                (4, (1, 2)), (5, (1, 3)), (6, (1, 4))):
+        vizrank = self.widget.vizrank_dialog
+        for vizrank.attr_range_index, rge in (
+                (0, (1, 2)), (1, (2, 3)), (2, (3, 4)), (3, (4, 5)),
+                (4, (1, 3)), (5, (1, 4)), (6, (1, 5))):
             self.assertEqual(vizrank.attr_range(), rge,
-                             f"failed at max_attrs={vizrank.max_attrs}")
+                             f"failed at attr_range_index={vizrank.attr_range_index}")
 
         reduced = data.transform(Domain(domain.attributes[:2], domain.class_var))
         self.send_signal(self.widget.Inputs.data, reduced)
-        for vizrank.max_attrs, rge in (
-                (0, (1, 1)), (1, (2, 2)), (2, (3, 2)), (3, (4, 2)),
-                (4, (1, 2)), (5, (1, 2)), (6, (1, 2))):
+        vizrank = self.widget.vizrank_dialog
+        for vizrank.attr_range_index, rge in (
+                (0, (1, 2)), (1, (2, 3)), (2, (3, 3)), (3, (4, 3)),
+                (4, (1, 3)), (5, (1, 3)), (6, (1, 3))):
             self.assertEqual(vizrank.attr_range(), rge,
-                             f"failed at max_attrs={vizrank.max_attrs}")
-            self.assertIs(vizrank.state_count() == 0, rge[0] > rge[1])
+                             f"failed at attr_range_index={vizrank.attr_range_index}")
+            self.assertIs(vizrank.state_count() == 0, rge[0] >= rge[1])
 
         simulate.combobox_activate_index(self.widget.controls.variable_color, 0)
-        for vizrank.max_attrs, rge in (
-                (0, (2, 2)), (1, (2, 2)), (2, (3, 3)), (3, (4, 3)),
-                (4, (2, 2)), (5, (2, 3)), (6, (2, 3))):
+        vizrank = self.widget.vizrank_dialog
+        for vizrank.attr_range_index, rge in (
+                (0, (2, 3)), (1, (2, 3)), (2, (3, 4)), (3, (4, 4)),
+                (4, (2, 3)), (5, (2, 4)), (6, (2, 4))):
             self.assertEqual(vizrank.attr_range(), rge,
-                             f"failed at max_attrs={vizrank.max_attrs}")
-            self.assertIs(vizrank.state_count() == 0, rge[0] > rge[1])
-
+                             f"failed at attr_range_index={vizrank.attr_range_index}")
+            self.assertIs(vizrank.state_count() == 0, rge[0] >= rge[1])
 
     def test_nan_column(self):
         """
@@ -431,17 +408,11 @@ class MosaicVizRankTests(WidgetTest):
         """
         Color combo enables to select class values. Checks if class values
         are selected correctly.
-        GH-2133
-        GH-2036
         """
-        RESULTS = [[0, 1, 6], [0, 2, 4], [0, 3, 1],
-                   [0, 4, 6], [0, 5, 10], [0, 6, 11],
-                   [1, 0, 3], [1, 1, 3], [1, 2, 1], [1, 3, 0],
-                   [1, 4, 6], [1, 5, 7], [1, 6, 7]]
         table = Table("titanic")
         self.send_signal(self.widget.Inputs.data, table)
         color_vars = ["(Pearson residuals)"] + [str(x) for x in table.domain.variables]
-        for i, cv in enumerate(color_vars):
+        for cv in color_vars:
             idx = self.widget.cb_attr_color.findText(cv)
             self.widget.cb_attr_color.setCurrentIndex(idx)
             color = self.widget.cb_attr_color.currentText()
@@ -456,17 +427,7 @@ class MosaicVizRankTests(WidgetTest):
             output = self.get_output(self.widget.Outputs.annotated_data)
             self.assertEqual(output.domain.class_var, table.domain.class_var)
 
-            for ma in range(i == 0, 7):
-                self.vizrank.max_attrs = ma
-                sc = self.vizrank.state_count()
-                self.assertTrue([i > 0, ma, sc] in RESULTS)
-
     def test_scores(self):
-        """
-        Test scores without running vizrank.
-        GH-2299
-        GH-2036
-        """
         SCORES = {('status', ): 4.35e-40,
                   ('sex', ): 6.18e-100,
                   ('age', ): 2.82e-05,
@@ -476,13 +437,12 @@ class MosaicVizRankTests(WidgetTest):
                   ('age', 'sex', 'status'): 5.3e-128}
         table = Table("titanic")
         self.send_signal(self.widget.Inputs.data, table)
-        self.vizrank.compute_attr_order()
-        self.widget.vizrank.max_attrs = 3
-        state = None
-        for state in self.vizrank.iterate_states(state):
-            self.vizrank.iterate_states(state)
-            attrlist = tuple(sorted(self.vizrank.attr_ordering[i].name for i in state))
-            sc = self.vizrank.compute_score(state)
+        vizrank = self.widget.vizrank_dialog
+        vizrank.prepare_run()
+        vizrank.attr_range_index = 3
+        for state in vizrank.state_generator():
+            attrlist = tuple(sorted(vizrank.attr_order[i].name for i in state))
+            sc = vizrank.compute_score(state)
             self.assertTrue(np.allclose(sc, SCORES[attrlist], rtol=0.003, atol=0))
 
     def test_subset_data(self):
@@ -511,25 +471,27 @@ class MosaicVizRankTests(WidgetTest):
         self.send_signal(self.widget.Inputs.data_subset, self.iris)
         self.assertFalse(self.widget.Warning.incompatible_subset.is_shown())
 
-    def test_on_manual_change(self):
+    def test_autoselect(self):
         data = Table("iris.tab")
-        self.widget.vizrank.max_attrs = 1
+        self.widget.vizrank_attr_range_index = 2
         self.send_signal(self.widget.Inputs.data, data)
-        self.vizrank.toggle()
+        spy = QSignalSpy(self.widget.vizrankRunStateChanged)
+        self.widget.vizrank_button().click()
         # This takes 0.5 s on my M1 Mac (2022), but let us tolerate 20x longer
         # on CI
-        self.process_events(until=lambda: not self.vizrank.keep_running,
-                            timeout=10000)
+        while spy.wait(timeout=10000) and spy[-1][0] != RunState.Done:
+            pass
 
-        model = self.vizrank.rank_model
-        attrs = model.data(model.index(3, 0), self.vizrank._AttrRole)
-        self.vizrank.on_manual_change(attrs)
-        selection = self.vizrank.rank_table.selectedIndexes()
+        vizrank = self.widget.vizrank_dialog
+        model = vizrank.rank_model
+        attrs = model.data(model.index(3, 0), vizrank._AttrRole)
+        vizrank.auto_select(attrs)
+        selection = vizrank.rank_table.selectedIndexes()
         self.assertEqual(len(selection), 1)
         self.assertEqual(selection[0].row(), 3)
 
-        self.vizrank.on_manual_change(attrs[::-1])
-        selection = self.vizrank.rank_table.selectedIndexes()
+        vizrank.auto_select(attrs[::-1])
+        selection = vizrank.rank_table.selectedIndexes()
         self.assertEqual(len(selection), 0)
 
 

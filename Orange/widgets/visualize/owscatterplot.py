@@ -5,9 +5,9 @@ from scipy.stats import linregress
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtCore import Qt, QTimer, QPointF, Signal
+from AnyQt.QtCore import Qt, QTimer, QPointF
 from AnyQt.QtGui import QColor, QFont
-from AnyQt.QtWidgets import QGroupBox, QPushButton
+from AnyQt.QtWidgets import QGroupBox
 
 import pyqtgraph as pg
 
@@ -26,47 +26,20 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
     ScatterBaseParameterSetter
-from Orange.widgets.visualize.utils import VizRankDialogAttrPair
+from Orange.widgets.visualize.utils.vizrank import VizRankDialogAttrPair, \
+    VizRankMixin
 from Orange.widgets.visualize.utils.customizableplot import Updater
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import AttributeList, Msg, Input, Output
 
 
 class ScatterPlotVizRank(VizRankDialogAttrPair):
-    captionTitle = "Score Plots"
     minK = 10
-    attr_color = None
-
-    def __init__(self, master):
-        super().__init__(master)
-        self.attr_color = self.master.attr_color
-
-    def initialize(self):
-        self.attr_color = self.master.attr_color
-        super().initialize()
-
-    def check_preconditions(self):
-        self.Information.add_message(
-            "color_required", "Color variable is not selected")
-        self.Information.color_required.clear()
-        if not super().check_preconditions():
-            return False
-        if not self.attr_color:
-            self.Information.color_required()
-            return False
-        return True
-
-    def iterate_states(self, initial_state):
-        # If we put initialization of `self.attrs` to `initialize`,
-        # `score_heuristic` would be run on every call to `set_data`.
-        if initial_state is None:  # on the first call, compute order
-            self.attrs = self.score_heuristic()
-        yield from super().iterate_states(initial_state)
 
     def compute_score(self, state):
         # pylint: disable=invalid-unary-operand-type
-        attrs = [self.attrs[i] for i in state]
-        data = self.master.data
+        attrs = [self.attr_order[i] for i in state]
+        data = self.data
         data = data.transform(Domain(attrs, self.attr_color))
         data = data[~np.isnan(data.X).any(axis=1) & ~np.isnan(data.Y).T]
         if len(data) < self.minK:
@@ -79,20 +52,17 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
                    n_neighbors / len(data.Y)
         else:
             return -r2_score(data.Y, np.mean(data.Y[ind], axis=1)) * \
-                   (len(data.Y) / len(self.master.data))
+                   (len(data.Y) / len(self.data))
 
-    def bar_length(self, score):
-        return max(0, -score)
-
-    def score_heuristic(self):
+    def score_attributes(self):
         assert self.attr_color is not None
-        vars = [
+        attrs = [
             v
-            for v in self.master.xy_model  # same attributes that are in xy combos
+            for v in self.attrs  # same attributes that are in xy combos
             if v is not self.attr_color and v.is_primitive()
         ]
-        domain = Domain(attributes=vars, class_vars=self.attr_color)
-        data = self.master.data.transform(domain)
+        domain = Domain(attributes=attrs, class_vars=self.attr_color)
+        data = self.data.transform(domain)
         relief = ReliefF if isinstance(domain.class_var, DiscreteVariable) \
             else RReliefF
         weights = relief(
@@ -308,7 +278,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         self.update_reg_line_label_colors()
 
 
-class OWScatterPlot(OWDataProjectionWidget):
+class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
     """Scatterplot visualization with explorative analysis and intelligent
     data visualization enhancements."""
 
@@ -335,8 +305,6 @@ class OWScatterPlot(OWDataProjectionWidget):
     graph = SettingProvider(OWScatterPlotGraph)
     embedding_variables_names = None
 
-    xy_changed_manually = Signal(Variable, Variable)
-
     class Warning(OWDataProjectionWidget.Warning):
         missing_coords = Msg(
             "Plot cannot be displayed because '{}' or '{}' "
@@ -352,8 +320,6 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.xy_model: DomainModel = None
         self.cb_attr_x: ComboBoxSearch = None
         self.cb_attr_y: ComboBoxSearch = None
-        self.vizrank: ScatterPlotVizRank = None
-        self.vizrank_button: QPushButton = None
         self.sampling: QGroupBox = None
         self._xy_invalidated: bool = True
 
@@ -408,8 +374,9 @@ class OWScatterPlot(OWDataProjectionWidget):
             model=self.xy_model, **common_options,
         )
         vizrank_box = gui.hBox(self.attr_box)
-        self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
-            vizrank_box, self, "Find Informative Projections", self.set_attr)
+        button = self.vizrank_button("Find Informative Projections")
+        vizrank_box.layout().addWidget(button)
+        self.vizrankSelectionChanged.connect(self.set_attr)
 
     def _add_controls_sampling(self):
         self.sampling = gui.auto_commit(
@@ -428,8 +395,7 @@ class OWScatterPlot(OWDataProjectionWidget):
             eff_var = [self.attr_x]
         return self.data.transform(Domain(eff_var))
 
-    def _vizrank_color_change(self):
-        self.vizrank.initialize()
+    def init_vizrank(self):
         err_msg = ""
         if self.data is None:
             err_msg = "No data on input"
@@ -441,13 +407,15 @@ class OWScatterPlot(OWDataProjectionWidget):
             err_msg = "Color variable is not selected"
         elif np.isnan(self.data.get_column(self.attr_color)).all():
             err_msg = "Color variable has no values"
-        self.vizrank_button.setEnabled(not err_msg)
-        self.vizrank_button.setToolTip(err_msg)
+        if not err_msg:
+            super().init_vizrank(self.data, list(self.xy_model), self.attr_color)
+        else:
+            self.disable_vizrank(err_msg)
 
     @OWDataProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
-        self._vizrank_color_change()
+        self.init_vizrank()
 
         def findvar(name, iterable):
             """Find a Orange.data.Variable in `iterable` by name"""
@@ -571,11 +539,9 @@ class OWScatterPlot(OWDataProjectionWidget):
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
         self.attr_box.setEnabled(True)
-        self.vizrank.setEnabled(True)
         if self.attribute_selection_list and self.data is not None and \
                 self.data.domain is not None:
             self.attr_box.setEnabled(False)
-            self.vizrank.setEnabled(False)
             if all(attr in self.xy_model for attr in self.attribute_selection_list):
                 self.attr_x, self.attr_y = self.attribute_selection_list
             else:
@@ -602,14 +568,14 @@ class OWScatterPlot(OWDataProjectionWidget):
                 self.init_attr_values()
             self.attribute_selection_list = None
 
-    def set_attr(self, attr_x, attr_y):
-        if attr_x != self.attr_x or attr_y != self.attr_y:
-            self.attr_x, self.attr_y = attr_x, attr_y
+    def set_attr(self, attrs):
+        if attrs != [self.attr_x,self.attr_y]:
+            self.attr_x, self.attr_y = attrs
             self.attr_changed()
 
     def set_attr_from_combo(self):
         self.attr_changed()
-        self.xy_changed_manually.emit(self.attr_x, self.attr_y)
+        self.vizrankAutoSelect.emit([self.attr_x, self.attr_y])
 
     def attr_changed(self):
         self.cb_reg_line.setEnabled(self.can_draw_regresssion_line())
@@ -621,7 +587,7 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     def colors_changed(self):
         super().colors_changed()
-        self._vizrank_color_change()
+        self.init_vizrank()
 
     @gui.deferred
     def commit(self):
