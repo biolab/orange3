@@ -13773,19 +13773,15 @@ widgets/visualize/owlineplot.py:
     brown-selected: false
 widgets/visualize/owmosaic.py:
     class `MosaicVizRank`:
-        Mosaic Ranking: Ocenjevanje mozaikov
         def `__init__`:
-            Score combinations of: Oceni kombinacije
-            def `update_combo_label`:
-                Score Mosaics with: Oceni Mozaike z
-                Score combinations of: Oceni kombinacije z
-            a single variable: eno
-            two variables: dvema spremenljivkama
-            three variables: tremi spremenljivkami
-            four variables: štirimi spremenljivkami
-            at most two variables: največ dvema spremenljivkama
-            at most three variables: največ tremi spremenljivkami
-            at most four variables: največ štirimi spremenljivkami
+            'Score Mosaics with ': Oceni Mozaike
+            a single variable: z eno spremenljivko
+            two variables: z dvema spremenljivkama
+            three variables: s tremi spremenljivkami
+            four variables: s štirimi spremenljivkami
+            at most two variables: z največ dvema spremenljivkama
+            at most three variables: z največ tremi spremenljivkami
+            at most four variables: z največ štirimi spremenljivkami
         def `on_attrs_changed`:
             Restart with new settings: Poženi z novimi nastavitvami
         def `score_attributes`:
@@ -15084,7 +15080,7 @@ widgets/visualize/utils/vizrank.py:
             Orange.data.Variable: false
             'Number of variables: ': 'Število spremenljivk: '
         def `on_n_attrs_changed`:
-            Restart with {new_attrs} variables: Ponovno poženi z {z_besedo{new_attrs, 6, "f")} {plsi(new_attrs, "spremenljivko|spremenljivkama|spremenljivkami")}
+            Restart with {new_attrs} variables: Ponovno poženi {plsi_sz(new_attrs)} {z_besedo(new_attrs, 6, "f")} {plsi(new_attrs, "spremenljivko|spremenljivkama|spremenljivkami")}
         def `emit_run_state_changed`:
             n_attrs: false
 widgets/visualize/utils/widget.py:
