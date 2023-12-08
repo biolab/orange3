@@ -2685,6 +2685,9 @@ preprocess/impute.py:
         def `__call__`:
             "'{}' has no values": false
             "'{}' has an unknown distribution": false
+    class `ReplaceUnknownsModel`:
+        def `transform`:
+            abstract in Transformation, never used here: false
 preprocess/normalize.py:
     Normalizer: false
 preprocess/preprocess.py:
