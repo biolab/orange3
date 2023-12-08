@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse as sp
 
 import Orange.data
+from Orange.data.table import DomainTransformationError
 from Orange.statistics import distribution, basic_stats
 from Orange.util import Reprable
 from .transformation import Transformation, Lookup
@@ -202,8 +203,12 @@ class ReplaceUnknownsModel(Transformation):
             data = data.transform(
                 Orange.data.Domain(domain.attributes, None, domain.metas)
             )
-        predicted = self.model(data[mask])
-        column[mask] = predicted
+        try:
+            column[mask] = self.model(data[mask])
+        except DomainTransformationError:
+            # owpredictions showed error when imputing target using a Model
+            # based imputer (owpredictions removes the target before predicing)
+            pass
         return column
 
     def transform(self, c):
