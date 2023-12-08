@@ -16,6 +16,7 @@ from AnyQt.QtWidgets import (
     QVBoxLayout, QLineEdit
 )
 from Orange.data import Variable
+from Orange.util import deprecated
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate, TableBarItem
 from Orange.widgets.utils.concurrent import ConcurrentMixin, TaskState
@@ -101,6 +102,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, WidgetMessagesMixin,
     class Information(WidgetMessagesMixin.Information):
         nothing_to_rank = Msg("There is nothing to rank.")
 
+    @deprecated("Orange.widgets.visualize.utils.vizrank.VizRankDialog")
     def __init__(self, master):
         """Initialize the attributes and set up the interface"""
         QDialog.__init__(self, master, windowTitle=self.captionTitle)

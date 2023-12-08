@@ -2,6 +2,7 @@ from itertools import chain
 import unittest
 from unittest.mock import Mock
 from queue import Queue
+import warnings
 
 from AnyQt.QtGui import QStandardItem
 
@@ -94,6 +95,12 @@ class TestRunner(unittest.TestCase):
 
 
 class TestVizRankDialog(WidgetTest):
+    def setUp(self):
+        warnings.filterwarnings(
+            "ignore",
+            ".*Orange.widgets.visualize.utils.vizrank.VizRankDialog.*")
+        super().setUp()
+
     def test_on_partial_result(self):
         def iterate_states(initial_state):
             if initial_state is not None:
