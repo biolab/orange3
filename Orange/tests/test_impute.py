@@ -9,7 +9,7 @@ import scipy.sparse as sp
 from Orange import preprocess
 from Orange.preprocess import impute, SklImpute
 from Orange import data
-from Orange.data import Unknown, Table
+from Orange.data import Unknown, Table, Domain
 
 from Orange.classification import MajorityLearner, SimpleTreeLearner
 from Orange.regression import MeanLearner
@@ -292,6 +292,27 @@ class TestModel(unittest.TestCase):
         imputer = impute.Model(MajorityLearner())
         self.assertRaises(ValueError, imputer, data=table,
                           variable=table.domain[0])
+
+    def test_missing_imputed_columns(self):
+        housing = Table("housing")
+
+        learner = SimpleTreeLearner(min_instances=10, max_depth=10)
+        method = preprocess.impute.Model(learner)
+
+        ivar = method(housing, housing.domain.attributes[0])
+        imputed = housing.transform(
+            Domain([ivar],
+                   housing.domain.class_var)
+        )
+        removed_imputed = imputed.transform(
+            Domain([], housing.domain.class_var))
+
+        r = removed_imputed.transform(imputed.domain)
+
+        no_class = removed_imputed.transform(Domain(removed_imputed.domain.attributes, None))
+        model_prediction_for_unknowns = ivar.compute_value.model(no_class[0])
+
+        np.testing.assert_equal(r.X, model_prediction_for_unknowns)
 
 
 class TestRandom(unittest.TestCase):
