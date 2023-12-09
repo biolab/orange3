@@ -4,12 +4,14 @@ from types import SimpleNamespace as namespace
 from typing import Optional, Iterable, List, Callable, Iterator, Any, Type
 from threading import Timer
 
-from AnyQt.QtCore import Qt, QSize, QSortFilterProxyModel, pyqtSignal as Signal
+from AnyQt.QtCore import (
+    Qt, QSize, QSortFilterProxyModel, QObject, pyqtSignal as Signal)
 from AnyQt.QtGui import (
     QStandardItemModel, QStandardItem, QShowEvent, QCloseEvent, QHideEvent)
 from AnyQt.QtWidgets import (
     QTableView, QDialog, QVBoxLayout, QLineEdit, QPushButton)
 
+from orangewidget.widget import OWBaseWidget
 from Orange.widgets import gui
 from Orange.widgets.gui import HorizontalGridDelegate, TableBarItem
 from Orange.widgets.utils.concurrent import ConcurrentMixin, TaskState
@@ -33,14 +35,18 @@ class RunState(namespace):
     Ready = 2  # Has data, iterator is initialized, but never used
     Running = 3  # Scoring thread is running
     Paused = 4  # Scoring thread is inactive, but can continue (without prepare_run)
-    Done = 5  # Scoring is done
+    Hidden = 5  # Dialog is hidden and ranking paused; will resume on reopen
+    Done = 6  # Scoring is done
+
+    # The difference between Paused and Hidden is that for the former the
+    # ranking is not automatically restarted when the dialog is reopened.
 
     state: int = Invalid
     iterator: Iterable = None
     completed: int = 0
 
     def can_run(self):
-        return self.state in (self.Ready, self.Paused)
+        return self.state in (self.Ready, self.Paused, self.Hidden)
 
 
 class VizRankDialog(QDialog, ProgressBarMixin, ConcurrentMixin):
@@ -67,7 +73,9 @@ class VizRankDialog(QDialog, ProgressBarMixin, ConcurrentMixin):
     - RunState.Paused (after pause_computation): ranking is paused. This may
        continue (with start_computation) or be reset when parameters of VizRank
        are changed (by calling `set_run_state(RunState.Initialized)` and then
-       start_computation, which will first call prepare_run to go to Ready)
+       start_computation, which will first call prepare_run to go to Ready).
+    - RunState.Hidden (after closing the dialog): ranking is paused. This is
+       similar to `RunState.Paused`, except that reopening dialog resumes it.
     - RunState.Done: ranking is done. The only allowed next state is
        Initialized (with the procedure described in the previous point).
 
@@ -132,6 +140,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, ConcurrentMixin):
                      RunState.Ready: "Start",
                      RunState.Running: "Pause",
                      RunState.Paused: "Continue",
+                     RunState.Hidden: "Continue",
                      RunState.Done: "Finished",
                      RunState.Invalid: "Start"}
 
@@ -207,12 +216,16 @@ class VizRankDialog(QDialog, ProgressBarMixin, ConcurrentMixin):
             self.compute_score, self.scores,
             self.run_state.iterator, self.run_state.completed)
 
-    def pause_computation(self) -> None:
+    def pause_computation(self, new_state=RunState.Paused) -> None:
         if not self.run_state.state == RunState.Running:
             return
-        self.set_run_state(RunState.Paused)
+        self.set_run_state(new_state)
         self.cancel()
         self._update_model()
+
+    def dialog_reopened(self):
+        if self.run_state.state != RunState.Paused:
+            self.start_computation()
 
     @staticmethod
     def run_vizrank(compute_score: Callable, scores: List,
@@ -317,7 +330,7 @@ class VizRankDialog(QDialog, ProgressBarMixin, ConcurrentMixin):
 
     def hideEvent(self, event: QHideEvent) -> None:
         # pylint: disable=protected-access
-        self.pause_computation()
+        self.pause_computation(RunState.Hidden)
         self.parent()._save_vizrank_geometry()
         super().hideEvent(event)
 
@@ -406,14 +419,44 @@ def VizRankMixin(vizrank_class: Type[VizRankDialog]) -> Type[type]:
       attribute in the scatter plot), the vizrank will also select this
       combination in the list, if found.
 """
-    class __VizRankMixin:  # pylint: disable=invalid_name
+
+    # __VizRankMixin must be derived from OWBaseWidget so that it is
+    # properly included in MRO and calls to super(),
+    # e.g. super().onDeleteWidget() are properly called.
+    #
+    # Yet PyQt cannot handle diamond-shaped inheritance: signals exist,
+    # but can't be connected. While PyQt states that "It is not possible to
+    # define a new Python class that sub-classes from more than one Qt class
+    # (https://www.riverbankcomputing.com/static/Docs/PyQt5/gotchas.html#multiple-inheritance),
+    # this is not the case here, because we subclass from QDialog in the
+    # tip of the diamond, hence it is a single inheritance with multiple
+    # paths. Hence we define signals in a separate object, instantiate it,
+    # and forward the signals through it.
+    class VizrankSignalDelegator(QObject):
+        vizrankSelectionChanged = Signal(object)
+        vizrankRunStateChanged = Signal(int, dict)
+        vizrankAutoSelect = Signal(object)
+
+    class __VizRankMixin(OWBaseWidget, openclass=True):  # pylint: disable=invalid_name
         __button: Optional[QPushButton] = None
         __vizrank: Optional[VizRankDialog] = None
         __vizrank_geometry: Optional[bytes] = None
 
-        vizrankSelectionChanged = Signal(object)
-        vizrankRunStateChanged = Signal(int, dict)
-        vizrankAutoSelect = Signal(object)
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.__signal_delegator = VizrankSignalDelegator()
+
+        @property
+        def vizrankSelectionChanged(self):
+            return self.__signal_delegator.vizrankSelectionChanged
+
+        @property
+        def vizrankAutoSelect(self):
+            return self.__signal_delegator.vizrankAutoSelect
+
+        @property
+        def vizrankRunStateChanged(self):
+            return self.__signal_delegator.vizrankRunStateChanged
 
         @property
         def vizrank_dialog(self) -> Optional[VizRankDialog]:
@@ -477,7 +520,7 @@ def VizRankMixin(vizrank_class: Type[VizRankDialog]) -> Type[type]:
             There should be no reason to call this directly,
             unless the widget has no vizrank button.
             """
-            self.__vizrank.start_computation()
+            self.__vizrank.dialog_reopened()
 
         def raise_vizrank(self) -> None:
             """

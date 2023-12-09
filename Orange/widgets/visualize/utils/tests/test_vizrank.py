@@ -104,7 +104,7 @@ class TestVizRankMixin(GuiTest):
         self.mock_dialog = Mock()
         self.mock_dialog.__name__ = "foo"
 
-        class Widget(QDialog, VizRankMixin(self.mock_dialog)):
+        class Widget(OWWidget, VizRankMixin(self.mock_dialog)):
             pass
 
         self.widget = Widget()
