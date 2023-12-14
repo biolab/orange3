@@ -20,7 +20,7 @@ from Orange.preprocess.score import ReliefF
 from Orange.statistics.distribution import get_distribution, get_distributions
 from Orange.widgets import gui, settings
 from Orange.widgets.settings import (
-    Setting, DomainContextHandler, ContextSetting, SettingProvider)
+    Setting, DomainContextHandler, ContextSetting)
 from Orange.widgets.utils import to_html, get_variable_values_sorted
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
@@ -52,14 +52,24 @@ class MosaicVizRank(VizRankDialogAttrs):
             ["a single variable", "two variables", "three variables",
              "four variables", "at most two variables",
              "at most three variables", "at most four variables"])
-        item0 = combo.model().item(0)
-        enabled = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+
+        def disable_item(i):
+            enabled = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+            item = combo.model().item(i)
+            item.setFlags(item.flags() & ~enabled)
+            if self.attr_range_index == i:
+                # select one attribute less, or a pair instead of a single
+                self.attr_range_index = i - 1 if i else 1
+
         if self.attr_color is None:
-            item0.setFlags(item0.flags() & ~enabled)
-        else:
-            item0.setFlags(item0.flags() | enabled)
+            disable_item(0)  # can't do a single attribute with Pearson
+        if len(data.domain.attributes) < 4:
+            disable_item(3)  # four attributes
+        if len(data.domain.attributes) < 3:
+            disable_item(2)  # three attributes
+
         combo.activated.connect(self.on_attrs_changed)
-        combo.setCurrentIndex(attr_range_index)
+        combo.setCurrentIndex(self.attr_range_index)
         box.layout().addWidget(label)
         box.layout().addWidget(combo)
         gui.rubber(box)
@@ -227,7 +237,6 @@ class OWMosaicDisplay(OWWidget, VizRankMixin(MosaicVizRank)):
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
     settingsHandler = DomainContextHandler()
-    vizrank = SettingProvider(MosaicVizRank)
     settings_version = 2
     use_boxes = Setting(True)
     variable1: Variable = ContextSetting(None)
@@ -394,8 +403,8 @@ class OWMosaicDisplay(OWWidget, VizRankMixin(MosaicVizRank)):
         self.openContext(self.data)
 
     def init_vizrank(self):
-        if self.data is not None and len(self.data) > 1 \
-                and len(self.data.domain.attributes) >= 1:
+        if self.discrete_data is not None and len(self.discrete_data) > 1 \
+                and len(self.discrete_data.domain.attributes) >= 2:
             attr_range_index = self.vizrank_attr_range_index
             if self.variable_color is None:
                 if attr_range_index == 0:
