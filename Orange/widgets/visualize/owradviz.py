@@ -1,5 +1,5 @@
-from itertools import islice, permutations, chain
-from math import factorial
+from itertools import islice, permutations, chain, combinations
+from math import factorial, comb
 import warnings
 
 import numpy as np
@@ -7,22 +7,23 @@ from scipy.spatial import distance
 from sklearn.model_selection import cross_val_score
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
 
-from AnyQt.QtGui import QStandardItem, QColor, QPalette
-from AnyQt.QtCore import Qt, QRectF, QPoint, pyqtSignal as Signal
+from AnyQt.QtGui import QColor, QPalette
+from AnyQt.QtCore import Qt, QRectF, QPoint
 
 import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ScatterPlotItem import ScatterPlotItem
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, IsDefined
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.projection import RadViz
 from Orange.widgets import widget, gui
-from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.plot.owplotgui import VariableSelectionModel, \
     variables_selection
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.visualize.utils import VizRankDialog
+from Orange.widgets.visualize.utils import vizrank
+from Orange.widgets.visualize.utils.vizrank import VizRankDialogNAttrs, \
+    VizRankMixin
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import TextItem
 from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
@@ -32,183 +33,52 @@ MAX_DISPLAYED_VARS = 20
 MAX_LABEL_LEN = 16
 
 
-class RadvizVizRank(VizRankDialog, OWComponent):
-    captionTitle = "Score Plots"
-    n_attrs = Setting(3)
+class RadvizVizRank(VizRankDialogNAttrs):
     minK = 10
 
-    attrsSelected = Signal([])
-    _AttrRole = next(gui.OrangeUserRole)
+    def __init__(self, parent, data, attributes, color, n_attrs):
+        super().__init__(parent, data, attributes, color, n_attrs,
+                         spin_label="Maximum number of variables: ")
 
-    percent_data_used = Setting(100)
-
-    def __init__(self, master):
-        """Add the spin box for maximal number of attributes"""
-        VizRankDialog.__init__(self, master)
-        OWComponent.__init__(self, master)
-
-        self.master = master
-        self.n_neighbors = 10
-
-        box = gui.hBox(self)
-        max_n_attrs = min(MAX_DISPLAYED_VARS, len(master.model_selected))
-        self.n_attrs_spin = gui.spin(
-            box, self, "n_attrs", 3, max_n_attrs, label="Maximum number of variables: ",
-            controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
-        gui.rubber(box)
-        self.last_run_n_attrs = None
-        self.attr_color = master.attr_color
-        self.attr_ordering = None
-        self.data = None
-        self.valid_data = None
-
-        self.rank_table.clicked.connect(self.on_row_clicked)
-        self.rank_table.verticalHeader().sectionClicked.connect(
-            self.on_header_clicked)
-
-    def initialize(self):
-        super().initialize()
-        self.attr_color = self.master.attr_color
-
-    def _compute_attr_order(self):
-        """
-        used by VizRank to evaluate attributes
-        """
-        master = self.master
-        attrs = [v for v in master.primitive_variables
-                 if v is not self.attr_color]
-        data = self.master.data.transform(Domain(attributes=attrs, class_vars=self.attr_color))
-        self.data = data
-        self.valid_data = np.hstack((~np.isnan(data.X), ~np.isnan(data.Y.reshape(len(data.Y), 1))))
+    def score_attributes(self):
+        attrs = [v for v in self.attrs if v is not self.attr_color]
+        data = self.data.transform(Domain(attrs, self.attr_color))
         relief = ReliefF if self.attr_color.is_discrete else RReliefF
         weights = relief(n_iterations=100, k_nearest=self.minK)(data)
         attrs = sorted(zip(weights, attrs), key=lambda x: (-x[0], x[1].name))
-        self.attr_ordering = attr_ordering = [a for _, a in attrs]
-        return attr_ordering
+        return [a for _, a in attrs]
 
-    def _evaluate_projection(self, x, y):
-        """
-        kNNEvaluate - evaluate class separation in the given projection using a k-NN method
-        Parameters
-        ----------
-        x - variables to evaluate
-        y - class
+    def state_count(self):
+        n_all_attrs = self.max_attrs()
+        if not n_all_attrs:
+            return 0
+        return sum(comb(n_all_attrs, n_attrs) * factorial(n_attrs - 1) // 2
+                   for n_attrs in range(3, self.n_attrs + 1))
 
-        Returns
-        -------
-        scores
-        """
-        if self.percent_data_used != 100:
-            rand = np.random.choice(len(x), int(len(x) * self.percent_data_used / 100),
-                                    replace=False)
-            x = x[rand]
-            y = y[rand]
-        neigh = KNeighborsClassifier(n_neighbors=3) if self.attr_color.is_discrete else \
-            KNeighborsRegressor(n_neighbors=3)
-        assert ~(np.isnan(x).any(axis=None) | np.isnan(x).any(axis=None))
-        neigh.fit(x, y)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=UserWarning)
-            scores = cross_val_score(neigh, x, y, cv=3)
-        return scores.mean()
-
-    def _n_attrs_changed(self):
-        """
-        Change the button label when the number of attributes changes. The method does not reset
-        anything so the user can still see the results until actually restarting the search.
-        """
-        if self.n_attrs != self.last_run_n_attrs or self.saved_state is None:
-            self.button.setText("Start")
-        else:
-            self.button.setText("Continue")
-        self.button.setEnabled(self.check_preconditions())
-
-    def progressBarSet(self, value):
-        self.setWindowTitle(self.captionTitle + " Evaluated {} permutations".format(value))
-
-    def check_preconditions(self):
-        master = self.master
-        if not super().check_preconditions():
-            return False
-        elif not master.btn_vizrank.isEnabled():
-            return False
-        self.n_attrs_spin.setMaximum(min(MAX_DISPLAYED_VARS,
-                                         len(master.model_selected)))
-        return True
-
-    def on_selection_changed(self, selected, _):
-        self.on_row_clicked(selected.indexes()[0])
-
-    def on_row_clicked(self, index):
-        self.selectionChanged.emit(index.data(self._AttrRole))
-
-    def on_header_clicked(self, section):
-        self.on_row_clicked(self.rank_model.index(section, 0))
-
-    def iterate_states(self, state):
-        if state is None:  # on the first call, compute order
-            self.attrs = self._compute_attr_order()
-            state = list(range(3))
-        else:
-            state = list(state)
-
-        def combinations(n, s):
-            while True:
-                yield s
-                for up, _ in enumerate(s):
-                    s[up] += 1
-                    if up + 1 == len(s) or s[up] < s[up + 1]:
-                        break
-                    s[up] = up
-                if s[-1] == n:
-                    if len(s) < self.n_attrs:
-                        s = list(range(len(s) + 1))
-                    else:
-                        break
-
-        for c in combinations(len(self.attrs), state):
-            for p in islice(permutations(c[1:]), factorial(len(c) - 1) // 2):
-                yield (c[0],) + p
+    def state_generator(self):
+        return (
+            (c[0], *p)
+            for k in range(3, self.n_attrs + 1)
+            for c in combinations(list(range(len(self.attr_order))), k)
+            for p in islice(permutations(c[1:]), factorial(len(c) - 1) // 2))
 
     def compute_score(self, state):
-        attrs = [self.attrs[i] for i in state]
+        attrs = [self.attr_order[i] for i in state]
         domain = Domain(attributes=attrs, class_vars=[self.attr_color])
         data = self.data.transform(domain)
+        valid_data = IsDefined()(data)
         projector = RadViz()
-        projection = projector(data)
-        radviz_xy = projection(data).X
-        y = projector.preprocess(data).Y
-        return -self._evaluate_projection(radviz_xy, y)
+        projection = projector(valid_data)
+        radviz_xy = projection(valid_data).X
+        y = projector.preprocess(valid_data).Y
 
-    def bar_length(self, score):
-        return -score
-
-    def row_for_state(self, score, state):
-        attrs = [self.attrs[s] for s in state]
-        item = QStandardItem("[{:0.6f}] ".format(-score) + ", ".join(a.name for a in attrs))
-        item.setData(attrs, self._AttrRole)
-        return [item]
-
-    def _update_progress(self):
-        self.progressBarSet(int(self.saved_progress))
-
-    def before_running(self):
-        """
-        Disable the spin for number of attributes before running and
-        enable afterwards. Also, if the number of attributes is different than
-        in the last run, reset the saved state (if it was paused).
-        """
-        if self.n_attrs != self.last_run_n_attrs:
-            self.saved_state = None
-            self.saved_progress = 0
-        if self.saved_state is None:
-            self.scores = []
-            self.rank_model.clear()
-        self.last_run_n_attrs = self.n_attrs
-        self.n_attrs_spin.setDisabled(True)
-
-    def stopped(self):
-        self.n_attrs_spin.setDisabled(False)
+        neigh = (KNeighborsClassifier if self.attr_color.is_discrete else
+                 KNeighborsRegressor)(n_neighbors=3)
+        neigh.fit(radviz_xy, y)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=UserWarning)
+            scores = cross_val_score(neigh, radviz_xy, y, cv=3)
+        return -scores.mean() * len(valid_data) / len(data)
 
 
 class OWRadvizGraph(OWGraphWithAnchors):
@@ -309,7 +179,7 @@ class OWRadvizGraph(OWGraphWithAnchors):
         self.plot_widget.addItem(self.indicator_item)
 
 
-class OWRadviz(OWAnchorProjectionWidget):
+class OWRadviz(OWAnchorProjectionWidget, VizRankMixin(RadvizVizRank)):
     name = "Radviz"
     description = "Display Radviz projection"
     icon = "icons/Radviz.svg"
@@ -319,15 +189,19 @@ class OWRadviz(OWAnchorProjectionWidget):
     settings_version = 3
 
     selected_vars = ContextSetting([])
-    vizrank = SettingProvider(RadvizVizRank)
     GRAPH_CLASS = OWRadvizGraph
     graph = SettingProvider(OWRadvizGraph)
+    n_attrs_vizrank = Setting(3)
 
     class Warning(OWAnchorProjectionWidget.Warning):
         removed_vars = widget.Msg(
             "Categorical variables with more than two values are not shown.")
         max_vars_selected = widget.Msg(
             "Maximum number of selected variables reached.")
+
+    def __init__(self):
+        VizRankMixin.__init__(self)  # pylint: disable=non-parent-init-called
+        OWAnchorProjectionWidget.__init__(self)
 
     def _add_controls(self):
         box = gui.vBox(self.controlArea, box="Features")
@@ -336,9 +210,9 @@ class OWRadviz(OWAnchorProjectionWidget):
         variables_selection(box, self, self.model_selected)
         self.model_selected.selection_changed.connect(
             self.__model_selected_changed)
-        self.vizrank, self.btn_vizrank = RadvizVizRank.add_vizrank(
-            None, self, "Suggest features", self.vizrank_set_attrs)
-        box.layout().addWidget(self.btn_vizrank)
+        box.layout().addWidget(self.vizrank_button("Suggest features"))
+        self.vizrankSelectionChanged.connect(self.vizrank_set_attrs)
+        self.vizrankRunStateChanged.connect(self.store_vizrank_n_attrs)
         super()._add_controls()
 
     def _add_buttons(self):
@@ -361,7 +235,11 @@ class OWRadviz(OWAnchorProjectionWidget):
     def effective_data(self):
         return self.data.transform(Domain(self.effective_variables))
 
-    def vizrank_set_attrs(self, *attrs):
+    def store_vizrank_n_attrs(self, state, data):
+        if state == vizrank.RunState.Running:
+            self.n_attrs_vizrank = data["n_attrs"]
+
+    def vizrank_set_attrs(self, attrs):
         if not attrs:
             return
         self.selected_vars[:] = attrs
@@ -380,24 +258,35 @@ class OWRadviz(OWAnchorProjectionWidget):
 
     def colors_changed(self):
         super().colors_changed()
-        self._init_vizrank()
+        self.init_vizrank()
 
     @OWAnchorProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
-        self._init_vizrank()
+        self.init_vizrank()
         self.init_projection()
 
-    def _init_vizrank(self):
-        is_enabled = self.data is not None and \
-            len(self.primitive_variables) > 3 and \
-            self.attr_color is not None and \
-            not np.isnan(self.data.get_column(self.attr_color)).all() and \
-            np.sum(np.all(np.isfinite(self.data.X), axis=1)) > 1 and \
-            np.all(np.nan_to_num(np.nanstd(self.data.X, 0)) != 0)
-        self.btn_vizrank.setEnabled(bool(is_enabled))
-        if is_enabled:
-            self.vizrank.initialize()
+    def init_vizrank(self):
+        msgerr = ""
+        if self.data is None:
+            msgerr = "No data"
+        elif len(self.primitive_variables) <= 3:
+            msgerr = "Not enough variables"
+        elif self.attr_color is None:
+            msgerr = "Color is not set."
+        elif np.isnan(self.data.get_column(self.attr_color)).all():
+            msgerr = "No rows with defined color variable"
+        elif np.sum(np.all(np.isfinite(self.data.X), axis=1)) <= 1:
+            msgerr = "Not enough rows without missing data"
+        elif not np.all(np.nan_to_num(np.nanstd(self.data.X, 0)) != 0):
+            msgerr = "Constant data"
+
+        if not msgerr:
+            super().init_vizrank(
+                self.data, self.primitive_variables, self.attr_color,
+                self.n_attrs_vizrank)
+        else:
+            self.disable_vizrank(msgerr)
 
     def check_data(self):
         super().check_data()
@@ -477,5 +366,5 @@ class MoveIndicator(pg.GraphicsObject):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    data = Table("brown-selected")
-    WidgetPreview(OWRadviz).run(set_data=data, set_subset_data=data[::10])
+    brown = Table("brown-selected")
+    WidgetPreview(OWRadviz).run(set_data=brown, set_subset_data=brown[::10])

@@ -2010,10 +2010,10 @@ distance/distance.py:
         def `compute_distances`:
             hamming: false
 ensembles/ada_boost.py:
-    def `base_estimator_deprecation`:
-        '`base_estimator` is deprecated (to be removed in 3.39): use `estimator` instead.': false
     SklAdaBoostClassificationLearner: false
     SklAdaBoostRegressionLearner: false
+    def `base_estimator_deprecation`:
+        '`base_estimator` is deprecated (to be removed in 3.39): use `estimator` instead.': false
     class `SklAdaBoostClassificationLearner`:
         def `__init__`:
             SAMME.R: false
@@ -3452,13 +3452,13 @@ tests/sql/base.py:
     class `DataBaseTest`:
         def `_check_db`:
             >: false
-            This test is only run database version higher then {}: false
             <: false
-            This test is only run on database version lower then {}: false
             {} module is required for this database: false
             Database is not running: false
             No connection provided for {}: false
             Unsupported database: false
+            This test is only run database version higher then {}: false
+            This test is only run on database version lower then {}: false
         def `_setup_test_with`:
             def `new_test`:
                 setUpDB: false
@@ -5403,23 +5403,19 @@ widgets/data/oweditdomain.py:
         name: false
         categories: false
         annotations: false
-        linked: false
     class `Real`:
         Real: false
         name: false
         format: false
         annotations: false
-        linked: false
     class `String`:
         String: false
         name: false
         annotations: false
-        linked: false
     class `Time`:
         Time: false
         name: false
         annotations: false
-        linked: false
     class `Rename`:
         Rename: false
         name: false
@@ -13610,16 +13606,6 @@ widgets/visualize/owheatmap.py:
     __main__: false
     brown-selected.tab: false
 widgets/visualize/owlinearprojection.py:
-    class `LinearProjectionVizRank`:
-        Score Plots: Oceni projekcije
-        def `__init__`:
-            n_attrs: false
-            'Number of variables: ': 'Število spremenljivk: '
-        def `row_for_state`:
-            ', ': false
-        def `_n_attrs_changed`:
-            Start: Začni
-            Continue: Nadaljuj
     class `OWLinProjGraph`:
         def `update_anchors`:
             <b>{label}</b>: false
@@ -13648,6 +13634,8 @@ widgets/visualize/owlinearprojection.py:
             placement: false
         def `_add_buttons`:
             auto_commit: false
+        def `store_vizrank_n_attrs`:
+            n_attrs: false
         def `_check_options`:
             Current data has no target variable: Podatki nimajo ciljne spremenljivke.
             {class_var.name} is not categorical: {class_var.name} ni kategorična spremenljivka.
@@ -13657,7 +13645,7 @@ widgets/visualize/owlinearprojection.py:
             "Data contains just {['one', 'two'][nclasses - 1]} distinct ": "Podatki vsebujejo le {plsi(nclasses - 1, 'eno vrednost|dve vrednosti|')} "
             "{pl(nclasses, 'value')} ({vals}) for '{class_var.name}'; ": "spremenljivke '{class_var.name}'; "
             at least three are required.: LDA potrebuje vsaj tri.
-        def `_init_vizrank`:
+        def `init_vizrank`:
             There is no data.: Ni podatkov.
             Color variable has to be selected: Potrebno je izbrati spremenljivko za barvo.
             'Suggest Features does not work for Linear ': 'Predlaganje spremenljivk ne deluje '
@@ -13785,29 +13773,25 @@ widgets/visualize/owlineplot.py:
     brown-selected: false
 widgets/visualize/owmosaic.py:
     class `MosaicVizRank`:
-        Mosaic Ranking: Ocenjevanje mozaikov
         def `__init__`:
-            max_attrs: false
-            Number of variables:: Število spremenljivk:
-            one: ena
-            two: dve
-            three: tri
-            four: štiri
-            at most two: največ dve
-            at most three: največ tri
-            at most four: največ štiri
-        def `max_attr_changed`:
-            Start: Začni
-            Continue: Nadaljuj
-        def `check_preconditions`:
-            no_attributes: false
-            No variables to rank.: Ni spremenljivk za rangiranje.
-        def `compute_attr_order`:
+            'Score Mosaics with ': Oceni Mozaike
+            a single variable: z eno spremenljivko
+            two variables: z dvema spremenljivkama
+            three variables: s tremi spremenljivkami
+            four variables: s štirimi spremenljivkami
+            at most two variables: z največ dvema spremenljivkama
+            at most three variables: z največ tremi spremenljivkami
+            at most four variables: z največ štirimi spremenljivkami
+        def `on_attrs_changed`:
+            Restart with new settings: Poženi z novimi nastavitvami
+        def `score_attributes`:
             name: false
         def `compute_score`:
             -: false
         def `row_for_state`:
             ', ': false
+        def `emit_run_state_changed`:
+            attr_range_index: false
     class `OWMosaicDisplay`:
         Mosaic Display: Mozaik
         Display data in a mosaic plot.: Pokaži mozaik za podatke.
@@ -13832,6 +13816,10 @@ widgets/visualize/owmosaic.py:
             variable_color: false
             use_boxes: false
             Compare with total: Primerjaj s celoto
+        def `store_vizrank_attr_range`:
+            attr_range_index: false
+        def `init_vizrank`:
+            Not enough data: Ni dovolj podatkov
         def `update_graph`:
             def `get_counts`:
                 -: true
@@ -14111,20 +14099,10 @@ widgets/visualize/owpythagoreanforest.py:
     iris: false
 widgets/visualize/owradviz.py:
     class `RadvizVizRank`:
-        Score Plots: Ocenjevanje kombinacij
         def `__init__`:
-            n_attrs: false
             'Maximum number of variables: ': 'Največje število spremenljivk: '
-        def `_evaluate_projection`:
+        def `compute_score`:
             ignore: false
-        def `_n_attrs_changed`:
-            Start: Začni
-            Continue: Nadaljuj
-        def `progressBarSet`:
-            ' Evaluated {} permutations': : Ocenjenih {} kombinacij
-        def `row_for_state`:
-            '[{:0.6f}] ': false
-            ', ': false
     class `OWRadvizGraph`:
         def `update_anchors`:
             <b>{label}</b>: false
@@ -14144,6 +14122,15 @@ widgets/visualize/owradviz.py:
             Suggest features: Predlagaj spremenljivke
         def `_add_buttons`:
             auto_commit: false
+        def `store_vizrank_n_attrs`:
+            n_attrs: false
+        def `init_vizrank`:
+            No data: Ni podatkov.
+            Not enough variables: Ni dovolj spremenljivk.
+            Color is not set.: Barva ni nastavljena.
+            No rows with defined color variable: Ni vrstic z definirano vrednostjo {self.attr_color.name}.
+            Not enough rows without missing data: Ni dovolj vrstic brez manjkajočih podatkov.
+            Constant data: Konstantni podatki.
         def `_send_components_metas`:
             angle: false
         def `migrate_context`:
@@ -14213,11 +14200,6 @@ widgets/visualize/owruleviewer.py:
     __main__: false
     iris: false
 widgets/visualize/owscatterplot.py:
-    class `ScatterPlotVizRank`:
-        Score Plots: Oceni prikaze
-        def `check_preconditions`:
-            color_required: false
-            Color variable is not selected: Barva ni izbrana
     class `ParameterSetter`:
         def `axis_items`:
             item: false
@@ -14264,12 +14246,12 @@ widgets/visualize/owscatterplot.py:
             auto_sample: false
             Sample: Vzorec
             Sampling: Vzorčenje
-        def `_vizrank_color_change`:
-            No data on input: Ni podatkov na vhodu.
-            Data is sparse: Podatki so redki.
-            Not enough features for ranking: Ni dovolj spremenljivk za rangiranje,
-            Color variable is not selected: Barva ni določena,
-            Color variable has no values: Spremenljivka z barvo nima znanih vrednosti.
+        def `init_vizrank`:
+            No data on input: Ni podatkov.
+            Data is sparse: Podatki so v redki tabeli.
+            Not enough features for ranking: Ni dovolj spremenljivk za rangiranje.
+            Color variable is not selected: Barva ni izbrana.
+            Color variable has no values: Spremenljivka {self.attr_color} nima znanih vrednosti.
         def `_point_tooltip`:
             <br/>: false
             {} = {}: false
@@ -14388,6 +14370,10 @@ widgets/visualize/owsieve.py:
             attr_x: false
             attrY: false
             attr_y: false
+        def `init_vizrank`:
+            No data: Ni podatkov.
+            Not enough data: Ni dovolj podatkov.
+            Data is sparse: Podatki so v redki tabeli.
         def `resolve_shown_attributes`:
             Features from the input signal are not present in the data: Spremenljivk na vhodnem signalu ni v vhodni tabeli.
         def `update_graph`:
@@ -14854,6 +14840,7 @@ widgets/visualize/utils/__init__.py:
         class `Information`:
             There is nothing to rank.: Ni česa rangirati.
         def `__init__`:
+            Orange.widgets.visualize.utils.vizrank.VizRankDialog: false
             Filter ...: false
             Start: Začni
         def `initialize`:
@@ -15064,6 +15051,39 @@ widgets/visualize/utils/scene.py:
     class `UpdateItemsOnSelectGraphicsScene`:
         def `__handle_selection`:
             selection_changed: false
+widgets/visualize/utils/vizrank.py:
+    class `VizRankDialog`:
+        Score Plots: Oceni prikaze
+        Start: Začni
+        Pause: Počakaj
+        Continue: Nadaljuj
+        Finished: Končano
+        def `__init__`:
+            Filter ...: true
+            Start: Začni
+        def `set_run_state`:
+            {self.captionTitle} (paused at {self._progress}%): {self.captionTitle} (čaka pri {self._progress}%)
+    def `VizRankMixin`:
+        {vizrank_class.__name__}Mixin: false
+    class `VizRankDialogAttrs`:
+        def `__init__`:
+            Orange.data.Table: false
+            Orange.data.Variable: false
+        def `attr_order`:
+            Orange.data.Variable: false
+        def `row_for_state`:
+            ', ': true
+        def `auto_select`:
+            Orange.data.Variable: false
+    class `VizRankDialogNAttrs`:
+        def `__init__`:
+            Orange.data.Table: false
+            Orange.data.Variable: false
+            'Number of variables: ': 'Število spremenljivk: '
+        def `on_n_attrs_changed`:
+            Restart with {new_attrs} variables: Ponovno poženi {plsi_sz(new_attrs)} {z_besedo(new_attrs, 6, "f")} {plsi(new_attrs, "spremenljivko|spremenljivkama|spremenljivkami")}
+        def `emit_run_state_changed`:
+            n_attrs: false
 widgets/visualize/utils/widget.py:
     class `OWProjectionWidgetBase`:
         class `Information`:

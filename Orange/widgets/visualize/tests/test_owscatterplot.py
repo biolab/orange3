@@ -7,6 +7,7 @@ import numpy as np
 from AnyQt.QtCore import QRectF, Qt
 from AnyQt.QtWidgets import QToolTip
 from AnyQt.QtGui import QColor, QFont
+
 from orangewidget.tests.base import DEFAULT_TIMEOUT
 
 from Orange.data import (
@@ -75,9 +76,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                         DiscreteVariable("e", values="ab"))
         a = np.arange(10).reshape((10, 1))
         data = Table(domain, np.hstack([a, a, a, a]), a >= 5)
-        self.send_signal(self.widget.Inputs.data, data)
-        vizrank = ScatterPlotVizRank(self.widget)
-        self.assertEqual([x.name for x in vizrank.score_heuristic()],
+        vizrank = ScatterPlotVizRank(self.widget, data, attr_color=data.domain.class_var)
+        self.assertEqual([x.name for x in vizrank.score_attributes()],
                          list("abcd"))
 
     def test_optional_combos(self):
@@ -334,7 +334,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertIs(self.widget.attr_x, self.data.domain[2])
         self.assertIs(self.widget.attr_y, self.data.domain[3])
         self.assertFalse(self.widget.attr_box.isEnabled())
-        self.assertFalse(self.widget.vizrank.isEnabled())
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
         x, y = self.widget.graph.scatterplot_item.getData()
         np.testing.assert_array_equal(x, self.data.X[:, 2])
         np.testing.assert_array_equal(y, self.data.X[:, 3])
@@ -344,11 +344,11 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertIs(self.widget.attr_x, self.data.domain[2])
         self.assertIs(self.widget.attr_y, self.data.domain[3])
         self.assertFalse(self.widget.attr_box.isEnabled())
-        self.assertFalse(self.widget.vizrank.isEnabled())
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
 
         self.send_signal(self.widget.Inputs.features, None)
         self.assertTrue(self.widget.attr_box.isEnabled())
-        self.assertTrue(self.widget.vizrank.isEnabled())
+        self.assertTrue(self.widget.vizrank_button().isEnabled())
 
     def test_features_and_hidden_data(self):
         new_domain = self.data.domain.copy()
@@ -360,13 +360,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertIsNone(self.widget.attr_x)
         self.assertIsNone(self.widget.attr_y)
         self.assertFalse(self.widget.attr_box.isEnabled())
-        self.assertFalse(self.widget.vizrank.isEnabled())
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
 
         self.send_signal(self.widget.Inputs.features, None)
         self.assertEqual(self.widget.attr_x, self.data.domain[1])
         self.assertEqual(self.widget.attr_y, self.data.domain[2])
         self.assertTrue(self.widget.attr_box.isEnabled())
-        self.assertTrue(self.widget.vizrank.isEnabled())
+        self.assertTrue(self.widget.vizrank_button().isEnabled())
 
         # try with features not in data
         bad_feat = AttributeList([ContinuousVariable("a"), ContinuousVariable("b")])
@@ -374,13 +374,13 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertIsNone(self.widget.attr_x)
         self.assertIsNone(self.widget.attr_y)
         self.assertFalse(self.widget.attr_box.isEnabled())
-        self.assertFalse(self.widget.vizrank.isEnabled())
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
 
         self.send_signal(self.widget.Inputs.features, None)
         self.assertEqual(self.widget.attr_x, self.data.domain[1])
         self.assertEqual(self.widget.attr_y, self.data.domain[2])
         self.assertTrue(self.widget.attr_box.isEnabled())
-        self.assertTrue(self.widget.vizrank.isEnabled())
+        self.assertTrue(self.widget.vizrank_button().isEnabled())
 
     def test_output_features(self):
         data = Table("iris")
@@ -401,20 +401,17 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
     def test_vizrank(self):
         data = Table("iris")
         self.send_signal(self.widget.Inputs.data, data)
-        vizrank = ScatterPlotVizRank(self.widget)
+        vizrank = self.widget.vizrank_dialog
         n_states = len(data.domain.attributes)
         n_states = n_states * (n_states - 1) / 2
-        states = list(vizrank.iterate_states(None))
+        states = list(vizrank.state_generator())
         self.assertEqual(len(states), n_states)
         self.assertEqual(len(set(states)), n_states)
         self.assertIsNotNone(vizrank.compute_score(states[0]))
-        self.send_signal(self.widget.Inputs.data, data[:9])
-        self.assertIsNone(vizrank.compute_score(states[0]))
 
-        data = Table("housing")[::10]
-        self.send_signal(self.widget.Inputs.data, data)
-        vizrank = ScatterPlotVizRank(self.widget)
-        self.assertIsNotNone(vizrank.compute_score(next(vizrank.iterate_states(None))))
+        self.send_signal(self.widget.Inputs.data, data[:9])
+        vizrank = self.widget.vizrank_dialog
+        self.assertIsNone(vizrank.compute_score(states[0]))
 
     def test_vizrank_class_nan(self):
         """
@@ -424,7 +421,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         """
         def assert_vizrank_enabled(data, is_enabled):
             self.send_signal(self.widget.Inputs.data, data)
-            self.assertEqual(is_enabled, self.widget.vizrank_button.isEnabled())
+            self.assertEqual(is_enabled, self.widget.vizrank_button().isEnabled())
 
         data1 = Table("iris")[::30]
         data2 = Table("iris")[::30].copy()
@@ -447,24 +444,23 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, data)
         with patch("Orange.widgets.visualize.owscatterplot.ReliefF",
                    new=lambda *_1, **_2: lambda data: np.arange(len(data))):
-            self.widget.vizrank.score_heuristic()
+            self.widget.vizrank_button().click()
 
     def test_vizrank_enabled(self):
         self.send_signal(self.widget.Inputs.data, self.data)
-        self.assertTrue(self.widget.vizrank_button.isEnabled())
-        self.assertEqual(self.widget.vizrank_button.toolTip(), "")
-        self.assertTrue(self.widget.vizrank.button.isEnabled())
-        self.widget.vizrank.button.click()
+        self.assertTrue(self.widget.vizrank_button().isEnabled())
+        self.assertEqual(self.widget.vizrank_button().toolTip(), "")
+        self.assertTrue(self.widget.vizrank_button().isEnabled())
 
     def test_vizrank_enabled_no_data(self):
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.vizrank_button.isEnabled())
-        self.assertEqual(self.widget.vizrank_button.toolTip(), "No data on input")
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
+        self.assertEqual(self.widget.vizrank_button().toolTip(), "No data on input")
 
     def test_vizrank_enabled_sparse_data(self):
         self.send_signal(self.widget.Inputs.data, self.data.to_sparse())
-        self.assertFalse(self.widget.vizrank_button.isEnabled())
-        self.assertEqual(self.widget.vizrank_button.toolTip(), "Data is sparse")
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
+        self.assertEqual(self.widget.vizrank_button().toolTip(), "Data is sparse")
 
     def test_vizrank_enabled_constant_data(self):
         domain = Domain([ContinuousVariable("c1"),
@@ -475,21 +471,20 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         X = np.zeros((10, 4))
         table = Table(domain, X, np.random.randint(2, size=10))
         self.send_signal(self.widget.Inputs.data, table)
-        self.assertEqual(self.widget.vizrank_button.toolTip(), "")
-        self.assertTrue(self.widget.vizrank_button.isEnabled())
-        self.assertTrue(self.widget.vizrank.button.isEnabled())
-        self.widget.vizrank.button.click()
+        self.assertEqual(self.widget.vizrank_button().toolTip(), "")
+        self.assertTrue(self.widget.vizrank_button().isEnabled())
+        self.assertTrue(self.widget.vizrank_button().isEnabled())
 
     def test_vizrank_enabled_two_features(self):
         self.send_signal(self.widget.Inputs.data, self.data[:, :2])
-        self.assertFalse(self.widget.vizrank_button.isEnabled())
-        self.assertEqual(self.widget.vizrank_button.toolTip(),
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
+        self.assertEqual(self.widget.vizrank_button().toolTip(),
                          "Not enough features for ranking")
 
     def test_vizrank_enabled_no_color_var(self):
         self.send_signal(self.widget.Inputs.data, self.data[:, :3])
-        self.assertFalse(self.widget.vizrank_button.isEnabled())
-        self.assertEqual(self.widget.vizrank_button.toolTip(),
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
+        self.assertEqual(self.widget.vizrank_button().toolTip(),
                          "Color variable is not selected")
 
     def test_vizrank_enabled_color_var_nans(self):
@@ -500,11 +495,12 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                         DiscreteVariable("cls", values=("a", "b")))
         table = Table(domain, np.random.random((10, 4)), np.full(10, np.nan))
         self.send_signal(self.widget.Inputs.data, table)
-        self.assertFalse(self.widget.vizrank_button.isEnabled())
-        self.assertEqual(self.widget.vizrank_button.toolTip(),
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
+        self.assertEqual(self.widget.vizrank_button().toolTip(),
                          "Color variable has no values")
 
-    def test_vizrank_hidden_attributes(self):
+    @patch.object(OWScatterPlot.__bases__[1], "init_vizrank")
+    def test_vizrank_hidden_attributes(self, init_vizrank):
         """
         Test hidden attributes not considered in Find Informative Projections
         """
@@ -512,11 +508,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         new_domain.attributes[0].attributes["hidden"] = True
         data = self.data.transform(new_domain)
         self.send_signal(self.widget.Inputs.data, data)
-        vizrank = ScatterPlotVizRank(self.widget)
-        self.assertListEqual(
-            ["petal width", "petal length", "sepal width"],
-            [x.name for x in vizrank.score_heuristic()],
-        )
+        self.assertEqual(list(init_vizrank.call_args[0][1]),
+                         list(new_domain.variables[1:]))
 
     def test_auto_send_selection(self):
         """
@@ -848,8 +841,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertListEqual(self.widget.effective_variables, list(features))
 
     @patch('Orange.widgets.visualize.owscatterplot.ScatterPlotVizRank.'
-           'on_manual_change')
-    def test_vizrank_receives_manual_change(self, on_manual_change):
+           'auto_select')
+    def test_vizrank_receives_manual_change(self, auto_select):
         # Recreate the widget so the patch kicks in
         self.widget = self.create_widget(OWScatterPlot)
         data = Table("iris.tab")
@@ -859,25 +852,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.attr_y = model[1]
         simulate.combobox_activate_index(self.widget.controls.attr_x, 2)
         self.assertIs(self.widget.attr_x, model[2])
-        on_manual_change.assert_called_with(model[2], model[1])
-
-    def test_on_manual_change(self):
-        data = Table("iris.tab")
-        self.send_signal(self.widget.Inputs.data, data)
-        vizrank = self.widget.vizrank
-        vizrank.toggle()
-        self.process_events(until=lambda: not vizrank.keep_running)
-
-        model = vizrank.rank_model
-        attrs = model.data(model.index(3, 0), vizrank._AttrRole)
-        vizrank.on_manual_change(*attrs)
-        selection = vizrank.rank_table.selectedIndexes()
-        self.assertEqual(len(selection), 1)
-        self.assertEqual(selection[0].row(), 3)
-
-        vizrank.on_manual_change(*attrs[::-1])
-        selection = vizrank.rank_table.selectedIndexes()
-        self.assertEqual(len(selection), 0)
+        auto_select.assert_called_with([model[2], model[1]])
 
     def test_regression_lines_appear(self):
         self.widget.graph.controls.show_reg_line.setChecked(True)

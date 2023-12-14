@@ -4,7 +4,7 @@ from itertools import chain
 import numpy as np
 from scipy.stats.distributions import chi2
 
-from AnyQt.QtCore import Qt, QSize, Signal
+from AnyQt.QtCore import Qt, QSize
 from AnyQt.QtGui import QColor, QPen, QBrush
 from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem, QSizePolicy
 
@@ -20,8 +20,10 @@ from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.vizrank import VizRankDialogAttrPair, \
+    VizRankMixin
 from Orange.widgets.visualize.utils import (
-    CanvasText, CanvasRectangle, ViewWithPress, VizRankDialogAttrPair)
+    CanvasText, CanvasRectangle, ViewWithPress)
 from Orange.widgets.widget import OWWidget, AttributeList, Input, Output
 
 
@@ -54,22 +56,18 @@ class ChiSqStats:
 
 
 class SieveRank(VizRankDialogAttrPair):
-    captionTitle = "Sieve Rank"
-
-    def initialize(self):
-        super().initialize()
-        self.attrs = self.master.attrs
+    caption_title = "Sieve Rank"
+    sort_names_in_row = True
 
     def compute_score(self, state):
-        p = ChiSqStats(self.master.discrete_data,
-                       *(self.attrs[i].name for i in state)).p
+        p = ChiSqStats(self.data, *(self.attr_order[i].name for i in state)).p
         return 2 if np.isnan(p) else p
 
     def bar_length(self, score):
         return min(1, -math.log(score, 10) / 50) if 0 < score <= 1 else 0
 
 
-class OWSieveDiagram(OWWidget):
+class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
     name = "Sieve Diagram"
     description = "Visualize the observed and expected frequencies " \
                   "for a combination of values."
@@ -95,8 +93,6 @@ class OWSieveDiagram(OWWidget):
     attr_y = ContextSetting(None)
     selection = ContextSetting(set())
 
-    xy_changed_manually = Signal(Variable, Variable)
-
     def __init__(self):
         # pylint: disable=missing-docstring
         super().__init__()
@@ -118,9 +114,10 @@ class OWSieveDiagram(OWWidget):
         gui.comboBox(value="attr_x", **combo_args)
         gui.widgetLabel(self.attr_box, "\u2717", sizePolicy=fixed_size)
         gui.comboBox(value="attr_y", **combo_args)
-        self.vizrank, self.vizrank_button = SieveRank.add_vizrank(
-            self.attr_box, self, "Score Combinations", self.set_attr)
-        self.vizrank_button.setSizePolicy(*fixed_size)
+        button = self.vizrank_button("Score Combinations")
+        self.attr_box.layout().addWidget(button)
+        self.vizrankSelectionChanged.connect(self.set_attr)
+        button.setSizePolicy(*fixed_size)
 
         self.canvas = QGraphicsScene(self)
         self.canvasView = ViewWithPress(
@@ -190,19 +187,30 @@ class OWSieveDiagram(OWWidget):
         self.resolve_shown_attributes()
         self.update_graph()
         self.update_selection()
+        self.init_vizrank()
 
-        self.vizrank.initialize()
-        self.vizrank_button.setEnabled(
-            self.data is not None and len(self.data) > 1 and
-            len(self.data.domain.attributes) > 1 and not self.data.is_sparse())
+    def init_vizrank(self):
+        errmsg = ""
+        if self.data is None:
+            errmsg = "No data"
+        elif len(self.data) <= 1 or len(self.data.domain.attributes) <= 1:
+            errmsg = "Not enough data"
+        elif self.data.is_sparse():
+            errmsg = "Data is sparse"
 
-    def set_attr(self, attr_x, attr_y):
-        self.attr_x, self.attr_y = attr_x, attr_y
+        if not errmsg:
+            super().init_vizrank(self.discrete_data,
+                                 list(self.data.domain.variables))
+        else:
+            self.disable_vizrank(errmsg)
+
+    def set_attr(self, attrs):
+        self.attr_x, self.attr_y = (self.data.domain[attr.name] for attr in attrs)
         self.update_attr()
 
     def attr_changed(self):
         self.update_attr()
-        self.xy_changed_manually.emit(self.attr_x, self.attr_y)
+        self.vizrankAutoSelect.emit([self.attr_x, self.attr_y])
 
     def update_attr(self):
         """Update the graph and selection."""
@@ -255,7 +263,6 @@ class OWSieveDiagram(OWWidget):
         """
         self.warning()
         self.attr_box.setEnabled(True)
-        self.vizrank.setEnabled(True)
         if not self.input_features:  # None or empty
             return
         features = [f for f in self.input_features if f in self.domain_model]
@@ -266,7 +273,6 @@ class OWSieveDiagram(OWWidget):
         old_attrs = self.attr_x, self.attr_y
         self.attr_x, self.attr_y = [f for f in (features * 2)[:2]]
         self.attr_box.setEnabled(False)
-        self.vizrank.setEnabled(False)
         if (self.attr_x, self.attr_y) != old_attrs:
             self.selection = set()
             self.update_graph()
