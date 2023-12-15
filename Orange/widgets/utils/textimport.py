@@ -38,13 +38,14 @@ from typing import (
 
 from AnyQt.QtCore import (
     Qt, QSize, QPoint, QRect, QRectF, QRegularExpression, QAbstractTableModel,
-    QModelIndex, QItemSelectionModel, QTextBoundaryFinder, QTimer, QEvent
+    QModelIndex, QItemSelectionModel, QTextBoundaryFinder, QTimer, QEvent,
+    QObject
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 from AnyQt.QtGui import (
     QRegularExpressionValidator, QColor, QBrush, QPalette, QHelpEvent,
     QStandardItemModel, QStandardItem, QIcon, QIconEngine, QPainter, QPixmap,
-    QFont
+    QFont, QMouseEvent
 )
 from AnyQt.QtWidgets import (
     QWidget, QComboBox, QFormLayout, QHBoxLayout, QVBoxLayout, QLineEdit,
@@ -1044,18 +1045,43 @@ class CSVImportWidget(QWidget):
         header = self.dataview.verticalHeader()  # type: QHeaderView
         index = header.logicalIndexAt(pos)
         pos = header.mapToGlobal(pos)
-        model = header.model()  # type: QAbstractTableModel
+        bhv = self.dataview.selectionBehavior()
+        if bhv == QAbstractItemView.SelectRows:
+            selmodel = self.dataview.selectionModel()
+            model = selmodel.model()
+            midxs = selmodel.selectedRows(0)
+            indices = [midx.row() for midx in midxs]
+            if index not in indices:
+                selmodel.select(
+                    model.index(index, 0),
+                    QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
+                )
+                indices = [index]
+        else:
+            indices = [index]
+        self.__run_row_menu(pos, indices)
 
+    def __run_row_menu(self, pos: QPoint, rows: List[int]):
+        model = self.__previewmodel
+        if model is None:
+            return
+        header = self.dataview.verticalHeader()
         RowStateRole = TablePreviewModel.RowStateRole
-        state = model.headerData(index, Qt.Vertical, RowStateRole)
+        rowstates = {model.headerData(i, Qt.Vertical, RowStateRole)
+                     for i in rows}
+        if len(rowstates) == 1:
+            current = rowstates.pop()
+        else:
+            current = None
+
         m = QMenu(header)
         skip_action = m.addAction("Skip")
         skip_action.setCheckable(True)
-        skip_action.setChecked(state == TablePreview.Skipped)
+        skip_action.setChecked(current == TablePreview.Skipped)
         m.addSection("")
         mark_header = m.addAction("Header")
         mark_header.setCheckable(True)
-        mark_header.setChecked(state == TablePreview.Header)
+        mark_header.setChecked(current == TablePreview.Header)
 
         def update_row_state(action):
             # type: (QAction) -> None
@@ -1064,8 +1090,9 @@ class CSVImportWidget(QWidget):
                 state = TablePreview.Header if action.isChecked() else None
             elif action is skip_action:
                 state = TablePreview.Skipped if action.isChecked() else None
-            model.setHeaderData(index, Qt.Vertical, state, RowStateRole)
-            self.dataview.setRowHints({index: state})
+            for index in rows:
+                model.setHeaderData(index, Qt.Vertical, state, RowStateRole)
+            self.dataview.setRowHints(dict.fromkeys(rows, state))
 
         m.triggered.connect(update_row_state)
         m.popup(pos)
@@ -1313,6 +1340,9 @@ class TablePreview(QTableView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setItemDelegate(PreviewItemDelegate(self))
+        self.horizontalHeader().viewport().installEventFilter(self)
+        self.verticalHeader().viewport().installEventFilter(self)
+        self.viewport().installEventFilter(self)
 
     def rowsInserted(self, parent, start, end):
         # type: (QModelIndex, int, int) -> None
@@ -1350,6 +1380,25 @@ class TablePreview(QTableView):
         hsection = hh.defaultSectionSize()
         vsection = vh.defaultSectionSize()
         return sh.expandedTo(QSize(8 * hsection, 20 * vsection))
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        if event.type() == QEvent.MouseButtonPress:
+            event = typing.cast(QMouseEvent, event)
+            bhv = None
+            if event.button() == Qt.LeftButton:
+                if obj is self.horizontalHeader().viewport():
+                    bhv = QTableView.SelectColumns
+                elif obj is self.verticalHeader().viewport():
+                    bhv = QTableView.SelectRows
+            elif event.button() in (Qt.LeftButton, Qt.RightButton) and \
+                    obj is self.viewport():
+                pass
+                bhv = QTableView.SelectColumns
+                if bhv != self.selectionBehavior():
+                    self.clearSelection()
+            if bhv is not None:
+                self.setSelectionBehavior(bhv)
+        return super().eventFilter(obj, event)
 
 
 def is_surrogate_escaped(text: str) -> bool:
