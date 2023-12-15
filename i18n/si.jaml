@@ -364,8 +364,10 @@ canvas/config.py:
             canvas_settings_dir: false
         def `application_icon`:
             icons/orange-256.png: false
+            png: false
         def `splash_screen`:
             icons/orange-splash-screen-{splash_n:02}.png: false
+            png: false
             .: false
             Helvetica: false
             '#000000': false
