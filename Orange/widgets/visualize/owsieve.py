@@ -56,7 +56,6 @@ class ChiSqStats:
 
 
 class SieveRank(VizRankDialogAttrPair):
-    caption_title = "Sieve Rank"
     sort_names_in_row = True
 
     def compute_score(self, state):

@@ -356,6 +356,30 @@ class MosaicVizRankTests(WidgetTest):
         model = combo.model()
         self.assertEqual(model.item(0).flags() & enabled, enabled)
 
+    def test_disable_combo_3_4(self):
+        def assert_enabled(*args, sel=1):
+            enabled = Qt.ItemIsSelectable | Qt.ItemIsEnabled
+            vizrank = widget.vizrank_dialog
+            combo = vizrank.attrs_combo
+            model = combo.model()
+            for opt in (2, 3):
+                self.assertEqual(model.item(opt).flags() & enabled,
+                                 enabled if opt + 1 in args else Qt.NoItemFlags)
+            self.assertEqual(combo.currentIndex(), sel)
+
+        widget = self.widget
+
+        data = Table("iris.tab")
+        widget.vizrank_attr_range_index = 3
+        self.send_signal(self.widget.Inputs.data, data)
+        assert_enabled(3, 4, sel=3)
+
+        self.send_signal(self.widget.Inputs.data, data[:, :3])
+        assert_enabled(3, sel=2)
+
+        self.send_signal(self.widget.Inputs.data, data[:, :2])
+        assert_enabled(sel=1)
+
     def test_attr_range(self):
         data = Table("iris.tab")
         domain = data.domain

@@ -14346,8 +14346,6 @@ widgets/visualize/owsieve.py:
     class `ChiSqStats`:
         def `__init__`:
             ignore: false
-    class `SieveRank`:
-        Sieve Rank: Rangiranje
     class `OWSieveDiagram`:
         Sieve Diagram: Sievov diagram
         'Visualize the observed and expected frequencies ': 'Prikaz pričakovanih in opaženih pogostosti '
