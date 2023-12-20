@@ -1030,10 +1030,17 @@ class CSVImportWidget(QWidget):
         self.__setColumnType(columns, coltype)
 
     def __dataview_context_menu(self, pos):
+        bhv = self.dataview.selectionBehavior()
+        selmodel = self.dataview.selectionModel()
         pos = self.dataview.viewport().mapToGlobal(pos)
-        cols = self.dataview.selectionModel().selectedColumns(0)
-        cols = [idx.column() for idx in cols]
-        self.__run_type_columns_menu(pos, cols)
+        if bhv == QTableView.SelectColumns:
+            cols = selmodel.selectedColumns(0)
+            cols = [midx.column() for midx in cols]
+            self.__run_type_columns_menu(pos, cols)
+        elif bhv == QTableView.SelectRows:
+            rows = selmodel.selectedRows(0)
+            rows = [midx.row() for midx in rows]
+            self.__run_row_menu(pos, rows)
 
     def __hheader_context_menu(self, pos):
         pos = self.dataview.horizontalHeader().mapToGlobal(pos)
@@ -1097,8 +1104,7 @@ class CSVImportWidget(QWidget):
         m.triggered.connect(update_row_state)
         m.popup(pos)
 
-    def __run_type_columns_menu(self, pos, columns):
-        # type: (QPoint, List[int]) -> None
+    def __run_type_columns_menu(self, pos: QPoint, columns: List[int]) -> None:
         # Open a QMenu at pos for setting column types for column indices list
         # `columns`
         model = self.__previewmodel
