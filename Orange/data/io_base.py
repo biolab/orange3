@@ -15,6 +15,7 @@ from fnmatch import fnmatch
 from glob import glob
 
 import numpy as np
+import pandas
 
 from Orange.data import Table, Domain, Variable, DiscreteVariable, \
     StringVariable, ContinuousVariable, TimeVariable
@@ -665,7 +666,7 @@ class _FileWriter:
         elif var.is_discrete:
             return lambda value: "" if isnan(value) else var.values[int(value)]
         elif var.is_string:
-            return lambda value: value
+            return lambda value: "" if pandas.isnull(value) else value
         else:
             return var.repr_val
 
