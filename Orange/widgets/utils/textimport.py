@@ -55,6 +55,8 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.widgets.utils import encodings
+from Orange.widgets.utils.tableview import TableView
+from Orange.widgets.utils.headerview import CheckableHeaderView
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.combobox import TextEditCombo
 
@@ -1339,13 +1341,16 @@ class RowSpec(enum.IntEnum):
     Skipped = 2
 
 
-class TablePreview(QTableView):
+class TablePreview(TableView):
     RowSpec = RowSpec
     Header, Skipped = RowSpec
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setItemDelegate(PreviewItemDelegate(self))
+        header = CheckableHeaderView(Qt.Vertical)
+        header.setSectionsClickable(True)
+        self.setVerticalHeader(header)
         self.horizontalHeader().viewport().installEventFilter(self)
         self.verticalHeader().viewport().installEventFilter(self)
         self.viewport().installEventFilter(self)
@@ -1396,9 +1401,8 @@ class TablePreview(QTableView):
                     bhv = QTableView.SelectColumns
                 elif obj is self.verticalHeader().viewport():
                     bhv = QTableView.SelectRows
-            elif event.button() in (Qt.LeftButton, Qt.RightButton) and \
+            if event.button() in (Qt.LeftButton, Qt.RightButton) and \
                     obj is self.viewport():
-                pass
                 bhv = QTableView.SelectColumns
                 if bhv != self.selectionBehavior():
                     self.clearSelection()
@@ -1681,6 +1685,9 @@ class TablePreviewModel(QAbstractTableModel):
         """Reimplemented."""
         if role == Qt.DisplayRole:
             return section + 1
+        elif role == Qt.CheckStateRole and orientation == Qt.Vertical:
+            state = self.__headerData[orientation][section].get(TablePreviewModel.RowStateRole)
+            return Qt.Unchecked if state == RowSpec.Skipped else Qt.Checked
         else:
             return self.__headerData[orientation][section].get(role)
 
@@ -1692,6 +1699,9 @@ class TablePreviewModel(QAbstractTableModel):
             if value is None:
                 del self.__headerData[orientation][section][role]
             else:
+                if role == Qt.CheckStateRole and orientation == Qt.Vertical:
+                    role = TablePreviewModel.RowStateRole
+                    value = RowSpec.Skipped if value == Qt.Unchecked else None
                 self.__headerData[orientation][section][role] = value
             self.headerDataChanged.emit(orientation, section, section)
         return True

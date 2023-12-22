@@ -6,7 +6,7 @@ from AnyQt.QtTest import QTest
 
 
 from Orange.widgets.tests.base import GuiTest
-from Orange.widgets.utils.headerview import HeaderView
+from Orange.widgets.utils.headerview import HeaderView, CheckableHeaderView
 from Orange.widgets.utils.textimport import StampIconEngine
 
 
@@ -103,3 +103,23 @@ class TestHeaderView(GuiTest):
         opt = QStyleOptionHeader()
         header.initStyleOptionForIndex(opt, 0)
         self.assertFalse(opt.state & QStyle.State_Sunken)
+
+
+class TestCheckableHeaderView(GuiTest):
+    def test_view(self):
+        model = QStandardItemModel()
+        model.setColumnCount(1)
+        model.setRowCount(3)
+        view = CheckableHeaderView(Qt.Vertical)
+        view.setModel(model)
+        view.adjustSize()
+        model.setHeaderData(0, Qt.Vertical, Qt.Checked, Qt.CheckStateRole)
+        model.setHeaderData(1, Qt.Vertical, Qt.Unchecked, Qt.CheckStateRole)
+        view.grab()
+        style = view.style()
+        opt = view._CheckableHeaderView__viewItemOption(0)
+        hr = style.subElementRect(QStyle.SE_ItemViewItemCheckIndicator, opt, view)
+        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=hr.center())
+        self.assertEqual(model.headerData(0, Qt.Vertical, Qt.CheckStateRole), Qt.Unchecked)
+        QTest.mouseClick(view.viewport(), Qt.LeftButton, pos=hr.center())
+        self.assertEqual(model.headerData(0, Qt.Vertical, Qt.CheckStateRole), Qt.Checked)

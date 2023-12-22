@@ -1,7 +1,9 @@
-from AnyQt.QtCore import Qt, QRect
+from __future__ import annotations
+
+from AnyQt.QtCore import Qt, QRect, QSize
 from AnyQt.QtGui import QBrush, QIcon, QCursor, QPalette, QPainter, QMouseEvent
 from AnyQt.QtWidgets import (
-    QHeaderView, QStyleOptionHeader, QStyle, QApplication
+    QHeaderView, QStyleOptionHeader, QStyle, QApplication, QStyleOptionViewItem
 )
 
 
@@ -225,3 +227,140 @@ class HeaderView(QHeaderView):
         self.style().drawControl(QStyle.CE_Header, opt, painter, self)
 
         painter.setBrushOrigin(oldBO)
+
+
+class CheckableHeaderView(HeaderView):
+    """
+    A HeaderView with checkable header items.
+
+    The header is checkable if the model defines a `Qt.CheckStateRole` value.
+    """
+    __sectionPressed: int = -1
+
+    def paintSection(
+            self, painter: QPainter, rect: QRect, logicalIndex: int
+    ) -> None:
+        opt = QStyleOptionHeader()
+        self.initStyleOption(opt)
+        self.initStyleOptionForIndex(opt, logicalIndex)
+        model = self.model()
+        if model is None:
+            return  # pragma: no cover
+        opt.rect = rect
+        checkstate = self.sectionCheckState(logicalIndex)
+        ischeckable = checkstate is not None
+        style = self.style()
+        # draw background
+        style.drawControl(QStyle.CE_HeaderSection, opt, painter, self)
+        text_rect = QRect(rect)
+        optindicator = QStyleOptionViewItem()
+        optindicator.initFrom(self)
+        optindicator.font = self.font()
+        optindicator.fontMetrics = opt.fontMetrics
+        optindicator.features = QStyleOptionViewItem.HasCheckIndicator | QStyleOptionViewItem.HasDisplay
+        optindicator.rect = opt.rect
+        indicator_rect = style.subElementRect(
+            QStyle.SE_ItemViewItemCheckIndicator, optindicator, self)
+        text_rect.setLeft(indicator_rect.right() + 4)
+        if ischeckable:
+            optindicator.checkState = checkstate
+            optindicator.state |= QStyle.State_On if checkstate == Qt.Checked else QStyle.State_Off
+            optindicator.rect = indicator_rect
+            style.drawPrimitive(QStyle.PE_IndicatorItemViewItemCheck, optindicator,
+                                painter, self)
+        opt.rect = text_rect
+        # draw section label
+        style.drawControl(QStyle.CE_HeaderLabel, opt, painter, self)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        pos = event.pos()
+        section = self.logicalIndexAt(pos)
+        if section == -1 or not self.isSectionCheckable(section):
+            super().mousePressEvent(event)
+            return
+        if event.button() == Qt.LeftButton:
+            opt = self.__viewItemOption(section)
+            hitrect = self.style().subElementRect(QStyle.SE_ItemViewItemCheckIndicator, opt, self)
+            if hitrect.contains(pos):
+                self.__sectionPressed = section
+                event.accept()
+                return
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        pos = event.pos()
+        section = self.logicalIndexAt(pos)
+        if section == -1 or not self.isSectionCheckable(section) \
+                or self.__sectionPressed != section:
+            super().mouseReleaseEvent(event)
+            return
+        if event.button() == Qt.LeftButton:
+            opt = self.__viewItemOption(section)
+            hitrect = self.style().subElementRect(QStyle.SE_ItemViewItemCheckIndicator, opt, self)
+            if hitrect.contains(pos):
+                state = self.sectionCheckState(section)
+                newstate = Qt.Checked if state == Qt.Unchecked else Qt.Unchecked
+                model = self.model()
+                model.setHeaderData(
+                    section, self.orientation(), newstate, Qt.CheckStateRole)
+                return
+        super().mouseReleaseEvent(event)
+
+    def isSectionCheckable(self, index: int) -> bool:
+        model = self.model()
+        if model is None:  # pragma: no cover
+            return False
+        checkstate = model.headerData(index, self.orientation(), Qt.CheckStateRole)
+        return checkstate is not None
+
+    def sectionCheckState(self, index: int) -> Qt.CheckState | None:
+        model = self.model()
+        if model is None:  # pragma: no cover
+            return None
+        checkstate = model.headerData(index, self.orientation(), Qt.CheckStateRole)
+        if checkstate is None:
+            return None
+        try:
+            return Qt.CheckState(checkstate)
+        except TypeError:  # pragma: no cover
+            return None
+
+    def __viewItemOption(self, index: int) -> QStyleOptionViewItem:
+        opt = QStyleOptionHeader()
+        self.initStyleOption(opt)
+        self.initStyleOptionForIndex(opt, index)
+        pos = self.sectionViewportPosition(index)
+        size = self.sectionSize(index)
+        if self.orientation() == Qt.Horizontal:
+            rect = QRect(pos, 0, size, self.height())
+        else:
+            rect = QRect(0, pos, self.width(), size)
+        optindicator = QStyleOptionViewItem()
+        optindicator.initFrom(self)
+        optindicator.rect = rect
+        optindicator.font = self.font()
+        optindicator.fontMetrics = opt.fontMetrics
+        optindicator.features = QStyleOptionViewItem.HasCheckIndicator
+        if not opt.icon.isNull():
+            optindicator.icon = opt.icon
+            optindicator.features |= QStyleOptionViewItem.HasDecoration
+        return optindicator
+
+    def sectionSizeFromContents(self, logicalIndex: int) -> QSize:
+        style = self.style()
+        opt = QStyleOptionHeader()
+        self.initStyleOption(opt)
+        self.initStyleOptionForIndex(opt, logicalIndex)
+        sh = style.sizeFromContents(QStyle.CT_HeaderSection, opt,
+                                           QSize(), self)
+
+        optindicator = QStyleOptionViewItem()
+        optindicator.initFrom(self)
+        optindicator.font = self.font()
+        optindicator.fontMetrics = opt.fontMetrics
+        optindicator.features = QStyleOptionViewItem.HasCheckIndicator
+        optindicator.rect = opt.rect
+        indicator_rect = style.subElementRect(
+            QStyle.SE_ItemViewItemCheckIndicator, optindicator, self)
+        return QSize(sh.width() + indicator_rect.width() + 4,
+                     max(sh.height(), indicator_rect.height()))
