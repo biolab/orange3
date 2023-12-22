@@ -10,6 +10,7 @@ from math import isnan, floor
 from pickle import PickleError
 
 import numpy as np
+import pandas
 import scipy.sparse as sp
 
 from Orange.data import _variable
@@ -905,6 +906,8 @@ class StringVariable(Variable):
             if not val.value:
                 return "?"
             val = val.value
+        if pandas.isnull(val):
+            return "?"
         return str(val)
 
     def repr_val(self, val):
