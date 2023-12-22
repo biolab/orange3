@@ -163,8 +163,12 @@ if not release:
         GIT_REVISION = git_version()
     elif os.path.exists('Orange/version.py'):
         # must be a source distribution, use existing version file
-        import imp
-        version = imp.load_source("Orange.version", "Orange/version.py")
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "Orange.version", filename
+        )
+        version = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(version)
         GIT_REVISION = version.git_revision
     else:
         GIT_REVISION = "Unknown"
