@@ -332,4 +332,4 @@ int-import-graph=
 overgeneral-exceptions=builtins.Exception
 
 [isort]
-known-standard-library=pkg_resources
+known-standard-library=

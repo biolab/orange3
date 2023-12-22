@@ -1,5 +1,5 @@
 from collections import OrderedDict
-import pkg_resources
+import importlib.resources
 
 import numpy
 
@@ -993,7 +993,8 @@ class PreprocessAction:
 
 
 def icon_path(basename):
-    return pkg_resources.resource_filename(__name__, "icons/" + basename)
+    path = importlib.resources.files(__package__).joinpath("icons/" + basename)
+    return str(path)
 
 
 PREPROCESS_ACTIONS = [

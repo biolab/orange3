@@ -2,11 +2,12 @@ from itertools import chain
 from os import listdir, environ
 from os.path import isfile, join, dirname
 import unittest
-import pkg_resources
+from unittest import mock
 
 from AnyQt.QtTest import QTest
 
 from orangecanvas.registry import WidgetRegistry
+from orangecanvas.config import EntryPoint
 from orangewidget.workflow import widgetsscheme
 
 from Orange.canvas.config import Config
@@ -63,17 +64,17 @@ class TestWorkflows(GuiTest):
                     QTest.qWait(0)
 
     def test_examples_order(self):
-        # register test entrypoints
-        dist_orange = pkg_resources.working_set.by_key['orange3']
-        ep_map = dist_orange.get_entry_map()
-        ep_first = pkg_resources.EntryPoint('!Testname', 'orangecontrib.any_addon.tutorials')
-        ep_last = pkg_resources.EntryPoint('exampletutorials', 'orangecontrib.other_addon.tutorials')
-        ep_map['orange.widgets.tutorials'] = {ep_first.name: ep_first, ep_last.name: ep_last}
+        ep_first = EntryPoint(
+            '!Testname', 'orangecontrib.any_addon.tutorials', '')
+        ep_last = EntryPoint(
+            'exampletutorials', 'orangecontrib.other_addon.tutorials', '')
 
-        ep_names = [point.name for point in Config.examples_entry_points()]
+        def entry_points(*_, **__):
+            return ep_first, ep_last
+
+        with mock.patch("Orange.canvas.config.entry_points", entry_points):
+            ep_names = [point.name for point in Config.examples_entry_points()]
         self.assertLess(ep_names.index(ep_first.name),
                         ep_names.index("000-Orange3"))
         self.assertLess(ep_names.index("000-Orange3"),
                         ep_names.index(ep_last.name))
-
-        del ep_map['orange.widgets.tutorials']
