@@ -18,7 +18,7 @@ Contents
 # TODO: Consider a wizard-like interface:
 #   * 1. Select encoding, delimiter, ... (preview is all text)
 #   * 2. Define column types (preview is parsed and rendered type appropriate)
-
+from __future__ import annotations
 import sys
 import io
 import enum
@@ -1370,19 +1370,10 @@ class TablePreview(TableView):
                 command |= QItemSelectionModel.Columns
             smodel.select(selection, command)
 
-    def setRowHints(self, hints):
-        # type: (Dict[int, TablePreview.RowSpec]) -> None
-        for row, hint in hints.items():
-            current = self.itemDelegateForRow(row)
-            if current is not None:
-                current.deleteLater()
-            if hint == TablePreview.Header:
-                delegate = HeaderItemDelegate(self)
-            elif hint == TablePreview.Skipped:
-                delegate = SkipItemDelegate(self)
-            else:
-                delegate = None
-            self.setItemDelegateForRow(row, delegate)
+    def setRowHints(self, hints: dict[int, TablePreview.RowSpec]) -> None:
+        model = self.model()
+        for index, hint in hints.items():
+            model.setHeaderData(index, Qt.Vertical, hint)
 
     def sizeHint(self):
         sh = super().sizeHint()  # type: QSize
@@ -1433,7 +1424,9 @@ class PreviewItemDelegate(QStyledItemDelegate):
         if coltype == ColumnType.Numeric or coltype == ColumnType.Time:
             option.displayAlignment = Qt.AlignRight | Qt.AlignVCenter
 
-        if not self.validate(option.text):
+        rowhint = model.headerData(index.row(), Qt.Vertical,
+                                   TablePreviewModel.RowStateRole)
+        if not self.validate(option.text) and rowhint is None:
             option.palette.setBrush(
                 QPalette.All, QPalette.Text, QBrush(Qt.red, Qt.SolidPattern)
             )
@@ -1442,7 +1435,21 @@ class PreviewItemDelegate(QStyledItemDelegate):
                 QBrush(Qt.red, Qt.SolidPattern)
             )
 
-    def validate(self, value: str) -> bool:  # pylint: disable=no-self-use
+        if rowhint == RowSpec.Skipped:
+            color = QColor(Qt.red)
+            base = option.palette.color(QPalette.Base)
+            if base.isValid() and base.value() > 127:
+                # blend on 'light' base, not on dark (low contrast)
+                color.setAlphaF(0.2)
+            option.backgroundBrush = QBrush(color, Qt.DiagCrossPattern)
+        elif rowhint == RowSpec.Header:
+            shadow = option.palette.color(QPalette.WindowText)
+            if shadow.isValid():
+                shadow.setAlphaF(0.1)
+                option.backgroundBrush = QBrush(shadow, Qt.SolidPattern)
+            option.displayAlignment = Qt.AlignCenter
+
+    def validate(self, value: str) -> bool:
         return not is_surrogate_escaped(value)
 
     def helpEvent(self, event, view, option, index):
@@ -1455,39 +1462,6 @@ class PreviewItemDelegate(QStyledItemDelegate):
                 QToolTip.showText(event.globalPos(), ttip, view)
                 return True
         return super().helpEvent(event, view, option, index)
-
-
-class HeaderItemDelegate(PreviewItemDelegate):
-    """
-    Paint the items with an alternate color scheme
-    """
-    NoFeatures = 0
-    AutoDecorate = 1
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__features = HeaderItemDelegate.NoFeatures
-
-    def features(self):
-        return self.__features
-
-    def initStyleOption(self, option, index):
-        # type: (QStyleOptionViewItem, QModelIndex) -> None
-        super().initStyleOption(option, index)
-        palette = option.palette
-        shadow = palette.color(QPalette.WindowText)  # type: QColor
-        if shadow.isValid():
-            shadow.setAlphaF(0.1)
-            option.backgroundBrush = QBrush(shadow, Qt.SolidPattern)
-        option.displayAlignment = Qt.AlignCenter
-        model = index.model()
-        if option.icon.isNull() and \
-                self.__features & HeaderItemDelegate.AutoDecorate:
-            ctype = model.headerData(index.column(), Qt.Horizontal,
-                                     TablePreviewModel.ColumnTypeRole)
-            option.icon = icon_for_column_type(ctype)
-        if not option.icon.isNull():
-            option.features |= QStyleOptionViewItem.HasDecoration
 
 
 def icon_for_column_type(coltype):
@@ -1739,7 +1713,7 @@ class TablePreviewModel(QAbstractTableModel):
     def flags(self, index):
         # type: (QModelIndex) -> Qt.ItemFlags
         """Reimplemented."""
-        # pylint: disable=unused-argument,no-self-use
+        # pylint: disable=unused-argument
         return Qt.ItemFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
 
     def errorString(self):
