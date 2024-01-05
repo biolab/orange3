@@ -1554,7 +1554,12 @@ def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
             na_values=na_values, keep_default_na=False,
             **numbers_format_kwds
         )
-
+        if parse_dates:
+            for date_col in parse_dates:
+                if df.dtypes[date_col] == "object":
+                    df[df.columns[date_col]] = pd.to_datetime(
+                        df.iloc[:, date_col], errors="coerce"
+                    )
         if prefix:
             df.columns = [f"{prefix}{column}" for column in df.columns]
 
