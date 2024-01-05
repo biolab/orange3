@@ -12693,7 +12693,7 @@ widgets/utils/textimport.py:
             ,: false
         def `__resetPreview`:
             surrogateescape: false
-        def `__vheader_context_menu`:
+        def `__run_row_menu`:
             Skip: Izpusti
             Header: Glava
         def `__run_type_columns_menu`:
