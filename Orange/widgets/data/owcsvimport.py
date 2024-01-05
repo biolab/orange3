@@ -1532,11 +1532,6 @@ def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
         numbers_format_kwds["thousands"] = opts.group_separator
 
     if numbers_format_kwds:
-        # float_precision = "round_trip" cannot handle non c-locale decimal and
-        # thousands sep (https://github.com/pandas-dev/pandas/issues/35365).
-        # Fallback to 'high'.
-        numbers_format_kwds["float_precision"] = "high"
-    else:
         numbers_format_kwds["float_precision"] = "round_trip"
 
     with ExitStack() as stack:
