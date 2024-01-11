@@ -9596,14 +9596,8 @@ widgets/model/owcurvefit.py:
     housing: false
 widgets/model/owgradientboosting.py:
     class `LearnerItemModel`:
-        Extreme Gradient Boosting (xgboost): true
-        xgboost: false
-        Extreme Gradient Boosting Random Forest (xgboost): true
-        Gradient Boosting (catboost): true
-        catboost: false
         def `_add_data`:
             {name}: false
-            {lib} is not installed: {lib} ni nameščen
     class `BaseEditor`:
         def `_add_main_layout`:
             callback: false
@@ -9638,7 +9632,7 @@ widgets/model/owgradientboosting.py:
             Regularization:: Regularizacija
             lambda_index: false
         def `_set_lambda_label`:
-            'Lambda: {}': true
+            'Lambda: {self.lambda_}': true
         def `get_arguments`:
             reg_lambda: false
         def `get_learner_parameters`:
