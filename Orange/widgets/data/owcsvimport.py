@@ -4,6 +4,7 @@ CSV File Import Widget
 ----------------------
 
 """
+from __future__ import annotations
 import sys
 import types
 import os
@@ -32,7 +33,8 @@ from typing import (
 )
 
 from AnyQt.QtCore import (
-    Qt, QFileInfo, QTimer, QSettings, QObject, QSize, QMimeDatabase, QMimeType
+    Qt, QFileInfo, QTimer, QSettings, QObject, QSize, QMimeDatabase, QMimeType,
+    QUrl
 )
 from AnyQt.QtGui import (
     QStandardItem, QStandardItemModel, QPalette, QColor, QIcon
@@ -50,12 +52,15 @@ import pandas as pd
 from pandas import CategoricalDtype
 from pandas.api import types as pdtypes
 
+from orangecanvas.utils import assocf
+from orangecanvas.utils.qobjref import qobjref_weak
 from orangewidget.utils import enum_as_int
 
 import Orange.data
 from Orange.misc.collections import natural_sorted
 
 from Orange.widgets import widget, gui, settings
+from Orange.widgets.utils.filedialogs import OWUrlDropBase
 from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.concurrent import PyOwned
 from Orange.widgets.utils import (
@@ -610,7 +615,7 @@ def default_options_for_mime_type(
     return Options(dialect=dialect, encoding=encoding, rowspec=rowspec)
 
 
-class OWCSVFileImport(widget.OWWidget):
+class OWCSVFileImport(OWUrlDropBase):
     name = "CSV File Import"
     description = "Import a data table from a CSV formatted file."
     icon = "icons/CSVFile.svg"
@@ -967,6 +972,24 @@ class OWCSVFileImport(widget.OWWidget):
         """Activate the Import Options dialog for the  current item."""
         item = self.current_item()
         assert item is not None
+        path = item.path()
+        options = item.options()
+
+        def onfinished(dlg: CSVImportDialog):
+            if dlg.result() != QDialog.Accepted:
+                return
+            newoptions = dlg.options()
+            item.setData(newoptions, ImportItem.OptionsRole)
+            # update local recent paths list
+            self._note_recent(path, newoptions)
+            if newoptions != options:
+                self._invalidate()
+
+        self._activate_import_dialog_for_item(item, finished=onfinished)
+
+    def _activate_import_dialog_for_item(
+            self, item: ImportItem, finished: Callable[[CSVImportDialog], None]
+    ):
         dlg = CSVImportDialog(
             self, windowTitle="Import Options", sizeGripEnabled=True,
         )
@@ -984,18 +1007,14 @@ class OWCSVFileImport(widget.OWWidget):
         if isinstance(options, Options):
             dlg.setOptions(options)
 
-        def update():
-            newoptions = dlg.options()
-            item.setData(newoptions, ImportItem.OptionsRole)
-            # update local recent paths list
-            self._note_recent(path, newoptions)
-            if newoptions != options:
-                self._invalidate()
-        dlg.accepted.connect(update)
+        dialog_ref = qobjref_weak(dlg)
 
-        def store_size():
+        def onfinished():
+            dlg = dialog_ref()
             settings.setValue("size", dlg.size())
-        dlg.finished.connect(store_size)
+            finished(dlg)
+
+        dlg.finished.connect(onfinished)
         dlg.show()
 
     def set_selected_file(self, filename, options=None):
@@ -1035,7 +1054,6 @@ class OWCSVFileImport(widget.OWWidget):
         else:
             item = ImportItem.fromPath(filename)
 
-        # item.setData(VarPath(filename), ImportItem.VarPathRole)
         item.setData(True, ImportItem.IsSessionItemRole)
         model.insertRow(0, item)
 
@@ -1127,6 +1145,7 @@ class OWCSVFileImport(widget.OWWidget):
         """
         Cancel current pending or executing task.
         """
+        self.__committimer.stop()
         if self.__watcher is not None:
             self.__cancel_task()
             self.__clear_running_state()
@@ -1310,6 +1329,37 @@ class OWCSVFileImport(widget.OWWidget):
         else:
             idx = -1
         self.recent_combo.setCurrentIndex(idx)
+
+    def canDropUrl(self, url: QUrl) -> bool:
+        if url.isLocalFile():
+            return _mime_type_for_path(url.toLocalFile()).inherits("text/plain")
+        else:
+            return False
+
+    def handleDroppedUrl(self, url: QUrl) -> None:
+        # search recent items for path
+        path = url.toLocalFile()
+        hist = self.itemsFromSettings()
+        res = assocf(hist, lambda p: samepath(p, path))
+        if res is not None:
+            _, options = res
+        else:
+            mt = _mime_type_for_path(path)
+            options = default_options_for_mime_type(path, mt.name())
+        self.activate_import_for_file(path, options)
+
+    def activate_import_for_file(self, path: str, options: Options | None = None):
+        self.cancel()  # Cancel current task if any
+        item = ImportItem()  # dummy temp item
+        item.setPath(path)
+        item.setOptions(options)
+
+        def finished(dlg: CSVImportDialog):
+            if dlg.result() != QDialog.Accepted:
+                return
+            self.set_selected_file(path, dlg.options())
+
+        self._activate_import_dialog_for_item(item, finished)
 
     @classmethod
     def migrate_settings(cls, settings, version):
