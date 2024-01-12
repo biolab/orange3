@@ -243,6 +243,13 @@ class TestOWDistanceMatrix(WidgetTest):
         self.assertEqual(widget._get_selection(), (([0], [0, 2]), False))
         self.assertEqual(widget.annotation_idx, 0)
 
+    def test_empty_matrix(self):
+        matrix = DistMatrix(np.empty((0, 0)))
+        self.send_signal(self.widget.Inputs.distances, matrix)
+        self.assertTrue(self.widget.Error.empty_matrix.is_shown())
+        self.send_signal(self.widget.Inputs.distances, None)
+        self.assertFalse(self.widget.Error.empty_matrix.is_shown())
+
 
 if __name__ == "__main__":
     unittest.main()
