@@ -38,7 +38,7 @@ class TestOWCorrelations(WidgetTest):
         self.wait_until_finished()
         n_attrs = len(self.data_cont.domain.attributes)
         self.process_events()
-        self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 3)
+        self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 4)
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(),
                          n_attrs * (n_attrs - 1) / 2)
         self.send_signal(self.widget.Inputs.data, None)
@@ -60,7 +60,7 @@ class TestOWCorrelations(WidgetTest):
         n_attrs = len([a for a in domain.attributes if a.is_continuous])
         self.wait_until_finished()
         self.process_events()
-        self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 3)
+        self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 4)
         self.assertEqual(self.widget.vizrank.rank_model.rowCount(),
                          n_attrs * (n_attrs - 1) / 2)
 
@@ -328,7 +328,7 @@ class TestCorrelationRank(WidgetTest):
         self.assertEqual(row[0].data(Qt.DisplayRole), "+0.200")
         self.assertEqual(row[0].data(CorrelationRank.PValRole), 0.1)
         self.assertEqual(row[1].data(Qt.DisplayRole), self.attrs[0].name)
-        self.assertEqual(row[2].data(Qt.DisplayRole), self.attrs[1].name)
+        self.assertEqual(row[3].data(Qt.DisplayRole), self.attrs[1].name)
 
     def test_iterate_states(self):
         self.assertListEqual(list(self.vizrank.iterate_states(None)),
