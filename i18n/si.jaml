@@ -14887,6 +14887,8 @@ widgets/visualize/utils/customizableplot.py:
             {font.family()}: false
             font-style: false
             {fstyle}: false
+            foreground: false
+            color: false
         def `update_axes_ticks_font`:
             tickFont: false
         def `update_legend_font`:
