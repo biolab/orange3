@@ -48,7 +48,7 @@ Data
    widgets/data/paintdata
    widgets/data/pivot
    widgets/data/pythonscript
-   widgets/data/featureconstructor
+   widgets/data/formula
    widgets/data/editdomain
    widgets/data/impute
    widgets/data/mergedata

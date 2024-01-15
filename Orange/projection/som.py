@@ -1,3 +1,5 @@
+from typing import Union, Optional
+
 import numpy as np
 import scipy.sparse as sp
 
@@ -13,6 +15,39 @@ class SOM:
         self.hexagonal = hexagonal
         self.pca_init = pca_init
         self.random_seed = random_seed
+
+    @staticmethod
+    def prepare_data(x: Union[np.ndarray, sp.spmatrix],
+                     offsets: Optional[np.ndarray] = None,
+                     scales: Optional[np.ndarray] = None) \
+            -> (Union[np.ndarray, sp.spmatrix],
+                np.ndarray,
+                Union[np.ndarray, None],
+                Union[np.ndarray, None]):
+        if sp.issparse(x) and offsets is not None:
+            # This is used in compute_value, by any widget, hence there is no
+            # way to prevent it or report an error. We go dense...
+            x = x.todense()
+        if sp.issparse(x):
+            cont_x = x.tocsr()
+            mask = np.ones(cont_x.shape[0], bool)
+        else:
+            mask = np.all(np.isfinite(x), axis=1)
+            useful = np.sum(mask)
+            if useful == 0:
+                return x, mask, offsets, scales
+            if useful == len(mask):
+                cont_x = x.copy()
+            else:
+                cont_x = x[mask]
+            if offsets is None:
+                offsets = np.min(cont_x, axis=0)
+            cont_x -= offsets[None, :]
+            if scales is None:
+                scales = np.max(cont_x, axis=0)
+                scales[scales == 0] = 1
+            cont_x /= scales[None, :]
+        return cont_x, mask, offsets, scales
 
     def init_weights_random(self, x):
         random = (np.random if self.random_seed is None

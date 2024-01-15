@@ -42,6 +42,9 @@ class TestCatGBLearner(unittest.TestCase):
         booster.score(self.iris)
         booster.score(self.housing)
 
+    def test_supports_weights(self):
+        self.assertTrue(CatGBLearner().supports_weights)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -14,6 +14,14 @@ from orangecanvas.scheme import signalmanager
 # Imported to make webwidget addons work
 from Orange.widgets.utils.webview import WebviewWidget  # pylint: disable=unused-import
 
+LOG_LEVELS = [
+    logging.CRITICAL + 10,
+    logging.CRITICAL,
+    logging.ERROR,
+    logging.WARN,
+    logging.INFO,
+    logging.DEBUG
+]
 
 def main(argv=None):
     app = QApplication(list(argv) if argv else [])
@@ -28,13 +36,13 @@ def main(argv=None):
         )
     )
     parser.add_argument("--log-level", "-l", metavar="LEVEL", type=int,
-                        default=logging.CRITICAL, dest="log_level")
+                        default=3, dest="log_level")
     parser.add_argument("--config", default="Orange.canvas.config.Config",
                         type=str)
     parser.add_argument("file")
     args = parser.parse_args(argv[1:])
 
-    log_level = args.log_level
+    log_level = LOG_LEVELS[args.log_level]
     filename = args.file
     logging.basicConfig(level=log_level)
 
@@ -71,6 +79,9 @@ def main(argv=None):
                 if msg.contents and msg.severity == msg.Error:
                     print(msg.contents, msg.message_id, file=sys.stderr)
                     severity = msg.Error
+                elif msg.contents and msg.severity == msg.Warning and \
+                        log_level <= logging.WARNING:
+                    print(msg.contents, file=sys.stderr)
         if severity == UserMessage.Error:
             app.exit(1)
         else:

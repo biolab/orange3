@@ -350,8 +350,9 @@ class WidgetLearnerTestMixin:
         new_name = "Learner Name"
         self.click_apply()
         self.assertEqual(self.widget.learner.name,
-                         self.widget.name_line_edit.text()
-                         or self.widget.name_line_edit.placeholderText())
+                         self.widget.effective_learner_name())
+        self.assertEqual(self.widget.effective_learner_name(),
+                         self.widget.name_line_edit.placeholderText())
         self.widget.name_line_edit.setText(new_name)
         self.click_apply()
         self.wait_until_stop_blocking()

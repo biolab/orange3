@@ -1,5 +1,10 @@
+from typing import Union
+
 import numpy as np
-from Orange.data import Domain, DiscreteVariable
+
+from orangewidget.utils.signals import LazyValue
+
+from Orange.data import Domain, DiscreteVariable, Table
 from Orange.data.util import get_unique_names
 
 ANNOTATED_DATA_SIGNAL_NAME = "Data"
@@ -30,16 +35,26 @@ def add_columns(domain, attributes=(), class_vars=(), metas=()):
     return Domain(attributes, class_vars, metas)
 
 
-def _table_with_annotation_column(data, values, column_data, var_name):
-    var = DiscreteVariable(get_unique_names(data.domain, var_name), values)
-    class_vars, metas = data.domain.class_vars, data.domain.metas
-    if not data.domain.class_vars:
+def domain_with_annotation_column(
+        data: Union[Table, Domain],
+        values=("No", "Yes"),
+        var_name=ANNOTATED_DATA_FEATURE_NAME):
+    domain = data if isinstance(data, Domain) else data.domain
+    var = DiscreteVariable(get_unique_names(domain, var_name), values)
+    class_vars, metas = domain.class_vars, domain.metas
+    if not domain.class_vars:
         class_vars += (var, )
-        column_data = column_data.reshape((len(data), ))
     else:
         metas += (var, )
+    return Domain(domain.attributes, class_vars, metas), var
+
+
+def _table_with_annotation_column(data, values, column_data, var_name):
+    domain, var = domain_with_annotation_column(data, values, var_name)
+    if not data.domain.class_vars:
+        column_data = column_data.reshape((len(data), ))
+    else:
         column_data = column_data.reshape((len(data), 1))
-    domain = Domain(data.domain.attributes, class_vars, metas)
     table = data.transform(domain)
     with table.unlocked(table.Y if not data.domain.class_vars else table.metas):
         table[:, var] = column_data
@@ -65,17 +80,20 @@ def create_annotated_table(data, selected_indices):
         data, ("No", "Yes"), annotated, ANNOTATED_DATA_FEATURE_NAME)
 
 
+def lazy_annotated_table(data, selected_indices):
+    domain, _ = domain_with_annotation_column(data)
+    return LazyValue[Table](
+        lambda: create_annotated_table(data, selected_indices),
+        length=len(data), domain=domain)
+
+
 def create_groups_table(data, selection,
                         include_unselected=True,
                         var_name=ANNOTATED_DATA_FEATURE_NAME,
                         values=None):
     if data is None:
         return None
-    max_sel = np.max(selection)
-    if values is None:
-        values = ["G{}".format(i + 1) for i in range(max_sel)]
-        if include_unselected:
-            values.append("Unselected")
+    values, max_sel = group_values(selection, include_unselected, values)
     if include_unselected:
         # Place Unselected instances in the "last group", so that the group
         # colors and scatter diagram marker colors will match
@@ -88,3 +106,24 @@ def create_groups_table(data, selection,
         data = data[mask]
         selection = selection[mask] - 1
     return _table_with_annotation_column(data, values, selection, var_name)
+
+
+def lazy_groups_table(data, selection, include_unselected=True,
+                      var_name=ANNOTATED_DATA_FEATURE_NAME, values=None):
+    length = len(data) if include_unselected else np.sum(selection != 0)
+    values, _ = group_values(selection, include_unselected, values)
+    domain, _ = domain_with_annotation_column(data, values, var_name)
+    return LazyValue[Table](
+        lambda: create_groups_table(data, selection, include_unselected,
+                                    var_name, values),
+        length=length, domain=domain
+    )
+
+
+def group_values(selection, include_unselected, values):
+    max_sel = np.max(selection)
+    if values is None:
+        values = ["G{}".format(i + 1) for i in range(max_sel)]
+        if include_unselected:
+            values.append("Unselected")
+    return values, max_sel

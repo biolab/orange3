@@ -225,7 +225,6 @@ class OWRuleLearner(OWBaseLearner):
     storage_measures = ["entropy", "laplace", "wracc"]
 
     # default parameter values
-    learner_name = Setting("CN2 rule inducer")
     rule_ordering = Setting(0)
     covering_algorithm = Setting(0)
     gamma = Setting(0.7)

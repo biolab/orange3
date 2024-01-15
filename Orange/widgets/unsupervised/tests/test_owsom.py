@@ -12,7 +12,8 @@ from Orange.data import Table, Domain
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
-from Orange.widgets.unsupervised.owsom import OWSOM, SomView, SOM
+from Orange.widgets.unsupervised.owsom import OWSOM, SomView, SOM, \
+    SomSharedValueCompute, SomCellCompute, SomCoordsCompute, SomErrorCompute
 
 
 def _patch_recompute_som(meth):
@@ -21,11 +22,14 @@ def _patch_recompute_som(meth):
         w = np.zeros((n, 2), dtype=int)
         w[n // 5:] = [0, 1]
         w[n // 3:] = [1, 2]
-        return w
+        return w, np.arange(n) / n
 
     def recompute(self):
         if not self.data:
             return
+
+        self.som = Mock()
+        self.som.winners = winners_from_weights
         self._assign_instances(None, None)
         self._redraw()
         self.update_output()
@@ -123,6 +127,12 @@ class TestOWSOM(WidgetTest):
         self.send_signal(widget.Inputs.data, None)
         self.assertFalse(widget.Warning.missing_values.is_shown())
 
+    def test_run_actual_optimization(self):
+        # ther tests that compute something use _patch_recompute_som
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertEqual(len(out), 150)
+
     @_patch_recompute_som
     def test_single_row_data(self):
         widget = self.widget
@@ -158,6 +168,7 @@ class TestOWSOM(WidgetTest):
         self.assertTrue(sp.isspmatrix_csr(widget.cont_x))
         self.assertEqual(widget.cont_x.shape, (150, 4))
 
+    @_patch_recompute_som
     def test_auto_compute_dimensions(self):
         widget = self.widget
         self.send_signal(widget.Inputs.data, self.iris)
@@ -455,6 +466,7 @@ class TestOWSOM(WidgetTest):
         a = widget.elements.childItems()[0]
         np.testing.assert_equal(a.dist, [0.5, 0, 0, 0.5])
 
+    @_patch_recompute_som
     def test_get_color_column(self):
         widget = self.widget
 
@@ -478,7 +490,6 @@ class TestOWSOM(WidgetTest):
         np.testing.assert_equal(
             widget._get_color_column(),
             widget.data.get_column("gender").astype(int))
-
 
         # numeric attribute
         widget.thresholds = np.array([120, 150])
@@ -576,7 +587,7 @@ class TestOWSOM(WidgetTest):
         widget.on_selection_change([])
 
     @_patch_recompute_som
-    def test_output(self):
+    def test_output_selection(self):
         widget = self.widget
         self.send_signal(self.widget.Inputs.data, self.iris)
 
@@ -585,6 +596,11 @@ class TestOWSOM(WidgetTest):
         self.assertEqual(len(out), 150)
         self.assertTrue(
             np.all(out.get_column(ANNOTATED_DATA_FEATURE_NAME) == 0))
+
+        self.widget.cells = np.array(
+            [[[0, 30], [30, 50]] + [[50, 50]] * 6,
+             [[50, 50], [50, 50], [50, 150]] + [[150, 150]] * 5]
+            + [[[150, 150]] * 8] * 6)
 
         m = np.zeros((widget.size_x, widget.size_y), dtype=bool)
         m[0, 0] = True
@@ -611,6 +627,29 @@ class TestOWSOM(WidgetTest):
         self.send_signal(self.widget.Inputs.data, None)
         self.assertIsNone(self.get_output(widget.Outputs.selected_data))
         self.assertIsNone(self.get_output(widget.Outputs.annotated_data))
+
+    @_patch_recompute_som
+    def test_output_columns(self):
+        widget = self.widget
+        self.send_signal(self.widget.Inputs.data, self.iris)
+
+        m = np.zeros((widget.size_x, widget.size_y), dtype=bool)
+        m[0, 0] = True
+        m[1, 2] = True
+        widget.on_selection_change(m)
+
+        out = self.get_output(widget.Outputs.annotated_data)
+
+        np.testing.assert_equal(out.get_column("som_row"),
+                                [1] * 30 + [2] * 20 + [3] * 100)
+        np.testing.assert_equal(out.get_column("som_col"),
+                                [1] * 50 + [2] * 100)
+        cell_var = out.domain["som_cell"]
+        np.testing.assert_equal([cell_var.repr_val(v)
+                                 for v in out.get_column("som_cell")],
+                                ["r1c1"] * 30 + ["r2c1"] * 20 + ["r3c2"] * 100)
+        np.testing.assert_equal(out.get_column("som_error"),
+                                np.arange(150) / 150)
 
     def test_invalidated(self):
         heart = Table("heart_disease")
@@ -683,6 +722,50 @@ class TestOWSOM(WidgetTest):
         self.assertTrue(w.Information.modified.is_shown())
         restart_button.click()
         self.assertFalse(w.Information.modified.is_shown())
+
+
+class TestComputeValues(unittest.TestCase):
+    def test_eq_hash(self):
+        def equ(obj2):
+            self.assertEqual(obj1, obj2)
+            self.assertEqual(hash(obj1), hash(obj2))
+
+        def neq(obj2):
+            self.assertNotEqual(obj1, obj2)
+            self.assertNotEqual(hash(obj1), hash(obj2))
+
+        som1 = Mock()
+        som2 = Mock()
+        domain1 = Table("iris").domain
+        domain2 = Table("iris")[:, :4].domain
+        assert domain1 != domain2
+        offsets1, scales1 = np.array([1, 2, 3]), np.array([4, 5, 6])
+        offsets2, scales2 = np.array([2, 3, 4]), np.array([5, 6, 7])
+
+        shared1 = SomSharedValueCompute(domain1, som1, offsets1, scales1)
+        shared2 = SomSharedValueCompute(domain2, som1, offsets1, scales1)
+
+        obj1 = shared1
+        equ(SomSharedValueCompute(domain1, som1, offsets1, scales1))
+        neq(shared2)
+        neq(SomSharedValueCompute(domain1, som2, offsets1, scales1))
+        neq(SomSharedValueCompute(domain1, som1, offsets2, scales1))
+        neq(SomSharedValueCompute(domain1, som1, offsets1, scales2))
+
+        obj1 = SomCellCompute(shared1, 8, False)
+        equ(SomCellCompute(shared1, 8, False))
+        neq(SomCellCompute(shared2, 8, False))
+        neq(SomCellCompute(shared1, 5, False))
+        neq(SomCellCompute(shared1, 8, True))
+
+        obj1 = SomCoordsCompute(shared1, 0)
+        equ(SomCoordsCompute(shared1, 0))
+        neq(SomCoordsCompute(shared2, 0))
+        neq(SomCoordsCompute(shared1, 1))
+
+        obj1 = SomErrorCompute(shared1)
+        equ(SomErrorCompute(shared1))
+        neq(SomErrorCompute(shared2))
 
 
 if __name__ == "__main__":

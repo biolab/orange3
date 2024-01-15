@@ -1,12 +1,16 @@
+from unittest.mock import patch
+
 import random
 import unittest
 
 import numpy as np
 
-from Orange.data import Table, Domain, StringVariable, DiscreteVariable
+from Orange.data import Table, Domain, StringVariable, DiscreteVariable, \
+    ContinuousVariable
 from Orange.data.filter import SameValue
 from Orange.widgets.utils.annotated_data import (
-    create_annotated_table, create_groups_table, ANNOTATED_DATA_FEATURE_NAME
+    create_annotated_table, create_groups_table, ANNOTATED_DATA_FEATURE_NAME,
+    lazy_annotated_table, lazy_groups_table, domain_with_annotation_column
 )
 
 
@@ -14,6 +18,42 @@ class TestAnnotatedData(unittest.TestCase):
     def setUp(self):
         random.seed(42)
         self.zoo = Table("zoo")
+
+    def test_domain_with_annotation_column(self):
+        a, b, c = (ContinuousVariable(x) for x in "abc")
+
+        x = [[1, 2, 3], [4, 5, 6]]
+
+        for data in (dabc := Domain([a, b, c]), Table.from_list(dabc, x)):
+            dom, var = domain_with_annotation_column(data)
+            self.assertEqual(dom.attributes, (a, b, c))
+            self.assertIs(dom.class_var, var)
+            self.assertEqual(var.name, ANNOTATED_DATA_FEATURE_NAME)
+            self.assertEqual(var.values, ("No", "Yes"))
+
+            dom, var = domain_with_annotation_column(
+                data, values=tuple("xyz"), var_name="d")
+            self.assertEqual(dom.attributes, (a, b, c))
+            self.assertIs(dom.class_var, var)
+            self.assertEqual(var.name, "d")
+            self.assertEqual(var.values, tuple("xyz"))
+
+        for data in (dabc := Domain([a, b], c), Table.from_list(dabc, x)):
+            dom, var = domain_with_annotation_column(
+                data, values=tuple("xyz"), var_name="d")
+            self.assertEqual(dom.attributes, (a, b))
+            self.assertIs(dom.class_var, c)
+            self.assertEqual(dom.metas, (var, ))
+            self.assertEqual(var.name, "d")
+            self.assertEqual(var.values, tuple("xyz"))
+
+            dom, var = domain_with_annotation_column(
+                data, values=tuple("xyz"), var_name="c")
+            self.assertEqual(dom.attributes, (a, b))
+            self.assertIs(dom.class_var, c)
+            self.assertEqual(dom.metas, (var, ))
+            self.assertEqual(var.name, "c (1)")
+            self.assertEqual(var.values, tuple("xyz"))
 
     def test_create_annotated_table(self):
         annotated = create_annotated_table(self.zoo, list(range(10)))
@@ -129,3 +169,52 @@ class TestAnnotatedData(unittest.TestCase):
         values = ("this", "that", "rest")
         table = create_groups_table(self.zoo, selection, values=values)
         self.assertEqual(tuple(table.domain["Selected"].values), values)
+
+    @patch("Orange.widgets.utils.annotated_data.create_annotated_table")
+    def test_lazy_annotated_table(self, creator):
+        selected_indices = np.array([1, 2, 3])
+        lazy_table = lazy_annotated_table(self.zoo, selected_indices)
+        self.assertEqual(lazy_table.length, len(self.zoo))
+        self.assertEqual(lazy_table.domain.attributes, self.zoo.domain.attributes)
+        self.assertEqual(lazy_table.domain.class_var, self.zoo.domain.class_var)
+        self.assertEqual(len(lazy_table.domain.metas), 2)
+        var = lazy_table.domain.metas[1]
+        self.assertIsInstance(var, DiscreteVariable)
+        self.assertEqual(var.name, ANNOTATED_DATA_FEATURE_NAME)
+        creator.assert_not_called()
+        self.assertIs(lazy_table.get_value(), creator.return_value)
+
+    @patch("Orange.widgets.utils.annotated_data.create_groups_table")
+    def test_lazy_groups_table(self, creator):
+        group_indices = np.zeros(len(self.zoo), dtype=int)
+        group_indices[10:15] = 1
+
+        lazy_table = lazy_groups_table(self.zoo, group_indices)
+        self.assertEqual(lazy_table.length, len(self.zoo))
+        self.assertEqual(lazy_table.domain.attributes, self.zoo.domain.attributes)
+        self.assertEqual(lazy_table.domain.class_var, self.zoo.domain.class_var)
+        self.assertEqual(len(lazy_table.domain.metas), 2)
+        var = lazy_table.domain.metas[1]
+        self.assertIsInstance(var, DiscreteVariable)
+        self.assertEqual(var.name, ANNOTATED_DATA_FEATURE_NAME)
+        creator.assert_not_called()
+        self.assertIs(lazy_table.get_value(), creator.return_value)
+        creator.reset_mock()
+
+        lazy_table = lazy_groups_table(
+            self.zoo, group_indices, include_unselected=False, var_name="foo",
+            values=("bar", "baz"))
+        self.assertEqual(lazy_table.length, 5)
+        self.assertEqual(lazy_table.domain.attributes, self.zoo.domain.attributes)
+        self.assertEqual(lazy_table.domain.class_var, self.zoo.domain.class_var)
+        self.assertEqual(len(lazy_table.domain.metas), 2)
+        var = lazy_table.domain.metas[1]
+        self.assertIsInstance(var, DiscreteVariable)
+        self.assertEqual(var.name, "foo")
+        self.assertEqual(var.values, ("bar", "baz"))
+        creator.assert_not_called()
+        self.assertIs(lazy_table.get_value(), creator.return_value)
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,8 +1,9 @@
 """Tests for OWPredictions"""
 # pylint: disable=protected-access
-import io
+import os
 import unittest
 from functools import partial
+from tempfile import NamedTemporaryFile
 from typing import Optional
 from unittest.mock import Mock, patch
 
@@ -152,6 +153,14 @@ class TestOWPredictions(WidgetTest):
             predmodel.data(predmodel.index(0, 0), Qt.UserRole)))
         self.assertIn(predmodel.data(predmodel.index(0, 0))[0],
                       titanic.domain.class_var.values)
+        self.widget.send_report()
+
+        housing = self.housing[::5]
+        mean_housing = ConstantLearner()(housing)
+        no_target = housing.transform(Domain(housing.domain.attributes, None))
+        self.send_signal(self.widget.Inputs.data, no_target)
+        self.send_signal(self.widget.Inputs.predictors, mean_housing, 1)
+        self.widget.send_report()
 
     def test_invalid_regression_target(self):
         widget = self.widget
@@ -198,8 +207,10 @@ class TestOWPredictions(WidgetTest):
         child\tmale\tyes
         child\tfemale\tyes
         """
-        file1 = io.StringIO(filestr1)
-        table = TabReader(file1).read()
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(filestr1)
+        table = TabReader(tmp.name).read()
+        os.unlink(tmp.name)
         learner = TreeLearner()
         tree = learner(table)
 
@@ -212,9 +223,11 @@ class TestOWPredictions(WidgetTest):
         child\tmale\tyes
         child\tfemale\tunknown
         """
-        file2 = io.StringIO(filestr2)
-        bad_table = TabReader(file2).read()
+        with NamedTemporaryFile(mode="w", delete=False) as tmp:
+            tmp.write(filestr2)
 
+        bad_table = TabReader(tmp.name).read()
+        os.unlink(tmp.name)
         self.send_signal(self.widget.Inputs.predictors, tree, 1)
 
         with excepthook_catch():
@@ -861,6 +874,7 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(widget.Inputs.predictors, bayes01, 0)
         self.send_signal(widget.Inputs.predictors, bayes12, 1)
         self.send_signal(widget.Inputs.predictors, bayes012, 2)
+        widget.controls.show_probability_errors.setChecked(False)
 
         for i, pred in enumerate(widget.predictors):
             p = pred.results.unmapped_probabilities
@@ -910,6 +924,7 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(widget.Inputs.data, iris012)
         self.send_signal(widget.Inputs.predictors, bayes01, 0)
         self.send_signal(widget.Inputs.predictors, bayes012, 1)
+        widget.controls.show_probability_errors.setChecked(False)
 
         for i, pred in enumerate(widget.predictors):
             p = pred.results.unmapped_probabilities
@@ -960,7 +975,7 @@ class TestOWPredictions(WidgetTest):
                          MeanLearner()(self.housing), 1)
         out = self.get_output(widget.Outputs.predictions)
         np.testing.assert_equal(
-            out.metas,
+            out.metas[:, [0, 2]],
             np.hstack([pred.results.predicted.T for pred in widget.predictors]))
 
     def test_classless(self):
@@ -1149,6 +1164,13 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(delegate.span, max(3 / 2, 6 / 11))
         self.assertFalse(delegate.centered)
 
+    def test_regression_error_no_model(self):
+        data = self.housing[:5]
+        self.send_signal(self.widget.Inputs.data, data)
+        combo = self.widget.controls.show_reg_errors
+        with excepthook_catch(raise_on_exit=True):
+            simulate.combobox_activate_index(combo, 1)
+
     def test_report(self):
         widget = self.widget
 
@@ -1172,6 +1194,43 @@ class TestOWPredictions(WidgetTest):
         settings = {"score_table": {"shown_scores": {"Sensitivity"}}}
         self.widget.migrate_settings(settings, 1)
         self.assertTrue(settings["score_table"]["show_score_hints"]["Sensitivity"])
+
+    def test_output_error_reg(self):
+        data = self.housing
+        lin_reg = LinearRegressionLearner()
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.predictors, lin_reg(data), 0)
+        self.send_signal(self.widget.Inputs.predictors,
+                         LinearRegressionLearner(fit_intercept=False)(data), 1)
+        pred = self.get_output(self.widget.Outputs.predictions)
+
+        names = ["", " (error)"]
+        names = [f"{n}{i}" for i in ("", " (1)") for n in names]
+        names = [f"{lin_reg.name}{x}" for x in names]
+        self.assertEqual(names, [m.name for m in pred.domain.metas])
+        self.assertAlmostEqual(pred.metas[0, 1], 6.0, 1)
+        self.assertAlmostEqual(pred.metas[0, 3], 5.1, 1)
+
+    def test_output_error_cls(self):
+        data = self.iris
+        log_reg = LogisticRegressionLearner()
+        self.send_signal(self.widget.Inputs.predictors, log_reg(data), 0)
+        self.send_signal(self.widget.Inputs.predictors,
+                         LogisticRegressionLearner(penalty="l1")(data), 1)
+        with data.unlocked(data.Y):
+            data.Y[1] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        pred = self.get_output(self.widget.Outputs.predictions)
+
+        names = [""] + [f" ({v})" for v in
+                        list(data.domain.class_var.values) + ["error"]]
+        names = [f"{n}{i}" for i in ("", " (1)") for n in names]
+        names = [f"{log_reg.name}{x}" for x in names]
+        self.assertEqual(names, [m.name for m in pred.domain.metas])
+        self.assertAlmostEqual(pred.metas[0, 4], 0.018, 3)
+        self.assertAlmostEqual(pred.metas[0, 9], 0.113, 3)
+        self.assertTrue(np.isnan(pred.metas[1, 4]))
+        self.assertTrue(np.isnan(pred.metas[1, 9]))
 
 
 class SelectionModelTest(unittest.TestCase):

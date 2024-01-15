@@ -5,13 +5,16 @@ from AnyQt.QtWidgets import QFormLayout
 from AnyQt.QtCore import Qt
 
 from orangewidget.report import bool_str
+from orangewidget.settings import Setting
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable
 from Orange.data.util import get_unique_names
 from Orange.data.sql.table import SqlTable, AUTO_DL_LIMIT
 from Orange.preprocess import preprocess
 from Orange.projection import PCA
-from Orange.widgets import widget, gui, settings
+from Orange.widgets import widget, gui
+from Orange.widgets.utils.annotated_data import add_columns
+from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin
 from Orange.widgets.utils.slidergraph import SliderGraph
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
@@ -21,7 +24,7 @@ MAX_COMPONENTS = 100
 LINE_NAMES = ["component variance", "cumulative variance"]
 
 
-class OWPCA(widget.OWWidget):
+class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
     name = "PCA"
     description = "Principal component analysis with a scree-diagram."
     icon = "icons/PCA.svg"
@@ -37,12 +40,12 @@ class OWPCA(widget.OWWidget):
         components = Output("Components", Table)
         pca = Output("PCA", PCA, dynamic=False)
 
-    ncomponents = settings.Setting(2)
-    variance_covered = settings.Setting(100)
-    auto_commit = settings.Setting(True)
-    normalize = settings.Setting(True)
-    maxp = settings.Setting(20)
-    axis_labels = settings.Setting(10)
+    ncomponents = Setting(2)
+    variance_covered = Setting(100)
+    auto_commit = Setting(True)
+    normalize = Setting(True)
+    maxp = Setting(20)
+    axis_labels = Setting(10)
 
     graph_name = "plot.plotItem"  # QGraphicsView (pg.PlotWidget -> SliderGraph)
 
@@ -57,13 +60,13 @@ class OWPCA(widget.OWWidget):
 
     def __init__(self):
         super().__init__()
-        self.data = None
+        ConcurrentWidgetMixin.__init__(self)
 
+        self.data = None
         self._pca = None
         self._transformed = None
         self._variance_ratio = None
         self._cumulative = None
-        self._init_projector()
 
         # Components Selection
         form = QFormLayout()
@@ -114,6 +117,7 @@ class OWPCA(widget.OWWidget):
 
     @Inputs.data
     def set_data(self, data):
+        self.cancel()
         self.clear_messages()
         self.clear()
         self.information()
@@ -138,12 +142,11 @@ class OWPCA(widget.OWWidget):
                 self.clear_outputs()
                 return
 
-        self._init_projector()
-
         self.data = data
         self.fit()
 
     def fit(self):
+        self.cancel()
         self.clear()
         self.Warning.trivial_components.clear()
         if self.data is None:
@@ -151,27 +154,45 @@ class OWPCA(widget.OWWidget):
 
         data = self.data
 
-        if self.normalize:
-            self._pca_projector.preprocessors = \
-                self._pca_preprocessors + [preprocess.Normalize(center=False)]
-        else:
-            self._pca_projector.preprocessors = self._pca_preprocessors
+        projector = self._create_projector()
 
         if not isinstance(data, SqlTable):
-            pca = self._pca_projector(data)
-            variance_ratio = pca.explained_variance_ratio_
-            cumulative = numpy.cumsum(variance_ratio)
+            self.start(self._call_projector, data, projector)
 
-            if numpy.isfinite(cumulative[-1]):
-                self.components_spin.setRange(0, len(cumulative))
-                self._pca = pca
-                self._variance_ratio = variance_ratio
-                self._cumulative = cumulative
-                self._setup_plot()
-            else:
-                self.Warning.trivial_components()
+    @staticmethod
+    def _call_projector(data: Table, projector, state):
 
-            self.commit.now()
+        def callback(i: float, status=""):
+            state.set_progress_value(i * 100)
+            if status:
+                state.set_status(status)
+            if state.is_interruption_requested():
+                raise Exception  # pylint: disable=broad-exception-raised
+
+        return projector(data, progress_callback=callback)
+
+    def on_done(self, result):
+        pca = result
+        variance_ratio = pca.explained_variance_ratio_
+        cumulative = numpy.cumsum(variance_ratio)
+
+        if numpy.isfinite(cumulative[-1]):
+            self.components_spin.setRange(0, len(cumulative))
+            self._pca = pca
+            self._variance_ratio = variance_ratio
+            self._cumulative = cumulative
+            self._setup_plot()
+        else:
+            self.Warning.trivial_components()
+
+        self.commit.now()
+
+    def on_partial_result(self, result):
+        pass
+
+    def onDeleteWidget(self):
+        self.shutdown()
+        super().onDeleteWidget()
 
     def clear(self):
         self._pca = None
@@ -184,7 +205,7 @@ class OWPCA(widget.OWWidget):
         self.Outputs.transformed_data.send(None)
         self.Outputs.data.send(None)
         self.Outputs.components.send(None)
-        self.Outputs.pca.send(self._pca_projector)
+        self.Outputs.pca.send(self._create_projector())
 
     def _setup_plot(self):
         if self._pca is None:
@@ -203,8 +224,7 @@ class OWPCA(widget.OWWidget):
         self._update_axis()
 
     def _on_cut_changed(self, components):
-        if components == self.ncomponents \
-                or self.ncomponents == 0:
+        if self.ncomponents in (components, 0):
             return
 
         self.ncomponents = components
@@ -251,10 +271,13 @@ class OWPCA(widget.OWWidget):
         if self.data is None:
             self._invalidate_selection()
 
-    def _init_projector(self):
-        self._pca_projector = PCA(n_components=MAX_COMPONENTS, random_state=0)
-        self._pca_projector.component = self.ncomponents
-        self._pca_preprocessors = PCA.preprocessors
+    def _create_projector(self):
+        projector = PCA(n_components=MAX_COMPONENTS, random_state=0)
+        projector.component = self.ncomponents  # for use as a Scorer
+        if self.normalize:
+            projector.preprocessors = \
+                PCA.preprocessors + [preprocess.Normalize(center=False)]
+        return projector
 
     def _nselected_components(self):
         """Return the number of selected components."""
@@ -311,9 +334,9 @@ class OWPCA(widget.OWWidget):
             proposed = [a.name for a in self._pca.orig_domain.attributes]
             meta_name = get_unique_names(proposed, 'components')
             meta_vars = [StringVariable(name=meta_name)]
-            metas = numpy.array([['PC{}'.format(i + 1)
-                                  for i in range(self.ncomponents)]],
-                                dtype=object).T
+            metas = numpy.array(
+                [[f"PC{i + 1}"for i in range(self.ncomponents)]], dtype=object
+            ).T
             if self._variance_ratio is not None:
                 variance_name = get_unique_names(proposed, "variance")
                 meta_vars.append(ContinuousVariable(variance_name))
@@ -329,20 +352,13 @@ class OWPCA(widget.OWWidget):
                                metas=metas)
             components.name = 'components'
 
-            data_dom = Domain(
-                self.data.domain.attributes,
-                self.data.domain.class_vars,
-                self.data.domain.metas + domain.attributes)
-            data = Table.from_numpy(
-                data_dom, self.data.X, self.data.Y,
-                numpy.hstack((self.data.metas, transformed.X)),
-                ids=self.data.ids)
+            data_dom = add_columns(self.data.domain, metas=domain.attributes)
+            data = self.data.transform(data_dom)
 
-        self._pca_projector.component = self.ncomponents
         self.Outputs.transformed_data.send(transformed)
         self.Outputs.components.send(components)
         self.Outputs.data.send(data)
-        self.Outputs.pca.send(self._pca_projector)
+        self.Outputs.pca.send(self._create_projector())
 
     def send_report(self):
         if self.data is None:
@@ -350,7 +366,7 @@ class OWPCA(widget.OWWidget):
         self.report_items((
             ("Normalize data", bool_str(self.normalize)),
             ("Selected components", self.ncomponents),
-            ("Explained variance", "{:.3f} %".format(self.variance_covered))
+            ("Explained variance", f"{self.variance_covered:.3f} %")
         ))
         self.report_plot()
 

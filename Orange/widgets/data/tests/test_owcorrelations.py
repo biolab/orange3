@@ -158,10 +158,14 @@ class TestOWCorrelations(WidgetTest):
         self.assertIsInstance(correlations, Table)
         self.assertEqual(len(correlations), 6)
         self.assertEqual(len(correlations.domain.metas), 2)
-        self.assertListEqual(["Correlation", "FDR"],
+        self.assertListEqual(["Correlation", "uncorrected p", "FDR"],
                              [m.name for m in correlations.domain.attributes])
-        array = np.array([[0.963, 0], [0.872, 0], [0.818, 0], [-0.421, 0],
-                          [-0.357, 0.000009], [-0.109, 0.1827652]])
+        array = np.array([[0.963, 0, 0],
+                          [0.872, 0, 0],
+                          [0.818, 0, 0],
+                          [-0.421, 0, 0],
+                          [-0.357, 7.52e-6, 0.000009],
+                          [-0.109, 0.1827652, 0.1827652]])
         npt.assert_almost_equal(correlations.X, array)
 
     def test_input_changed(self):

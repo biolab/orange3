@@ -9,23 +9,14 @@ This is compatible with Orange3's GPL-3.0 license.
 """  # pylint: disable=duplicate-code
 import unittest
 
-from Orange.widgets.data.utils.pythoneditor.tests.base import SimpleWidget
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.data.utils.pythoneditor.tests.base import EditorTest
 
 # pylint: disable=protected-access
 
-class _BaseTest(WidgetTest):
+
+class _BaseTest(EditorTest):
     """Base class for tests
     """
-
-    def setUp(self):
-        super().setUp()
-        self.widget = self.create_widget(SimpleWidget)
-        self.qpart = self.widget.qpart
-
-    def tearDown(self):
-        self.qpart.terminate()
-        super().tearDown()
 
 
 class Selection(_BaseTest):

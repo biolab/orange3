@@ -55,6 +55,10 @@ class TestXGB(unittest.TestCase):
         booster.score(self.iris)
         booster.score(self.housing)
 
+    @test_learners
+    def test_supports_weights(self, learner_class: Union[XGBLearner, XGBRFLearner]):
+        self.assertTrue(learner_class().supports_weights)
+
 
 if __name__ == "__main__":
     unittest.main()

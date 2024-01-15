@@ -1,3 +1,5 @@
+import warnings
+
 import copy
 import inspect
 import threading
@@ -9,6 +11,7 @@ from Orange.base import ReprableWithPreprocessors
 from Orange.data.util import SharedComputeValue, get_unique_names
 from Orange.misc.wrapper_meta import WrapperMeta
 from Orange.preprocess import RemoveNaNRows
+from Orange.util import dummy_callback, wrap_callback, OrangeDeprecationWarning
 import Orange.preprocess
 
 __all__ = ["LinearCombinationSql", "Projector", "Projection", "SklProjector",
@@ -44,17 +47,36 @@ class Projector(ReprableWithPreprocessors):
         raise NotImplementedError(
             "Classes derived from Projector must overload method fit")
 
-    def __call__(self, data):
-        data = self.preprocess(data)
+    def __call__(self, data, progress_callback=None):
+        if progress_callback is None:
+            progress_callback = dummy_callback
+        progress_callback(0, "Preprocessing...")
+        try:
+            cb = wrap_callback(progress_callback, end=0.1)
+            data = self.preprocess(data, progress_callback=cb)
+        except TypeError:
+            data = self.preprocess(data)
+            warnings.warn("A keyword argument 'progress_callback' has been "
+                          "added to the preprocess() signature. Implementing "
+                          "the method without the argument is deprecated and "
+                          "will result in an error in the future.",
+                          OrangeDeprecationWarning, stacklevel=2)
         self.domain = data.domain
+        progress_callback(0.1, "Fitting...")
         clf = self.fit(data.X, data.Y)
         clf.pre_domain = data.domain
         clf.name = self.name
+        progress_callback(1)
         return clf
 
-    def preprocess(self, data):
-        for pp in self.preprocessors:
+    def preprocess(self, data, progress_callback=None):
+        if progress_callback is None:
+            progress_callback = dummy_callback
+        n_pps = len(self.preprocessors)
+        for i, pp in enumerate(self.preprocessors):
+            progress_callback(i / n_pps)
             data = pp(data)
+        progress_callback(1)
         return data
 
     # Projectors implemented using `fit` access the `domain` through the
@@ -208,8 +230,8 @@ class SklProjector(Projector, metaclass=WrapperMeta):
             raise TypeError("Wrapper does not define '__wraps__'")
         return params
 
-    def preprocess(self, data):
-        data = super().preprocess(data)
+    def preprocess(self, data, progress_callback=None):
+        data = super().preprocess(data, progress_callback)
         if any(v.is_discrete and len(v.values) > 2
                for v in data.domain.attributes):
             raise ValueError("Wrapped scikit-learn methods do not support "

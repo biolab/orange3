@@ -23,6 +23,7 @@ class _FeatureScorerMixin(LearnerScorer):
 
 class XGBRegressor(XGBBase, Learner, _FeatureScorerMixin):
     __wraps__ = xgboost.XGBRegressor
+    supports_weights = True
 
     def __init__(self,
                  max_depth=None,
@@ -75,6 +76,7 @@ class XGBRegressor(XGBBase, Learner, _FeatureScorerMixin):
 
 class XGBRFRegressor(XGBBase, Learner, _FeatureScorerMixin):
     __wraps__ = xgboost.XGBRFRegressor
+    supports_weights = True
 
     def __init__(self,
                  max_depth=None,

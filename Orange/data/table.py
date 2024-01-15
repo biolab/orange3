@@ -553,6 +553,8 @@ class Table(Sequence, Storage):
                 setattr(self, "Y", no_view(state.pop("_Y")))  # state["_Y"] is a 2d array
             self.__dict__.update(state)
 
+        self._init_ids(self)
+
     def __getstate__(self):
         # Compatibility with pickles before table locking:
         # return the same state as before table lock
@@ -1007,9 +1009,11 @@ class Table(Sequence, Storage):
 
     @classmethod
     def _init_ids(cls, obj):
+        length = int(obj.X.shape[0])
         with cls._next_instance_lock:
-            obj.ids = np.array(range(cls._next_instance_id, cls._next_instance_id + obj.X.shape[0]))
-            cls._next_instance_id += obj.X.shape[0]
+            nid = cls._next_instance_id
+            cls._next_instance_id += length
+        obj.ids = np.arange(nid, nid + length, dtype=int)
 
     @classmethod
     def new_id(cls):
@@ -1321,7 +1325,7 @@ class Table(Sequence, Storage):
         return s
 
     @classmethod
-    def concatenate(cls, tables, axis=0):
+    def concatenate(cls, tables, axis=0, *, ignore_domains=None):
         """
         Concatenate tables into a new table, either vertically or horizontally.
 
@@ -1342,14 +1346,15 @@ class Table(Sequence, Storage):
         """
         if axis not in (0, 1):
             raise ValueError("invalid axis")
+        if ignore_domains is not None and axis != 0:
+            raise ValueError("'ignore_domains' is incompatible with 'axis=1'")
         if not tables:
             raise ValueError('need at least one table to concatenate')
 
         if len(tables) == 1:
             return tables[0].copy()
-
         if axis == 0:
-            conc = cls._concatenate_vertical(tables)
+            conc = cls._concatenate_vertical(tables, bool(ignore_domains))
         else:
             conc = cls._concatenate_horizontal(tables)
 
@@ -1364,7 +1369,7 @@ class Table(Sequence, Storage):
         return conc
 
     @classmethod
-    def _concatenate_vertical(cls, tables):
+    def _concatenate_vertical(cls, tables, ignore_domains=False):
         def vstack(arrs):
             return [np, sp][any(sp.issparse(arr) for arr in arrs)].vstack(arrs)
 
@@ -1383,7 +1388,8 @@ class Table(Sequence, Storage):
             return [getattr(arr, attr) for arr in tables]
 
         domain = tables[0].domain
-        if any(table.domain != domain for table in tables):
+        if not ignore_domains \
+                and any(table.domain != domain for table in tables):
             raise ValueError('concatenated tables must have the same domain')
 
         conc = cls.from_numpy(
@@ -1922,6 +1928,8 @@ class Table(Sequence, Storage):
         """
         if filter.oper == filter.IsDefined:
             return col.astype(bool)
+        if filter.oper == filter.NotIsDefined:
+            return ~col.astype(bool)
 
         col = col.astype(str)
         fmin = filter.min or ""
@@ -1936,12 +1944,21 @@ class Table(Sequence, Storage):
         if filter.oper == filter.Contains:
             return np.fromiter((fmin in e for e in col),
                                dtype=bool)
+        if filter.oper == filter.NotContain:
+            return np.fromiter((fmin not in e for e in col),
+                               dtype=bool)
         if filter.oper == filter.StartsWith:
             return np.fromiter((e.startswith(fmin) for e in col),
                                dtype=bool)
+        if filter.oper == filter.NotStartsWith:
+            return np.fromiter((not e.startswith(fmin) for e in col),
+                               dtype=bool)        
         if filter.oper == filter.EndsWith:
             return np.fromiter((e.endswith(fmin) for e in col),
                                dtype=bool)
+        if filter.oper == filter.NotEndsWith:
+            return np.fromiter((not e.endswith(fmin) for e in col),
+                               dtype=bool)        
 
         return self._range_filter_to_indicator(filter, col, fmin, fmax)
 

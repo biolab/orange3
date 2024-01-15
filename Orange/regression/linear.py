@@ -27,6 +27,7 @@ class _FeatureScorerMixin(LearnerScorer):
 
 class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_linear_model.LinearRegression
+    supports_weights = True
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, preprocessors=None, fit_intercept=True):
@@ -40,6 +41,7 @@ class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
 
 class RidgeRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Ridge
+    supports_weights = True
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, fit_intercept=True, copy_X=True,
@@ -50,6 +52,7 @@ class RidgeRegressionLearner(LinearRegressionLearner):
 
 class LassoRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.Lasso
+    supports_weights = True
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, fit_intercept=True, precompute=False,
@@ -61,6 +64,7 @@ class LassoRegressionLearner(LinearRegressionLearner):
 
 class ElasticNetLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNet
+    supports_weights = True
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, alpha=1.0, l1_ratio=0.5, fit_intercept=True,
@@ -72,6 +76,7 @@ class ElasticNetLearner(LinearRegressionLearner):
 
 class ElasticNetCVLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.ElasticNetCV
+    supports_weights = True
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, l1_ratio=0.5, eps=0.001, n_alphas=100, alphas=None,
@@ -85,6 +90,7 @@ class ElasticNetCVLearner(LinearRegressionLearner):
 class SGDRegressionLearner(LinearRegressionLearner):
     __wraps__ = skl_linear_model.SGDRegressor
     preprocessors = SklLearner.preprocessors + [Normalize()]
+    supports_weights = True
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
     def __init__(self, loss='squared_error', penalty='l2', alpha=0.0001,

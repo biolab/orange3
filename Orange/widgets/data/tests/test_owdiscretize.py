@@ -18,7 +18,8 @@ from Orange.widgets.data.owdiscretize import OWDiscretize, \
     IncreasingNumbersListValidator, VarHint, Methods, DefaultKey, \
     _fixed_width_discretization, _fixed_time_width_discretization, \
     _custom_discretization, variable_key, Options, DefaultHint, \
-    _mdl_discretization, ListViewSearch, format_desc, DefaultDiscModel
+    _mdl_discretization, ListViewSearch, format_desc, DefaultDiscModel, \
+    DiscDomainModel, DiscDesc
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.utils.itemmodels import select_rows
 
@@ -547,6 +548,27 @@ class TestModels(WidgetTest, DataMixin):
         self.assertIn(
             str(w.discretized_vars[("x", False)].compute_value.points[0])[:3],
             display)
+
+
+class TestDiscModel(GuiTest, DataMixin):
+    def setUp(self) -> None:
+        super().setUp()
+        self.prepare_data()
+
+    def test_model(self):
+        model = DiscDomainModel()
+        model.set_domain(self.domain)
+        index = model.index(0)
+        self.assertEqual(index.data(Qt.DisplayRole), "x")
+        self.assertIn("x", index.data(Qt.ToolTipRole), "x")
+        model.setData(
+            index,
+            DiscDesc(
+                VarHint(Methods.EqualFreq, (3, )), "1, 2", ("1", "2")),
+            Qt.UserRole
+        )
+        self.assertTrue(index.data(Qt.DisplayRole).startswith("x "))
+        self.assertIn("2", index.data(Qt.ToolTipRole))
 
 
 class TestDefaultDiscModel(GuiTest):

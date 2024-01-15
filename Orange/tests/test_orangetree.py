@@ -5,6 +5,7 @@ import unittest
 
 import numpy as np
 import scipy.sparse as sp
+from Orange.classification._tree_scorers import find_threshold_entropy
 
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.classification.tree import \
@@ -34,7 +35,7 @@ class TestTree:
         learn = self.TreeLearner(**self.no_pruning_args)
         clf = learn(table)
         pred = clf(table)
-        self.assertTrue(np.all(table.Y.flatten() == pred))
+        np.testing.assert_equal(table.Y.flatten(), pred)
 
     def test_min_samples_split(self):
         clf = self.TreeLearner(
@@ -448,3 +449,36 @@ class TestTreeModel(unittest.TestCase):
              [14, 2, 1]], dtype=float
         ))
         np.testing.assert_equal(model.get_values(x), expected_values)
+
+
+class TestScorers(unittest.TestCase):
+
+    def test_find_threshold_entropy(self):
+        x = np.array([1, 2, 3, 4], dtype=float)
+        y = np.array([0, 0, 1, 1], dtype=float)
+        ind = np.argsort(x, kind="stable")
+        e, t = find_threshold_entropy(x, y, ind, 2, 1)
+        self.assertAlmostEqual(e, 1)
+        self.assertEqual(t, 2.0)
+
+    def test_find_threshold_entropy_repeated(self):
+        x = np.array([1, 1, 1, 2, 2, 2], dtype=float)
+        y = np.array([0, 0, 0, 0, 1, 1], dtype=float)
+        ind = np.argsort(x, kind="stable")
+        e, t = find_threshold_entropy(x, y, ind, 2, 1)
+        self.assertAlmostEqual(e, 0.459147917027245)
+        self.assertEqual(t, 1.0)
+
+        x = np.array([1, 1, 1, 2, 2, 2], dtype=float)
+        y = np.array([0, 0, 1, 1, 1, 1], dtype=float)
+        ind = np.argsort(x, kind="stable")
+        e, t = find_threshold_entropy(x, y, ind, 2, 1)
+        self.assertAlmostEqual(e, 0.459147917027245)
+        self.assertEqual(t, 1.0)
+
+        x = np.array([1, 1, 1, 2, 2, 2], dtype=float)
+        y = np.array([0, 1, 1, 1, 1, 1], dtype=float)
+        ind = np.argsort(x, kind="stable")
+        e, t = find_threshold_entropy(x, y, ind, 2, 1)
+        self.assertAlmostEqual(e, 0.19087450462110966)
+        self.assertEqual(t, 1.0)

@@ -83,3 +83,7 @@ class TestKNNLearner(unittest.TestCase):
         results = cv(self.housing, learners)
         mse = MSE(results)
         self.assertLess(mse[1], mse[0])
+
+    def test_supports_weights(self):
+        self.assertFalse(KNNLearner().supports_weights)
+        self.assertFalse(KNNRegressionLearner().supports_weights)

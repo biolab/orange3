@@ -118,3 +118,6 @@ class TestLinearRegressionLearner(unittest.TestCase):
         learner2 = eval(repr_text)
 
         self.assertIsInstance(learner2, LinearRegressionLearner)
+
+    def test_supports_weights(self):
+        self.assertTrue(LinearRegressionLearner().supports_weights)

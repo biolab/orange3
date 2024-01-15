@@ -4,6 +4,64 @@ Change Log
 [next] - TBA
 ------------
 
+
+[3.36.2] - 2023-10-31
+--------------------
+##### Enhancements
+* oweditdomain: Add variable filter ([#6603](../../pull/6603))
+* IO - Change origin attribute when not find on system ([#6555](../../pull/6555))
+* Predictions: Output errors ([#6577](../../pull/6577))
+
+##### Bugfixes
+* EmbedderCache - Handle cache persisting when no permissions ([#6611](../../pull/6611))
+
+
+[3.36.1] - 2023-09-22
+--------------------
+##### Bugfixes
+* Distributions: Fix selection output ([#6578](../../pull/6578))
+* Datasets: save selected dataset platform independently ([#6575](../../pull/6575))
+
+
+[3.36.0] - 2023-09-08
+--------------------
+##### Enhancements
+* Update widget.json
+* feature-constructor2-stamped.png - resize and index
+* Formula documentation: Minor changes
+* index.rst - fix reference to formula
+* move accidentally displaced formula.md
+* SOM: output columns with coordinates and errors ([#6542](../../pull/6542))
+* Lazy signals for Hierarchical Clustering ([#6348](../../pull/6348))
+* PCA widget runs a separate thread ([#6528](../../pull/6528))
+* Edit Domain: Change types of multiple variables ([#6426](../../pull/6426))
+* owsavebase: Display a warning when auto save is disabled ([#6454](../../pull/6454))
+* Select Columns: Accept partially correct drops ([#6390](../../pull/6390))
+
+##### Bugfixes
+* Update widget.json
+* feature-constructor2-stamped.png - resize and index
+* Formula documentation: Minor changes
+* index.rst - fix reference to formula
+* move accidentally displaced formula.md
+* Predictions: Fix column size hinting ([#6563](../../pull/6563))
+* Naive Bayes: fix predictions with unknown values ([#6564](../../pull/6564))
+* Scatter Plot - Handle input features that are hidden in data ([#6531](../../pull/6531))
+* Adapt tests to pandas 2.1 and fix deprecations ([#6560](../../pull/6560))
+* Adapt to newly released pandas 2.1 ([#6559](../../pull/6559))
+* CSV Import - Change datetime format parsing ([#6539](../../pull/6539))
+* owdiscretize: Fix formatting display string when user role is undefined ([#6498](../../pull/6498))
+* Neural Network: Default learner name propagation ([#6526](../../pull/6526))
+* PCA - Output instance of table subclass when instance of table subclass on input ([#6536](../../pull/6536))
+* owpredictions: Fix a type error in report when using NoopDelegate ([#6537](../../pull/6537))
+* Scatter Plot - Fix Vizrank for hidden attributes ([#6530](../../pull/6530))
+* config: Replace and fix use of pkg_resources.parse_version ([#6523](../../pull/6523))
+* Fix classification trees for data with repeated feature values ([#6488](../../pull/6488))
+* Group By - Fix error with hidden attributes ([#6473](../../pull/6473))
+* Sql - Fix comparison with values trailing spaces ([#6470](../../pull/6470))
+* ListView - empty variable when all values unselected ([#6441](../../pull/6441))
+
+
 [3.35.0] - 2023-05-05
 ---------------------                                                                                       
 ##### Enhancements
@@ -1783,8 +1841,11 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.35.0..HEAD
-[3.34.1]: https://github.com/biolab/orange3/compare/3.34.1...3.35.0
+[next]: https://github.com/biolab/orange3/compare/3.36.2..HEAD
+[3.36.2]: https://github.com/biolab/orange3/compare/3.36.1...3.36.2
+[3.36.1]: https://github.com/biolab/orange3/compare/3.36.0...3.36.1
+[3.36.0]: https://github.com/biolab/orange3/compare/3.35.0...3.36.0
+[3.35.0]: https://github.com/biolab/orange3/compare/3.34.1...3.35.0
 [3.34.1]: https://github.com/biolab/orange3/compare/3.34.0...3.34.1
 [3.34.0]: https://github.com/biolab/orange3/compare/3.33.0...3.34.0
 [3.33.0]: https://github.com/biolab/orange3/compare/3.32.0...3.33.0

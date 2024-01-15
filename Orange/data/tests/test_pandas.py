@@ -1,6 +1,7 @@
 # pylint: disable=import-outside-toplevel
 import unittest
 from datetime import date, datetime, timezone, timedelta
+from unittest import skipIf
 
 import numpy as np
 import pandas as pd
@@ -199,6 +200,11 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(table.domain.variables[0].have_time, 0)
         self.assertEqual(table.domain.variables[0].have_date, 1)
 
+    @skipIf(
+        pd.__version__.split(".")[:2] == ["2", "0"],
+        "Skipping because of pandas issue in version 2.0.*",
+    )
+    # https://github.com/pandas-dev/pandas/issues/53134#issuecomment-1546011517
     def test_table_from_frame_time(self):
         df = pd.DataFrame(
             [[pd.Timestamp("00:00:00.25")], [pd.Timestamp("20:20:20.30")], [np.nan]]
@@ -412,11 +418,20 @@ class TestPandasCompat(unittest.TestCase):
         )
         self.assertTrue(all(isinstance(v, StringVariable) for v in table.domain.metas))
 
+    @skipIf(
+        pd.__version__.split(".")[:2] == ["2", "0"],
+        "Skipping because of pandas issue in version 2.0.*",
+    )
+    # https://github.com/pandas-dev/pandas/issues/53134#issuecomment-1546011517
     def test_time_variable_compatible(self):
         def to_df(val):
             return pd.DataFrame([[pd.Timestamp(val)]])
 
         for datestr, timestamp, outstr in TestTimeVariable.TESTS:
+            if datestr == "010101.01":
+                # 010101.01 parses as Jan 1 year 1 which isn't wrong since we do
+                # not provide format (and pandas does as it does in this case)
+                continue
             var = TimeVariable("time")
             var_parse = var.to_val(datestr)
             try:
@@ -780,7 +795,7 @@ class TestDenseTablePandas(TestTablePandas):
     def test_amend(self):
         with self.table.unlocked():
             df = self.table.X_df
-            df.iloc[0][0] = 0
+            df.iloc[0, 0] = 0
         X = self.table.X
         with self.table.unlocked():
             self.table.X_df = df

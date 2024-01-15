@@ -184,9 +184,13 @@ class OWSelectRows(widget.OWWidget):
             (FilterString.Between, "is between", "are between"),
             (FilterString.Outside, "is outside", "are outside"),
             (FilterString.Contains, "contains", "contain"),
+            (FilterString.NotContain, "does not contain", "do not contain"),
             (FilterString.StartsWith, "begins with", "begin with"),
+            (FilterString.NotStartsWith, "does not begin with", "do not begin with"),
             (FilterString.EndsWith, "ends with", "end with"),
+            (FilterString.NotEndsWith, "does not end with", "do not end with"),
             (FilterString.IsDefined, "is defined", "are defined"),
+            (FilterString.NotIsDefined, "is not defined", "are not defined"),
         ]
     }
 

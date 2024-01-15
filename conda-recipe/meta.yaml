@@ -27,48 +27,50 @@ requirements:
     - {{ compiler('cxx') }}
   host:
     - python
-    - setuptools
-    - numpy
-    - cython
     - pip
-    - wheel
-    - sphinx >=4.2.0
-    - docutils <0.17  # docutils changed html template in 0.17
+    - cython
+    - numpy
     - recommonmark
+    - setuptools
+    - sphinx >=4.2.0
+    - wheel
   run:
     - python
-    - setuptools >=41.0.0
-    - numpy >=1.19.5
-    - scipy >=1.9
-    - scikit-learn >=1.1.0,<1.2.0
-    - bottleneck >=1.3.4
-    - chardet >=3.0.2
-    - xlrd >=1.2.0
-    - xlsxwriter
+    # GUI requirements
+    - orange-canvas-core >=0.1.30,<0.2a
+    - orange-widget-base >=4.22.0
     - anyqt >=0.2.0
     - pyqt >=5.12,!=5.15.1,<6.0
+    - matplotlib-base >=3.2.0
+    - pygments >=2.8.0
     - pyqtgraph >=0.13.1
+    - qtconsole >=4.7.2
+    # core requirements
+    - baycomp >=1.0.2
+    - bottleneck >=1.3.4
+    - catboost >=1.0.1
+    - chardet >=3.0.2
+    - httpx >=0.21
     - joblib >=1.0.0
     - keyring
     - keyrings.alt
-    - pip >=18.0
-    - python.app  # [osx]
-    - serverfiles
-    - python-louvain >=0.13
-    - requests
-    - matplotlib-base >=3.2.0
+    - networkx
+    - numpy >=1.20.0
+    - openpyxl
     - openTSNE >=0.6.1,!=0.7.0
     - pandas >=1.4.0,!=1.5.0,!=2.0.0
+    - pip >=18.0
+    - python.app  # [osx]
+    - python-louvain >=0.13
     - pyyaml
-    - orange-canvas-core >=0.1.30,<0.2a
-    - orange-widget-base >=4.20.0
-    - openpyxl
-    - httpx >=0.21
-    - baycomp >=1.0.2
-    # cachecontrol (required by canvas core) <0.12.5 is incompatible with msgpack 1.0
-    - cachecontrol >=0.12.6
-    - qtconsole >=4.7.2
-    - pygments >=2.8.0
+    - requests
+    - scikit-learn >=1.1.0,!=1.2.*,<1.4   # ignoring 1.2.*: scikit-learn/issues/26241
+    - scipy >=1.9
+    - serverfiles
+    - setuptools >=51.0.0
+    - xgboost >=1.7.4
+    - xlsxwriter
+    - xlrd >=1.2.0
 
 test:
   # Python imports

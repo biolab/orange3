@@ -5,9 +5,9 @@ Concatenate
 Concatenate (append) two or more datasets.
 
 """
-from collections import OrderedDict, namedtuple, defaultdict
+from collections import OrderedDict, namedtuple, defaultdict, Counter
 from functools import reduce
-from itertools import chain, count
+from itertools import chain, count, zip_longest
 from typing import List, Optional, Sequence
 
 import numpy as np
@@ -44,15 +44,21 @@ class OWConcatenate(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         bow_concatenation = Msg("Inputs must be of the same type.")
+        incompatible_domains = \
+            Msg("Ignoring column names requires matching column types")
 
     class Warning(widget.OWWidget.Warning):
         renamed_variables = Msg(
             "Variables with duplicated names have been renamed.")
+        unmergeable_attributes = Msg(
+            "Some variables may not be concatenated correctly due "
+            "to attributes difference ({}).")
 
     merge_type: int
     append_source_column: bool
     source_column_role: int
     source_attr_name: str
+    ignore_names: bool
 
     #: Domain merging operations
     MergeUnion, MergeIntersection = 0, 1
@@ -68,6 +74,8 @@ class OWConcatenate(widget.OWWidget):
     source_column_role = settings.Setting(0)
     #: User specified name for the "Source ID" attr
     source_attr_name = settings.Setting("Source ID")
+    #: Use names from the primary table, ignore others
+    ignore_names = settings.Setting(False)
 
     ignore_compute_value = settings.Setting(False)
 
@@ -87,27 +95,29 @@ class OWConcatenate(widget.OWWidget):
         self.primary_data = None
         self._more_data_input: List[Optional[Orange.data.Table]] = []
 
-        self.mergebox = gui.vBox(self.controlArea, "Variable Merging")
-        box = gui.radioButtons(
-            self.mergebox, self, "merge_type",
+        self.mergebox = gui.vBox(self.controlArea, "Variable Sets Merging")
+        gui.widgetLabel(
+            self.mergebox, self.tr("When there is no primary table, " +
+                                   "the output should contain"))
+
+        gui.radioButtons(
+            gui.indentedBox(self.mergebox, 10), self, "merge_type", self.domain_opts,
             callback=self._merge_type_changed)
 
-        gui.widgetLabel(
-            box, self.tr("When there is no primary table, " +
-                         "the output should contain:"))
-
-        for opts in self.domain_opts:
-            gui.appendRadioButton(box, self.tr(opts))
-
-        gui.separator(box)
-
         label = gui.widgetLabel(
-            box,
+            self.mergebox,
             self.tr("The resulting table will have a class only if there " +
                     "is no conflict between input classes."))
         label.setWordWrap(True)
 
-        gui.separator(box)
+        box = gui.vBox(self.controlArea, "Variable matching")
+        gui.checkBox(
+            box, self, "ignore_names",
+            "Use column names from the primary table,\n"
+            "and ignore names in other tables.",
+            callback=self.ignore_names_changed, stateWhenDisabled=False)
+
+        gui.separator(self.controlArea)
         gui.checkBox(
             box, self, "ignore_compute_value",
             "Treat variables with the same name as the same variable,\n"
@@ -176,11 +186,18 @@ class OWConcatenate(widget.OWWidget):
 
     def handleNewSignals(self):
         self.mergebox.setDisabled(self.primary_data is not None)
+        self.controls.ignore_names.setEnabled(self.primary_data is not None)
+        self.controls.ignore_compute_value.setDisabled(
+            self.primary_data is not None and self.ignore_names)
         if self.incompatible_types():
             self.Error.bow_concatenation()
         else:
             self.Error.bow_concatenation.clear()
             self.commit.now()
+
+    def ignore_names_changed(self):
+        self.controls.ignore_compute_value.setDisabled(self.ignore_names)
+        self.commit.deferred()
 
     def incompatible_types(self):
         types_ = set()
@@ -196,6 +213,8 @@ class OWConcatenate(widget.OWWidget):
     @gui.deferred
     def commit(self):
         self.Warning.renamed_variables.clear()
+        self.Warning.unmergeable_attributes.clear()
+        self.Error.incompatible_domains.clear()
         tables, domain, source_var = [], None, None
         if self.primary_data is not None:
             tables = [self.primary_data] + list(self.more_data)
@@ -218,22 +237,46 @@ class OWConcatenate(widget.OWWidget):
                 get_unique_names(domain, self.source_attr_name),
                 values=names
             )
-            places = ["class_vars", "attributes", "metas"]
-            domain = add_columns(
-                domain,
-                **{places[self.source_column_role]: (source_var,)})
+            source_ids = np.array(list(flatten(
+                [i] * len(table) for i, table in enumerate(tables)))).reshape((-1, 1))
 
-        tables = [table.transform(domain) for table in tables]
-        if tables:
+        if not tables:
+            data = None
+        elif self.primary_data is not None and self.ignore_names:
+            if any(type(pv) is not type(mv) or
+                   pv.is_discrete and pv.values != mv.values
+                   for table in self.more_data
+                   for pv, mv in chain(zip_longest(domain.attributes, table.domain.attributes),
+                                       zip_longest(domain.class_vars, table.domain.class_vars),
+                                       zip_longest(domain.metas, table.domain.metas)
+                                       )
+                   ):
+                self.Error.incompatible_domains()
+                data = None
+            else:
+                data = type(tables[0]).concatenate(tables, ignore_domains=True)
+                if source_var is not None:
+                    if self.source_column_role == self.ClassRole:
+                        sdata = data.Table.from_numpy(
+                            data.Domain([], source_var),
+                            np.zeros(len(source_ids, 0)), source_ids)
+                        data = type(tables[0].concatenate(sdata, axis=1))
+                    else:
+                        data = data.add_column(
+                            source_var, source_ids.flatten(),
+                            to_metas=self.source_column_role == self.MetaRole)
+        else:
+            if source_var is not None:
+                places = ["class_vars", "attributes", "metas"]
+                domain = add_columns(
+                    domain,
+                    **{places[self.source_column_role]: (source_var,)})
+            tables = [table.transform(domain) for table in tables]
             data = type(tables[0]).concatenate(tables)
-            if source_var:
-                source_ids = np.array(list(flatten(
-                    [i] * len(table) for i, table in enumerate(tables)))).reshape((-1, 1))
+            if source_var is not None:
                 parts = [data.Y, data.X, data.metas]
                 with data.unlocked(parts[self.source_column_role]):
                     data[:, source_var] = source_ids
-        else:
-            data = None
 
         self.Outputs.data.send(data)
 
@@ -291,11 +334,41 @@ class OWConcatenate(widget.OWWidget):
         self.report_items(items)
 
     def merge_domains(self, domains):
+        variables = set(chain.from_iterable(
+            [d.variables + d.metas for d in domains]))
+
+        feature_attrs = defaultdict(list)
+        for var in variables:
+            for domain in domains:
+                if var not in domain:
+                    continue
+                for key, value in domain[var].attributes.items():
+                    feature_attrs[var].append((key, value))
+
         def fix_names(part):
             for i, attr, name in zip(count(), part, name_iter):
                 if attr.name != name:
                     part[i] = attr.renamed(name)
                     self.Warning.renamed_variables()
+
+        def fix_attrs(part):
+            fixed = []
+            for attr in part:
+                attrs = feature_attrs[attr]
+                if len(attrs) > 0:
+                    attr = attr.copy()
+                    attr.attributes = dict(attrs)
+                    # find duplicated keys with different values - can't use
+                    # set because values are not necessarily hashable
+                    counter = Counter(k for k, _ in attrs)
+                    for duplicate in [k for k, v in counter.items() if v > 1]:
+                        values = [v for k, v in feature_attrs[attr]
+                                  if k == duplicate]
+                        if len(values) > 1:
+                            if any(values[0] != v for v in values[1:]):
+                                self.Warning.unmergeable_attributes(attr.name)
+                fixed.append(attr)
+            return fixed
 
         oper = set.union if self.merge_type == OWConcatenate.MergeUnion \
             else set.intersection
@@ -305,6 +378,7 @@ class OWConcatenate(widget.OWWidget):
         name_iter = iter(get_unique_names_duplicates(all_names))
         for part in parts:
             fix_names(part)
+        parts = [fix_attrs(part) for part in parts]
         domain = Orange.data.Domain(*parts)
         return domain
 

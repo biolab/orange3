@@ -330,6 +330,8 @@ class DiscDomainModel(DomainModel):
         if role == Qt.ToolTipRole:
             var = self[index.row()]
             data = index.data(Qt.UserRole)
+            if not isinstance(data, DiscDesc):
+                return super().data(index, role)
             tip = f"<b>{var.name}: </b>"
             values = map(html.escape, data.values)
             if not data.values:
@@ -342,8 +344,12 @@ class DiscDomainModel(DomainModel):
                     + "".join(f"- {value}<br/>" for value in values)
         value = super().data(index, role)
         if role == Qt.DisplayRole:
-            hint, points, values = index.data(Qt.UserRole)
-            value += f" ({format_desc(hint)}){points}"
+            try:
+                hint, points, values = index.data(Qt.UserRole)
+            except TypeError:
+                pass  # don't have user role (yet)
+            else:
+                value += f" ({format_desc(hint)}){points}"
         return value
 
 

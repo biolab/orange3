@@ -18,24 +18,10 @@ from AnyQt.QtTest import QTest
 from AnyQt.QtGui import QKeySequence
 
 from Orange.widgets.data.utils.pythoneditor.tests import base
-from Orange.widgets.data.utils.pythoneditor.tests.base import SimpleWidget
-from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.data.utils.pythoneditor.tests.base import EditorTest
 
 
-class _Test(WidgetTest):
-    """Base class for tests
-    """
-
-    def setUp(self):
-        super().setUp()
-        self.widget = self.create_widget(SimpleWidget)
-        self.qpart = self.widget.qpart
-
-    def tearDown(self):
-        self.qpart.hide()
-        self.qpart.terminate()
-        super().tearDown()
-
+class _Test(EditorTest):
     def test_real_to_visible(self):
         self.qpart.text = 'abcdfg'
         self.assertEqual(0, self.qpart._rectangularSelection._realToVisibleColumn(self.qpart.text, 0))

@@ -23,6 +23,7 @@ class _FeatureScorerMixin(LearnerScorer):
 class GBRegressor(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_ensemble.GradientBoostingRegressor
     __returns__ = SklModel
+    supports_weights = True
 
     def __init__(self,
                  loss="squared_error",

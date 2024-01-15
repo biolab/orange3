@@ -12,6 +12,7 @@ class SGDClassificationLearner(SklLearner):
     __wraps__ = SGDClassifier
     __returns__ = LinearModel
     preprocessors = SklLearner.preprocessors + [Normalize()]
+    supports_weights = True
 
     def __init__(self, loss='hinge', penalty='l2', alpha=0.0001,
                  l1_ratio=0.15, fit_intercept=True, max_iter=5,

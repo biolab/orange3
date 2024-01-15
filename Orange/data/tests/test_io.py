@@ -135,9 +135,9 @@ class TestWriters(unittest.TestCase):
 c\td\ta\tb
 continuous\tstring\tx y z\tcontinuous
 class\tmeta\t\t
-3.0\tfoo\ty\t0.5
-1.0\tbar\tz\t
-7.0\tbaz\t\t1.0625""".strip())
+3\tfoo\ty\t0.500
+1\tbar\tz\t
+7\tbaz\t\t1.06250""".strip())
         finally:
             os.remove(fname)
 

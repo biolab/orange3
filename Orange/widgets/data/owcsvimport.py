@@ -1627,19 +1627,6 @@ def guess_data_type(col: pd.Series) -> pd.Series:
     -------
     Data column with correct dtype
     """
-    def parse_dates(s):
-        """
-        This is an extremely fast approach to datetime parsing.
-        For large data, the same dates are often repeated. Rather than
-        re-parse these, we store all unique dates, parse them, and
-        use a lookup to convert all dates.
-        """
-        try:
-            dates = {date: pd.to_datetime(date) for date in s.unique()}
-        except ValueError:
-            return None
-        return s.map(dates)
-
     if pdtypes.is_numeric_dtype(col):
         unique_values = col.unique()
         if len(unique_values) <= 2 and (
@@ -1647,13 +1634,12 @@ def guess_data_type(col: pd.Series) -> pd.Series:
                 or len(np.setdiff1d(unique_values, [1, 2])) == 0):
             return col.astype("category")
     else:  # object
-        # try parse as date - if None not a date
-        parsed_col = parse_dates(col)
-        if parsed_col is not None:
-            return parsed_col
-        unique_values = col.unique()
-        if len(unique_values) < 100 and len(unique_values) < len(col)**0.7:
-            return col.astype("category")
+        try:
+            return pd.to_datetime(col)
+        except ValueError:
+            unique_values = col.unique()
+            if len(unique_values) < 100 and len(unique_values) < len(col)**0.7:
+                return col.astype("category")
     return col
 
 

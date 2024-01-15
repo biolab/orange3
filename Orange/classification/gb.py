@@ -23,6 +23,7 @@ class _FeatureScorerMixin(LearnerScorer):
 class GBClassifier(SklLearner, _FeatureScorerMixin):
     __wraps__ = skl_ensemble.GradientBoostingClassifier
     __returns__ = SklModel
+    supports_weights = True
 
     def __init__(self,
                  loss="log_loss",
