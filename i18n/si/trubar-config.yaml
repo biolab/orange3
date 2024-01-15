@@ -1,0 +1,2 @@
+auto-import: "from orangecanvas.utils.localization.si import plsi, plsi_sz, z_besedo  # pylint: disable=wrong-import-order"
+encoding: "utf-8"

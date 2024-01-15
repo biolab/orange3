@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme version="2.0" title="Datoteka in Tabela" description="Osnovne enote za rudarjenje podatkov v programu Orange se imenujejo gradniki. Obstajajo gradniki za branje podatkov, obdelavo, vizualizacijo, gručenje, klasifikacijo in drugi. Gradniki komunicirajo prek kanalov. Delotok podatkovnega rudarjenja je torej zbirka gradnikov in komunikacijskih kanalov.&#10;&#10;V tem delotoku je gradnik Datoteka, ki prebere podatke. Te podatke nato posreduje gradniku Tabela, ki prikazuje preglednico podatkov. Opazimo, kako je izhod gradnika Datoteka povezan z vhodom gradnika Tabela. V programu Orange so izhodi gradnikov na desni strani, vhodi pa na levi strani gradnika.">
+	<nodes>
+		<node id="0" name="Datoteka" qualified_name="Orange.widgets.data.owfile.OWFile" project_name="Orange3" version="" title="Datoteka" position="(86.0, 176.0)" />
+		<node id="1" name="Tabela" qualified_name="Orange.widgets.data.owtable.OWTable" project_name="Orange3" version="" title="Tabela" position="(293.0, 175.0)" />
+	</nodes>
+	<links>
+		<link id="0" source_node_id="0" sink_node_id="1" source_channel="Podatki" sink_channel="Podatki" enabled="true" source_channel_id="data" sink_channel_id="data" />
+	</links>
+	<annotations>
+		<text id="0" type="text/plain" rect="(17.0, 21.0, 160.0, 55.0)" font-family="Helvetica" font-size="14">Gradnik Datoteka. Z dvojnim klikom ga odpri in izberi datoteko s podatki.</text>
+		<text id="1" type="text/plain" rect="(52.0, 254.0, 118.0, 46.0)" font-family="Helvetica" font-size="14">Izhod gradnika Datoteka.</text>
+		<text id="2" type="text/plain" rect="(238.0, 246.0, 131.0, 46.0)" font-family="Helvetica" font-size="14">Vhod gradnika Tabela.</text>
+		<text id="3" type="text/plain" rect="(135.0, 316.0, 150.0, 82.0)" font-family="Helvetica" font-size="14">Komunikacijski kanal. Ta prenese podatke iz gradnika Datoteka v gradnik Tabela.</text>
+		<text id="4" type="text/plain" rect="(262.0, 21.0, 150.0, 68.0)" font-family="Helvetica" font-size="14">Gradnik Tabela. Dvakrat klikni ikono, da si ogledaš podatke v preglednici.</text>
+		<text id="5" type="text/plain" rect="(412.0, 87.0, 150.0, 83.0)" font-family="Helvetica" font-size="14">Izhod gradnika Tabela pošlje naprej vse podatke (vrstice), ki so izbrani v gradniku.</text>
+		<text id="6" type="text/plain" rect="(486.0, 196.0, 216.0, 233.0)" font-family="Helvetica" font-size="14">Ta izhod ni uporabljen, zato je črta črtkana. Dodaš lahko še eno Tabelo s klikom na njeno ikono v orodjarni na levi strani. Nato poveži izhod gradnika Tabela z vhodom gradnika Tabela (1) in preveri, ali se izbrani podatki iz prvotne tabele res pošljejo v drugo tabelo za nadaljnjo obdelavo. To se najbolje opazi, če bosta oba gradnika odprta, to je, če sta njuni okni prikazani.</text>
+		<arrow id="7" start="(86.00000000000004, 99.00000000000003)" end="(85.00000000000004, 145.00000000000003)" fill="#C1272D" />
+		<arrow id="8" start="(288.0, 100.99999999999999)" end="(294.0, 143.99999999999997)" fill="#C1272D" />
+		<arrow id="9" start="(141.0, 250.0)" end="(118.0, 201.0)" fill="#C1272D" />
+		<arrow id="10" start="(245.99999999999997, 243.0)" end="(252.99999999999997, 190.0)" fill="#C1272D" />
+		<arrow id="11" start="(192.99999999999997, 316.0)" end="(191.99999999999997, 178.0)" fill="#C1272D" />
+		<arrow id="12" start="(485.0, 216.99999999999997)" end="(325.0, 185.99999999999997)" fill="#39B54A" />
+		<arrow id="13" start="(411.0, 124.00000000000003)" end="(324.0, 160.00000000000006)" fill="#C1272D" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties node_id="0" format="pickle">gASVuAMAAAAAAAB9lCiMEmNvbnRyb2xBcmVhVmlzaWJsZZSIjAxyZWNlbnRfcGF0aHOUXZSMHm9y
+YW5nZXdpZGdldC51dGlscy5maWxlZGlhbG9nc5SMClJlY2VudFBhdGiUk5QpgZR9lCiMB2Fic3Bh
+dGiUjC0vVXNlcnMvamFuZXovb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaXJpcy50YWKUjAZwcmVm
+aXiUjA9zYW1wbGUtZGF0YXNldHOUjAdyZWxwYXRolIwIaXJpcy50YWKUjAV0aXRsZZSMAJSMBXNo
+ZWV0lGgQjAtmaWxlX2Zvcm1hdJROdWJhjAtyZWNlbnRfdXJsc5RdlIwTc2F2ZWRXaWRnZXRHZW9t
+ZXRyeZRDLgHZ0MsAAQAAAAACEwAAATwAAAOqAAACNQAAAhMAAAFSAAADqgAAAjUAAAAAAACUjAtz
+aGVldF9uYW1lc5R9lIwGc291cmNllEsAjAN1cmyUaBCMDWRvbWFpbl9lZGl0b3KUfZSMC19fdmVy
+c2lvbl9flEsBjBBjb250ZXh0X3NldHRpbmdzlF2UjBVvcmFuZ2V3aWRnZXQuc2V0dGluZ3OUjAdD
+b250ZXh0lJOUKYGUfZQojAR0aW1llEdB1qcWDLpbX4wGdmFsdWVzlH2UKIwJdmFyaWFibGVzlF2U
+aBt9lGgoXZQoXZQojAxzZXBhbCBsZW5ndGiUjBRPcmFuZ2UuZGF0YS52YXJpYWJsZZSMEkNvbnRp
+bnVvdXNWYXJpYWJsZZSTlEsAaBCIZV2UKIwLc2VwYWwgd2lkdGiUaDBLAGgQiGVdlCiMDHBldGFs
+IGxlbmd0aJRoMEsAaBCIZV2UKIwLcGV0YWwgd2lkdGiUaDBLAGgQiGVdlCiMBGlyaXOUaC6MEERp
+c2NyZXRlVmFyaWFibGWUk5RLAYwsSXJpcy1zZXRvc2EsIElyaXMtdmVyc2ljb2xvciwgSXJpcy12
+aXJnaW5pY2GUiWVlc2gdSwF1jAphdHRyaWJ1dGVzlCiMDHNlcGFsIGxlbmd0aJRLAoaUjAtzZXBh
+bCB3aWR0aJRLAoaUjAxwZXRhbCBsZW5ndGiUSwKGlIwLcGV0YWwgd2lkdGiUSwKGlHSUjAVtZXRh
+c5QpjApjbGFzc192YXJzlIwEaXJpc5RdlCiMC0lyaXMtc2V0b3NhlIwPSXJpcy12ZXJzaWNvbG9y
+lIwOSXJpcy12aXJnaW5pY2GUZYaUhZSMEm1vZGlmaWVkX3ZhcmlhYmxlc5RdlHViYXUu
+</properties>
+		<properties node_id="1" format="literal">{'auto_commit': True, 'color_by_class': True, 'controlAreaVisible': True, 'savedWidgetGeometry': None, 'select_rows': True, 'show_attribute_labels': True, 'show_distributions': False, 'stored_selection': {'rows': [], 'columns': []}, 'stored_sort': [], '__version__': 1}</properties>
+	</node_properties>
+	<session_state>
+		<window_groups />
+	</session_state>
+</scheme>
