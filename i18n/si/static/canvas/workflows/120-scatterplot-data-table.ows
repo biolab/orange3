@@ -1,0 +1,62 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme version="2.0" title="Interaktivne vizualizacije" description="Večina vizualizacij v programu Orange je interaktivnih. Kot na primer Razsevni diagram. Dvakrat klikni njegovo ikono, da ga odpreš, in s klikom ter vlečenjem izberi nekaj primerov podatkov (točk na grafu). Izbrani podatki se samodejno prenesejo v Tabelo. Dvakrat klikni njen gradnik, da preveriš, kateri podatki so bili izbrani. Spremeni izbor in opazujte spremembo v Tabeli. To se najbolje vidi, če sta odprta oba gradnika.">
+	<nodes>
+		<node id="0" name="Datoteka" qualified_name="Orange.widgets.data.owfile.OWFile" project_name="Orange3" version="" title="Datoteka" position="(88.0, 178.0)" />
+		<node id="1" name="Razsevni diagram" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" project_name="Orange3" version="" title="Razsevni diagram" position="(253.0, 177.0)" />
+		<node id="2" name="Tabela" qualified_name="Orange.widgets.data.owtable.OWTable" project_name="Orange3" version="" title="Tabela" position="(410.0, 177.0)" />
+	</nodes>
+	<links>
+		<link id="0" source_node_id="0" sink_node_id="1" source_channel="Podatki" sink_channel="Podatki" enabled="true" source_channel_id="data" sink_channel_id="data" />
+		<link id="1" source_node_id="1" sink_node_id="2" source_channel="Izbrani podatki" sink_channel="Podatki" enabled="true" source_channel_id="selected_data" sink_channel_id="data" />
+	</links>
+	<annotations>
+		<text id="0" type="text/plain" rect="(27.0, -60.0, 158.0, 154.0)" font-family="Helvetica" font-size="12">Ta gradnik Datoteka je nastavljen za branje nabora podatkov Iris. Z dvojnim klikom na ikono lahko spremeniš vhodno podatkovno datoteko in opazuješ, kako ta delotok deluje za nekatere druge primere podatkov (na primer housing).</text>
+		<text id="1" type="text/plain" rect="(216.0, -25.0, 150.0, 111.0)" font-family="Helvetica" font-size="12">Za vizualizacijo podatkov dvakrat klikni ikono Razsevni diagram. Nato izberi podmnožico podatkov tako, da izbereš točke na razsevnem diagramu.</text>
+		<text id="2" type="text/plain" rect="(401.0, 13.0, 150.0, 69.0)" font-family="Helvetica" font-size="12">Gradnik Tabela prikazuje podmnožico podatkov, izbrano v gradniku Razsevni diagram.</text>
+		<arrow id="3" start="(84.00000000000001, 90.0)" end="(85.00000000000001, 147.0)" fill="#C1272D" />
+		<arrow id="4" start="(257.0, 86.00000000000003)" end="(256.0, 142.00000000000003)" fill="#C1272D" />
+		<arrow id="5" start="(451.0, 83.99999999999999)" end="(403.0, 144.99999999999997)" fill="#C1272D" />
+		<text id="6" type="text/plain" rect="(184.0, 264.0, 301.0, 92.0)" font-family="Helvetica" font-size="12">Poskusi povezati kakšen drug gradnik z izhodom gradnika Razsevni diagram. Recimo gradnik Škatla z brki (orodjarna, podokno Vizualizacija). Škatla z brki bo prikazala porazdelitve podmnožice podatkov, izbrane v Razsevnem diagramu.</text>
+		<arrow id="7" start="(331.0, 263.0)" end="(298.0, 190.0)" fill="#39B54A" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties node_id="0" format="pickle">gASVvAMAAAAAAAB9lCiMEmNvbnRyb2xBcmVhVmlzaWJsZZSIjAxyZWNlbnRfcGF0aHOUXZSMHm9y
+YW5nZXdpZGdldC51dGlscy5maWxlZGlhbG9nc5SMClJlY2VudFBhdGiUk5QpgZR9lCiMB2Fic3Bh
+dGiUjC0vVXNlcnMvamFuZXovb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaXJpcy50YWKUjAZwcmVm
+aXiUjA9zYW1wbGUtZGF0YXNldHOUjAdyZWxwYXRolIwIaXJpcy50YWKUjAV0aXRsZZSMAJSMBXNo
+ZWV0lGgQjAtmaWxlX2Zvcm1hdJROdWJhjAtyZWNlbnRfdXJsc5RdlIwTc2F2ZWRXaWRnZXRHZW9t
+ZXRyeZRDMgHZ0MsAAgAAAAACEwAAATwAAAQlAAADUgAAAhMAAAFSAAAEJQAAA1IAAAAAAAAAAAWg
+lIwLc2hlZXRfbmFtZXOUfZSMBnNvdXJjZZRLAIwDdXJslGgQjA1kb21haW5fZWRpdG9ylH2UjAtf
+X3ZlcnNpb25fX5RLAYwQY29udGV4dF9zZXR0aW5nc5RdlIwVb3Jhbmdld2lkZ2V0LnNldHRpbmdz
+lIwHQ29udGV4dJSTlCmBlH2UKIwEdGltZZRHQdanFiOv2ZCMBnZhbHVlc5R9lCiMCXZhcmlhYmxl
+c5RdlGgbfZRoKF2UKF2UKIwMc2VwYWwgbGVuZ3RolIwUT3JhbmdlLmRhdGEudmFyaWFibGWUjBJD
+b250aW51b3VzVmFyaWFibGWUk5RLAGgQiGVdlCiMC3NlcGFsIHdpZHRolGgwSwBoEIhlXZQojAxw
+ZXRhbCBsZW5ndGiUaDBLAGgQiGVdlCiMC3BldGFsIHdpZHRolGgwSwBoEIhlXZQojARpcmlzlGgu
+jBBEaXNjcmV0ZVZhcmlhYmxllJOUSwGMLElyaXMtc2V0b3NhLCBJcmlzLXZlcnNpY29sb3IsIEly
+aXMtdmlyZ2luaWNhlIllZXNoHUsBdYwKYXR0cmlidXRlc5QojAxzZXBhbCBsZW5ndGiUSwKGlIwL
+c2VwYWwgd2lkdGiUSwKGlIwMcGV0YWwgbGVuZ3RolEsChpSMC3BldGFsIHdpZHRolEsChpR0lIwF
+bWV0YXOUKYwKY2xhc3NfdmFyc5SMBGlyaXOUXZQojAtJcmlzLXNldG9zYZSMD0lyaXMtdmVyc2lj
+b2xvcpSMDklyaXMtdmlyZ2luaWNhlGWGlIWUjBJtb2RpZmllZF92YXJpYWJsZXOUXZR1YmF1Lg==
+</properties>
+		<properties node_id="1" format="pickle">gASVEwMAAAAAAAB9lCiMC2F1dG9fY29tbWl0lIiMC2F1dG9fc2FtcGxllIiMEmNvbnRyb2xBcmVh
+VmlzaWJsZZSIjBNzYXZlZFdpZGdldEdlb21ldHJ5lEMuAdnQywABAAAAAAOtAAABrAAABmwAAAR7
+AAADrQAAAcIAAAZsAAAEewAAAAAAAJSMCXNlbGVjdGlvbpROjBF0b29sdGlwX3Nob3dzX2FsbJSI
+jA92aXN1YWxfc2V0dGluZ3OUfZSMBWdyYXBolH2UKIwLYWxwaGFfdmFsdWWUS4CMDWNsYXNzX2Rl
+bnNpdHmUiYwRaml0dGVyX2NvbnRpbnVvdXOUiYwLaml0dGVyX3NpemWUSwqME2xhYmVsX29ubHlf
+c2VsZWN0ZWSUiYwWb3J0aG9ub3JtYWxfcmVncmVzc2lvbpSJjAtwb2ludF93aWR0aJRLCowJc2hv
+d19ncmlklImMC3Nob3dfbGVnZW5klIiMDXNob3dfcmVnX2xpbmWUiXWMC19fdmVyc2lvbl9flEsF
+jBBjb250ZXh0X3NldHRpbmdzlF2UjBVvcmFuZ2V3aWRnZXQuc2V0dGluZ3OUjAdDb250ZXh0lJOU
+KYGUfZQojAphdHRyaWJ1dGVzlH2UKIwLc2VwYWwgd2lkdGiUSwKMBGlyaXOUSwGMC3BldGFsIHdp
+ZHRolEsCjAxzZXBhbCBsZW5ndGiUSwKMDHBldGFsIGxlbmd0aJRLAnWMBHRpbWWUR0HWpxYjvO8b
+jAVtZXRhc5R9lIwGdmFsdWVzlH2UKIwKYXR0cl9jb2xvcpSMBGlyaXOUS2WGlIwKYXR0cl9sYWJl
+bJROSv7///+GlIwKYXR0cl9zaGFwZZROSv7///+GlIwJYXR0cl9zaXpllE5K/v///4aUjAZhdHRy
+X3iUjAxzZXBhbCBsZW5ndGiUS2aGlIwGYXR0cl95lIwLc2VwYWwgd2lkdGiUS2aGlGgKfZRoFksF
+dYwOb3JkZXJlZF9kb21haW6UXZQoaCNLAoaUaCBLAoaUaCRLAoaUaCJLAoaUaCFLAYaUZXViYXUu
+</properties>
+		<properties node_id="2" format="literal">{'auto_commit': True, 'color_by_class': True, 'controlAreaVisible': True, 'savedWidgetGeometry': None, 'select_rows': True, 'show_attribute_labels': True, 'show_distributions': False, 'stored_selection': {'rows': [], 'columns': []}, 'stored_sort': [], '__version__': 1}</properties>
+	</node_properties>
+	<session_state>
+		<window_groups />
+	</session_state>
+</scheme>
