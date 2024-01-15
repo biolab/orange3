@@ -9,16 +9,8 @@ from AnyQt.QtWidgets import QWidget, QVBoxLayout
 from Orange.base import Learner
 from Orange.data import Table
 from Orange.modelling import GBLearner
-
-try:
-    from Orange.modelling import CatGBLearner
-except ImportError:
-    CatGBLearner = None
-try:
-    from Orange.modelling import XGBLearner, XGBRFLearner
-except ImportError:
-    XGBLearner = XGBRFLearner = None
-
+from Orange.modelling import CatGBLearner
+from Orange.modelling import XGBLearner, XGBRFLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting, SettingProvider
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
@@ -26,27 +18,17 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 
 
 class LearnerItemModel(QStandardItemModel):
-    LEARNERS = [
-        (GBLearner, "", ""),
-        (XGBLearner, "Extreme Gradient Boosting (xgboost)", "xgboost"),
-        (XGBRFLearner, "Extreme Gradient Boosting Random Forest (xgboost)",
-         "xgboost"),
-        (CatGBLearner, "Gradient Boosting (catboost)", "catboost"),
-    ]
+    LEARNERS = [GBLearner, XGBLearner, XGBRFLearner, CatGBLearner]
 
     def __init__(self, parent):
         super().__init__(parent)
         self._add_data()
 
     def _add_data(self):
-        for cls, opt_name, lib in self.LEARNERS:
+        for cls in self.LEARNERS:
             item = QStandardItem()
-            imported = bool(cls)
-            name = cls.name if imported else opt_name
+            name = cls.name
             item.setData(f"{name}", Qt.DisplayRole)
-            item.setEnabled(imported)
-            if not imported:
-                item.setToolTip(f"{lib} is not installed")
             self.appendRow(item)
 
 
@@ -143,7 +125,7 @@ class RegEditor(BaseEditor):
         self._set_lambda_label()
 
     def _set_lambda_label(self):
-        self.lambda_label.setText("Lambda: {}".format(self.lambda_))
+        self.lambda_label.setText(f"Lambda: {self.lambda_}")
 
     def get_arguments(self) -> Dict:
         params = super().get_arguments()
