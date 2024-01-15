@@ -202,9 +202,9 @@ util.py:
         def `funcv`:
             unsafe: false
 version.py:
-    3.36.0: false
-    3.36.0.dev0+c9a59d2: false
-    c9a59d2a26298235720f6d87e241d47d745bfb0a: false
+    3.37.0: false
+    3.37.0.dev0+9c2b0da: false
+    9c2b0dad0d28ca89fbe643a30662a28783f5e84a: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -378,7 +378,6 @@ canvas/config.py:
         def `examples_entry_points`:
             000-Orange3: false
             Orange.canvas.workflows: false
-            Orange3: false
             orange.widgets.tutorials: false
         Bug Report: false
         https://github.com/biolab/orange3/issues: false
@@ -2658,6 +2657,9 @@ preprocess/impute.py:
         Fixed value: Določena vrednost
         Fixed Value: določena
         {var.name}: false
+    class `ReplaceUnknownsModel`:
+        def `transform`:
+            abstract in Transformation, never used here: false
     class `Model`:
         Model-based imputer: Nadomeščanje z modelom
         model: model
@@ -2687,9 +2689,6 @@ preprocess/impute.py:
         def `__call__`:
             "'{}' has no values": false
             "'{}' has an unknown distribution": false
-    class `ReplaceUnknownsModel`:
-        def `transform`:
-            abstract in Transformation, never used here: false
 preprocess/normalize.py:
     Normalizer: false
 preprocess/preprocess.py:
@@ -2970,10 +2969,9 @@ projection/manifold.py:
     class `TSNE`:
         t-SNE: true
         def `__init__`:
+            auto: false
             pca: false
             euclidean: false
-            exact: false
-            bh: false
         def `compute_affinities`:
             'A sparse matrix was passed, but dense data is required. Use ': false
             X.toarray() to convert to a dense numpy array.: false
@@ -2982,13 +2980,19 @@ projection/manifold.py:
             'Perplexity should be an instance of `float`, `%s` ': false
         def `compute_initialization`:
             pca: false
+            spectral: false
             random: false
             'Invalid initialization `%s`. Please use either `pca` or ': false
             `random` or provide a numpy array.: false
         def `convert_embedding_to_model`:
+            precomputed: false
+            'Expected `data` to be instance of ': false
+            '{DistMatrix.__class__.__name__} when using ': false
+            "`metric='precomputed'. Got {data.__class__.__name__} ": false
+            instead!: false
             x: false
             y: false
-            '"t-SNE-{p}"': false
+            t-SNE-{p}: true
 projection/pca.py:
     PCA: false
     SparsePCA: false
@@ -4579,6 +4583,7 @@ widgets/data/owcorrelations.py:
     class `CorrelationRank`:
         def `row_for_state`:
             name: false
+            :: true
             {:+.3f}: false
     class `OWCorrelations`:
         Correlations: Korelacije
@@ -4980,10 +4985,11 @@ widgets/data/owcsvimport.py:
         decimal: false
         thousands: false
         float_precision: false
-        high: false
         round_trip: false
         rb: false
         read: false
+        object: false
+        coerce: false
         {prefix}{column}: false
     def `guess_data_type`:
         category: false
@@ -10766,6 +10772,8 @@ widgets/unsupervised/owdistancematrix.py:
             Distances: Razdalje
             Selected Data: Izbrani podatki
             Table: Tabela
+        class `Error`:
+            Distance matrix is empty.: Matrika razdalj je prazna.
         def `__init__`:
             annotation_idx: false
             'Labels: ': 'Oznake: '
@@ -10850,6 +10858,7 @@ widgets/unsupervised/owdistances.py:
             Some metrics don't support sparse data\n: Nekatere metrike ne podpirajo redkih podatkov\n
             'and were disabled: {}': in so bile onemogočene: {}
             Missing values were imputed: Manjkajoče vrednosti so bile nadomeščene
+            Data has no features: Podatki nimajo spremenljivk.
         def `__init__`:
             axis: false
             Rows: Vrstice
@@ -11623,37 +11632,72 @@ widgets/unsupervised/owsom.py:
     __main__: false
     iris: false
 widgets/unsupervised/owtsne.py:
-    def `prepare_tsne_obj`:
-        approx: false
-        fft: false
-        exact: false
-        bh: false
+    PCA: true
+    pca: false
+    Spectral: Spektralna
+    spectral: false
+    Euclidean: Evklidska
+    l2: false
+    Manhattan: Manhattan
+    l1: false
+    Cosine: Kosinusna
+    cosine: false
+    class `Task`:
+        def `validate`:
+            Task: false
+            Both `distance_matrix` and `data` cannot be `None`: false
+            precomputed: false
+            '`distance_metric` must be set to `precomputed` when using ': false
+            a distance matrix: false
+            spectral: false
+            '`initialization_method` must be set to `spectral` when ': false
+            using a distance matrix: false
+            '`distance_metric` cannot be set to `precomputed` when no ': false
+            distance matrix is provided: false
+            Data normalization is not supported for sparse data: false
     class `TSNERunner`:
+        def `compute_tsne_preprocessing`:
+            Preprocessing data...: Predobdelujem podatke...
+            preprocessed_data: false
+        def `compute_normalization`:
+            Normalizing data...: Normaliziram podatke...
+            normalized_data: false
         def `compute_pca`:
             Computing PCA...: Računam PCA...
             pca_projection: false
         def `compute_initialization`:
             Preparing initialization...: Pripravljam začetno stanje...
+            pca: false
+            spectral: false
+            Unrecognized initialization scheme `{task.initialization_method}`!: false
             initialization: false
         def `compute_affinities`:
             Finding nearest neighbors...: Iščem najbližje sosede...
+            precomputed: false
             affinities: false
         def `compute_tsne`:
             Running optimization...: Optimizacija teče...
+            precomputed: false
             tsne_embedding: false
             def `run_optimization`:
                 tsne_embedding: false
         def `run`:
+            preprocessing: false
+            normalization: false
             pca: false
             init: false
             aff: false
             tsne: false
+            precomputed: false
     class `invalidated`:
         def `__str__`:
             %s(%s): false
             ', ': false
             =: false
+            preprocessed_data: false
+            normalized_data: false
             pca_projection: false
+            initialization: false
             affinities: false
             tsne_embedding: false
     class `OWtSNE`:
@@ -11663,26 +11707,42 @@ widgets/unsupervised/owtsne.py:
         t-sne, tsne: tsne, projekcija podatkov
         t-SNE-x: false
         t-SNE-y: false
+        class `Inputs`:
+            Distances: Razdalje
         class `Information`:
             'The parameter settings have been changed. Press ': 'Parametri so spremenjeni. Pritisnite '
             \"Start\" to rerun with the new settings.: '"Začni" za ponovni izračun.'
+        class `Warning`:
+            The input data contains a large number of features, which may slow: Vhodni podatki vsebujejo veliko spremeljivk, kar lahko upočasni
+            ' down t-SNE computation. Consider enabling PCA preprocessing.': ' t-SNE. Priporočamo predobdelavo s PCA.'
         class `Error`:
             Input data needs at least 2 rows: Podatki morajo vsebovati vsaj dva primera.
             Input data needs at least 2 attributes: Podatki morajo vsebovati vsaj dve spremenljivki.
             Input data is constant: Podatki so konstantni.
             No projection due to no valid data: Ni veljavnih podatkov - ni projekcije.
+            Distance matrix is not symmetric: Matrika razdalj ni simetrična.
+            Input matrix must be at least 2x2: Matrika mora biti vsaj 2x2.
+            Data and distance dimensions do not match: Dimenzije podatkov in razdalj se ne ujemajo.
         def `_add_controls_start_box`:
-            Optimize: Optimizacija
+            Preprocessing: Predobdelava
+            normalize: false
+            Normalize data: Normiraj podatke
+            use_pca_preprocessing: false
+            Apply PCA preprocessing: Uporabi predobdelavo s PCA
+            pca_components: false
+            PCA Components:: Komponente PCA:
+            Parameters: Parametri
+            initialization_method_idx: false
+            Initialization:: Začetno stanje:
+            distance_metric_idx: false
+            Distance metric:: Mera razdalje:
             perplexity: false
             Perplexity:: Zmedenost (perplexity):
             multiscale: false
             Preserve global structure: Ohrani globalni razpored:
             exaggeration: false
+            %.2f: false
             Exaggeration:: Pretiravanje (exaggeration):
-            pca_components: false
-            PCA components:: Število komponent PCA:
-            normalize: false
-            Normalize data: Normiraj podatke
             Start: Začni
         def `_stop_running_task`:
             Start: Začni
@@ -11692,10 +11752,27 @@ widgets/unsupervised/owtsne.py:
         def `_toggle_run`:
             Resume: Nadaljuj
         def `enable_controls`:
+            Precomputed distances provided. Preprocessing is unnecessary!: Kadar so na voljo predizračunane razdalje, predobdelava ni potrebna.
+            Spectral: Spektralna
+            'Only spectral intialization is supported with precomputed ': 'Kadar uporabljamo predizračunane razdalje, je na voljo le spektralna '
+            distance matrices.: inicializacija.
+            Precomputed distances provided.: Na voljo so predizračunane razdalje.
             Data normalization is not supported on sparse matrices.: Normalizacija redkih podatkov ni podprta.
         def `run`:
             Stop: Prekini
+            precomputed: false
+            spectral: false
+        def `__ensure_task_same_for_preprocessing`:
+            precomputed: false
+        def `__ensure_task_same_for_normalization`:
+            precomputed: false
+        def `__ensure_task_same_for_pca`:
+            precomputed: false
+        def `__ensure_task_same_for_affinities`:
+            precomputed: false
         def `on_partial_result`:
+            preprocessed_data: false
+            normalized_data: false
             pca_projection: false
             initialization: false
             affinities: false
@@ -11703,7 +11780,7 @@ widgets/unsupervised/owtsne.py:
             Unrecognized partial result called with `%s`: false
         def `on_done`:
             Start: Začni
-        def `clear`:
+        def `cancel`:
             Start: Začni
         def `migrate_settings`:
             selection_indices: false
@@ -14885,12 +14962,14 @@ widgets/visualize/utils/customizableplot.py:
         Dash dot line: Črta - pika
         Dash dot dot line: Črta - pika - pika
         def `update_axes_titles_font`:
+            foreground: false
             normal: false
             italic: false
             font-size: false
             {font.pointSize()}pt: false
             font-family: false
             {font.family()}: false
+            color: false
             font-style: false
             {fstyle}: false
         def `update_axes_ticks_font`:
