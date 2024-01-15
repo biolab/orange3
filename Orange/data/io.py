@@ -14,11 +14,13 @@ from itertools import chain
 from os import path, remove
 from tempfile import NamedTemporaryFile
 from urllib.parse import urlparse, urlsplit, urlunsplit, \
-    unquote as urlunquote, quote
+    unquote as urlunquote
 from urllib.request import urlopen, Request
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
+
 
 import xlrd
 import xlsxwriter
@@ -164,7 +166,14 @@ class CSVReader(FileFormat, DataTableMixin):
                         skipinitialspace=True,
                     )
                     data = self.data_table(reader)
-                    data.name = path.splitext(path.split(self.filename)[-1])[0]
+
+                    # ToDO: Name can be set unconditionally when/if
+                    # self.filename will always be a string with the file name.
+                    # Currently, some tests pass StringIO instead of
+                    # the file name to a reader.
+                    if isinstance(self.filename, str):
+                        data.name = path.splitext(
+                            path.split(self.filename)[-1])[0]
                     if error and isinstance(error, UnicodeDecodeError):
                         pos, endpos = error.args[2], error.args[3]
                         warning = ('Skipped invalid byte(s) in position '
@@ -511,3 +520,67 @@ class UrlReader(FileFormat):
         matches = re.findall(r"filename\*?=(?:\"|.{0,10}?'[^']*')([^\"]+)",
                              content_disposition or '')
         return urlunquote(matches[-1]) if matches else default_name
+
+
+class GenericHDF5Reader(FileFormat):
+    """
+    Class in charge to read and write generic .hdf5 files
+    
+    Parameters
+    ----------
+        data (h5py._hl.dataset.Dataset): Chosen dataset to read by the class
+        
+    Methods
+    -------
+        read():
+            Returns transforms its data attribute into an Orange.Table object
+    """
+    EXTENSIONS = ('.hdf5', '.h5', '.nxs',)
+    DESCRIPTION = 'Hierarchical Data Format files'
+    SUPPORT_COMPRESSED = False
+    SUPPORT_SPARSE_DATA = False
+    
+    def __init__(self, filename):
+        super().__init__(filename=filename)
+        self.data = None
+        
+    def read(self):
+        """Processes the data stored in self.data and returns it as an Orange
+        Table object.
+
+        Returns
+        -------
+            table (Orange.Table object): 
+                Contains the information of the chosen dataset in the hdf5 file.
+
+        Raises
+        ------
+            Exception: If the self.data variable has not been filled yet.
+        """
+        if self.data is None:
+            raise Exception("The data has not been loaded correctly")
+            
+        if self.data.name is not None:
+            name = self.data.name.split('/')[-1]
+        else:
+            name = "Data"
+
+        # Standard names for the columns of the dataset, can be changed manually
+        # in the widget itself
+        columns = [str(i) for i in range(len(self.data.shape))]
+        
+        dataset = np.array(self.data)
+        
+        # Indexs are created to keep track of the position of the values in the 
+        # original data file 
+        index = pd.MultiIndex.from_product([range(s) for s in dataset.shape], names=columns)
+        dataset = dataset.flatten()
+        
+        # Combines the values and the indexes in a readable 2d structure
+        df = pd.DataFrame({name : dataset}, index=index).reset_index()
+        
+        attrs = [ContinuousVariable(str(val)) for val in range(0, len(df.columns))]
+        table = Table.from_numpy(domain=Domain(attributes=attrs), X=df.values)
+        
+        return table
+    
