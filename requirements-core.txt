@@ -26,3 +26,5 @@ xgboost>=1.7.4
 xlrd>=1.2.0
 # Writing Excel Files
 xlsxwriter
+# HDF5 binary data format
+h5py
