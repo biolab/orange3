@@ -6,6 +6,7 @@ requires = [
     "setuptools>=51.0",
     "sphinx",
     "wheel",
+    "h5py",
 ]
 
 build-backend = "setuptools.build_meta"
