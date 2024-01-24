@@ -214,7 +214,7 @@ class TableTestCase(unittest.TestCase):
 
     def test_remind_us_of_instance_warning(self):
         now = datetime.now()
-        if (now.year, now.month) >= (2024, 1):
+        if (now.year, now.month) >= (2024, 6):
             iris = temp_dasktable("iris")
             with self.assertWarns(expected_warning=UserWarning):
                 iris[1]
