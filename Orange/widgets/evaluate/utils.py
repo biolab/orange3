@@ -31,10 +31,7 @@ def check_results_adequacy(results, error_group, check_nan=True):
 
     if results is None:
         return None
-    if results.data is None:
-        error_group.invalid_results(
-            "Results do not include information on test data.")
-    elif not results.data.domain.has_discrete_class:
+    elif not results.domain.has_discrete_class:
         error_group.invalid_results(
             "Categorical target variable is required.")
     elif not results.actual.size:
@@ -48,6 +45,28 @@ def check_results_adequacy(results, error_group, check_nan=True):
             "Results contain invalid values.")
     else:
         return results
+
+
+def check_can_calibrate(results, selection, require_binary=True):
+    assert results is not None
+
+    problems = [
+        msg for condition, msg in (
+            (results.folds is not None and len(results.folds) > 1,
+             "each training data sample produces a different model"),
+            (results.models is None,
+             "test results do not contain stored models - try testing "
+             "on separate data or on training data"),
+            (len(selection) != 1,
+             "select a single model - the widget can output only one"),
+            (require_binary and len(results.domain.class_var.values) != 2,
+             "cannot calibrate non-binary models"))
+        if condition]
+
+    if len(problems) == 1:
+        return problems[0]
+    else:
+        return "".join(f"\n - {problem}" for problem in problems)
 
 
 def results_for_preview(data_name=""):

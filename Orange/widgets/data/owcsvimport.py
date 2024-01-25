@@ -47,6 +47,7 @@ from AnyQt.QtCore import pyqtSlot as Slot, pyqtSignal as Signal
 import numpy as np
 import pandas.errors
 import pandas as pd
+from pandas import CategoricalDtype
 from pandas.api import types as pdtypes
 
 from orangewidget.utils import enum_as_int
@@ -1531,11 +1532,6 @@ def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
         numbers_format_kwds["thousands"] = opts.group_separator
 
     if numbers_format_kwds:
-        # float_precision = "round_trip" cannot handle non c-locale decimal and
-        # thousands sep (https://github.com/pandas-dev/pandas/issues/35365).
-        # Fallback to 'high'.
-        numbers_format_kwds["float_precision"] = "high"
-    else:
         numbers_format_kwds["float_precision"] = "round_trip"
 
     with ExitStack() as stack:
@@ -1558,7 +1554,12 @@ def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
             na_values=na_values, keep_default_na=False,
             **numbers_format_kwds
         )
-
+        if parse_dates:
+            for date_col in parse_dates:
+                if df.dtypes[date_col] == "object":
+                    df[df.columns[date_col]] = pd.to_datetime(
+                        df.iloc[:, date_col], errors="coerce"
+                    )
         if prefix:
             df.columns = [f"{prefix}{column}" for column in df.columns]
 
@@ -1770,7 +1771,7 @@ def pandas_to_table(df):
     columns = []  # type: List[Tuple[Orange.data.Variable, np.ndarray]]
 
     for header, series in df.items():  # type: (Any, pd.Series)
-        if pdtypes.is_categorical_dtype(series):
+        if isinstance(series.dtype, CategoricalDtype):
             coldata = series.values  # type: pd.Categorical
             categories = natural_sorted(str(c) for c in coldata.categories)
             var = Orange.data.DiscreteVariable.make(

@@ -265,6 +265,27 @@ class TestOWDistances(WidgetTest):
         out_domain = out.row_items.domain
         self.assertEqual(out_domain.metas, (domain["name"], domain["legs"]))
 
+    def test_no_features(self):
+        zoo = Table("zoo")[:5, 16:]
+
+        self.send_signal(self.widget.Inputs.data, zoo)
+        self.wait_until_finished()
+        out = self.get_output(self.widget.Outputs.distances)
+        self.assertEqual(out.shape, (5, 5))
+        self.assertTrue((out == 0).all())
+        self.assertTrue(self.widget.Warning.no_features.is_shown())
+
+        self.widget.controls.axis.buttons[1].click()
+        self.wait_until_finished()
+        out = self.get_output(self.widget.Outputs.distances)
+        self.assertEqual(out.shape, (0, 0))
+        self.assertTrue((out == 0).all())
+        self.assertTrue(self.widget.Warning.no_features.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.wait_until_finished()
+        self.assertFalse(self.widget.Warning.no_features.is_shown())
+
 
 if __name__ == "__main__":
     unittest.main()

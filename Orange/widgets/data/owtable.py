@@ -281,9 +281,6 @@ class OWTable(OWWidget):
     @Inputs.data
     def set_dataset(self, data: Optional[Table]):
         """Set the input dataset."""
-        # reset the (header) view state.
-        self.view.setModel(None)
-        self.view.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
         if data is not None:
             summary = tsummary.table_summary(data)
             self.input = InputData(
@@ -353,7 +350,6 @@ class OWTable(OWWidget):
         view = self.view
         data = self.input.table
         rowcount = data.approx_len()
-
         view.setModel(datamodel)
 
         vheader = view.verticalHeader()

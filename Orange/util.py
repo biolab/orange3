@@ -1,19 +1,22 @@
 """Various small utilities that might be useful everywhere"""
 import logging
 import os
+import time
 import inspect
 import datetime
 import math
+import functools
+import importlib.resources
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Callable
-
-import pkg_resources
+from importlib.metadata import distribution
+from typing import TYPE_CHECKING, Callable, Union, Optional
+from weakref import WeakKeyDictionary
 from enum import Enum as _Enum
 from functools import wraps, partial
 from operator import attrgetter
 from itertools import chain, count, repeat
 
-from collections import OrderedDict, namedtuple
+from collections import namedtuple
 import warnings
 
 # Exposed here for convenience. Prefer patching to try-finally blocks
@@ -112,20 +115,18 @@ def resource_filename(path):
     """
     Return the resource filename path relative to the Orange package.
     """
-    return pkg_resources.resource_filename("Orange", path)
+    path = importlib.resources.files("Orange").joinpath(path)
+    return str(path)
 
 
 def get_entry_point(dist, group, name):
     """
     Load and return the entry point from the distribution.
-
-    Unlike `pkg_resources.load_entry_point`, this function does not check
-    for requirements. Calling this function is preferred because of developers
-    who experiment with different versions and have inconsistent configurations.
     """
-    dist = pkg_resources.get_distribution(dist)
-    ep = dist.get_entry_info(group, name)
-    return ep.resolve()
+    dist = distribution(dist)
+    eps = dist.entry_points.select(group=group, name=name)
+    ep = next(iter(eps))
+    return ep.load()
 
 
 def deprecated(obj):
@@ -161,18 +162,18 @@ def deprecated(obj):
     ...         return 'new behavior'
     >>> C().old() # doctest: +SKIP
     /... OrangeDeprecationWarning: Call to deprecated ... C.old ...
-      Instead, use C.new() ...
+      use use C.new() instead ...
     'old behavior'
     """
-    alternative = ('; Instead, use ' + obj) if isinstance(obj, str) else ''
+    alternative = f'; use {obj} instead' if isinstance(obj, str) else ''
 
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            name = '{}.{}'.format(
-                func.__self__.__class__,
-                func.__name__) if hasattr(func, '__self__') else func
-            warnings.warn('Call to deprecated {}{}'.format(name, alternative),
+            name = func.__name__
+            if hasattr(func, "__self__"):
+                name = f'{func.__self__.__class__}.{name}'
+            warnings.warn(f'Call to deprecated {name}{alternative}',
                           OrangeDeprecationWarning, stacklevel=2)
             return func(*args, **kwargs)
         return wrapper
@@ -180,8 +181,143 @@ def deprecated(obj):
     return decorator if alternative else decorator(obj)
 
 
+# This should look like decorator, not a class, pylint: disable=invalid-name
+class allot:
+    """
+    Decorator that allows a function only a specified portion of time per call.
+
+    Usage:
+
+    ```
+    @allot(0.2, overflow=of)
+    def f(x):
+       ...
+    ```
+
+    The above function is allotted 0.2 second per second. If it runs for 0.2 s,
+    all subsequent calls in the next second (after the start of the call) are
+    ignored. If it runs for 0.1 s, subsequent calls in the next 0.5 s are
+    ignored. If it runs for a second, subsequent calls are ignored for 5 s.
+
+    An optional overflow function can be given as a keyword argument
+    `overflow`. This function must have the same signature as the wrapped
+    function and is called instead of the original when the call is blocked.
+
+    If the overflow function is not given, the wrapped function must not return
+    result. This is because without the overflow function, the wrapper has no
+    value to return when the call is skipped.
+
+    The decorator adds a method `call` to force the call, e.g. by calling
+    f.call(5), in the above case. The used up time still counts for the
+    following (non-forced) calls.
+
+    The decorator also adds two attributes:
+
+    - f.last_call_duration is the duration of the last call (in seconds)
+    - f.no_call_before contains the time stamp when the next call will be made.
+
+    The decorator can be used for functions and for methods.
+
+    A non-parametrized decorator doesn't block any calls and only adds
+    last_call_duration, so that it can be used for timing.
+    """
+
+    try:
+        __timer = time.thread_time
+    except AttributeError:
+        # thread_time is not available on macOS
+        __timer = time.process_time
+
+    def __new__(cls: type, arg: Union[None, float, Callable], *,
+                overflow: Optional[Callable] = None,
+                _bound_methods: Optional[WeakKeyDictionary] = None):
+        self = super().__new__(cls)
+
+        if arg is None or isinstance(arg, float):
+            # Parametrized decorator
+            if arg is not None:
+                assert arg > 0
+
+            def set_func(func):
+                self.__init__(func,
+                              overflow=overflow,
+                              _bound_methods=_bound_methods)
+                self.allotted_time = arg
+                return self
+
+            return set_func
+
+        else:
+            # Non-parametrized decorator
+            self.allotted_time = None
+            return self
+
+    def __init__(self,
+                 func: Callable, *,
+                 overflow: Optional[Callable] = None,
+                 _bound_methods: Optional[WeakKeyDictionary] = None):
+        assert callable(func)
+        self.func = func
+        self.overflow = overflow
+        functools.update_wrapper(self, func)
+
+        self.no_call_before = 0
+        self.last_call_duration = None
+
+        # Used by __get__; see a comment there
+        if _bound_methods is None:
+            self.__bound_methods = WeakKeyDictionary()
+        else:
+            self.__bound_methods = _bound_methods
+
+    # If we are wrapping a method, __get__ is called to bind it.
+    # Create a wrapper for each instance and store it, so that each instance's
+    # method gets its share of time.
+    def __get__(self, inst, cls):
+        if inst is None:
+            return self
+
+        if inst not in self.__bound_methods:
+            # __bound_methods caches bound methods per instance. This is not
+            # done for perfoamnce. Bound methods can be rebound, even to
+            # different instances or even classes, e.g.
+            # >>> x = f.__get__(a, A)
+            # >>> y = x.__get__(b, B)
+            # >>> z = x.__get__(a, A)
+            # After this, we want `x is z`, there shared caching. This looks
+            # bizarre, but let's keep it safe. At least binding to the same
+            # instance, f.__get__(a, A),__get__(a, A), sounds reasonably
+            # possible.
+            cls = type(self)
+            bound_overflow = self.overflow and self.overflow.__get__(inst, cls)
+            decorator = cls(
+                self.allotted_time,
+                overflow=bound_overflow,
+                _bound_methods=self.__bound_methods)
+            self.__bound_methods[inst] = decorator(self.func.__get__(inst, cls))
+
+        return self.__bound_methods[inst]
+
+    def __call__(self, *args, **kwargs):
+        if self.__timer() < self.no_call_before:
+            if self.overflow is None:
+                return None
+            return self.overflow(*args, **kwargs)
+        return self.call(*args, **kwargs)
+
+    def call(self, *args, **kwargs):
+        start = self.__timer()
+        result = self.func(*args, **kwargs)
+        self.last_call_duration = self.__timer() - start
+        if self.allotted_time is not None:
+            if self.overflow is None:
+                assert result is None, "skippable function cannot return a result"
+            self.no_call_before = start + self.last_call_duration / self.allotted_time
+        return result
+
+
 def literal_eval(literal):
-    import ast
+    import ast  # pylint: disable=import-outside-toplevel
     # ast.literal_eval does not parse empty set ¯\_(ツ)_/¯
 
     if literal == "set()":
@@ -225,11 +361,11 @@ def requirementsSatisfied(required_state, local_state, req_type=None):
     for req_string in required_state:
         # parse requirement
         req = None
-        for op_str in op_map:
+        for op_str, op in op_map.items():
             split = req_string.split(op_str)
             # if operation is not in req_string, continue
             if len(split) == 2:
-                req = _Requirement(split[0], op_map[op_str], split[1])
+                req = _Requirement(split[0], op, split[1])
                 break
 
         if req is None:
@@ -269,7 +405,7 @@ class Registry(type):
     def __new__(mcs, name, bases, attrs):
         cls = type.__new__(mcs, name, bases, attrs)
         if not hasattr(cls, 'registry'):
-            cls.registry = OrderedDict()
+            cls.registry = {}
         else:
             cls.registry[name] = cls
         return cls
@@ -280,11 +416,14 @@ class Registry(type):
     def __str__(cls):
         if cls in cls.registry.values():
             return cls.__name__
-        return '{}({{{}}})'.format(cls.__name__, ', '.join(cls.registry))
+        return f'{cls.__name__}({{{", ".join(cls.registry)}}})'
 
 
+# it is what it is, we keep for compatibility:
+# pylint: disable=keyword-arg-before-vararg
 def namegen(prefix='_', *args, spec_count=count, **kwargs):
     """Continually generate names with `prefix`, e.g. '_1', '_2', ..."""
+    # pylint: disable=stop-iteration-return
     spec_count = iter(spec_count(*args, **kwargs))
     while True:
         yield prefix + str(next(spec_count))
@@ -325,6 +464,7 @@ def deepgetattr(obj, attr, default=_NOTSET):
 
 
 def color_to_hex(color):
+    # pylint: disable=consider-using-f-string
     return "#{:02X}{:02X}{:02X}".format(*color)
 
 
@@ -337,9 +477,9 @@ def inherit_docstrings(cls):
     for method in cls.__dict__.values():
         if inspect.isfunction(method) and method.__doc__ is None:
             for parent in cls.__mro__[1:]:
-                __doc__ = getattr(parent, method.__name__, None).__doc__
-                if __doc__:
-                    method.__doc__ = __doc__
+                doc = getattr(parent, method.__name__, None).__doc__
+                if doc:
+                    method.__doc__ = doc
                     break
     return cls
 
@@ -379,7 +519,7 @@ def interleave(seq1, seq2):
 def Reprable_repr_pretty(name, itemsiter, printer, cycle):
     # type: (str, Iterable[Tuple[str, Any]], Ipython.lib.pretty.PrettyPrinter, bool) -> None
     if cycle:
-        printer.text("{0}(...)".format("name"))
+        printer.text(f"{name}(...)")
     else:
         def printitem(field, value):
             printer.text(field + "=")
@@ -392,8 +532,9 @@ def Reprable_repr_pretty(name, itemsiter, printer, cycle):
         itemsiter = (partial(printitem, *item) for item in itemsiter)
         sepiter = repeat(printsep)
 
-        with printer.group(len(name) + 1, "{0}(".format(name), ")"):
+        with printer.group(len(name) + 1, f"{name}(", ")"):
             for part in interleave(itemsiter, sepiter):
+                part()
                 part()
 
 
@@ -458,6 +599,7 @@ class Reprable:
                     param.kind not in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
                 yield param.name, param.default
 
+    # pylint: disable=unused-argument
     def _reprable_omit_param(self, name, default, value):
         if default is value:
             return True
@@ -503,9 +645,9 @@ class Reprable:
         nameparts = (([str(module)] if module else []) +
                      [self.__class__.__name__])
         name = ".".join(nameparts)
-        return "{}({})".format(
-            name, ", ".join("{}={!r}".format(f, v) for f, _, v in self._reprable_items())
-        )
+        items = ", ".join(f"{f}={repr(v)}"
+                          for f, _, v in self._reprable_items())
+        return f"{name}({items})"
 
 
 def wrap_callback(progress_callback, start=0, end=1):

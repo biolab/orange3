@@ -46,16 +46,28 @@ class EmbedderCache:
         try:
             with open(file_name, 'wb') as f:
                 pickle.dump(obj, f)
-        except PermissionError:
-            # do not save cache if no right permission
-            pass
+        except PermissionError as ex:
+            # skip saving cache if no right permissions
+            log.warning(
+                "Can't save embedding to %s due to %s.",
+                file_name,
+                type(ex).__name__,
+                exc_info=True,
+            )
 
     @staticmethod
     def load_pickle(file_name):
         try:
             with open(file_name, 'rb') as f:
                 return pickle.load(f)
-        except (EOFError, PermissionError):
+        except (EOFError, PermissionError) as ex:
+            # load empty cache if no permission or EOF error
+            log.warning(
+                "Can't load embedding from %s due to %s.",
+                file_name,
+                type(ex).__name__,
+                exc_info=True,
+            )
             return {}
 
     @staticmethod

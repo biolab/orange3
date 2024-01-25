@@ -1,0 +1,60 @@
+name: Check translations
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install Trubar
+        run: |
+          pip install trubar
+
+      - name: Collect translations
+        run: |
+          cd i18n
+          trubar collect -s ../Orange new.jaml
+          trubar merge -u Obsolete.jaml si/msgs.jaml new.jaml
+          trubar missing -o Missing.jaml new.jaml
+          if [ ! -s Missing.jaml ]
+          then
+              rm Missing.jaml
+          fi
+
+      - name: Check Slovenian translations
+        run: |
+          cd i18n
+          for fn in Obsolete Missing
+          do
+            if [ -f $fn.jaml ]
+            then
+                echo "::group::$fn translations"
+                cat $fn.jaml
+                echo "::endgroup::"
+            fi
+          done
+          echo "-------------------------------"
+          trubar stat new.jaml
+          echo "-------------------------------"
+          if [ -f Missing.jaml ] || [ -f Obsolete.jaml ]
+          then
+              echo "### Missing or obsolete translations" >> $GITHUB_STEP_SUMMARY
+              echo "::error::Missing or obsolete translations"
+              echo "If you wish to fix this, see i18n/README.md"
+              exit 1
+          else
+              echo "### All translations are up to date" >> $GITHUB_STEP_SUMMARY
+          fi

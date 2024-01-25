@@ -15,8 +15,8 @@ from logging.handlers import RotatingFileHandler
 from collections import defaultdict
 from datetime import date
 from urllib.request import urlopen, Request
+from packaging.version import Version
 
-import pkg_resources
 import yaml
 
 from AnyQt.QtGui import QColor, QDesktopServices, QIcon, QPalette
@@ -101,9 +101,8 @@ def check_for_updates():
                     self.resultReady.emit(contents)
 
         def compare_versions(latest):
-            version = pkg_resources.parse_version
             skipped = settings.value('startup/latest-skipped-version', "", type=str)
-            if version(latest) <= version(current) or \
+            if Version(latest) <= Version(current) or \
                     latest == skipped:
                 return
 
@@ -187,8 +186,6 @@ def pull_notifications():
     if not check_notifs:
         return None
 
-    Version = pkg_resources.parse_version
-
     # create settings_dict for notif requirements purposes (read-only)
     spec = canvasconfig.spec + config.spec
     settings_dict = canvasconfig.Settings(defaults=spec, store=settings)
@@ -198,7 +195,7 @@ def pull_notifications():
                       if ep.dist is not None]
     installed = defaultdict(lambda: "-1")
     for addon in installed_list:
-        installed[addon.project_name] = addon.version
+        installed[addon.name] = addon.version
 
     # get set of already displayed notification IDs, stored in settings["notifications/displayed"]
     displayedIDs = literal_eval(settings.value("notifications/displayed", "set()", str))

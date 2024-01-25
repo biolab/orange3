@@ -119,3 +119,13 @@ To avoid ambiguity, Orange supports date and/or time formatted in one of the [IS
     2016-12-27
     2016-12-27 14:20:51
     16:20
+
+## Attributes of attributes
+
+In the third row of the header, one can specify additional attribute information. For example:
+
+   - *type=image*: signifies a column with a path to the image (local or URL)
+   - *include=True*: signifies a column that is considered a text feature (can also be set in the **Corpus** widget)
+   - *title=True*: signifies a column used for titles in document list, i.e. **Corpus Viewer**
+
+These attributes can be edited with **Edit Domain**.

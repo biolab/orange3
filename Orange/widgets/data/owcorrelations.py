@@ -70,7 +70,7 @@ class KMeansCorrelationHeuristic:
         :return: generator of attributes grouped by cluster
         """
         data = Normalize()(self.data).X.T
-        kmeans = KMeans(n_clusters=self.n_clusters, random_state=0).fit(data)
+        kmeans = KMeans(n_clusters=self.n_clusters, random_state=0, n_init=1).fit(data)
         labels_attrs = sorted([(l, i) for i, l in enumerate(kmeans.labels_)])
         return [Cluster(instances=list(pair[1] for pair in group),
                         centroid=kmeans.cluster_centers_[l])
@@ -153,12 +153,16 @@ class CorrelationRank(VizRankDialogAttrPair):
     def row_for_state(self, score, state):
         attrs = sorted((self.attrs[x] for x in state), key=attrgetter("name"))
         attr_items = []
-        for attr in attrs:
+        for attr, halign in zip(attrs, (Qt.AlignRight, Qt.AlignLeft)):
             item = QStandardItem(attr.name)
             item.setData(attrs, self._AttrRole)
-            item.setData(Qt.AlignLeft + Qt.AlignCenter, Qt.TextAlignmentRole)
+            item.setData(halign + Qt.AlignVCenter, Qt.TextAlignmentRole)
             item.setToolTip(attr.name)
             attr_items.append(item)
+            if halign is Qt.AlignRight:
+                colon = QStandardItem(":")
+                colon.setData(Qt.AlignCenter, Qt.TextAlignmentRole)
+                attr_items.append(colon)
         correlation_item = QStandardItem("{:+.3f}".format(score[1]))
         correlation_item.setData(score[2], self.PValRole)
         correlation_item.setData(attrs, self._AttrRole)
@@ -195,6 +199,7 @@ class CorrelationRank(VizRankDialogAttrPair):
         self.threadStopped.emit()
         header = self.rank_table.horizontalHeader()
         header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
 
     def start(self, task, *args, **kwargs):
         self._set_empty_status()

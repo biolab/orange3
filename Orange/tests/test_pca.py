@@ -5,7 +5,6 @@ import unittest
 from unittest.mock import MagicMock
 
 import numpy as np
-from sklearn import __version__ as sklearn_version
 from sklearn.utils import check_random_state
 
 from Orange.data import Table, Domain
@@ -155,8 +154,6 @@ class TestPCA(unittest.TestCase):
             pca.singular_values_, rpca.singular_values_, decimal=8
         )
 
-    @unittest.skipIf(sklearn_version.startswith('0.20'),
-                     "https://github.com/scikit-learn/scikit-learn/issues/12234")
     def test_incremental_pca(self):
         data = self.ionosphere
         self.__ipca_test_helper(data, n_com=3, min_xpl_var=0.49)
@@ -257,3 +254,33 @@ class TestPCA(unittest.TestCase):
         self.assertEqual(len(pca.explained_variance_ratio_), 20)
         pca = PCA(n_components=10)(data)
         self.assertEqual(len(pca.explained_variance_ratio_), 10)
+
+    def test_eq_hash(self):
+        d = np.random.RandomState(0).rand(20, 20)
+        data = Table.from_numpy(None, d)
+        p1 = PCA()(data)
+        p2 = PCA()(data)
+        np.testing.assert_equal(p1(data).X, p2(data).X)
+
+        # even though results are the same, these transformations
+        # are different because the PCA object is
+        self.assertNotEqual(p1, p2)
+        self.assertNotEqual(p1.domain, p2.domain)
+        self.assertNotEqual(hash(p1), hash(p2))
+        self.assertNotEqual(hash(p1.domain), hash(p2.domain))
+
+        # copy projection
+        p2.domain[0].compute_value.compute_shared.projection = \
+            p1.domain[0].compute_value.compute_shared.projection
+        p2.proj = p1.proj
+        # reset hash caches because object were hacked
+        # pylint: disable=protected-access
+        p1.domain._hash = None
+        p2.domain._hash = None
+        p1.domain[0].compute_value.compute_shared._hash = None
+        p2.domain[0].compute_value.compute_shared._hash = None
+
+        self.assertEqual(p1, p2)
+        self.assertEqual(p1.domain, p2.domain)
+        self.assertEqual(hash(p1), hash(p2))
+        self.assertEqual(hash(p1.domain), hash(p2.domain))
