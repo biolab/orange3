@@ -31,6 +31,7 @@ from Orange.widgets.evaluate.utils import (
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output, MultiInput
 from Orange.widgets.utils.itemmodels import TableModel
+from Orange.widgets.utils.annotated_data import lazy_annotated_table
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
@@ -72,7 +73,9 @@ class OWPredictions(OWWidget):
         predictors = MultiInput("Predictors", Model, filter_none=True)
 
     class Outputs:
-        predictions = Output("Predictions", Orange.data.Table)
+        selected_predictions = Output("Selected Predictions", Orange.data.Table,
+                                      default=True, replaces=["Predictions"])
+        annotated = Output("Predictions", Orange.data.Table)
         evaluation_results = Output("Evaluation Results", Results)
 
     class Warning(OWWidget.Warning):
@@ -814,7 +817,8 @@ class OWPredictions(OWWidget):
 
     def _commit_predictions(self):
         if not self.data:
-            self.Outputs.predictions.send(None)
+            self.Outputs.selected_predictions.send(None)
+            self.Outputs.annotated.send(None)
             return
 
         newmetas = []
@@ -855,12 +859,17 @@ class OWPredictions(OWWidget):
             # Reorder rows as they are ordered in view
             shown_rows = datamodel.mapFromSourceRows(rows)
             rows = rows[numpy.argsort(shown_rows)]
-            predictions = predictions[rows]
-        elif datamodel.sortColumn() >= 0 \
-                or predmodel is not None and predmodel.sortColumn() > 0:
-            # No selection: output all, but in the shown order
-            predictions = predictions[datamodel.mapToSourceRows(...)]
-        self.Outputs.predictions.send(predictions)
+            selected = predictions[rows]
+            annotated_data = lazy_annotated_table(predictions, rows)
+        else:
+            if datamodel.sortColumn() >= 0 \
+                    or predmodel is not None and predmodel.sortColumn() > 0:
+                predictions = predictions[datamodel.mapToSourceRows(...)]
+            selected = predictions
+            annotated_data = predictions
+        self.Outputs.selected_predictions.send(selected)
+        self.Outputs.annotated.send(annotated_data)
+
 
     def _add_classification_out_columns(self, slot, newmetas, newcolumns, index):
         pred = slot.predictor
