@@ -1,11 +1,20 @@
-"""Learners"""
+"""
+======
+Models
+======
 
-NAME = 'Model'
+Classifiers and regressors.
 
-DESCRIPTION = 'Prediction.'
+"""
 
-BACKGROUND = '#FAC1D9'
+NAME = "Model"
 
-ICON = 'icons/Category-Model.svg'
+ID = "orange.widgets.model"
+
+DESCRIPTION = "Prediction"
+
+BACKGROUND = "#FAC1D9"
+
+ICON = "icons/Category-Model.svg"
 
 PRIORITY = 4
