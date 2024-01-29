@@ -1,0 +1,15 @@
+name: Check translations
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test-translations:
+    uses: biolab/orange-ci-cd/.github/workflows/test-translations.yml@master
+    with:
+      package-dir: Orange

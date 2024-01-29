@@ -18,7 +18,7 @@ Contents
 # TODO: Consider a wizard-like interface:
 #   * 1. Select encoding, delimiter, ... (preview is all text)
 #   * 2. Define column types (preview is parsed and rendered type appropriate)
-
+from __future__ import annotations
 import sys
 import io
 import enum
@@ -38,13 +38,14 @@ from typing import (
 
 from AnyQt.QtCore import (
     Qt, QSize, QPoint, QRect, QRectF, QRegularExpression, QAbstractTableModel,
-    QModelIndex, QItemSelectionModel, QTextBoundaryFinder, QTimer, QEvent
+    QModelIndex, QItemSelectionModel, QTextBoundaryFinder, QTimer, QEvent,
+    QObject
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 from AnyQt.QtGui import (
     QRegularExpressionValidator, QColor, QBrush, QPalette, QHelpEvent,
     QStandardItemModel, QStandardItem, QIcon, QIconEngine, QPainter, QPixmap,
-    QFont
+    QFont, QMouseEvent
 )
 from AnyQt.QtWidgets import (
     QWidget, QComboBox, QFormLayout, QHBoxLayout, QVBoxLayout, QLineEdit,
@@ -54,6 +55,8 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.widgets.utils import encodings
+from Orange.widgets.utils.tableview import TableView
+from Orange.widgets.utils.headerview import CheckableHeaderView
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.combobox import TextEditCombo
 
@@ -1029,10 +1032,17 @@ class CSVImportWidget(QWidget):
         self.__setColumnType(columns, coltype)
 
     def __dataview_context_menu(self, pos):
+        bhv = self.dataview.selectionBehavior()
+        selmodel = self.dataview.selectionModel()
         pos = self.dataview.viewport().mapToGlobal(pos)
-        cols = self.dataview.selectionModel().selectedColumns(0)
-        cols = [idx.column() for idx in cols]
-        self.__run_type_columns_menu(pos, cols)
+        if bhv == QTableView.SelectColumns:
+            cols = selmodel.selectedColumns(0)
+            cols = [midx.column() for midx in cols]
+            self.__run_type_columns_menu(pos, cols)
+        elif bhv == QTableView.SelectRows:
+            rows = selmodel.selectedRows(0)
+            rows = [midx.row() for midx in rows]
+            self.__run_row_menu(pos, rows)
 
     def __hheader_context_menu(self, pos):
         pos = self.dataview.horizontalHeader().mapToGlobal(pos)
@@ -1044,18 +1054,43 @@ class CSVImportWidget(QWidget):
         header = self.dataview.verticalHeader()  # type: QHeaderView
         index = header.logicalIndexAt(pos)
         pos = header.mapToGlobal(pos)
-        model = header.model()  # type: QAbstractTableModel
+        bhv = self.dataview.selectionBehavior()
+        if bhv == QAbstractItemView.SelectRows:
+            selmodel = self.dataview.selectionModel()
+            model = selmodel.model()
+            midxs = selmodel.selectedRows(0)
+            indices = [midx.row() for midx in midxs]
+            if index not in indices:
+                selmodel.select(
+                    model.index(index, 0),
+                    QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
+                )
+                indices = [index]
+        else:
+            indices = [index]
+        self.__run_row_menu(pos, indices)
 
+    def __run_row_menu(self, pos: QPoint, rows: List[int]):
+        model = self.__previewmodel
+        if model is None:
+            return
+        header = self.dataview.verticalHeader()
         RowStateRole = TablePreviewModel.RowStateRole
-        state = model.headerData(index, Qt.Vertical, RowStateRole)
+        rowstates = {model.headerData(i, Qt.Vertical, RowStateRole)
+                     for i in rows}
+        if len(rowstates) == 1:
+            current = rowstates.pop()
+        else:
+            current = None
+
         m = QMenu(header)
         skip_action = m.addAction("Skip")
         skip_action.setCheckable(True)
-        skip_action.setChecked(state == TablePreview.Skipped)
+        skip_action.setChecked(current == TablePreview.Skipped)
         m.addSection("")
         mark_header = m.addAction("Header")
         mark_header.setCheckable(True)
-        mark_header.setChecked(state == TablePreview.Header)
+        mark_header.setChecked(current == TablePreview.Header)
 
         def update_row_state(action):
             # type: (QAction) -> None
@@ -1064,14 +1099,14 @@ class CSVImportWidget(QWidget):
                 state = TablePreview.Header if action.isChecked() else None
             elif action is skip_action:
                 state = TablePreview.Skipped if action.isChecked() else None
-            model.setHeaderData(index, Qt.Vertical, state, RowStateRole)
-            self.dataview.setRowHints({index: state})
+            for index in rows:
+                model.setHeaderData(index, Qt.Vertical, state, RowStateRole)
+            self.dataview.setRowHints(dict.fromkeys(rows, state))
 
         m.triggered.connect(update_row_state)
         m.popup(pos)
 
-    def __run_type_columns_menu(self, pos, columns):
-        # type: (QPoint, List[int]) -> None
+    def __run_type_columns_menu(self, pos: QPoint, columns: List[int]) -> None:
         # Open a QMenu at pos for setting column types for column indices list
         # `columns`
         model = self.__previewmodel
@@ -1306,13 +1341,19 @@ class RowSpec(enum.IntEnum):
     Skipped = 2
 
 
-class TablePreview(QTableView):
+class TablePreview(TableView):
     RowSpec = RowSpec
     Header, Skipped = RowSpec
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setItemDelegate(PreviewItemDelegate(self))
+        header = CheckableHeaderView(Qt.Vertical)
+        header.setSectionsClickable(True)
+        self.setVerticalHeader(header)
+        self.horizontalHeader().viewport().installEventFilter(self)
+        self.verticalHeader().viewport().installEventFilter(self)
+        self.viewport().installEventFilter(self)
 
     def rowsInserted(self, parent, start, end):
         # type: (QModelIndex, int, int) -> None
@@ -1329,19 +1370,10 @@ class TablePreview(QTableView):
                 command |= QItemSelectionModel.Columns
             smodel.select(selection, command)
 
-    def setRowHints(self, hints):
-        # type: (Dict[int, TablePreview.RowSpec]) -> None
-        for row, hint in hints.items():
-            current = self.itemDelegateForRow(row)
-            if current is not None:
-                current.deleteLater()
-            if hint == TablePreview.Header:
-                delegate = HeaderItemDelegate(self)
-            elif hint == TablePreview.Skipped:
-                delegate = SkipItemDelegate(self)
-            else:
-                delegate = None
-            self.setItemDelegateForRow(row, delegate)
+    def setRowHints(self, hints: dict[int, TablePreview.RowSpec]) -> None:
+        model = self.model()
+        for index, hint in hints.items():
+            model.setHeaderData(index, Qt.Vertical, hint)
 
     def sizeHint(self):
         sh = super().sizeHint()  # type: QSize
@@ -1350,6 +1382,24 @@ class TablePreview(QTableView):
         hsection = hh.defaultSectionSize()
         vsection = vh.defaultSectionSize()
         return sh.expandedTo(QSize(8 * hsection, 20 * vsection))
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        if event.type() == QEvent.MouseButtonPress:
+            event = typing.cast(QMouseEvent, event)
+            bhv = None
+            if event.button() == Qt.LeftButton:
+                if obj is self.horizontalHeader().viewport():
+                    bhv = QTableView.SelectColumns
+                elif obj is self.verticalHeader().viewport():
+                    bhv = QTableView.SelectRows
+            if event.button() in (Qt.LeftButton, Qt.RightButton) and \
+                    obj is self.viewport():
+                bhv = QTableView.SelectColumns
+                if bhv != self.selectionBehavior():
+                    self.clearSelection()
+            if bhv is not None:
+                self.setSelectionBehavior(bhv)
+        return super().eventFilter(obj, event)
 
 
 def is_surrogate_escaped(text: str) -> bool:
@@ -1374,7 +1424,9 @@ class PreviewItemDelegate(QStyledItemDelegate):
         if coltype == ColumnType.Numeric or coltype == ColumnType.Time:
             option.displayAlignment = Qt.AlignRight | Qt.AlignVCenter
 
-        if not self.validate(option.text):
+        rowhint = model.headerData(index.row(), Qt.Vertical,
+                                   TablePreviewModel.RowStateRole)
+        if not self.validate(option.text) and rowhint is None:
             option.palette.setBrush(
                 QPalette.All, QPalette.Text, QBrush(Qt.red, Qt.SolidPattern)
             )
@@ -1383,7 +1435,21 @@ class PreviewItemDelegate(QStyledItemDelegate):
                 QBrush(Qt.red, Qt.SolidPattern)
             )
 
-    def validate(self, value: str) -> bool:  # pylint: disable=no-self-use
+        if rowhint == RowSpec.Skipped:
+            color = QColor(Qt.red)
+            base = option.palette.color(QPalette.Base)
+            if base.isValid() and base.value() > 127:
+                # blend on 'light' base, not on dark (low contrast)
+                color.setAlphaF(0.2)
+            option.backgroundBrush = QBrush(color, Qt.DiagCrossPattern)
+        elif rowhint == RowSpec.Header:
+            shadow = option.palette.color(QPalette.WindowText)
+            if shadow.isValid():
+                shadow.setAlphaF(0.1)
+                option.backgroundBrush = QBrush(shadow, Qt.SolidPattern)
+            option.displayAlignment = Qt.AlignCenter
+
+    def validate(self, value: str) -> bool:
         return not is_surrogate_escaped(value)
 
     def helpEvent(self, event, view, option, index):
@@ -1396,39 +1462,6 @@ class PreviewItemDelegate(QStyledItemDelegate):
                 QToolTip.showText(event.globalPos(), ttip, view)
                 return True
         return super().helpEvent(event, view, option, index)
-
-
-class HeaderItemDelegate(PreviewItemDelegate):
-    """
-    Paint the items with an alternate color scheme
-    """
-    NoFeatures = 0
-    AutoDecorate = 1
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__features = HeaderItemDelegate.NoFeatures
-
-    def features(self):
-        return self.__features
-
-    def initStyleOption(self, option, index):
-        # type: (QStyleOptionViewItem, QModelIndex) -> None
-        super().initStyleOption(option, index)
-        palette = option.palette
-        shadow = palette.color(QPalette.WindowText)  # type: QColor
-        if shadow.isValid():
-            shadow.setAlphaF(0.1)
-            option.backgroundBrush = QBrush(shadow, Qt.SolidPattern)
-        option.displayAlignment = Qt.AlignCenter
-        model = index.model()
-        if option.icon.isNull() and \
-                self.__features & HeaderItemDelegate.AutoDecorate:
-            ctype = model.headerData(index.column(), Qt.Horizontal,
-                                     TablePreviewModel.ColumnTypeRole)
-            option.icon = icon_for_column_type(ctype)
-        if not option.icon.isNull():
-            option.features |= QStyleOptionViewItem.HasDecoration
 
 
 def icon_for_column_type(coltype):
@@ -1626,6 +1659,9 @@ class TablePreviewModel(QAbstractTableModel):
         """Reimplemented."""
         if role == Qt.DisplayRole:
             return section + 1
+        elif role == Qt.CheckStateRole and orientation == Qt.Vertical:
+            state = self.__headerData[orientation][section].get(TablePreviewModel.RowStateRole)
+            return Qt.Unchecked if state == RowSpec.Skipped else Qt.Checked
         else:
             return self.__headerData[orientation][section].get(role)
 
@@ -1637,6 +1673,9 @@ class TablePreviewModel(QAbstractTableModel):
             if value is None:
                 del self.__headerData[orientation][section][role]
             else:
+                if role == Qt.CheckStateRole and orientation == Qt.Vertical:
+                    role = TablePreviewModel.RowStateRole
+                    value = RowSpec.Skipped if value == Qt.Unchecked else None
                 self.__headerData[orientation][section][role] = value
             self.headerDataChanged.emit(orientation, section, section)
         return True
@@ -1674,7 +1713,7 @@ class TablePreviewModel(QAbstractTableModel):
     def flags(self, index):
         # type: (QModelIndex) -> Qt.ItemFlags
         """Reimplemented."""
-        # pylint: disable=unused-argument,no-self-use
+        # pylint: disable=unused-argument
         return Qt.ItemFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
 
     def errorString(self):

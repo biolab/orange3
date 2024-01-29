@@ -1,0 +1,101 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme version="2.0" title="Klasifikacijsko drevo" description="Ta delotok združuje sklepanje in vizualizacijo klasifikacijskih dreves z razsevnim diagramom. Ko sta odprta drevogled in razsevni diagram, se z izbiro poljubnega vozlišča v drevesu pošljejo izbrani podatki v razsevni diagram. V delotoku se izbrani podatki obravnavajo kot podmnožica celotnega nabora podatkov in so označeni v razsevnem diagramu. S preprosto kombinacijo gradnikov smo sestavili interaktivni brskalnik klasifikacijskega drevesa.">
+	<nodes>
+		<node id="0" name="Datoteka" qualified_name="Orange.widgets.data.owfile.OWFile" project_name="Orange3" version="" title="Datoteka" position="(104.0, 148.0)" />
+		<node id="1" name="Drevogled" qualified_name="Orange.widgets.visualize.owtreeviewer.OWTreeGraph" project_name="Orange3" version="" title="Drevogled" position="(367.0, 253.0)" />
+		<node id="2" name="Razsevni diagram" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" project_name="Orange3" version="" title="Razsevni diagram" position="(555.0, 174.0)" />
+		<node id="3" name="Škatla z brki" qualified_name="Orange.widgets.visualize.owboxplot.OWBoxPlot" project_name="Orange3" version="" title="Škatla z brki" position="(537.0, 309.0)" />
+		<node id="4" name="Drevo" qualified_name="Orange.widgets.model.owtree.OWTreeLearner" project_name="Orange3" version="" title="Drevo" position="(216.0, 239.0)" />
+	</nodes>
+	<links>
+		<link id="0" source_node_id="0" sink_node_id="2" source_channel="Podatki" sink_channel="Podatki" enabled="true" source_channel_id="data" sink_channel_id="data" />
+		<link id="1" source_node_id="0" sink_node_id="4" source_channel="Podatki" sink_channel="Podatki" enabled="true" source_channel_id="data" sink_channel_id="data" />
+		<link id="2" source_node_id="4" sink_node_id="1" source_channel="Model" sink_channel="Drevo" enabled="true" source_channel_id="model" sink_channel_id="tree" />
+		<link id="3" source_node_id="1" sink_node_id="2" source_channel="Izbrani podatki" sink_channel="Podmnožica podatkov" enabled="true" source_channel_id="selected-data" sink_channel_id="data_subset" />
+		<link id="4" source_node_id="1" sink_node_id="3" source_channel="Izbrani podatki" sink_channel="Podatki" enabled="true" source_channel_id="selected-data" sink_channel_id="data" />
+	</links>
+	<annotations>
+		<arrow id="0" start="(151.0, 78.0)" end="(112.0, 113.0)" fill="#C1272D" />
+		<text id="1" type="text/plain" rect="(153.0, 35.0, 217.0, 64.0)" font-family="Helvetica" font-size="14">Naloži podatke o Irisu ("iris.tab") iz predhodno naloženih dokumentacijskih zbirk podatkov.</text>
+		<arrow id="2" start="(446.0, 127.0)" end="(376.0, 217.0)" fill="#39B54A" />
+		<arrow id="3" start="(465.0, 127.0)" end="(515.0, 153.0)" fill="#39B54A" />
+		<text id="4" type="text/plain" rect="(402.0, 29.0, 150.0, 97.0)" font-family="Helvetica" font-size="14">Vsaka sprememba pri izbiri drevesnega vozlišča spremeni upodobitev v razsevnem diagramu.</text>
+		<arrow id="5" start="(278.99999999999994, 311.0)" end="(325.0, 278.0)" fill="#C1272D" />
+		<text id="6" type="text/plain" rect="(160.0, 306.0, 126.0, 80.0)" font-family="Helvetica" font-size="14">Dvakrat klikni na ta gradnik in izberi poljubno vozlišče v drevesu.</text>
+		<arrow id="7" start="(425.99999999999994, 376.0)" end="(429.0, 313.0)" fill="#39B54A" />
+		<text id="8" type="text/plain" rect="(383.0, 380.0, 150.0, 97.0)" font-family="Helvetica" font-size="14">Podatki, izbrani v drevogledu, se prenesejo v vse nadaljnje gradnike v delotoku.</text>
+		<text id="9" type="text/plain" rect="(57.0, 495.0, 290.0, 63.0)" font-family="Helvetica" font-size="14">Ta delotok deluje najbolje, če so hkrati odprti Drevogled, Razsevni diagram in Škatla z brki.</text>
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties node_id="0" format="pickle">gASVOgYAAAAAAAB9lCiMEmNvbnRyb2xBcmVhVmlzaWJsZZSIjAxyZWNlbnRfcGF0aHOUXZQojB5v
+cmFuZ2V3aWRnZXQudXRpbHMuZmlsZWRpYWxvZ3OUjApSZWNlbnRQYXRolJOUKYGUfZQojAdhYnNw
+YXRolIwtL1VzZXJzL2phbmV6L29yYW5nZTMvT3JhbmdlL2RhdGFzZXRzL2lyaXMudGFilIwGcHJl
+Zml4lIwPc2FtcGxlLWRhdGFzZXRzlIwHcmVscGF0aJSMCGlyaXMudGFilIwFdGl0bGWUjACUjAVz
+aGVldJRoEIwLZmlsZV9mb3JtYXSUTnViaAYpgZR9lChoCYwwL1VzZXJzL2phbmV6L29yYW5nZTMv
+T3JhbmdlL2RhdGFzZXRzL3RpdGFuaWMudGFilGgLaAxoDYwLdGl0YW5pYy50YWKUaA9oEGgRaBBo
+Ek51YmgGKYGUfZQoaAmMMC9Vc2Vycy9qYW5lei9vcmFuZ2UzL09yYW5nZS9kYXRhc2V0cy9ob3Vz
+aW5nLnRhYpRoC2gMaA2MC2hvdXNpbmcudGFilGgPaBBoEWgQaBJOdWJoBimBlH2UKGgJjDYvVXNl
+cnMvamFuZXovb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaGVhcnRfZGlzZWFzZS50YWKUaAtoDGgN
+jBFoZWFydF9kaXNlYXNlLnRhYpRoD2gQaBFoEGgSTnViZYwLcmVjZW50X3VybHOUXZSME3NhdmVk
+V2lkZ2V0R2VvbWV0cnmUQzIB2dDLAAIAAAAAAhIAAAC1AAAEaQAAAvAAAAISAAAAywAABGkAAALw
+AAAAAAAAAAAGkJSMC3NoZWV0X25hbWVzlH2UjAZzb3VyY2WUSwCMA3VybJRoEIwNZG9tYWluX2Vk
+aXRvcpR9lIwLX192ZXJzaW9uX1+USwGMEGNvbnRleHRfc2V0dGluZ3OUXZQojBVvcmFuZ2V3aWRn
+ZXQuc2V0dGluZ3OUjAdDb250ZXh0lJOUKYGUfZQojAZ2YWx1ZXOUfZQojAl2YXJpYWJsZXOUXZRo
+J32UaDNdlChdlCiMDHNlcGFsIGxlbmd0aJSMFE9yYW5nZS5kYXRhLnZhcmlhYmxllIwSQ29udGlu
+dW91c1ZhcmlhYmxllJOUSwBoEIhlXZQojAtzZXBhbCB3aWR0aJRoO0sAaBCIZV2UKIwMcGV0YWwg
+bGVuZ3RolGg7SwBoEIhlXZQojAtwZXRhbCB3aWR0aJRoO0sAaBCIZV2UKIwEaXJpc5RoOYwQRGlz
+Y3JldGVWYXJpYWJsZZSTlEsBjCxJcmlzLXNldG9zYSwgSXJpcy12ZXJzaWNvbG9yLCBJcmlzLXZp
+cmdpbmljYZSJZWVzaClLAXWMCmF0dHJpYnV0ZXOUKIwMc2VwYWwgbGVuZ3RolEsChpSMC3NlcGFs
+IHdpZHRolEsChpSMDHBldGFsIGxlbmd0aJRLAoaUjAtwZXRhbCB3aWR0aJRLAoaUdJSMBW1ldGFz
+lCmMCmNsYXNzX3ZhcnOUjARpcmlzlF2UKIwLSXJpcy1zZXRvc2GUjA9JcmlzLXZlcnNpY29sb3KU
+jA5JcmlzLXZpcmdpbmljYZRlhpSFlIwSbW9kaWZpZWRfdmFyaWFibGVzlF2UdWJoLimBlH2UKGhR
+KWgxfZQojAl4bHNfc2hlZXSUaBBK/////4aUjA1kb21haW5fZWRpdG9ylH2UjAl2YXJpYWJsZXOU
+XZQoXZQojAxzZXBhbCBsZW5ndGiUaDtLAGgQiGVdlCiMC3NlcGFsIHdpZHRolGg7SwBoEIhlXZQo
+jAxwZXRhbCBsZW5ndGiUaDtLAGgQiGVdlCiMC3BldGFsIHdpZHRolGg7SwBoEIhlXZQojARpcmlz
+lGhFSwGMLElyaXMtc2V0b3NhLCBJcmlzLXZlcnNpY29sb3IsIElyaXMtdmlyZ2luaWNhlIllZXNo
+Y12UaClLAXVoRyhoZksChpRoaEsChpRoaksChpRobEsChpR0lIwOb3JkZXJlZF9kb21haW6UXZQo
+aGZLAoaUaGhLAoaUaGpLAoaUaGxLAoaUaG5LAYaUZYwEdGltZZRHQdYqsOiB0RhoWl2UaFJobksB
+hpSFlHViZXUu
+</properties>
+		<properties node_id="1" format="pickle">gASVrwEAAAAAAAB9lCiMEmNvbnRyb2xBcmVhVmlzaWJsZZSIjBFsaW5lX3dpZHRoX21ldGhvZJRL
+AowObWF4X25vZGVfd2lkdGiUS5aMDm1heF90cmVlX2RlcHRolEsAjBFyZWdyZXNzaW9uX2NvbG9y
+c5RLAIwTc2F2ZWRXaWRnZXRHZW9tZXRyeZRDQgHZ0MsAAwAAAAACFAAAASsAAAY8AAADPgAAAhUA
+AAFKAAAGOwAAAz0AAAAAAAAAAAeAAAACFQAAAUoAAAY7AAADPZSMEXNob3dfaW50ZXJtZWRpYXRl
+lImMBHpvb22USwOMC19fdmVyc2lvbl9flEsBjBBjb250ZXh0X3NldHRpbmdzlF2UjBVvcmFuZ2V3
+aWRnZXQuc2V0dGluZ3OUjAdDb250ZXh0lJOUKYGUfZQojAZ2YWx1ZXOUfZQojBJ0YXJnZXRfY2xh
+c3NfaW5kZXiUSwBoCksBdYwEdGltZZRHQdYqsOoF80WMB2NsYXNzZXOUXZQojAtJcmlzLXNldG9z
+YZSMD0lyaXMtdmVyc2ljb2xvcpSMDklyaXMtdmlyZ2luaWNhlGV1YmF1Lg==
+</properties>
+		<properties node_id="2" format="pickle">gASV4wIAAAAAAAB9lCiMC2F1dG9fY29tbWl0lIiMC2F1dG9fc2FtcGxllIiMEmNvbnRyb2xBcmVh
+VmlzaWJsZZSIjBNzYXZlZFdpZGdldEdlb21ldHJ5lE6MCXNlbGVjdGlvbpROjBF0b29sdGlwX3No
+b3dzX2FsbJSIjA92aXN1YWxfc2V0dGluZ3OUfZSMBWdyYXBolH2UKIwLYWxwaGFfdmFsdWWUS4CM
+DWNsYXNzX2RlbnNpdHmUiYwRaml0dGVyX2NvbnRpbnVvdXOUiYwLaml0dGVyX3NpemWUSwqME2xh
+YmVsX29ubHlfc2VsZWN0ZWSUiYwWb3J0aG9ub3JtYWxfcmVncmVzc2lvbpSJjAtwb2ludF93aWR0
+aJRLCowJc2hvd19ncmlklImMC3Nob3dfbGVnZW5klIiMDXNob3dfcmVnX2xpbmWUiXWMC19fdmVy
+c2lvbl9flEsFjBBjb250ZXh0X3NldHRpbmdzlF2UjBVvcmFuZ2V3aWRnZXQuc2V0dGluZ3OUjAdD
+b250ZXh0lJOUKYGUfZQojAZ2YWx1ZXOUfZQojAphdHRyX2NvbG9ylIwEaXJpc5RLZYaUjAphdHRy
+X2xhYmVslE5K/v///4aUjAphdHRyX3NoYXBllE5K/v///4aUjAlhdHRyX3NpemWUTkr+////hpSM
+BmF0dHJfeJSMDHNlcGFsIGxlbmd0aJRLZoaUjAZhdHRyX3mUjAtzZXBhbCB3aWR0aJRLZoaUaAl9
+lGgVSwV1jA5vcmRlcmVkX2RvbWFpbpRdlCiMDHNlcGFsIGxlbmd0aJRLAoaUjAtzZXBhbCB3aWR0
+aJRLAoaUjAxwZXRhbCBsZW5ndGiUSwKGlIwLcGV0YWwgd2lkdGiUSwKGlIwEaXJpc5RLAYaUZYwK
+YXR0cmlidXRlc5R9lChoMUsCaDNLAmg1SwJoN0sCaDlLAXWMBW1ldGFzlH2UjAR0aW1llEdB1iqw
+5zw20nViYXUu
+</properties>
+		<properties node_id="3" format="pickle">gASVGAIAAAAAAAB9lCiMB2NvbXBhcmWUSwKMEmNvbnRyb2xBcmVhVmlzaWJsZZSIjBNvcmRlcl9i
+eV9pbXBvcnRhbmNllImMHG9yZGVyX2dyb3VwaW5nX2J5X2ltcG9ydGFuY2WUiYwTc2F2ZWRXaWRn
+ZXRHZW9tZXRyeZROjBBzaG93X2Fubm90YXRpb25zlIiMC3Nob3dfbGFiZWxzlIiMDXNpZ190aHJl
+c2hvbGSURz+pmZmZmZmajApzb3J0X2ZyZXFzlImMCHN0YXR0ZXN0lEsAjAlzdHJldGNoZWSUiIwL
+X192ZXJzaW9uX1+USwGMEGNvbnRleHRfc2V0dGluZ3OUXZSMFW9yYW5nZXdpZGdldC5zZXR0aW5n
+c5SMB0NvbnRleHSUk5QpgZR9lCiMBnZhbHVlc5R9lCiMCWdyb3VwX3ZhcpSMBGlyaXOUS2WGlIwJ
+YXR0cmlidXRllIwMc2VwYWwgbGVuZ3RolEtmhpSMCmNvbmRpdGlvbnOUXZRoDEsBdYwOb3JkZXJl
+ZF9kb21haW6UXZQoaBpLAoaUjAtzZXBhbCB3aWR0aJRLAoaUjAxwZXRhbCBsZW5ndGiUSwKGlIwL
+cGV0YWwgd2lkdGiUSwKGlGgXSwGGlGWMCmF0dHJpYnV0ZXOUfZQoaBpLAmghSwJoI0sCaCVLAmgX
+SwF1jAVtZXRhc5R9lIwEdGltZZRHQdYqsOoVKdx1YmF1Lg==
+</properties>
+		<properties node_id="4" format="literal">{'auto_apply': True, 'binary_trees': True, 'controlAreaVisible': True, 'learner_name': 'Drevo', 'limit_depth': True, 'limit_majority': True, 'limit_min_internal': True, 'limit_min_leaf': True, 'max_depth': 100, 'min_internal': 5, 'min_leaf': 2, 'savedWidgetGeometry': b'\x01\xd9\xd0\xcb\x00\x03\x00\x00\x00\x00\x02\x90\x00\x00\x015\x00\x00\x04U\x00\x00\x02g\x00\x00\x02\x90\x00\x00\x015\x00\x00\x04U\x00\x00\x02g\x00\x00\x00\x00\x00\x00\x00\x00\x07\x80\x00\x00\x02\x90\x00\x00\x015\x00\x00\x04U\x00\x00\x02g', 'sufficient_majority': 95, '__version__': 1}</properties>
+	</node_properties>
+	<session_state>
+		<window_groups />
+	</session_state>
+</scheme>

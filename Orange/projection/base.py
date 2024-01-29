@@ -107,7 +107,8 @@ class Projector(ReprableWithPreprocessors):
 
 class Projection:
     def __init__(self, proj):
-        self.__dict__.update(proj.__dict__)
+        if proj is not None:
+            self.__dict__.update(proj.__dict__)
         self.proj = proj
 
     def transform(self, X):
@@ -119,26 +120,70 @@ class Projection:
     def __repr__(self):
         return self.name
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return type(self) is type(other) \
+            and self.proj == other.proj
+
+    def __hash__(self):
+        return hash(self.proj)
+
 
 class TransformDomain:
     def __init__(self, projection):
         self.projection = projection
+        self._hash = None
 
     def __call__(self, data):
         if data.domain != self.projection.pre_domain:
             data = data.transform(self.projection.pre_domain)
         return self.projection.transform(data.X)
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return type(self) is type(other) \
+            and self.projection == other.projection
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._hash = None
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state["_hash"]
+        return state
+
+    def __hash__(self):
+        if self._hash is None:
+            self._hash = hash(self.projection)
+        return self._hash
+
 
 class ComputeValueProjector(SharedComputeValue):
-    def __init__(self, projection, feature, transform):
+    def __init__(self, projection=None, feature=None, transform=None):
         super().__init__(transform)
+        if projection is not None:
+            warnings.warn("Argument projection is unused and will be removed.",
+                          OrangeDeprecationWarning, stacklevel=2)
         self.projection = projection
         self.feature = feature
         self.transformed = None
 
     def compute(self, data, space):
         return space[:, self.feature]
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return super().__eq__(other) \
+            and self.projection == other.projection \
+            and self.feature == other.feature \
+            and self.transformed == other.transformed
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.projection, self.feature, self.transformed))
 
 
 class DomainProjection(Projection):
@@ -149,7 +194,7 @@ class DomainProjection(Projection):
 
         def proj_variable(i, name):
             v = Orange.data.ContinuousVariable(
-                name, compute_value=ComputeValueProjector(self, i, transformer)
+                name, compute_value=ComputeValueProjector(feature=i, transform=transformer)
             )
             v.to_sql = LinearCombinationSql(
                 domain.attributes, self.components_[i, :],
@@ -175,6 +220,21 @@ class DomainProjection(Projection):
         model.pre_domain = self.pre_domain.copy()
         model.name = self.name
         return model
+
+    def __eq__(self, other):
+        # see comment in __hash__() about .domain
+        if self is other:
+            return True
+        return super().__eq__(other) \
+            and self.n_components == other.n_components \
+            and self.orig_domain == other.orig_domain \
+            and self.var_prefix == other.var_prefix
+
+    def __hash__(self):
+        # hashing self.domain would cause infinite recursion;
+        # because it is only constructed from .orig_domain, .n_components
+        # and .proj (dealt with in the superclass), we do not need it
+        return hash((super().__hash__(), self.n_components, self.orig_domain, self.var_prefix))
 
 
 class LinearProjector(Projector):

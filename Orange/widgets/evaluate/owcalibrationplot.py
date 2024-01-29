@@ -16,7 +16,8 @@ from Orange.evaluation.performance_curves import Curves
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
-from Orange.widgets.evaluate.utils import results_for_preview
+from Orange.widgets.evaluate.utils import results_for_preview, \
+    check_can_calibrate
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.customizableplot import \
@@ -486,23 +487,11 @@ class OWCalibrationPlot(widget.OWWidget):
         wrapped = None
         results = self.results
         if results is not None:
-            problems = [
-                msg for condition, msg in (
-                    (results.folds is not None and len(results.folds) > 1,
-                     "each training data sample produces a different model"),
-                    (results.models is None,
-                     "test results do not contain stored models - try testing "
-                     "on separate data or on training data"),
-                    (len(self.selected_classifiers) != 1,
-                     "select a single model - the widget can output only one"),
-                    (self.score != 0 and len(results.domain.class_var.values) != 2,
-                     "cannot calibrate non-binary classes"))
-                if condition]
-            if len(problems) == 1:
-                self.Information.no_output(problems[0])
-            elif problems:
-                self.Information.no_output(
-                    "".join(f"\n - {problem}" for problem in problems))
+            problems = check_can_calibrate(
+                self.results, self.selected_classifiers,
+                require_binary=self.score != 0)
+            if problems:
+                self.Information.no_output(problems)
             else:
                 clsf_idx = self.selected_classifiers[0]
                 model = results.models[0, clsf_idx]

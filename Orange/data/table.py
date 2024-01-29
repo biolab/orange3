@@ -1551,17 +1551,46 @@ class Table(Sequence, Storage):
         return bn.anynan(self._Y)
 
     @staticmethod
-    def __get_nan_frequency(data):
+    def __get_nan_count(data):
         if data.size == 0:
             return 0
         dense = data if not sp.issparse(data) else data.data
-        return np.isnan(dense).sum() / np.prod(data.shape)
+        return np.isnan(dense).sum()
+
+    @classmethod
+    def __get_nan_frequency(cls, data):
+        return cls.__get_nan_count(data) / (np.prod(data.shape) or 1)
+
+    def get_nan_count_attribute(self):
+        return self.__get_nan_count(self.X)
+
+    def get_nan_count_class(self):
+        return self.__get_nan_count(self.Y)
+
+    def get_nan_count_metas(self):
+        if self.metas.dtype != object:
+            return self.__get_nan_count(self.metas)
+
+        data = self.metas
+        if sp.issparse(data):
+            data = data.tocsc()
+
+        count = 0
+        for i, attr in enumerate(self.domain.metas):
+            col = data[:, i]
+            missing = np.isnan(col.astype(float)) \
+                if not isinstance(attr, StringVariable) else data == ""
+            count += np.sum(missing)
+        return count
 
     def get_nan_frequency_attribute(self):
         return self.__get_nan_frequency(self.X)
 
     def get_nan_frequency_class(self):
         return self.__get_nan_frequency(self.Y)
+
+    def get_nan_frequency_metas(self):
+        return self.get_nan_count_metas() / (np.prod(self.metas.shape) or 1)
 
     def checksum(self, include_metas=True):
         # TODO: zlib.adler32 does not work for numpy arrays with dtype object

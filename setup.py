@@ -36,8 +36,8 @@ except ImportError:
 
 NAME = 'Orange3'
 
-VERSION = '3.36.2'
-ISRELEASED = True
+VERSION = '3.37.0'
+ISRELEASED = False
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
 FULLVERSION = VERSION
@@ -163,8 +163,12 @@ if not release:
         GIT_REVISION = git_version()
     elif os.path.exists('Orange/version.py'):
         # must be a source distribution, use existing version file
-        import imp
-        version = imp.load_source("Orange.version", "Orange/version.py")
+        import importlib.util
+        spec = importlib.util.spec_from_file_location(
+            "Orange.version", filename
+        )
+        version = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(version)
         GIT_REVISION = version.git_revision
     else:
         GIT_REVISION = "Unknown"

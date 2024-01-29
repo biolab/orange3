@@ -21,10 +21,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-
 import xlrd
 import xlsxwriter
 import openpyxl
+import h5py
 
 from Orange.data import _io, Table, Domain, ContinuousVariable, update_origin
 from Orange.data import Compression, open_compressed, detect_encoding, \
@@ -32,7 +32,6 @@ from Orange.data import Compression, open_compressed, detect_encoding, \
 from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PROTOCOL
 
 from Orange.util import flatten
-
 
 # Support values longer than 128K (i.e. text contents features)
 csv.field_size_limit(100*1024*1024)
@@ -542,34 +541,56 @@ class GenericHDF5Reader(FileFormat):
 
     def __init__(self, filename):
         super().__init__(filename=filename)
-        self.data = None
 
+        self.h5_file = h5py.File(filename)
+        
+        self.datasets = {}
+        self._load_group("/", self.h5_file)
+
+    @property
+    def sheets(self) -> List:
+        """List of datasets in the file.
+
+        Returns
+        -------
+        List of dataset paths
+        """
+        return list(self.datasets.keys())
+
+    def select_sheet(self, sheet):
+        """Select dataset to be read
+
+        Parameters
+        ----------
+        sheet : str
+            dataset path
+        """
+        if sheet is None:
+            sheet = self.sheets[0]
+        self.sheet = sheet
+    
     def read(self):
-        """Processes the data stored in self.data and returns it as an Orange
+        """Process data stored in self.data and returns it as an Orange
         Table object.
 
         Returns
         -------
             table (Orange.Table object): 
                 Contains the information of the chosen dataset in the hdf5 file.
-
-        Raises
-        ------
-            Exception: If the self.data variable has not been filled yet.
         """
-        if self.data is None:
-            raise ValueError("The data has not been loaded correctly")
-
-        if self.data.name is not None:
-            name = self.data.name.split('/')[-1]
+        
+        if self.sheet is not None:
+            name = self.sheet.split('/')[-1]
         else:
             name = "Data"
 
+        data = self.datasets[self.sheet]
+
         # Standard names for the columns of the dataset, can be changed manually
         # in the widget itself
-        columns = [str(i) for i in range(len(self.data.shape))]
+        columns = [str(i) for i in range(len(data.shape))]
 
-        dataset = np.array(self.data)
+        dataset = np.array(data)
 
         # Indexs are created to keep track of the position of the values in the
         # original data file
@@ -583,3 +604,17 @@ class GenericHDF5Reader(FileFormat):
         table = Table.from_numpy(domain=Domain(attributes=attrs), X=df.values)
 
         return table
+
+    def _load_group(self, root, group): 
+        """Recursive procedure that constructs the list of datasets
+        stored in the .hdf5 file. 
+
+        Given a root, iterates over all its children to decide whether 
+        they are a dataset or another group of data.
+        """
+        for name, obj in group.items():
+            path = root + name
+            if isinstance(obj, h5py.Group):
+                self._load_group(path + "/", group[name])
+            elif isinstance(obj, h5py.Dataset):
+                self.datasets[path] = obj

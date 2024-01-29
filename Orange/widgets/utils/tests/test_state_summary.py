@@ -6,15 +6,17 @@ from collections import namedtuple
 import numpy as np
 
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QTableView
 
 from orangecanvas.scheme.signalmanager import LazyValue
 from orangewidget.utils.signals import summarize
 
 from Orange.data import Table, Domain, StringVariable, ContinuousVariable, \
     DiscreteVariable, TimeVariable
+from Orange.misc import DistMatrix
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.state_summary import format_summary_details, \
-    format_multiple_summaries
+    format_multiple_summaries, summarize_matrix
 
 VarDataPair = namedtuple('VarDataPair', ['variable', 'data'])
 
@@ -313,6 +315,24 @@ class TestSummarize(unittest.TestCase):
         previewer.assert_not_called()
         summary.preview_func()
         previewer.assert_called_with(data)
+
+
+class TestSummarizeMatrix(WidgetTest):
+    def test_summarize_matrix(self):
+        matrix = DistMatrix(np.arange(9).reshape(3, 3))
+        summary = summarize_matrix(matrix)
+        self.assertEqual(summary.summary, "3×3")
+        self.assertEqual(summary.details, "<nobr>3×3 distance matrix</nobr>")
+        view = summary.preview_func()
+        self.assertIsInstance(view, QTableView)
+
+    def test_summarize_matrix_empty(self):
+        matrix = DistMatrix(np.empty((0, 0)))
+        summary = summarize_matrix(matrix)
+        self.assertEqual(summary.summary, "0×0")
+        self.assertEqual(summary.details, "<nobr>0×0 distance matrix</nobr>")
+        view = summary.preview_func()
+        self.assertIsInstance(view, QTableView)
 
 
 if __name__ == "__main__":

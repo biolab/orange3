@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='utf-8'?>
+<scheme version="2.0" title="Analiza osnovnih komponent" description="PCA pretvori podatke v podatkovno zbirko z nekoreliranimi spremenljivkami, ki se imenujejo tudi osnovne komponente. Pripomoček PCA prikaže grafikon (diagram razpršenosti), ki prikazuje stopnjo pojasnjene variance najboljših osnovnih komponent, in omogoča interaktivno nastavitev števila komponent, ki bodo vključene v izhodno zbirko podatkov. V tem delotoku lahko opazujemo transformacijo v Tabeli in vizualiziramo podatke z uporabo izdelanih osnovnih komponent v Razsevnem diagramu.">
+	<nodes>
+		<node id="0" name="Datoteka" qualified_name="Orange.widgets.data.owfile.OWFile" project_name="Orange3" version="" title="Datoteka" position="(66.0, 238.0)" />
+		<node id="1" name="PCA" qualified_name="Orange.widgets.unsupervised.owpca.OWPCA" project_name="Orange3" version="" title="PCA" position="(232.0, 237.0)" />
+		<node id="2" name="Razsevni diagram" qualified_name="Orange.widgets.visualize.owscatterplot.OWScatterPlot" project_name="Orange3" version="" title="Razsevni diagram" position="(409.0, 165.0)" />
+		<node id="3" name="Tabela" qualified_name="Orange.widgets.data.owtable.OWTable" project_name="Orange3" version="" title="Tabela" position="(428.0, 294.0)" />
+	</nodes>
+	<links>
+		<link id="0" source_node_id="0" sink_node_id="1" source_channel="Podatki" sink_channel="Podatki" enabled="true" source_channel_id="data" sink_channel_id="data" />
+		<link id="1" source_node_id="1" sink_node_id="2" source_channel="Spremenjeni podatki" sink_channel="Podatki" enabled="true" source_channel_id="transformed_data" sink_channel_id="data" />
+		<link id="2" source_node_id="1" sink_node_id="3" source_channel="Spremenjeni podatki" sink_channel="Podatki" enabled="true" source_channel_id="transformed_data" sink_channel_id="data" />
+	</links>
+	<annotations>
+		<text id="0" type="text/plain" rect="(154.0, 83.0, 150.0, 76.0)" font-family="Helvetica" font-size="12">Odpri, da si ogledaš diagram razpršenosti in interaktivno izbereš število komponent.</text>
+		<text id="1" type="text/plain" rect="(346.0, 9.0, 150.0, 72.0)" font-family="Helvetica" font-size="12">Izberi dve najboljši osnovni komponenti in preveri, ali so razredi iz vhodnega nabora podatkov dobro ločeni.</text>
+		<text id="2" type="text/plain" rect="(44.0, 329.0, 241.0, 92.0)" font-family="Helvetica" font-size="12">Gradnik Datoteka naloži nabor podatkov brown-selected iz molekularne biologije z 79 spremenljivkami, 186 primerki in 3 razredi.</text>
+		<arrow id="3" start="(223.0, 153.0)" end="(228.0, 204.0)" fill="#C1272D" />
+		<arrow id="4" start="(423.99999999999994, 87.99999999999999)" end="(409.99999999999994, 135.0)" fill="#C1272D" />
+		<arrow id="5" start="(139.0, 325.0)" end="(102.0, 269.0)" fill="#C1272D" />
+	</annotations>
+	<thumbnail />
+	<node_properties>
+		<properties node_id="0" format="pickle">gASVxwsAAAAAAAB9lCiMEmNvbnRyb2xBcmVhVmlzaWJsZZSIjAxyZWNlbnRfcGF0aHOUXZQojB5v
+cmFuZ2V3aWRnZXQudXRpbHMuZmlsZWRpYWxvZ3OUjApSZWNlbnRQYXRolJOUKYGUfZQojAdhYnNw
+YXRolIw3L1VzZXJzL2phbmV6L29yYW5nZTMvT3JhbmdlL2RhdGFzZXRzL2Jyb3duLXNlbGVjdGVk
+LnRhYpSMBnByZWZpeJSMD3NhbXBsZS1kYXRhc2V0c5SMB3JlbHBhdGiUjBJicm93bi1zZWxlY3Rl
+ZC50YWKUjAV0aXRsZZSMAJSMBXNoZWV0lGgQjAtmaWxlX2Zvcm1hdJROdWJoBimBlH2UKGgJjC0v
+VXNlcnMvamFuZXovb3JhbmdlMy9PcmFuZ2UvZGF0YXNldHMvaXJpcy50YWKUaAtoDGgNjAhpcmlz
+LnRhYpRoD2gQaBFoEGgSTnViZYwLcmVjZW50X3VybHOUXZSME3NhdmVkV2lkZ2V0R2VvbWV0cnmU
+Qy4B2dDLAAEAAAAAA/8AAAJcAAAF8AAABEMAAAP/AAACcgAABfAAAARDAAAAAAAAlIwLc2hlZXRf
+bmFtZXOUfZSMBnNvdXJjZZRLAIwDdXJslGgQjA1kb21haW5fZWRpdG9ylH2UjAtfX3ZlcnNpb25f
+X5RLAYwQY29udGV4dF9zZXR0aW5nc5RdlIwVb3Jhbmdld2lkZ2V0LnNldHRpbmdzlIwHQ29udGV4
+dJSTlCmBlH2UKIwGdmFsdWVzlH2UKIwJdmFyaWFibGVzlF2UaB99lGgrXZQoXZQojAdhbHBoYSAw
+lIwUT3JhbmdlLmRhdGEudmFyaWFibGWUjBJDb250aW51b3VzVmFyaWFibGWUk5RLAGgQiGVdlCiM
+B2FscGhhIDeUaDNLAGgQiGVdlCiMCGFscGhhIDE0lGgzSwBoEIhlXZQojAhhbHBoYSAyMZRoM0sA
+aBCIZV2UKIwIYWxwaGEgMjiUaDNLAGgQiGVdlCiMCGFscGhhIDM1lGgzSwBoEIhlXZQojAhhbHBo
+YSA0MpRoM0sAaBCIZV2UKIwIYWxwaGEgNDmUaDNLAGgQiGVdlCiMCGFscGhhIDU2lGgzSwBoEIhl
+XZQojAhhbHBoYSA2M5RoM0sAaBCIZV2UKIwIYWxwaGEgNzCUaDNLAGgQiGVdlCiMCGFscGhhIDc3
+lGgzSwBoEIhlXZQojAhhbHBoYSA4NJRoM0sAaBCIZV2UKIwIYWxwaGEgOTGUaDNLAGgQiGVdlCiM
+CGFscGhhIDk4lGgzSwBoEIhlXZQojAlhbHBoYSAxMDWUaDNLAGgQiGVdlCiMCWFscGhhIDExMpRo
+M0sAaBCIZV2UKIwJYWxwaGEgMTE5lGgzSwBoEIhlXZQojAVFbHUgMJRoM0sAaBCIZV2UKIwGRWx1
+IDMwlGgzSwBoEIhlXZQojAZFbHUgNjCUaDNLAGgQiGVdlCiMBkVsdSA5MJRoM0sAaBCIZV2UKIwH
+RWx1IDEyMJRoM0sAaBCIZV2UKIwHRWx1IDE1MJRoM0sAaBCIZV2UKIwHRWx1IDE4MJRoM0sAaBCI
+ZV2UKIwHRWx1IDIxMJRoM0sAaBCIZV2UKIwHRWx1IDI0MJRoM0sAaBCIZV2UKIwHRWx1IDI3MJRo
+M0sAaBCIZV2UKIwHRWx1IDMwMJRoM0sAaBCIZV2UKIwHRWx1IDMzMJRoM0sAaBCIZV2UKIwHRWx1
+IDM2MJRoM0sAaBCIZV2UKIwHRWx1IDM5MJRoM0sAaBCIZV2UKIwIY2RjMTUgMTCUaDNLAGgQiGVd
+lCiMCGNkYzE1IDMwlGgzSwBoEIhlXZQojAhjZGMxNSA1MJRoM0sAaBCIZV2UKIwIY2RjMTUgNzCU
+aDNLAGgQiGVdlCiMCGNkYzE1IDkwlGgzSwBoEIhlXZQojAljZGMxNSAxMTCUaDNLAGgQiGVdlCiM
+CWNkYzE1IDEzMJRoM0sAaBCIZV2UKIwJY2RjMTUgMTUwlGgzSwBoEIhlXZQojAljZGMxNSAxNzCU
+aDNLAGgQiGVdlCiMCWNkYzE1IDE5MJRoM0sAaBCIZV2UKIwJY2RjMTUgMjEwlGgzSwBoEIhlXZQo
+jAljZGMxNSAyMzCUaDNLAGgQiGVdlCiMCWNkYzE1IDI1MJRoM0sAaBCIZV2UKIwJY2RjMTUgMjcw
+lGgzSwBoEIhlXZQojAljZGMxNSAyOTCUaDNLAGgQiGVdlCiMBXNwbyAwlGgzSwBoEIhlXZQojAVz
+cG8gMpRoM0sAaBCIZV2UKIwFc3BvIDWUaDNLAGgQiGVdlCiMBXNwbyA3lGgzSwBoEIhlXZQojAVz
+cG8gOZRoM0sAaBCIZV2UKIwGc3BvIDExlGgzSwBoEIhlXZQojAZzcG81IDKUaDNLAGgQiGVdlCiM
+BnNwbzUgN5RoM0sAaBCIZV2UKIwHc3BvNSAxMZRoM0sAaBCIZV2UKIwKc3BvLSBlYXJseZRoM0sA
+aBCIZV2UKIwIc3BvLSBtaWSUaDNLAGgQiGVdlCiMBmhlYXQgMJRoM0sAaBCIZV2UKIwHaGVhdCAx
+MJRoM0sAaBCIZV2UKIwHaGVhdCAyMJRoM0sAaBCIZV2UKIwHaGVhdCA0MJRoM0sAaBCIZV2UKIwH
+aGVhdCA4MJRoM0sAaBCIZV2UKIwIaGVhdCAxNjCUaDNLAGgQiGVdlCiMBmR0dCAxNZRoM0sAaBCI
+ZV2UKIwGZHR0IDMwlGgzSwBoEIhlXZQojAZkdHQgNjCUaDNLAGgQiGVdlCiMB2R0dCAxMjCUaDNL
+AGgQiGVdlCiMBmNvbGQgMJRoM0sAaBCIZV2UKIwHY29sZCAyMJRoM0sAaBCIZV2UKIwHY29sZCA0
+MJRoM0sAaBCIZV2UKIwIY29sZCAxNjCUaDNLAGgQiGVdlCiMBmRpYXUgYZRoM0sAaBCIZV2UKIwG
+ZGlhdSBilGgzSwBoEIhlXZQojAZkaWF1IGOUaDNLAGgQiGVdlCiMBmRpYXUgZJRoM0sAaBCIZV2U
+KIwGZGlhdSBllGgzSwBoEIhlXZQojAZkaWF1IGaUaDNLAGgQiGVdlCiMBmRpYXUgZ5RoM0sAaBCI
+ZV2UKIwIZnVuY3Rpb26UaDGMEERpc2NyZXRlVmFyaWFibGWUk5RLAYwTUHJvdGVhcywgUmVzcCwg
+Umlib5SJZV2UKIwEZ2VuZZRoMYwOU3RyaW5nVmFyaWFibGWUk5RLAmgQiWVlc2ghSwF1jAphdHRy
+aWJ1dGVzlChoMEsChpRoNUsChpRoN0sChpRoOUsChpRoO0sChpRoPUsChpRoP0sChpRoQUsChpRo
+Q0sChpRoRUsChpRoR0sChpRoSUsChpRoS0sChpRoTUsChpRoT0sChpRoUUsChpRoU0sChpRoVUsC
+hpRoV0sChpRoWUsChpRoW0sChpRoXUsChpRoX0sChpRoYUsChpRoY0sChpRoZUsChpRoZ0sChpRo
+aUsChpRoa0sChpRobUsChpRob0sChpRocUsChpRoc0sChpRodUsChpRod0sChpRoeUsChpRoe0sC
+hpRofUsChpRof0sChpRogUsChpRog0sChpRohUsChpRoh0sChpRoiUsChpRoi0sChpRojUsChpRo
+j0sChpRokUsChpRok0sChpRolUsChpRol0sChpRomUsChpRom0sChpRonUsChpRon0sChpRooUsC
+hpRoo0sChpRopUsChpRop0sChpRoqUsChpRoq0sChpRorUsChpRor0sChpRosUsChpRos0sChpRo
+tUsChpRot0sChpRouUsChpRou0sChpRovUsChpRov0sChpRowUsChpRow0sChpRoxUsChpRox0sC
+hpRoyUsChpRoy0sChpRozUsChpRoz0sChpR0lIwFbWV0YXOUaNZLA4aUhZSMCmNsYXNzX3ZhcnOU
+aNFdlCiMB1Byb3RlYXOUjARSZXNwlIwEUmlib5RlhpSFlIwSbW9kaWZpZWRfdmFyaWFibGVzlF2U
+dWJhdS4=
+</properties>
+		<properties node_id="1" format="literal">{'auto_commit': True, 'axis_labels': 10, 'controlAreaVisible': True, 'maxp': 20, 'ncomponents': 2, 'normalize': True, 'savedWidgetGeometry': None, 'variance_covered': 35, '__version__': 1}</properties>
+		<properties node_id="2" format="pickle">gASV5QQAAAAAAAB9lCiMC2F1dG9fY29tbWl0lIiMC2F1dG9fc2FtcGxllIiMEmNvbnRyb2xBcmVh
+VmlzaWJsZZSIjBNzYXZlZFdpZGdldEdlb21ldHJ5lEMuAdnQywABAAAAAASoAAAA4wAAB90AAAOy
+AAAEqAAAAPkAAAfdAAADsgAAAAAAAJSMCXNlbGVjdGlvbpROjBF0b29sdGlwX3Nob3dzX2FsbJSI
+jA92aXN1YWxfc2V0dGluZ3OUfZSMBWdyYXBolH2UKIwLYWxwaGFfdmFsdWWUS4CMDWNsYXNzX2Rl
+bnNpdHmUiIwRaml0dGVyX2NvbnRpbnVvdXOUiIwLaml0dGVyX3NpemWUSwGME2xhYmVsX29ubHlf
+c2VsZWN0ZWSUiYwWb3J0aG9ub3JtYWxfcmVncmVzc2lvbpSJjAtwb2ludF93aWR0aJRLCowJc2hv
+d19ncmlklImMC3Nob3dfbGVnZW5klIiMDXNob3dfcmVnX2xpbmWUiXWMC19fdmVyc2lvbl9flEsF
+jBBjb250ZXh0X3NldHRpbmdzlF2UKIwVb3Jhbmdld2lkZ2V0LnNldHRpbmdzlIwHQ29udGV4dJST
+lCmBlH2UKIwGdmFsdWVzlH2UKIwKYXR0cl9jb2xvcpSMCGZ1bmN0aW9ulEtlhpSMCmF0dHJfbGFi
+ZWyUTkr+////hpSMCmF0dHJfc2hhcGWUTkr+////hpSMCWF0dHJfc2l6ZZROSv7///+GlIwGYXR0
+cl94lIwDUEMxlEtmhpSMBmF0dHJfeZSMA1BDMpRLZoaUaAp9lGgWSwV1jAphdHRyaWJ1dGVzlH2U
+KGgqSwJoLUsCaCFLAXWMBW1ldGFzlH2UjARnZW5llEsDc3ViaBspgZR9lChoMn2UjAR0aW1llEdB
+1eCcEvjll2gwfZQojAhmdW5jdGlvbpRLAYwDUEMxlEsCjANQQzKUSwJ1jA5vcmRlcmVkX2RvbWFp
+bpRdlChoO0sChpRoPEsChpRoOksBhpRlaB59lCiMC2F1dG9fc2FtcGxllIhK/v///4aUjAZhdHRy
+X3iUjANQQzGUSwKGlIwRdG9vbGJhcl9zZWxlY3Rpb26USwBK/v///4aUjBNhdXRvX3NlbmRfc2Vs
+ZWN0aW9ulIhK/v///4aUjAVncmFwaJR9lCiMC2FscGhhX3ZhbHVllEuASv7///+GlIwKYXR0cl9j
+b2xvcpRoOksBhpSMEXRvb2x0aXBfc2hvd3NfYWxslIlK/v///4aUjAphdHRyX3NoYXBllIwAlEr+
+////hpSMC3Nob3dfbGVnZW5klIhK/v///4aUjAtqaXR0ZXJfc2l6ZZRLAUr+////hpSME2xhYmVs
+X29ubHlfc2VsZWN0ZWSUiUr+////hpSMCXNob3dfZ3JpZJSJSv7///+GlIwKYXR0cl9sYWJlbJRo
+VUr+////hpSMCWF0dHJfc2l6ZZRoVUr+////hpSMEWppdHRlcl9jb250aW51b3VzlIhK/v///4aU
+jAtwb2ludF93aWR0aJRLCkr+////hpSMDWNsYXNzX2RlbnNpdHmUiEr+////hpR1jBNzYXZlZFdp
+ZGdldEdlb21ldHJ5lGgFSv7///+GlIwGYXR0cl95lIwDUEMylEsChpRoIGhRaCdoYmglaFZoI2hg
+aBZLBXV1YmV1Lg==
+</properties>
+		<properties node_id="3" format="literal">{'auto_commit': True, 'color_by_class': True, 'controlAreaVisible': True, 'savedWidgetGeometry': None, 'select_rows': True, 'show_attribute_labels': True, 'show_distributions': False, 'stored_selection': {'rows': [], 'columns': []}, 'stored_sort': [], '__version__': 1}</properties>
+	</node_properties>
+	<session_state>
+		<window_groups />
+	</session_state>
+</scheme>

@@ -3,32 +3,33 @@ Linear Projection widget
 ------------------------
 """
 
-from itertools import islice, permutations, chain
-from math import factorial
+from itertools import islice, permutations, chain, combinations
+from math import factorial, comb
 
 import numpy as np
 
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtGui import QStandardItem, QPalette
-from AnyQt.QtCore import Qt, QRectF, QLineF, pyqtSignal as Signal
+from AnyQt.QtGui import QPalette
+from AnyQt.QtCore import QRectF, QLineF
 
 import pyqtgraph as pg
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, IsDefined
 from Orange.preprocess import Normalize
 from Orange.preprocess.score import ReliefF, RReliefF
 from Orange.projection import PCA, LDA, LinearProjector
 from Orange.util import Enum
 from Orange.widgets import gui, report
-from Orange.widgets.gui import OWComponent
 from Orange.widgets.settings import Setting, ContextSetting, SettingProvider
 from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.plot import variables_selection
 from Orange.widgets.utils.plot.owplotgui import VariableSelectionModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.visualize.utils import VizRankDialog
+from Orange.widgets.visualize.utils import vizrank
+from Orange.widgets.visualize.utils.vizrank import VizRankDialogNAttrs, \
+    VizRankMixin
 from Orange.widgets.visualize.utils.component import OWGraphWithAnchors
 from Orange.widgets.visualize.utils.plotutils import AnchorItem
 from Orange.widgets.visualize.utils.widget import OWAnchorProjectionWidget
@@ -38,152 +39,61 @@ from Orange.widgets.widget import Msg
 MAX_LABEL_LEN = 20
 
 
-class LinearProjectionVizRank(VizRankDialog, OWComponent):
-    captionTitle = "Score Plots"
-    n_attrs = Setting(3)
+class LinearProjectionVizRank(VizRankDialogNAttrs):
     minK = 10
+    show_bars = False
 
-    attrsSelected = Signal([])
-    _AttrRole = next(gui.OrangeUserRole)
-
-    def __init__(self, master):
-        # Add the spin box for a number of attributes to take into account.
-        VizRankDialog.__init__(self, master)
-        OWComponent.__init__(self, master)
-
-        box = gui.hBox(self)
-        max_n_attrs = len(master.model_selected)
-        self.n_attrs_spin = gui.spin(
-            box, self, "n_attrs", 3, max_n_attrs, label="Number of variables: ",
-            controlWidth=50, alignment=Qt.AlignRight, callback=self._n_attrs_changed)
-        gui.rubber(box)
-        self.last_run_n_attrs = None
-        self.attr_color = master.attr_color
-        self.attrs = []
-
-    def initialize(self):
-        super().initialize()
-        self.n_attrs_spin.setDisabled(False)
-        self.attr_color = self.master.attr_color
-
-    def before_running(self):
-        """
-        Disable the spin for number of attributes before running and
-        enable afterwards. Also, if the number of attributes is different than
-        in the last run, reset the saved state (if it was paused).
-        """
-        if self.n_attrs != self.last_run_n_attrs:
-            self.saved_state = None
-            self.saved_progress = 0
-        if self.saved_state is None:
-            self.scores = []
-            self.rank_model.clear()
-        self.last_run_n_attrs = self.n_attrs
-        self.n_attrs_spin.setDisabled(True)
-
-    def stopped(self):
-        self.n_attrs_spin.setDisabled(False)
-
-    def check_preconditions(self):
-        master = self.master
-        if not super().check_preconditions():
-            return False
-        elif not master.btn_vizrank.isEnabled():
-            return False
-        n_cont_var = len([v for v in master.continuous_variables
-                          if v is not master.attr_color])
-        self.n_attrs_spin.setMaximum(n_cont_var)
-        self.n_attrs_spin.setValue(self.n_attrs)
-        return True
-
-    def state_count(self):
-        n_all_attrs = len(self.attrs)
-        if not n_all_attrs:
-            return 0
-        n_attrs = self.n_attrs
-        return factorial(n_all_attrs) // (2 * factorial(n_all_attrs - n_attrs) * n_attrs)
-
-    def iterate_states(self, state):
-        if state is None:  # on the first call, compute order
-            self.attrs = self._score_heuristic()
-            state = list(range(self.n_attrs))
-        else:
-            state = list(state)
-
-        def combinations(n, s):
-            while True:
-                yield s
-                for up, _ in enumerate(s):
-                    s[up] += 1
-                    if up + 1 == len(s) or s[up] < s[up + 1]:
-                        break
-                    s[up] = up
-                if s[-1] == n:
-                    break
-
-        for c in combinations(len(self.attrs), state):
-            for p in islice(permutations(c[1:]), factorial(len(c) - 1) // 2):
-                yield (c[0], ) + p
-
-    def compute_score(self, state):
-        master = self.master
-        data = master.data
-        domain = Domain([self.attrs[i] for i in state], data.domain.class_vars)
-        projection = master.projector(data.transform(domain))
-        ec = projection(data).X
-        y = column_data(data, self.attr_color, dtype=float)
-        if ec.shape[0] < self.minK:
-            return None
-        n_neighbors = min(self.minK, len(ec) - 1)
-        knn = NearestNeighbors(n_neighbors=n_neighbors).fit(ec)
-        ind = knn.kneighbors(return_distance=False)
-        # pylint: disable=invalid-unary-operand-type
-        if self.attr_color.is_discrete:
-            return -np.sum(y[ind] == y.reshape(-1, 1)) / n_neighbors / len(y)
-        return -r2_score(y, np.mean(y[ind], axis=1)) * (len(y) / len(data))
-
-    def bar_length(self, score):
-        return max(0, -score)
-
-    def _score_heuristic(self):
+    def score_attributes(self):
         def normalized(a):
             span = np.max(a, axis=0) - np.min(a, axis=0)
             span[span == 0] = 1
             return (a - np.mean(a, axis=0)) / span
 
-        domain = self.master.data.domain
-        attr_color = self.master.attr_color
         domain = Domain(
-            attributes=[v for v in chain(domain.variables, domain.metas)
-                        if v.is_continuous and v is not attr_color],
-            class_vars=attr_color
+            attributes=[v for v in self.attrs if v is not self.attr_color],
+            class_vars=self.attr_color
         )
-        data = self.master.data.transform(domain).copy()
+        data = self.data.transform(domain).copy()
         with data.unlocked():
             data.X = normalized(data.X)
-        relief = ReliefF if attr_color.is_discrete else RReliefF
+        relief = ReliefF if self.attr_color.is_discrete else RReliefF
         weights = relief(n_iterations=100, k_nearest=self.minK)(data)
-        results = sorted(zip(weights, domain.attributes), key=lambda x: (-x[0], x[1].name))
+        results = sorted(zip(weights, domain.attributes),
+                         key=lambda x: (-x[0], x[1].name))
         return [attr for _, attr in results]
 
-    def row_for_state(self, score, state):
-        attrs = [self.attrs[i] for i in state]
-        item = QStandardItem(", ".join(a.name for a in attrs))
-        item.setData(attrs, self._AttrRole)
-        return [item]
+    def state_count(self):
+        n_all_attrs = self.max_attrs()
+        if not n_all_attrs:
+            return 0
+        return comb(n_all_attrs, self.n_attrs) * factorial(self.n_attrs - 1) // 2
 
-    def on_selection_changed(self, selected, deselected):
-        if not selected.indexes():
-            return
-        attrs = selected.indexes()[0].data(self._AttrRole)
-        self.selectionChanged.emit([attrs])
+    def state_generator(self):
+        return (
+            (c[0], *p)
+            for c in combinations(list(range(len(self.attr_order))), self.n_attrs)
+            for p in islice(permutations(c[1:]), factorial(len(c) - 1) // 2)
+        )
 
-    def _n_attrs_changed(self):
-        if self.n_attrs != self.last_run_n_attrs or self.saved_state is None:
-            self.button.setText("Start")
+    def compute_score(self, state):
+        domain = Domain([self.attr_order[i] for i in state], [self.attr_color])
+        reduced = IsDefined()(self.data.transform(domain))
+        if len(reduced) < self.minK:  # cancel early if not enough data
+            return None
+        projection = self.parent().projector(reduced)
+        ec = projection(reduced).X
+        if ec.shape[0] < self.minK:  # projection preprocessors can remove data(?)
+            return None
+        n_neighbors = min(self.minK, len(ec) - 1)
+        knn = NearestNeighbors(n_neighbors=n_neighbors).fit(ec)
+        ind = knn.kneighbors(return_distance=False)
+        y = reduced.get_column(self.attr_color)
+        if self.attr_color.is_discrete:
+            score = -np.sum(y[ind] == y.reshape(-1, 1)) / n_neighbors
         else:
-            self.button.setText("Continue")
-        self.button.setEnabled(self.check_preconditions())
+            score = -r2_score(y, np.mean(y[ind], axis=1))
+        # treat missing data as misclassified
+        return score * len(reduced) / len(self.data)
 
 
 class OWLinProjGraph(OWGraphWithAnchors):
@@ -265,7 +175,8 @@ Placement = Enum("Placement", dict(Circular=0, LDA=1, PCA=2), type=int,
                  qualname="Placement")
 
 
-class OWLinearProjection(OWAnchorProjectionWidget):
+class OWLinearProjection(OWAnchorProjectionWidget,
+                         VizRankMixin(LinearProjectionVizRank)):
     name = "Linear Projection"
     description = "A multi-axis projection of data onto " \
                   "a two-dimensional plane."
@@ -281,9 +192,9 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     placement = Setting(Placement.Circular)
     selected_vars = ContextSetting([])
-    vizrank = SettingProvider(LinearProjectionVizRank)
     GRAPH_CLASS = OWLinProjGraph
     graph = SettingProvider(OWLinProjGraph)
+    n_attrs_vizrank = Setting(3)
 
     class Error(OWAnchorProjectionWidget.Error):
         no_cont_features = Msg("Plotting requires numeric features")
@@ -307,8 +218,9 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         variables_selection(box, self, self.model_selected)
         self.model_selected.selection_changed.connect(
             self.__model_selected_changed)
-        self.vizrank, self.btn_vizrank = LinearProjectionVizRank.add_vizrank(
-            None, self, "Suggest Features", self.__vizrank_set_attrs)
+        self.btn_vizrank = self.vizrank_button("Suggest Features")
+        self.vizrankSelectionChanged.connect(self.vizrank_set_attrs)
+        self.vizrankRunStateChanged.connect(self.store_vizrank_n_attrs)
         box.layout().addWidget(self.btn_vizrank)
 
     def _add_controls_placement(self, box):
@@ -340,13 +252,18 @@ class OWLinearProjection(OWAnchorProjectionWidget):
             cvs = self.data.domain.class_vars
         return self.data.transform(Domain(self.effective_variables, cvs))
 
-    def __vizrank_set_attrs(self, attrs):
+    def vizrank_set_attrs(self, attrs):
         if not attrs:
             return
+        # False positive, pylint: disable=unsupported-assignment-operation
         self.selected_vars[:] = attrs
         # Ugly, but the alternative is to have yet another signal to which
         # the view will have to connect
         self.model_selected.selection_changed.emit()
+
+    def store_vizrank_n_attrs(self, state, data):
+        if state == vizrank.RunState.Running:
+            self.n_attrs_vizrank = data["n_attrs"]
 
     def __model_selected_changed(self):
         self.projection = None
@@ -359,7 +276,7 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self.controls.graph.hide_radius.setEnabled(
             self.placement != Placement.Circular)
         self.projection = self.projector = None
-        self._init_vizrank()
+        self.init_vizrank()
         self.init_projection()
         self.setup_plot()
         self.commit.deferred()
@@ -369,13 +286,13 @@ class OWLinearProjection(OWAnchorProjectionWidget):
 
     def colors_changed(self):
         super().colors_changed()
-        self._init_vizrank()
+        self.init_vizrank()
 
     @OWAnchorProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
         self._check_options()
-        self._init_vizrank()
+        self.init_vizrank()
         self.init_projection()
 
     def _check_options(self):
@@ -408,8 +325,8 @@ class OWLinearProjection(OWAnchorProjectionWidget):
         self.controls.graph.hide_radius.setEnabled(
             self.placement != Placement.Circular)
 
-    def _init_vizrank(self):
-        is_enabled, msg = False, ""
+    def init_vizrank(self):
+        msg = ""
         if self.data is None:
             msg = "There is no data."
         elif self.attr_color is None:
@@ -424,13 +341,12 @@ class OWLinearProjection(OWAnchorProjectionWidget):
             msg = "Not enough available continuous variables"
         elif np.sum(np.all(np.isfinite(self.data.X), axis=1)) < 2:
             msg = "Not enough valid data instances"
+        if not msg:
+            super().init_vizrank(
+                self.data, self.continuous_variables, self.attr_color,
+                self.n_attrs_vizrank)
         else:
-            is_enabled = \
-                not np.isnan(self.data.get_column(self.attr_color)).all()
-        self.btn_vizrank.setToolTip(msg)
-        self.btn_vizrank.setEnabled(is_enabled)
-        if is_enabled:
-            self.vizrank.initialize()
+            self.disable_vizrank(msg)
 
     def check_data(self):
         def error(err):
@@ -539,16 +455,6 @@ class OWLinearProjection(OWAnchorProjectionWidget):
     # for backward compatibility with settings < 6, pull the enum from global
     # namespace into class
     Placement = Placement
-
-
-def column_data(table, var, dtype):
-    dtype = np.dtype(dtype)
-    col = table.get_column(var)
-    if dtype != col.dtype:
-        col = col.astype(dtype)
-    if col.base is not None:
-        col = col.copy()
-    return col
 
 
 class CircularPlacement(LinearProjector):

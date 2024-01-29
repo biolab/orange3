@@ -20,7 +20,8 @@ from Orange.classification import ThresholdClassifier
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
-from Orange.widgets.evaluate.utils import check_results_adequacy
+from Orange.widgets.evaluate.utils import check_results_adequacy, \
+    check_can_calibrate
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.customizableplot import Updater, \
@@ -267,7 +268,7 @@ class OWLiftCurve(widget.OWWidget):
             item = self.classifiers_list_box.item(i)
             item.setIcon(colorpalettes.ColorIcon(color))
 
-        class_values = results.data.domain.class_var.values
+        class_values = results.domain.class_var.values
         self.target_cb.addItems(class_values)
         if class_values:
             self.target_index = 0
@@ -493,23 +494,10 @@ class OWLiftCurve(widget.OWWidget):
         wrapped = None
         results = self.results
         if results is not None:
-            problems = [
-                msg for condition, msg in (
-                    (results.folds is not None and len(results.folds) > 1,
-                     "each training data sample produces a different model"),
-                    (results.models is None,
-                     "test results do not contain stored models - try testing "
-                     "on separate data or on training data"),
-                    (len(self.selected_classifiers) != 1,
-                     "select a single model - the widget can output only one"),
-                    (len(results.domain.class_var.values) != 2,
-                     "cannot calibrate non-binary classes"))
-                if condition]
-            if len(problems) == 1:
-                self.Information.no_output(problems[0])
-            elif problems:
-                self.Information.no_output(
-                    "".join(f"\n - {problem}" for problem in problems))
+            problems = check_can_calibrate(
+                self.results, self.selected_classifiers)
+            if problems:
+                self.Information.no_output(problems)
             else:
                 clsf_idx = self.selected_classifiers[0]
                 model = results.models[0, clsf_idx]

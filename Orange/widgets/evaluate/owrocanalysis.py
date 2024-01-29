@@ -13,18 +13,21 @@ from AnyQt.QtCore import Qt, QSize
 import pyqtgraph as pg
 
 import Orange
+from Orange.base import Model
+from Orange.classification import ThresholdClassifier
+from Orange.evaluation.testing import Results
 from Orange.widgets import widget, gui, settings
 from Orange.widgets.evaluate.contexthandlers import \
     EvaluationResultsContextHandler
-from Orange.widgets.evaluate.utils import check_results_adequacy
+from Orange.widgets.evaluate.utils import check_results_adequacy, \
+    check_can_calibrate
 from Orange.widgets.utils import colorpalettes
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.plotutils import GraphicsView, PlotItem
-from Orange.widgets.widget import Input
+from Orange.widgets.widget import Input, Output, Msg
 from Orange.widgets import report
 
 from Orange.widgets.evaluate.utils import results_for_preview
-from Orange.evaluation.testing import Results
 
 
 #: Points on a ROC curve
@@ -305,6 +308,12 @@ class OWROCAnalysis(widget.OWWidget):
     class Inputs:
         evaluation_results = Input("Evaluation Results", Orange.evaluation.Results)
 
+    class Outputs:
+        calibrated_model = Output("Calibrated Model", Model)
+
+    class Information(widget.OWWidget.Information):
+        no_output = Msg("Can't output a model: {}")
+
     buttons_area_orientation = None
     settingsHandler = EvaluationResultsContextHandler()
     target_index = settings.ContextSetting(0)
@@ -466,7 +475,7 @@ class OWROCAnalysis(widget.OWWidget):
             listitem = self.classifiers_list_box.item(i)
             listitem.setIcon(colorpalettes.ColorIcon(self.colors[i]))
 
-        class_var = results.data.domain.class_var
+        class_var = results.domain.class_var
         self.target_cb.addItems(class_var.values)
         self.target_index = 0
         self._set_target_prior()
@@ -620,8 +629,7 @@ class OWROCAnalysis(widget.OWWidget):
         pen.setCosmetic(True)
         self.plot.plot([0, 1], [0, 1], pen=pen, antialias=True)
 
-        if self.roc_averaging == OWROCAnalysis.Merge:
-            self._update_perf_line()
+        self._update_perf_line()
 
         self._update_axes_ticks()
 
@@ -730,8 +738,7 @@ class OWROCAnalysis(widget.OWWidget):
         self._on_display_perf_line_changed()
 
     def _on_display_perf_line_changed(self):
-        if self.roc_averaging == OWROCAnalysis.Merge:
-            self._update_perf_line()
+        self._update_perf_line()
 
         if self.perf_line is not None:
             self.perf_line.setVisible(self.display_perf_line)
@@ -745,9 +752,12 @@ class OWROCAnalysis(widget.OWWidget):
             self._setup_plot()
 
     def _update_perf_line(self):
-        if self._perf_line is None:
+
+        if self._perf_line is None or self.roc_averaging != OWROCAnalysis.Merge:
+            self._update_output(None)
             return
 
+        ind = None
         self._perf_line.setVisible(self.display_perf_line)
         if self.display_perf_line:
             m = roc_iso_performance_slope(
@@ -761,6 +771,26 @@ class OWROCAnalysis(widget.OWWidget):
                 self._perf_line.setPos((hull.fpr[ind[0]], hull.tpr[ind[0]]))
             else:
                 self._perf_line.setVisible(False)
+
+        self._update_output(None if ind is None else hull.thresholds[ind[0]])
+
+    def _update_output(self, threshold):
+        self.Information.no_output.clear()
+
+        if threshold is None:
+            self.Outputs.calibrated_model.send(None)
+            return
+
+        problems = check_can_calibrate(self.results, self.selected_classifiers)
+        if problems:
+            self.Information.no_output(problems)
+            self.Outputs.calibrated_model.send(None)
+            return
+
+        model = ThresholdClassifier(
+            self.results.models[0][self.selected_classifiers[0]],
+            threshold)
+        self.Outputs.calibrated_model.send(model)
 
     def onDeleteWidget(self):
         self.clear()

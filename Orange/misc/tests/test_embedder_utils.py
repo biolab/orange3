@@ -130,6 +130,20 @@ class TestEmbedderCache(unittest.TestCase):
             cache = EmbedderCache("TestModel")
         self.assertDictEqual({}, cache._cache_dict)
 
+    def test_load_cache_eof_error(self):
+        # prepare a file
+        cache = EmbedderCache("TestModel")
+        self.assertDictEqual({}, cache._cache_dict)
+        cache.add("abc", [1, 2, 3])
+        cache.persist_cache()
+
+        # eof error
+        with patch(
+            "Orange.misc.utils.embedder_utils.pickle.load", side_effect=EOFError,
+        ):
+            cache = EmbedderCache("TestModel")
+            self.assertDictEqual({}, cache._cache_dict)
+
 
 if __name__ == "__main__":
     unittest.main()

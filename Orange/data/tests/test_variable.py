@@ -634,6 +634,8 @@ class TestStringVariable(VariableTest):
         self.assertEqual(a.str_val(""), "?")
         self.assertEqual(a.str_val(Value(a, "")), "?")
         self.assertEqual(a.repr_val(Value(a, "foo")), '"foo"')
+        self.assertEqual(a.str_val(np.nan), "?")
+        self.assertEqual(a.str_val(None), "?")
 
 
 @variabletest(TimeVariable)

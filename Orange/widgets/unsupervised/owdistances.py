@@ -127,6 +127,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
         unsupported_sparse = Msg("Some metrics don't support sparse data\n"
                                  "and were disabled: {}")
         imputing_data = Msg("Missing values were imputed")
+        no_features = Msg("Data has no features")
 
     def __init__(self):
         OWWidget.__init__(self)
@@ -242,11 +243,17 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
                         return False
             return True
 
+        def _check_no_features():
+            if len(data.domain.attributes) == 0:
+                self.Warning.no_features()
+            return True
+
         metric_def = MetricDefs[self.metric_id]
         metric = metric_def.metric
         self.clear_messages()
         if data is not None:
             for check in (_check_sparse, _check_tractability,
+                          _check_no_features,
                           _fix_discrete, _fix_missing, _fix_nonbinary):
                 if not check():
                     data = None

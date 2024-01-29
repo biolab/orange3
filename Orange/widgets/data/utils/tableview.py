@@ -139,6 +139,7 @@ class RichTableView(DataTableView):
             select_rows = self.selectionBehavior() == TableView.SelectRows
             sel_model = BlockSelectionModel(model, selectBlocks=not select_rows)
             self.setSelectionModel(sel_model)
+            self.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
 
             sortable = self.isModelSortable(model)
             self.setSortingEnabled(sortable)

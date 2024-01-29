@@ -33,6 +33,11 @@ Display shows:
 
 ![](images/BoxPlot-Discrete.png)
 
+Note
+----
+
+Ordering by relevance to subgroups computes ANOVA-based p-values for all variables, including the binary, in order to put them on the same scale. When showing significance in the graph, binary variables are treated differently: the widget computes the t-test with correction for unequal variance, which is more appropriate than ANOVA. These p-values may differ from those used in the ordering the variables in the lists on the left.
+
 Examples
 --------
 

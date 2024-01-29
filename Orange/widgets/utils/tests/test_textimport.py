@@ -1,12 +1,14 @@
 import unittest
 import csv
 import io
+from AnyQt.QtCore import Qt
 
 from AnyQt.QtWidgets import QComboBox, QWidget
-from AnyQt.QtTest import QSignalSpy
+from AnyQt.QtTest import QSignalSpy, QTest
 
 from Orange.widgets.utils import textimport
 from Orange.widgets.tests.base import GuiTest
+from Orange.widgets.utils.textimport import TablePreview, TablePreviewModel
 
 ColumnTypes = textimport.ColumnType
 
@@ -19,7 +21,7 @@ DATA4 = b'A, B, C, D\n' \
 DATA5 = b'a\tb\n' * 1000
 
 
-class WidgetsTests(GuiTest):
+class OptionsWidgetTests(GuiTest):
     def test_options_widget(self):
         w = textimport.CSVOptionsWidget()
         schanged = QSignalSpy(w.optionsChanged)
@@ -52,6 +54,8 @@ class WidgetsTests(GuiTest):
         self.assertEqual(d.delimiter, d1.delimiter)
         self.assertEqual(d.quotechar, d1.quotechar)
 
+
+class ImportWidgetTest(GuiTest):
     def test_import_widget(self):
         w = textimport.CSVImportWidget()
         w.setDialect(csv.excel())
@@ -100,6 +104,21 @@ class WidgetsTests(GuiTest):
         model.fetchMore()
         self.assertGreater(model.rowCount(), rows)
         self.assertEqual(len(spy), 1)
+
+    def test_preview_view(self):
+        w = TablePreview()
+        model = TablePreviewModel()
+        model.setPreviewStream(csv.reader(io.StringIO(DATA4.decode('utf-8'))))
+        w.setModel(model)
+        QTest.mouseClick(w.verticalHeader().viewport(), Qt.LeftButton)
+        self.assertEqual(w.selectionBehavior(), TablePreview.SelectRows)
+        QTest.mouseClick(w.horizontalHeader().viewport(), Qt.LeftButton)
+        self.assertEqual(w.selectionBehavior(), TablePreview.SelectColumns)
+
+        QTest.mouseClick(w.verticalHeader().viewport(), Qt.LeftButton)
+        self.assertEqual(w.selectionBehavior(), TablePreview.SelectRows)
+        QTest.mouseClick(w.viewport(), Qt.LeftButton)
+        self.assertEqual(w.selectionBehavior(), TablePreview.SelectColumns)
 
 
 if __name__ == "__main__":
