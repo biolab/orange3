@@ -542,24 +542,65 @@ class TestOWPredictions(WidgetTest):
         self.assertEqual(len(output), 2)
         self.assertEqual(output[0], self.iris[1])
         self.assertEqual(output[1], self.iris[3])
-        output = self.get_output(self.widget.Outputs.annotated)
-        self.assertEqual(len(output), len(self.iris))
-        col = output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        ann_output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(ann_output), len(self.iris))
+        col = ann_output.get_column(ANNOTATED_DATA_FEATURE_NAME)
         self.assertEqual(np.sum(col), 2)
-        self.assertEqual(col[1], 1)
-        self.assertEqual(col[3], 1)
+        np.testing.assert_array_equal(ann_output[col == 1].X, output.X)
 
         pred_model.sort(0, Qt.DescendingOrder)
         output = self.get_output(self.widget.Outputs.selected_predictions)
         self.assertEqual(len(output), 2)
         self.assertEqual(output[0], self.iris[3])
         self.assertEqual(output[1], self.iris[1])
+        ann_output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(ann_output), len(self.iris))
+        col = ann_output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        self.assertEqual(np.sum(col), 2)
+        np.testing.assert_array_equal(ann_output[col == 1].X, output.X)
+
+    def test_no_selection_output(self):
+        log_reg_iris = LogisticRegressionLearner()(self.iris)
+        self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+
+        data_model = self.widget.dataview.model()
+
+        output = self.get_output(self.widget.Outputs.selected_predictions)
+        self.assertEqual(len(output), len(self.iris))
         output = self.get_output(self.widget.Outputs.annotated)
         self.assertEqual(len(output), len(self.iris))
         col = output.get_column(ANNOTATED_DATA_FEATURE_NAME)
-        self.assertEqual(np.sum(col), 2)
-        self.assertEqual(col[1], 1)
-        self.assertEqual(col[3], 1)
+        self.assertFalse(np.any(col))
+
+        data_model.sort(2)
+        col_name = data_model.headerData(2, Qt.Horizontal, Qt.DisplayRole)  # "sepal width"
+        output = self.get_output(self.widget.Outputs.selected_predictions)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(col_name)
+        self.assertTrue(np.all(col[1:] >= col[:-1]))
+
+        output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(col_name)
+        self.assertTrue(np.all(col[1:] >= col[:-1]))
+        col = output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        self.assertFalse(np.any(col))
+
+        data_model.sort(2, Qt.DescendingOrder)
+        col_name = data_model.headerData(2, Qt.Horizontal, Qt.DisplayRole)  # "sepal width"
+        output = self.get_output(self.widget.Outputs.selected_predictions)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(col_name)
+        self.assertTrue(np.all(col[1:] <= col[:-1]))
+
+        output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(col_name)
+        self.assertTrue(np.all(col[1:] <= col[:-1]))
+        col = output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        self.assertFalse(np.any(col))
+
 
     def test_select_data_first(self):
         log_reg_iris = LogisticRegressionLearner()(self.iris)
