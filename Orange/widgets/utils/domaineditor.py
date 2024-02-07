@@ -81,9 +81,10 @@ class VarTableModel(QAbstractTableModel):
             if col == Column.tpe:
                 return gui.attributeIconDict[self.vartypes.index(val) + 1]
         if role == Qt.ForegroundRole:
-            if self.variables[row][Column.place] == Place.skip \
-                    and col != Column.place:
+            if self.variables[row][Column.place] == Place.skip and col != Column.place:
                 return QColor(160, 160, 160)
+            # The background is light-ish, force dark text color - same as data table
+            return self.data(index, Qt.BackgroundRole) and QColor(0, 0, 0, 200)
         if role == Qt.BackgroundRole:
             place = self.variables[row][Column.place]
             mapping = [Place.meta, Place.feature, Place.class_var, None]
