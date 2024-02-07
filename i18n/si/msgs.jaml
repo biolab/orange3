@@ -8940,6 +8940,7 @@ widgets/evaluate/owpredictions.py:
             Data: Podatki
             Predictors: Modeli
         class `Outputs`:
+            Selected Predictions: Izbrane napovedi
             Predictions: Napovedi
             Evaluation Results: Rezultati vrednotenja
         class `Warning`:

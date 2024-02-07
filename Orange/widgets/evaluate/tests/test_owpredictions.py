@@ -36,6 +36,7 @@ from Orange.modelling import ConstantLearner, TreeLearner
 from Orange.evaluation import Results
 from Orange.widgets.tests.utils import excepthook_catch, \
     possible_duplicate_table, simulate
+from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 
 
@@ -62,7 +63,7 @@ class TestOWPredictions(WidgetTest):
         yvec = data.get_column(data.domain.class_var)
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.predictors, ConstantLearner()(data), 1)
-        pred = self.get_output(self.widget.Outputs.predictions)
+        pred = self.get_output(self.widget.Outputs.selected_predictions)
         self.assertIsInstance(pred, Table)
         np.testing.assert_array_equal(
             yvec, pred.get_column(data.domain.class_var))
@@ -92,7 +93,7 @@ class TestOWPredictions(WidgetTest):
         test = Table(domain, np.array([[0, 0, 1], [0, 1, 0], [1, 0, 0]]),
                      np.full((3, 1), np.nan))
         self.send_signal(self.widget.Inputs.data, test)
-        pred = self.get_output(self.widget.Outputs.predictions)
+        pred = self.get_output(self.widget.Outputs.selected_predictions)
         self.assertEqual(len(pred), len(test))
 
         results = self.get_output(self.widget.Outputs.evaluation_results)
@@ -145,7 +146,7 @@ class TestOWPredictions(WidgetTest):
         no_class = titanic.transform(Domain(titanic.domain.attributes, None))
         self.send_signal(self.widget.Inputs.predictors, majority_titanic, 1)
         self.send_signal(self.widget.Inputs.data, no_class)
-        out = self.get_output(self.widget.Outputs.predictions)
+        out = self.get_output(self.widget.Outputs.selected_predictions)
         np.testing.assert_allclose(out.get_column("constant"), 0)
 
         predmodel = self.widget.predictionsview.model()
@@ -500,7 +501,7 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.predictors, predictor)
 
-        output = self.get_output(self.widget.Outputs.predictions)
+        output = self.get_output(self.widget.Outputs.selected_predictions)
         self.assertEqual(output.domain.metas[0].name, 'constant (1)')
 
     def test_select(self):
@@ -514,6 +515,92 @@ class TestOWPredictions(WidgetTest):
         sel = {(index.row(), index.column())
                for index in self.widget.dataview.selectionModel().selectedIndexes()}
         self.assertEqual(sel, {(1, col) for col in range(5)})
+
+    def test_selection_output(self):
+        log_reg_iris = LogisticRegressionLearner()(self.iris)
+        self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+
+        selmodel = self.widget.dataview.selectionModel()
+        pred_model = self.widget.predictionsview.model()
+
+        selmodel.select(self.widget.dataview.model().index(1, 0), QItemSelectionModel.Select)
+        selmodel.select(self.widget.dataview.model().index(3, 0), QItemSelectionModel.Select)
+        output = self.get_output(self.widget.Outputs.selected_predictions)
+        self.assertEqual(len(output), 2)
+        self.assertEqual(output[0], self.iris[1])
+        self.assertEqual(output[1], self.iris[3])
+        output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        self.assertEqual(np.sum(col), 2)
+        self.assertEqual(col[1], 1)
+        self.assertEqual(col[3], 1)
+
+        pred_model.sort(0)
+        output = self.get_output(self.widget.Outputs.selected_predictions)
+        self.assertEqual(len(output), 2)
+        self.assertEqual(output[0], self.iris[1])
+        self.assertEqual(output[1], self.iris[3])
+        ann_output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(ann_output), len(self.iris))
+        col = ann_output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        self.assertEqual(np.sum(col), 2)
+        np.testing.assert_array_equal(ann_output[col == 1].X, output.X)
+
+        pred_model.sort(0, Qt.DescendingOrder)
+        output = self.get_output(self.widget.Outputs.selected_predictions)
+        self.assertEqual(len(output), 2)
+        self.assertEqual(output[0], self.iris[3])
+        self.assertEqual(output[1], self.iris[1])
+        ann_output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(ann_output), len(self.iris))
+        col = ann_output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        self.assertEqual(np.sum(col), 2)
+        np.testing.assert_array_equal(ann_output[col == 1].X, output.X)
+
+    def test_no_selection_output(self):
+        log_reg_iris = LogisticRegressionLearner()(self.iris)
+        self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
+        self.send_signal(self.widget.Inputs.data, self.iris)
+
+        data_model = self.widget.dataview.model()
+
+        output = self.get_output(self.widget.Outputs.selected_predictions)
+        self.assertEqual(len(output), len(self.iris))
+        output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        self.assertFalse(np.any(col))
+
+        data_model.sort(2)
+        col_name = data_model.headerData(2, Qt.Horizontal, Qt.DisplayRole)  # "sepal width"
+        output = self.get_output(self.widget.Outputs.selected_predictions)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(col_name)
+        self.assertTrue(np.all(col[1:] >= col[:-1]))
+
+        output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(col_name)
+        self.assertTrue(np.all(col[1:] >= col[:-1]))
+        col = output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        self.assertFalse(np.any(col))
+
+        data_model.sort(2, Qt.DescendingOrder)
+        col_name = data_model.headerData(2, Qt.Horizontal, Qt.DisplayRole)  # "sepal width"
+        output = self.get_output(self.widget.Outputs.selected_predictions)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(col_name)
+        self.assertTrue(np.all(col[1:] <= col[:-1]))
+
+        output = self.get_output(self.widget.Outputs.annotated)
+        self.assertEqual(len(output), len(self.iris))
+        col = output.get_column(col_name)
+        self.assertTrue(np.all(col[1:] <= col[:-1]))
+        col = output.get_column(ANNOTATED_DATA_FEATURE_NAME)
+        self.assertFalse(np.any(col))
+
 
     def test_select_data_first(self):
         log_reg_iris = LogisticRegressionLearner()(self.iris)
@@ -537,7 +624,7 @@ class TestOWPredictions(WidgetTest):
                for index in widget.dataview.selectionModel().selectedIndexes()}
         self.assertEqual(sel, {(row, col)
                                for row in [1, 3, 4] for col in range(5)})
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         exp = self.iris[np.array([1, 3, 4])]
         np.testing.assert_equal(out.X, exp.X)
 
@@ -883,32 +970,32 @@ class TestOWPredictions(WidgetTest):
 
         widget.shown_probs = widget.NO_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 1, 2])
 
         widget.shown_probs = widget.DATA_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 0, 110, 2, 210, 211])
 
         widget.shown_probs = widget.MODEL_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 111, 2, 210, 211, 212])
 
         widget.shown_probs = widget.BOTH_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 2, 210, 211])
 
         widget.shown_probs = widget.BOTH_PROBS + 1
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 10, 1, 0, 2, 210])
 
         widget.shown_probs = widget.BOTH_PROBS + 2
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 11, 1, 110, 2, 211])
 
     def test_output_wrt_shown_probs_2(self):
@@ -933,37 +1020,37 @@ class TestOWPredictions(WidgetTest):
 
         widget.shown_probs = widget.NO_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 1])
 
         widget.shown_probs = widget.DATA_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 10, 11, 0, 1, 110, 111, 112])
 
         widget.shown_probs = widget.MODEL_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 111, 112])
 
         widget.shown_probs = widget.BOTH_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 111, 112])
 
         widget.shown_probs = widget.BOTH_PROBS + 1
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 10, 1, 110])
 
         widget.shown_probs = widget.BOTH_PROBS + 2
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 11, 1, 111])
 
         widget.shown_probs = widget.BOTH_PROBS + 3
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 0, 1, 112])
 
     def test_output_regression(self):
@@ -973,7 +1060,7 @@ class TestOWPredictions(WidgetTest):
                          LinearRegressionLearner()(self.housing), 0)
         self.send_signal(widget.Inputs.predictors,
                          MeanLearner()(self.housing), 1)
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         np.testing.assert_equal(
             out.metas[:, [0, 2]],
             np.hstack([pred.results.predicted.T for pred in widget.predictors]))
@@ -1001,12 +1088,12 @@ class TestOWPredictions(WidgetTest):
 
         widget.shown_probs = widget.NO_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 1, 2])
 
         widget.shown_probs = widget.MODEL_PROBS
         widget._commit_predictions()
-        out = self.get_output(widget.Outputs.predictions)
+        out = self.get_output(widget.Outputs.selected_predictions)
         self.assertEqual(list(out.metas[0]), [0, 10, 11, 1, 110, 111, 2, 210, 211, 212])
 
     @patch("Orange.widgets.evaluate.owpredictions.usable_scorers",
@@ -1047,7 +1134,7 @@ class TestOWPredictions(WidgetTest):
 
         self.send_signal(widget.Inputs.data, data)
         self.send_signal(widget.Inputs.predictors, mock_model, 1)
-        pred = self.get_output(widget.Outputs.predictions)
+        pred = self.get_output(widget.Outputs.selected_predictions)
         self.assertIsInstance(pred, Table)
 
     def test_error_controls_visibility(self):
@@ -1202,7 +1289,7 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.predictors, lin_reg(data), 0)
         self.send_signal(self.widget.Inputs.predictors,
                          LinearRegressionLearner(fit_intercept=False)(data), 1)
-        pred = self.get_output(self.widget.Outputs.predictions)
+        pred = self.get_output(self.widget.Outputs.selected_predictions)
 
         names = ["", " (error)"]
         names = [f"{n}{i}" for i in ("", " (1)") for n in names]
@@ -1220,7 +1307,7 @@ class TestOWPredictions(WidgetTest):
         with data.unlocked(data.Y):
             data.Y[1] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
-        pred = self.get_output(self.widget.Outputs.predictions)
+        pred = self.get_output(self.widget.Outputs.selected_predictions)
 
         names = [""] + [f" ({v})" for v in
                         list(data.domain.class_var.values) + ["error"]]
