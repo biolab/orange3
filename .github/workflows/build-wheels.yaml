@@ -16,7 +16,7 @@ jobs:
     outputs:
       include: ${{ steps.set-matrix.outputs.include }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Install cibuildwheel
         # Nb. keep cibuildwheel version pin consistent with job below
         run: pipx install cibuildwheel==2.14.1
@@ -46,7 +46,7 @@ jobs:
 
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
@@ -59,7 +59,7 @@ jobs:
         with:
           only: ${{ matrix.only }}
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           path: ./wheelhouse/*.whl
           name: Orange3-wheels
@@ -69,10 +69,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out the repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
 
       - name: Build sdist (pep517)
         run: |
@@ -80,7 +80,7 @@ jobs:
           python -m pep517.build -s .
 
       - name: Upload sdist
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Orange3-source
           path: dist/*.tar.gz
@@ -94,7 +94,7 @@ jobs:
     steps:
       - name: Download bdist files
         id: download_artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: Orange3-wheels
           path: ~/downloads
@@ -118,13 +118,13 @@ jobs:
 
     steps:
       - name: Download bdist files
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: Orange3-wheels
           path: downloads/
 
       - name: Download sdist files
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
         with:
           name: Orange3-source
           path: downloads/
