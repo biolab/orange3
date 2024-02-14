@@ -108,6 +108,7 @@ Model
    widgets/model/gradientboosting
    widgets/model/svm
    widgets/model/linearregression
+   widgets/model/pls
    widgets/model/logisticregression
    widgets/model/naivebayes
    widgets/model/adaboost
