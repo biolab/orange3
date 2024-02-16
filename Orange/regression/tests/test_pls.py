@@ -8,13 +8,14 @@ from Orange.data import Table, Domain, ContinuousVariable
 from Orange.regression import PLSRegressionLearner
 
 
-def table(rows, attr, vars):
-    attr_vars = [ContinuousVariable(name="Feature %i" % i) for i in
+def table(rows, attr, variables):
+    attr_vars = [ContinuousVariable(name=f"Feature {i}") for i in
                  range(attr)]
-    class_vars = [ContinuousVariable(name="Class %i" % i) for i in range(vars)]
+    class_vars = [ContinuousVariable(name=f"Class {i}") for i in
+                  range(variables)]
     domain = Domain(attr_vars, class_vars, [])
     X = np.random.RandomState(0).random((rows, attr))
-    Y = np.random.RandomState(1).random((rows, vars))
+    Y = np.random.RandomState(1).random((rows, variables))
     return Table.from_numpy(domain, X=X, Y=Y)
 
 

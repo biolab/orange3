@@ -33,16 +33,15 @@ class OWPLS(OWBaseLearner):
     max_iter = Setting(500)
 
     def add_main_layout(self):
-
-        self.optimization_box = gui.vBox(
+        optimization_box = gui.vBox(
             self.controlArea, "Optimization Parameters")
-        self.ncomps_spin = gui.spin(
-            self.optimization_box, self, "n_components", 1, 50, 1,
+        gui.spin(
+            optimization_box, self, "n_components", 1, 50, 1,
             label="Components: ",
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed)
-        self.n_iters = gui.spin(
-            self.optimization_box, self, "max_iter", 5, 1000000, 50,
+        gui.spin(
+            optimization_box, self, "max_iter", 5, 1000000, 50,
             label="Iteration limit: ",
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed,

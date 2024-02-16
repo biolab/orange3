@@ -1,3 +1,4 @@
+# pylint: disable=cyclic-import
 import unittest
 
 from Orange.widgets.model.owpls import OWPLS
@@ -11,8 +12,9 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
                                          stored_settings={"auto_apply": False})
         self.init()
         self.parameters = [
-            ParameterMapping('max_iter', self.widget.n_iters),
-            ParameterMapping('n_components', self.widget.ncomps_spin)]
+            ParameterMapping('max_iter', self.widget.controls.max_iter),
+            ParameterMapping('n_components', self.widget.controls.n_components)
+        ]
 
 
 if __name__ == "__main__":

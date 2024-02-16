@@ -25,7 +25,6 @@ class _PLSCommonTransform:
         self.pls_model = pls_model
 
     def _transform_with_numpy_output(self, X, Y):
-        pls = self.pls_model.skl_model
         """
         # the next command does the following
         x_center = X - pls._x_mean
@@ -33,6 +32,7 @@ class _PLSCommonTransform:
         t = x_center @ pls.x_rotations_
         u = y_center @ pls.y_rotations_
         """
+        pls = self.pls_model.skl_model
         t, u = pls.transform(X, Y)
         return np.hstack((t, u))
 
@@ -51,8 +51,8 @@ class PLSProjector(SharedComputeValue):
         super().__init__(transform)
         self.feature = feature
 
-    def compute(self, _, space):
-        return space[:, self.feature]
+    def compute(self, _, shared_data):
+        return shared_data[:, self.feature]
 
 
 class PLSModel(SklModel):
@@ -70,7 +70,7 @@ class PLSModel(SklModel):
         return vals
 
     def __str__(self):
-        return 'PLSModel {}'.format(self.skl_model)
+        return f"PLSModel {self.skl_model}"
 
     def _get_var_names(self, n, prefix):
         names = [f"{prefix}{postfix}" for postfix in range(1, n + 1)]
@@ -151,6 +151,7 @@ class PLSRegressionLearner(SklLearner, _FeatureScorerMixin):
         clf = self.__wraps__(**params)
         return self.__returns__(clf.fit(X, Y))
 
+    # pylint: disable=unused-argument
     def __init__(self, n_components=2, scale=True,
                  max_iter=500, preprocessors=None):
         super().__init__(preprocessors=preprocessors)
@@ -170,8 +171,8 @@ class PLSRegressionLearner(SklLearner, _FeatureScorerMixin):
 if __name__ == '__main__':
     import Orange
 
-    data = Orange.data.Table('housing')
+    housing = Orange.data.Table('housing')
     learners = [PLSRegressionLearner(n_components=2, max_iter=100)]
-    res = Orange.evaluation.CrossValidation()(data, learners)
+    res = Orange.evaluation.CrossValidation()(housing, learners)
     for learner, ca in zip(learners, Orange.evaluation.RMSE(res)):
-        print("learner: {}\nRMSE: {}\n".format(learner, ca))
+        print(f"learner: {learner}\nRMSE: {ca}\n")
