@@ -1,10 +1,17 @@
 """
-Widgets from Evaluate category
+========
+Evaluate
+========
+
+Evaluating models.
 
 """
+
 NAME = "Evaluate"
 
-DESCRIPTION = "Evaluate classification/regression performance."
+ID = "orange.widgets.evaluate"
+
+DESCRIPTION = "Evaluate model performance"
 
 BACKGROUND = "#C3F3F3"
 

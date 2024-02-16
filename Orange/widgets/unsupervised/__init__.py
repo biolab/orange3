@@ -7,9 +7,9 @@ Unsupervised learning.
 
 """
 
-# Category description for the widget registry
-
 NAME = "Unsupervised"
+
+ID = "orange.widgets.unsupervised"
 
 DESCRIPTION = "Unsupervised learning."
 
