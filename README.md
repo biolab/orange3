@@ -46,7 +46,7 @@ conda config --add channels conda-forge
 conda config --set channel_priority strict
 
 # Create and activate an environment for Orange
-conda create python=3 --yes --name orange3
+conda create python=3.10 --yes --name orange3
 conda activate orange3
 
 # Install Orange
@@ -134,7 +134,7 @@ export MY_GITHUB_USERNAME=replaceme
 create a conda environment, clone your fork, and install it:
 
 ```Shell
-conda create python=3 --yes --name orange3
+conda create python=3.10 --yes --name orange3
 conda activate orange3
 
 git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange3
@@ -176,7 +176,7 @@ export MY_GITHUB_USERNAME=replaceme
 create a conda environment, clone your forks, and install them:
 
 ```Shell
-conda create python=3 --yes --name orange3
+conda create python=3.10 --yes --name orange3
 conda activate orange3
 
 # Install PyQT and PyQtWebEngine. You can also use PyQt6
