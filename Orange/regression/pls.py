@@ -5,7 +5,8 @@ from Orange.data import Table, Domain, Variable, \
     ContinuousVariable, StringVariable
 from Orange.data.util import get_unique_names, SharedComputeValue
 from Orange.preprocess.score import LearnerScorer
-from Orange.regression import SklLearner, SklModel
+from Orange.regression.base_regression import SklLearnerRegression, \
+    SklModelRegression
 
 __all__ = ["PLSRegressionLearner"]
 
@@ -55,7 +56,7 @@ class PLSProjector(SharedComputeValue):
         return shared_data[:, self.feature]
 
 
-class PLSModel(SklModel):
+class PLSModel(SklModelRegression):
     var_prefix_X = "PLS T"
     var_prefix_Y = "PLS U"
 
@@ -137,11 +138,11 @@ class PLSModel(SklModel):
         return coef_table
 
 
-class PLSRegressionLearner(SklLearner, _FeatureScorerMixin):
+class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):
     __wraps__ = skl_pls.PLSRegression
     __returns__ = PLSModel
     supports_multiclass = True
-    preprocessors = SklLearner.preprocessors
+    preprocessors = SklLearnerRegression.preprocessors
 
     def fit(self, X, Y, W=None):
         params = self.params.copy()

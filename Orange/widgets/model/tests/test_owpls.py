@@ -1,4 +1,3 @@
-# pylint: disable=cyclic-import
 import unittest
 
 from Orange.widgets.model.owpls import OWPLS
