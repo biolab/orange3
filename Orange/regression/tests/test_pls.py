@@ -1,9 +1,7 @@
 # pylint: disable=missing-docstring
 import unittest
 
-import pkg_resources
 import numpy as np
-import sklearn
 from sklearn.cross_decomposition import PLSRegression
 
 from Orange.data import Table, Domain, ContinuousVariable
@@ -20,20 +18,7 @@ def table(rows, attr, vars):
     return Table.from_numpy(domain, X=X, Y=Y)
 
 
-def coefficients(sklmodel):
-    coef = sklmodel.coef_
-    # 1.3 has transposed coef_
-    if pkg_resources.parse_version(
-            sklearn.__version__) < pkg_resources.parse_version("1.3.0"):
-        coef = coef.T
-    return coef
-
-
 class TestPLSRegressionLearner(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.housing = Table("housing")
-
     def test_allow_y_dim(self):
         """ The current PLS version allows only a single Y dimension. """
         learner = PLSRegressionLearner(n_components=2)
@@ -50,7 +35,7 @@ class TestPLSRegressionLearner(unittest.TestCase):
         scikit_model = PLSRegression().fit(d.X, d.Y)
         np.testing.assert_almost_equal(scikit_model.predict(d.X).ravel(),
                                        orange_model(d))
-        np.testing.assert_almost_equal(coefficients(scikit_model),
+        np.testing.assert_almost_equal(scikit_model.coef_,
                                        orange_model.coefficients)
 
     def test_compare_to_sklearn_multid(self):
@@ -59,7 +44,7 @@ class TestPLSRegressionLearner(unittest.TestCase):
         scikit_model = PLSRegression().fit(d.X, d.Y)
         np.testing.assert_almost_equal(scikit_model.predict(d.X),
                                        orange_model(d))
-        np.testing.assert_almost_equal(coefficients(scikit_model),
+        np.testing.assert_almost_equal(scikit_model.coef_,
                                        orange_model.coefficients)
 
     def test_too_many_components(self):
@@ -103,7 +88,7 @@ class TestPLSRegressionLearner(unittest.TestCase):
             orange_model = PLSRegressionLearner()(d)
             scikit_model = PLSRegression().fit(d.X, d.Y)
             coef_table = orange_model.coefficients_table()
-            np.testing.assert_almost_equal(coefficients(scikit_model).T,
+            np.testing.assert_almost_equal(scikit_model.coef_.T,
                                            coef_table.X)
 
 
