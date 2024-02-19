@@ -146,9 +146,9 @@ class OWHeatMap(widget.OWWidget):
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
 
-    settings_version = 3
+    settings_version = 4
 
-    settingsHandler = settings.DomainContextHandler()
+    settingsHandler = settings.DomainContextHandlerPosition()
 
     # Disable clustering for inputs bigger than this
     MaxClustering = 25000
@@ -170,7 +170,7 @@ class OWHeatMap(widget.OWWidget):
     #: text row annotation (row names)
     annotation_var = settings.ContextSetting(None)
     #: color row annotation
-    annotation_color_var = settings.ContextSetting(None)
+    annotation_color_var = settings.ContextSetting(None, exclude_attributes=True)
     column_annotation_color_key: Optional[Tuple[str, str]] = settings.ContextSetting(None)
 
     # Discrete variable used to split that data/heatmaps (vertically)
