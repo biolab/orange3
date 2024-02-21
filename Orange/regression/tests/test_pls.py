@@ -93,6 +93,34 @@ class TestPLSRegressionLearner(unittest.TestCase):
             np.testing.assert_almost_equal(scikit_model.coef_.T,
                                            coef_table.X)
 
+    def test_eq_hash(self):
+        data = Table("housing")
+        pls1 = PLSRegressionLearner()(data)
+        pls2 = PLSRegressionLearner()(data)
+
+        proj1 = pls1.project(data)
+        proj2 = pls2.project(data)
+
+        np.testing.assert_equal(proj1.X, proj2.X)
+        np.testing.assert_equal(proj1.metas, proj2.metas)
+
+        # even though results are the same, these transformations
+        # are different because the PLS object is
+        self.assertNotEqual(proj1, proj2)
+        self.assertNotEqual(proj1.domain, proj2.domain)
+        self.assertNotEqual(hash(proj1), hash(proj2))
+        self.assertNotEqual(hash(proj1.domain), hash(proj2.domain))
+
+        proj2.domain[0].compute_value.compute_shared.pls_model = \
+            proj1.domain[0].compute_value.compute_shared.pls_model
+        # reset hash caches because object were hacked
+        # pylint: disable=protected-access
+        proj1.domain._hash = None
+        proj2.domain._hash = None
+
+        self.assertEqual(proj1.domain, proj2.domain)
+        self.assertEqual(hash(proj1.domain), hash(proj2.domain))
+
 
 class TestPLSCommonTransform(unittest.TestCase):
     def test_eq(self):

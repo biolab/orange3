@@ -64,6 +64,14 @@ class PLSProjector(SharedComputeValue):
     def compute(self, _, shared_data):
         return shared_data[:, self.feature]
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return super().__eq__(other) and self.feature == other.feature
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.feature))
+
 
 class PLSModel(SklModelRegression):
     var_prefix_X = "PLS T"
