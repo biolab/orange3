@@ -541,6 +541,11 @@ class Validation:
                 results.failed[res.learner_i] = res.failed
                 continue
 
+            if len(res.values.shape) > 1 and res.values.shape[1] > 1:
+                msg = "Multiple targets are not supported."
+                results.failed[res.learner_i] = ValueError(msg)
+                continue
+
             if self.store_models:
                 results.models[res.fold_i][res.learner_i] = res.model
 
