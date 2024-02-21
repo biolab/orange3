@@ -6,6 +6,7 @@ from sklearn.cross_decomposition import PLSRegression
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.regression import PLSRegressionLearner
+from Orange.regression.pls import _PLSCommonTransform
 
 
 def table(rows, attr, variables):
@@ -91,6 +92,26 @@ class TestPLSRegressionLearner(unittest.TestCase):
             coef_table = orange_model.coefficients_table()
             np.testing.assert_almost_equal(scikit_model.coef_.T,
                                            coef_table.X)
+
+
+class TestPLSCommonTransform(unittest.TestCase):
+    def test_eq(self):
+        m = PLSRegressionLearner()(table(10, 5, 1))
+        transformer = _PLSCommonTransform(m)
+        self.assertEqual(transformer, transformer)
+        self.assertEqual(transformer, _PLSCommonTransform(m))
+
+        m = PLSRegressionLearner()(table(10, 5, 2))
+        self.assertNotEqual(transformer, _PLSCommonTransform(m))
+
+    def test_hash(self):
+        m = PLSRegressionLearner()(table(10, 5, 1))
+        transformer = _PLSCommonTransform(m)
+        self.assertEqual(hash(transformer), hash(transformer))
+        self.assertEqual(hash(transformer), hash(_PLSCommonTransform(m)))
+
+        m = PLSRegressionLearner()(table(10, 5, 2))
+        self.assertNotEqual(hash(transformer), hash(_PLSCommonTransform(m)))
 
 
 if __name__ == "__main__":

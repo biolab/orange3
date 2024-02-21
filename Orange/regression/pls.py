@@ -46,6 +46,15 @@ class _PLSCommonTransform:
             Y = data.Y
         return self._transform_with_numpy_output(data.X, Y)
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return type(self) is type(other) \
+            and self.pls_model == other.pls_model
+
+    def __hash__(self):
+        return hash(self.pls_model)
+
 
 class PLSProjector(SharedComputeValue):
     def __init__(self, transform, feature):
