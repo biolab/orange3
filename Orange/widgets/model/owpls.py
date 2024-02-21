@@ -16,7 +16,6 @@ class OWPLS(OWBaseLearner):
     description = "Partial Least Squares Regression widget for multivariate data analysis"
     icon = "icons/PLS.svg"
     keywords = ["partial least squares"]
-    replaces = ["orangecontrib.spectroscopy.widgets.owpls.OWPLS"]
 
     LEARNER = PLSRegressionLearner
 
