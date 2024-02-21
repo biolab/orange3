@@ -1,5 +1,5 @@
 """Tests for OWPredictions"""
-# pylint: disable=protected-access
+# pylint: disable=protected-access,too-many-lines,too-many-public-methods
 import os
 import unittest
 from functools import partial

@@ -1,5 +1,4 @@
 import unittest
-from unittest.mock import patch, MagicMock
 
 from Orange.data import Table, Domain, DiscreteVariable
 from Orange.widgets.tests.base import WidgetTest
