@@ -423,6 +423,10 @@ class OWPredictions(OWWidget):
                 backmappers, n_values = predictor.get_backmappers(self.data)
                 prob = predictor.backmap_probs(prob, n_values, backmappers)
                 pred = predictor.backmap_value(pred, prob, n_values, backmappers)
+            if len(pred.shape) > 1 and pred.shape[1] > 1:
+                msg = "Multiple targets are not supported."
+                self.predictors[index] = slot._replace(results=f"{msg}")
+                continue
             results.predicted = pred.reshape((1, len(self.data)))
             results.probabilities = prob.reshape((1,) + prob.shape)
 
