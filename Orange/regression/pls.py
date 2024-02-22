@@ -91,8 +91,9 @@ class PLSModel(SklModelRegression):
         return f"PLSModel {self.skl_model}"
 
     def _get_var_names(self, n, prefix):
-        names = [f"{prefix}{postfix}" for postfix in range(1, n + 1)]
-        return get_unique_names([var.name for var in self.domain.metas], names)
+        proposed = [f"{prefix}{postfix}" for postfix in range(1, n + 1)]
+        names = [var.name for var in self.domain.metas + self.domain.variables]
+        return get_unique_names(names, proposed)
 
     def project(self, data):
         if not isinstance(data, Table):

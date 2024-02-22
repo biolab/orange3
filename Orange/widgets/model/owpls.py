@@ -1,7 +1,7 @@
 from AnyQt.QtCore import Qt
 import scipy.sparse as sp
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.regression import PLSRegressionLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -22,7 +22,7 @@ class OWPLS(OWBaseLearner):
 
     class Outputs(OWBaseLearner.Outputs):
         coefsdata = Output("Coefficients", Table, explicit=True)
-        transformed = Output("Transformed Data", Table)
+        data = Output("Data", Table)
         components = Output("Components", Table)
 
     class Warning(OWBaseLearner.Warning):
@@ -50,15 +50,23 @@ class OWPLS(OWBaseLearner):
     def update_model(self):
         super().update_model()
         coef_table = None
-        projection = None
+        data = None
         components = None
         if self.model is not None:
             coef_table = self.model.coefficients_table()
-            projection = self.model.project(self.data)
+            data = self._create_output_data()
             components = self.model.components()
         self.Outputs.coefsdata.send(coef_table)
-        self.Outputs.transformed.send(projection)
+        self.Outputs.data.send(data)
         self.Outputs.components.send(components)
+
+    def _create_output_data(self) -> Table:
+        projection = self.model.project(self.data)
+        data_domain = self.data.domain
+        proj_domain = projection.domain
+        metas = proj_domain.metas + proj_domain.attributes
+        domain = Domain(data_domain.attributes, data_domain.class_vars, metas)
+        return self.data.transform(domain)
 
     @OWBaseLearner.Inputs.data
     def set_data(self, data):
