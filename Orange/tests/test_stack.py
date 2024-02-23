@@ -1,7 +1,7 @@
 import unittest
 
 from Orange.data import Table
-from Orange.ensembles.stack import StackedFitter
+from Orange.ensembles.stack import StackedFitter, StackedLearner
 from Orange.evaluation import CA, CrossValidation, MSE
 from Orange.modelling import KNNLearner, TreeLearner
 
@@ -26,3 +26,16 @@ class TestStackedFitter(unittest.TestCase):
         mse = MSE()(results)
         self.assertLess(mse[0], mse[1])
         self.assertLess(mse[0], mse[2])
+
+    def test_timeseries(self):
+        def aggregate(data):
+            assert type(data) is Table
+
+        class CustomTable(Table):
+            pass
+
+        sl = StackedLearner([TreeLearner(), KNNLearner()],
+                             aggregate=aggregate)
+
+        data = CustomTable(self.iris)
+        sl(data)
