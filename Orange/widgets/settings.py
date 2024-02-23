@@ -310,7 +310,14 @@ class DomainContextHandlerPosition(DomainContextHandler):
 
         return attributes, class_vars, metas
 
-    new_context = ContextHandler.new_context
+    def new_context(self, domain, *args):
+        """Create a new context."""
+        context = ContextHandler.new_context(self)
+        # dummy .attributes and .metas make these settings loadable with DomainContextHandler,
+        # and they only influence perfect domain matching
+        context.attributes = {"dummy": "compat"}
+        context.metas = {}
+        return context
 
     @classmethod
     def _var_exists(cls, setting, value, attributes, class_vars, metas):
