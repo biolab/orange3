@@ -1,4 +1,5 @@
 # pylint: disable=no-self-use,protected-access,invalid-name,arguments-differ
+import tempfile
 import unittest
 from unittest import mock
 from contextlib import ExitStack, contextmanager
@@ -10,6 +11,7 @@ import json
 from typing import Type, TypeVar, Optional
 
 import numpy as np
+import pandas as pd
 from numpy.testing import assert_array_equal
 
 from AnyQt.QtCore import QSettings, Qt
@@ -358,6 +360,20 @@ class TestOWCSVFileImport(WidgetTest):
         cur = widget.current_item()
         self.assertEqual(item[0], cur.varPath())
         self.assertEqual(item[1].as_dict(), cur.options().as_dict())
+
+    def test_long_data(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "test.csv")
+            nums = np.tile([-3, -2, -1, 0, 1, 2], 100000)
+            pd.DataFrame(
+                {"A": np.hstack((nums, ["ABC"], nums))}
+            ).to_csv(path, index=False)
+
+            with self._browse_setup(self.widget, path):
+                self.widget.browse()
+            out = self.get_output(self.widget.Outputs.data)
+            self.assertIsInstance(out.domain.attributes[0], DiscreteVariable)
+            self.assertTupleEqual((6 * 100000 * 2 + 1, 1), out.X.shape)
 
 
 class TestImportDialog(GuiTest):

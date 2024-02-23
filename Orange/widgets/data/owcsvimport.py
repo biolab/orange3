@@ -1773,14 +1773,10 @@ def pandas_to_table(df):
     for header, series in df.items():  # type: (Any, pd.Series)
         if isinstance(series.dtype, CategoricalDtype):
             coldata = series.values  # type: pd.Categorical
-            categories = natural_sorted(str(c) for c in coldata.categories)
-            var = Orange.data.DiscreteVariable.make(
-                str(header), values=categories
-            )
+            categories = natural_sorted(set(str(c) for c in coldata.categories))
+            var = Orange.data.DiscreteVariable.make(str(header), values=categories)
             # Remap the coldata into the var.values order/set
-            coldata = pd.Categorical(
-                coldata.astype("str"), categories=var.values
-            )
+            coldata = pd.Categorical(coldata.astype("str"), categories=var.values)
             codes = coldata.codes
             assert np.issubdtype(codes.dtype, np.integer)
             orangecol = np.array(codes, dtype=float)
