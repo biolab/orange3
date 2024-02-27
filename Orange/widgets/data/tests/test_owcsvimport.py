@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,protected-access,invalid-name,arguments-differ
+# pylint: disable=protected-access,invalid-name,arguments-differ
 import tempfile
 import unittest
 from unittest import mock

@@ -71,11 +71,13 @@ class TestOWFile(WidgetTest):
     event_data = None
 
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWFile)  # type: OWFile
         dataset_dirs.append(dirname(__file__))
 
     def tearDown(self):
         dataset_dirs.pop()
+        super().tearDown()
 
     def test_describe_call_get_nans(self):
         table = Table("iris")
@@ -120,6 +122,12 @@ class TestOWFile(WidgetTest):
 
         self.assertEqual(self.widget.source, OWFile.LOCAL_FILE)
         self.assertTrue(path.samefile(self.widget.last_path(), TITANIC_PATH))
+        self.widget.load_data.assert_called_with()
+
+        event = self._drop_event(QUrl("https://example.com/aa.csv"))
+        self.widget.load_data.reset_mock()
+        self.widget.dropEvent(event)
+        self.assertEqual(self.widget.source, OWFile.URL)
         self.widget.load_data.assert_called_with()
 
     def _drop_event(self, url):

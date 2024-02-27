@@ -8,11 +8,14 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
+from AnyQt.QtCore import QMimeData, QUrl
+
 from orangewidget.utils.filedialogs import RecentPath
 from Orange.data import Table
 from Orange.classification.naive_bayes import NaiveBayesLearner
 from Orange.widgets.model.owloadmodel import OWLoadModel, OWLoadModelDropHandler
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import dragDrop
 
 
 class TestOWLoadModel(WidgetTest):
@@ -21,6 +24,7 @@ class TestOWLoadModel(WidgetTest):
     event_data = None
 
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWLoadModel)  # type: OWLoadModel
         data = Table("iris")
         self.model = NaiveBayesLearner()(data)
@@ -30,6 +34,7 @@ class TestOWLoadModel(WidgetTest):
 
     def tearDown(self):
         os.remove(self.filename)
+        super().tearDown()
 
     def test_browse_file_opens_file(self):
         w = self.widget
@@ -134,6 +139,23 @@ class TestOWLoadModel(WidgetTest):
             self.assertEqual(args.name, file_name.replace("\\", "/"))
         finally:
             os.remove(file_name)
+
+    def test_drop_file(self):
+        mime = QMimeData()
+        mime.setUrls([QUrl("https://example.com/a.html")])
+        with patch.object(self.widget, "open_file") as r:
+            self.assertFalse(dragDrop(self.widget, mime))
+            r.assert_not_called()
+
+        mime.setUrls([QUrl.fromLocalFile("file.notsupported")])
+        with patch.object(self.widget, "open_file") as r:
+            self.assertFalse(dragDrop(self.widget, mime))
+            r.assert_not_called()
+
+        mime.setUrls([QUrl.fromLocalFile(self.filename)])
+        with patch.object(self.widget, "open_file") as r:
+            self.assertTrue(dragDrop(self.widget, mime))
+            r.assert_called()
 
 
 class TestOWLoadModelDropHandler(unittest.TestCase):

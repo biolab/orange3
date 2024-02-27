@@ -26,6 +26,7 @@ from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
     open_filename_dialog, stored_recent_paths_prepend
+from Orange.widgets.utils.filedialogs import OWUrlDropBase
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
 from Orange.widgets.utils.combobox import TextEditCombo
@@ -82,7 +83,7 @@ class LineEditSelectOnFocus(QLineEdit):
         QTimer.singleShot(0, self.selectAll)
 
 
-class OWFile(widget.OWWidget, RecentPathsWComboMixin):
+class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
     description = "Read data from an input file or network " \
@@ -311,8 +312,7 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         QTimer.singleShot(0, self.load_data)
 
-    @staticmethod
-    def sizeHint():
+    def sizeHint(self):
         return QSize(600, 550)
 
     def select_file(self, n):
@@ -632,24 +632,18 @@ class OWFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.report_data("Data", self.data)
 
-    @staticmethod
-    def dragEnterEvent(event):
-        """Accept drops of valid file urls"""
-        urls = event.mimeData().urls()
-        if urls:
-            try:
-                FileFormat.get_reader(urls[0].toLocalFile())
-                event.acceptProposedAction()
-            except MissingReaderException:
-                pass
+    def canDropUrl(self, url: QUrl) -> bool:
+        return OWFileDropHandler().canDropUrl(url)
 
-    def dropEvent(self, event):
-        """Handle file drops"""
-        urls = event.mimeData().urls()
-        if urls:
-            self.add_path(urls[0].toLocalFile())  # add first file
+    def handleDroppedUrl(self, url: QUrl) -> None:
+        if url.isLocalFile():
+            self.add_path(url.toLocalFile())  # add first file
             self.source = self.LOCAL_FILE
             self.load_data()
+        else:
+            self.url_combo.insertItem(0, url.toString())
+            self.url_combo.setCurrentIndex(0)
+            self._url_set()
 
     def workflowEnvChanged(self, key, value, oldvalue):
         """
