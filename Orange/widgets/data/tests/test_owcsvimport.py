@@ -283,6 +283,34 @@ class TestOWCSVFileImport(WidgetTest):
             mb.assert_called()
         self.assertIsNone(widget.current_item())
 
+    @staticmethod
+    @contextmanager
+    def activate_recent_and_get_dialog(
+            widget: OWCSVFileImport, recent_index: int = 0
+    ) -> QFileDialog:
+        """
+        Activate the recent item (which MUST be missing on FS) and
+        yield the QFileDialog which is shown.
+        """
+        browse_dialog = widget._browse_dialog
+        with mock.patch.object(widget, "_browse_dialog") as r:
+            dlg = browse_dialog()
+            # segfaults in tests when using 'sheet' dialog on macos when parent
+            # is destroyed (before the dialog fully hides - animation)?
+            dlg.setParent(None)
+            # calling selectFile when using native (macOS) dialog does not have
+            # an effect - at least not immediately;
+            dlg.setOption(QFileDialog.DontUseNativeDialog)
+            r.return_value = dlg
+            with mock.patch.object(dlg, "open") as r:
+                widget.activate_recent(recent_index)
+                r.assert_called()
+        try:
+            yield dlg
+        finally:
+            dlg.deleteLater()
+        return
+
     def test_browse_for_missing(self):
         missing = os.path.dirname(__file__) + "/this file does not exist.csv"
         widget = self.create_widget(
@@ -292,19 +320,14 @@ class TestOWCSVFileImport(WidgetTest):
                 ]
             }
         )
-        widget.activate_recent(0)
-        dlg = widget.findChild(QFileDialog)
-        assert dlg is not None
-        # calling selectFile when using native (macOS) dialog does not have
-        # an effect - at least not immediately;
-        dlg.setOption(QFileDialog.DontUseNativeDialog)
-        dlg.selectFile(self.data_regions_path)
-        dlg.accept()
-        cur = widget.current_item()
-        self.assertTrue(samepath(self.data_regions_path, cur.path()))
-        self.assertEqual(
-            self.data_regions_options.as_dict(), cur.options().as_dict()
-        )
+        with self.activate_recent_and_get_dialog(widget) as dlg:
+            dlg.selectFile(self.data_regions_path)
+            dlg.accept()
+            cur = widget.current_item()
+            self.assertTrue(samepath(self.data_regions_path, cur.path()))
+            self.assertEqual(
+                self.data_regions_options.as_dict(), cur.options().as_dict()
+            )
 
     def test_browse_for_missing_prefixed(self):
         path = self.data_regions_path
@@ -318,21 +341,16 @@ class TestOWCSVFileImport(WidgetTest):
             },
             env={"basedir": basedir}
         )
-        widget.activate_recent(0)
-        dlg = widget.findChild(QFileDialog)
-        assert dlg is not None
-        # calling selectFile when using native (macOS) dialog does not have
-        # an effect - at least not immediately;
-        dlg.setOption(QFileDialog.DontUseNativeDialog)
-        dlg.selectFile(path)
-        dlg.accept()
-        cur = widget.current_item()
-        self.assertTrue(samepath(path, cur.path()))
-        self.assertEqual(
-            cur.varPath(), PathItem.VarPath("basedir", "data-regions.tab"))
-        self.assertEqual(
-            self.data_regions_options.as_dict(), cur.options().as_dict()
-        )
+        with self.activate_recent_and_get_dialog(widget) as dlg:
+            dlg.selectFile(path)
+            dlg.accept()
+            cur = widget.current_item()
+            self.assertTrue(samepath(path, cur.path()))
+            self.assertEqual(
+                cur.varPath(), PathItem.VarPath("basedir", "data-regions.tab"))
+            self.assertEqual(
+                self.data_regions_options.as_dict(), cur.options().as_dict()
+            )
 
     def test_browse_for_missing_prefixed_parent(self):
         path = self.data_regions_path
@@ -348,18 +366,13 @@ class TestOWCSVFileImport(WidgetTest):
             env={"basedir": basedir}
         )
         mb = widget._path_must_be_relative_mb = mock.Mock()
-        widget.activate_recent(0)
-        dlg = widget.findChild(QFileDialog)
-        assert dlg is not None
-        # calling selectFile when using native (macOS) dialog does not have
-        # an effect - at least not immediately;
-        dlg.setOption(QFileDialog.DontUseNativeDialog)
-        dlg.selectFile(path)
-        dlg.accept()
-        mb.assert_called()
-        cur = widget.current_item()
-        self.assertEqual(item[0], cur.varPath())
-        self.assertEqual(item[1].as_dict(), cur.options().as_dict())
+        with self.activate_recent_and_get_dialog(widget) as dlg:
+            dlg.selectFile(path)
+            dlg.accept()
+            mb.assert_called()
+            cur = widget.current_item()
+            self.assertEqual(item[0], cur.varPath())
+            self.assertEqual(item[1].as_dict(), cur.options().as_dict())
 
     def test_long_data(self):
         with tempfile.TemporaryDirectory() as tmp:
