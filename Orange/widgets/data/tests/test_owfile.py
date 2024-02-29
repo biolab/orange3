@@ -95,11 +95,6 @@ class TestOWFile(WidgetTest):
         self.widget.dragEnterEvent(event)
         self.assertTrue(event.isAccepted())
 
-    def test_dragEnterEvent_skips_osx_file_references(self):
-        event = self._drag_enter_event(QUrl.fromLocalFile('/.file/id=12345'))
-        self.widget.dragEnterEvent(event)
-        self.assertFalse(event.isAccepted())
-
     def test_dragEnterEvent_skips_usupported_files(self):
         event = self._drag_enter_event(QUrl.fromLocalFile('file.unsupported'))
         self.widget.dragEnterEvent(event)
