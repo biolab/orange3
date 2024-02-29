@@ -79,9 +79,6 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
         self.set_file_list()
         QTimer.singleShot(0, self.open_file)
 
-    def set_file_list(self):
-        super().set_file_list()
-
     def reload(self):
         return self.open_file()
 
