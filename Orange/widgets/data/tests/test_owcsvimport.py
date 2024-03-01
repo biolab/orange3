@@ -1,4 +1,4 @@
-# pylint: disable=no-self-use,protected-access,invalid-name,arguments-differ
+# pylint: disable=protected-access,invalid-name,arguments-differ
 import tempfile
 import unittest
 from unittest import mock
@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 from numpy.testing import assert_array_equal
 
-from AnyQt.QtCore import QSettings, Qt
+from AnyQt.QtCore import QSettings, Qt, QUrl
 from AnyQt.QtGui import QIcon
 from AnyQt.QtWidgets import QFileDialog
 from AnyQt.QtTest import QSignalSpy
@@ -28,7 +28,7 @@ from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.data import owcsvimport
 from Orange.widgets.data.owcsvimport import (
-    OWCSVFileImport, pandas_to_table, ColumnType, RowSpec,
+    OWCSVFileImport, pandas_to_table, ColumnType, RowSpec, ImportItem,
 )
 from Orange.widgets.utils.pathutils import PathItem, samepath
 from Orange.widgets.utils.settings import QSettings_writeArray
@@ -373,6 +373,41 @@ class TestOWCSVFileImport(WidgetTest):
             cur = widget.current_item()
             self.assertEqual(item[0], cur.varPath())
             self.assertEqual(item[1].as_dict(), cur.options().as_dict())
+
+    def test_activate_import_dialog(self):
+        path = self.data_regions_path
+        item = ImportItem.fromPath(path)
+        self.widget.import_items_model.appendRow(ImportItem.fromPath(path))
+        opts = item.options()
+        self.assertIsNone(opts)
+        with mock.patch.object(owcsvimport.CSVImportDialog, "show"):
+            self.widget.import_options_button.click()
+            dlg = self.widget.findChild(owcsvimport.CSVImportDialog)
+            dlg.accept()
+        item_ = self.widget.current_item()
+        self.assertEqual(item.path(), item_.path())
+        self.assertIsNotNone(item_.options())
+
+    def test_drop_file(self):
+        self.assertFalse(self.widget.canDropUrl(QUrl("https://aa-bb.com")))
+        url = QUrl.fromLocalFile(self.data_regions_path)
+        self.assertTrue(self.widget.canDropUrl(url))
+
+        with mock.patch.object(owcsvimport.CSVImportDialog, "show"):
+            self.widget.handleDroppedUrl(url)
+            dlg = self.widget.findChild(owcsvimport.CSVImportDialog)
+            dlg.reject()
+        item = self.widget.current_item()
+        self.assertIsNone(item, "Rejecting the dialog should not record the recent file")
+
+        with mock.patch.object(owcsvimport.CSVImportDialog, "show"):
+            self.widget.handleDroppedUrl(url)
+            dlg = self.widget.findChild(owcsvimport.CSVImportDialog)
+            dlg.accept()
+        item = self.widget.current_item()
+        self.assertEqual(item.path(), url.toLocalFile())
+        out = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(out.domain), 3)
 
     def test_long_data(self):
         with tempfile.TemporaryDirectory() as tmp:

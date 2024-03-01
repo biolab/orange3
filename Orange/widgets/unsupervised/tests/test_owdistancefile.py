@@ -1,9 +1,12 @@
 import os
 import unittest
+from unittest.mock import patch
 
 import numpy as np
+from AnyQt.QtCore import QMimeData, QUrl
 
 from Orange.widgets.tests.base import WidgetTest
+from Orange.widgets.tests.utils import dragDrop
 from Orange.widgets.unsupervised.owdistancefile \
     import OWDistanceFile, OWDistanceFileDropHandler
 
@@ -12,6 +15,7 @@ import Orange.tests
 
 class TestOWDistanceFile(WidgetTest):
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWDistanceFile)
 
     def open_file(self, filename):
@@ -31,6 +35,25 @@ class TestOWDistanceFile(WidgetTest):
         self.open_file("xlsx_files/distances_with_nans.xlsx")
         dist = self.get_output(self.widget.Outputs.distances)
         np.testing.assert_equal(dist, [[1, 2, 3], [4, 5, 0], [7, 0, 9]])
+
+    def test_drop_file(self):
+        mime = QMimeData()
+        mime.setUrls([QUrl("https://example.com/a.html")])
+        with patch.object(self.widget, "open_file") as r:
+            self.assertFalse(dragDrop(self.widget, mime))
+            r.assert_not_called()
+
+        mime.setUrls([QUrl.fromLocalFile("file.notsupported")])
+        with patch.object(self.widget, "open_file") as r:
+            self.assertFalse(dragDrop(self.widget, mime))
+            r.assert_not_called()
+
+        filename = os.path.normpath(os.path.join(__file__, "../test.dst"))
+        mime.setUrls([QUrl.fromLocalFile(filename)])
+        with patch.object(self.widget, "open_file") as r:
+            self.assertTrue(dragDrop(self.widget, mime))
+            self.assertEqual(os.path.normpath(self.widget.last_path()), filename)
+            r.assert_called()
 
 
 class TestOWDistanceFileDropHandler(unittest.TestCase):

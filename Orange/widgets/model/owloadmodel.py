@@ -3,7 +3,7 @@ import pickle
 from typing import Any, Dict
 
 from AnyQt.QtWidgets import QSizePolicy, QStyle, QFileDialog
-from AnyQt.QtCore import QTimer
+from AnyQt.QtCore import QTimer, QUrl
 
 from orangewidget.workflow.drophandler import SingleFileDropHandler
 
@@ -11,13 +11,13 @@ from Orange.base import Model
 from Orange.widgets import widget, gui
 from Orange.widgets.model import owsavemodel
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, RecentPath, \
-    stored_recent_paths_prepend
+    stored_recent_paths_prepend, OWUrlDropBase
 from Orange.widgets.utils import stdpaths
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Output
 
 
-class OWLoadModel(widget.OWWidget, RecentPathsWComboMixin):
+class OWLoadModel(OWUrlDropBase, RecentPathsWComboMixin):
     name = "Load Model"
     description = "Load a model from an input file."
     priority = 3050
@@ -90,6 +90,17 @@ class OWLoadModel(widget.OWWidget, RecentPathsWComboMixin):
             self.Outputs.model.send(None)
         else:
             self.Outputs.model.send(model)
+
+    def canDropUrl(self, url: QUrl) -> bool:
+        if url.isLocalFile():
+            return OWLoadModelDropHandler().canDropFile(url.toLocalFile())
+        else:
+            return False
+
+    def handleDroppedUrl(self, url: QUrl) -> None:
+        if url.isLocalFile():
+            self.add_path(url.toLocalFile())
+            self.open_file()
 
 
 class OWLoadModelDropHandler(SingleFileDropHandler):

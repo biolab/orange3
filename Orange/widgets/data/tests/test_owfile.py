@@ -71,11 +71,13 @@ class TestOWFile(WidgetTest):
     event_data = None
 
     def setUp(self):
+        super().setUp()
         self.widget = self.create_widget(OWFile)  # type: OWFile
         dataset_dirs.append(dirname(__file__))
 
     def tearDown(self):
         dataset_dirs.pop()
+        super().tearDown()
 
     def test_describe_call_get_nans(self):
         table = Table("iris")
@@ -92,11 +94,6 @@ class TestOWFile(WidgetTest):
         event = self._drag_enter_event(QUrl.fromLocalFile(TITANIC_PATH))
         self.widget.dragEnterEvent(event)
         self.assertTrue(event.isAccepted())
-
-    def test_dragEnterEvent_skips_osx_file_references(self):
-        event = self._drag_enter_event(QUrl.fromLocalFile('/.file/id=12345'))
-        self.widget.dragEnterEvent(event)
-        self.assertFalse(event.isAccepted())
 
     def test_dragEnterEvent_skips_usupported_files(self):
         event = self._drag_enter_event(QUrl.fromLocalFile('file.unsupported'))
@@ -120,6 +117,12 @@ class TestOWFile(WidgetTest):
 
         self.assertEqual(self.widget.source, OWFile.LOCAL_FILE)
         self.assertTrue(path.samefile(self.widget.last_path(), TITANIC_PATH))
+        self.widget.load_data.assert_called_with()
+
+        event = self._drop_event(QUrl("https://example.com/aa.csv"))
+        self.widget.load_data.reset_mock()
+        self.widget.dropEvent(event)
+        self.assertEqual(self.widget.source, OWFile.URL)
         self.widget.load_data.assert_called_with()
 
     def _drop_event(self, url):

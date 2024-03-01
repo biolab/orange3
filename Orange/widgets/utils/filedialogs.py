@@ -1,9 +1,14 @@
+from abc import abstractmethod
 from typing import List, Type
+
+from AnyQt.QtCore import QUrl
+from AnyQt.QtGui import QDropEvent
 
 from orangewidget.utils.filedialogs import (
     open_filename_dialog_save, open_filename_dialog,
     RecentPath, RecentPathsWidgetMixin, RecentPathsWComboMixin,
 )
+
 # imported for backcompatibility
 from orangewidget.utils.filedialogs import (  # pylint: disable=unused-import
     fix_extension, format_filter, get_file_name, Compression
@@ -11,11 +16,12 @@ from orangewidget.utils.filedialogs import (  # pylint: disable=unused-import
 
 from Orange.data.io import FileFormat
 from Orange.util import deprecated
+from Orange.widgets.widget import OWWidget
 
 __all__ = [
     "open_filename_dialog_save", "open_filename_dialog",
     "RecentPath", "RecentPathsWidgetMixin", "RecentPathsWComboMixin",
-    "stored_recent_paths_prepend",
+    "stored_recent_paths_prepend", "OWUrlDropBase"
 ]
 
 
@@ -54,3 +60,52 @@ def get_stored_default_recent_paths(class_: Type[RecentPathsWidgetMixin]):
     except (AttributeError, KeyError, TypeError):
         pass
     return recent_paths
+
+
+class OWUrlDropBase(OWWidget, openclass=True):
+    """
+    A abstract base class for a OWBaseWidget that accepts url drops.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setAcceptDrops(True)
+
+    @abstractmethod
+    def canDropUrl(self, url: QUrl) -> bool:
+        """
+        Can the `url` be dropped on this widget.
+
+        This method must be reimplemented in a subclass.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def handleDroppedUrl(self, url: QUrl) -> None:
+        """
+        Handle the dropped `url`.
+
+        This method must be reimplemented in a subclass.
+        """
+        raise NotImplementedError
+
+    def dragEnterEvent(self, event):
+        urls = event.mimeData().urls()
+        if urls and self.canDropUrl(urls[0]):
+            event.acceptProposedAction()
+            return
+        super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        urls = event.mimeData().urls()
+        if urls and self.canDropUrl(urls[0]):
+            event.acceptProposedAction()
+            return
+        super().dragMoveEvent(event)
+
+    def dropEvent(self, event: QDropEvent):
+        urls = event.mimeData().urls()
+        if urls and self.canDropUrl(urls[0]):
+            self.handleDroppedUrl(urls[0])
+            event.acceptProposedAction()
+            return
+        super().dropEvent(event)
