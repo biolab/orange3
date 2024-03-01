@@ -66,7 +66,7 @@ class OrangeDataFrame(pd.DataFrame):
 
         index = ['_o' + str(id_) for id_ in table.ids]
         varsdict = {var._name: var for var in vars_}
-        columns = varsdict.keys()
+        columns = list(varsdict.keys())
 
         if sp.issparse(data):
             data = data.asformat('csc')
@@ -77,7 +77,10 @@ class OrangeDataFrame(pd.DataFrame):
             # a hack to keep Orange df _metadata in sparse->dense conversion
             self.sparse.to_dense = self.__patch_constructor(self.sparse.to_dense)
         else:
-            super().__init__(data=data, index=index, columns=columns, **kwargs)
+            copy = kwargs.pop("copy", False)
+            super().__init__(
+                data=data, index=index, columns=columns, copy=copy, **kwargs
+            )
 
         self.orange_role = role
         self.orange_variables = varsdict
