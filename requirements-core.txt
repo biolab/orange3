@@ -9,7 +9,7 @@ joblib>=1.1.1
 keyring
 keyrings.alt    # for alternative keyring implementations
 networkx
-numpy>=1.20.0
+numpy>=1.20.0,<2
 openpyxl
 openTSNE>=0.6.1,!=0.7.0  # 0.7.0 segfaults
 packaging
