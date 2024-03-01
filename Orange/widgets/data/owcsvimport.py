@@ -1637,7 +1637,7 @@ def guess_data_type(col: pd.Series) -> pd.Series:
     else:  # object
         try:
             return pd.to_datetime(col)
-        except ValueError:
+        except (ValueError, TypeError):
             unique_values = col.unique()
             if len(unique_values) < 100 and len(unique_values) < len(col)**0.7:
                 return col.astype("category")
