@@ -1722,7 +1722,12 @@ class Table(Sequence, Storage):
                 raise ValueError(f"cannot set data for variable {index.name} "
                                  "with different encoding")
             index = self.domain.index(index)
-        self._get_column_view(index)[:] = data
+        # Zero-sized arrays cannot be made writeable, yet the below
+        # assignment would fail despite doing nothing.
+        if len(self) > 0:
+            self._get_column_view(index)[:] = data
+        else:
+            assert len(self) == len(data)
 
     def _filter_is_defined(self, columns=None, negate=False):
         # structure of function is obvious; pylint: disable=too-many-branches
