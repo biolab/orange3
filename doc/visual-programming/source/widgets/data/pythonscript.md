@@ -17,7 +17,7 @@ Extends functionalities through Python scripting.
 - Classifier (Orange.classification.Learner): classifier retrieved from ``out_classifier`` variable
 - Object: Python object retrieved from ``out_object`` variable
 
-**Python Script** widget can be used to run a python script in the input, when a suitable functionality is not implemented in an existing widget. The script has ``in_data``, ``in_distance``, ``in_learner``, ``in_classifier`` and ``in_object`` variables (from input signals) in its local namespace. If a signal is not connected or it did not yet receive any data, those variables contain ``None``.
+**Python Script** widget can be used to run a python script in the input, when a suitable functionality is not implemented in an existing widget. The script has ``in_data``, ``in_distance``, ``in_learner``, ``in_classifier`` and ``in_object`` variables (from input signals) in its local namespace. If a signal is not connected or it did not yet receive any data, those variables contain ``None``. For the case when multiple inputs are connected to the widget, the lists ``in_datas``, ``in_distances``, ``in_learners``, ``in_classifiers`` and ``in_objects`` may be used instead. 
 
 After the script is executed variables from the script’s local namespace are extracted and used as outputs of the widget. The widget can be further connected to other widgets for visualizing the output.
 

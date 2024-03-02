@@ -15,7 +15,8 @@ from orangewidget.utils.filedialogs import format_filter
 from orangewidget.workflow.drophandler import SingleUrlDropHandler
 
 from Orange.data.table import Table, get_sample_datasets_dir
-from Orange.data.io import FileFormat, UrlReader, class_from_qualified_name
+from Orange.data.io import FileFormat, UrlReader, \
+    class_from_qualified_name, GenericHDF5Reader
 from Orange.data.io_base import MissingReaderException
 from Orange.util import log_warnings
 from Orange.widgets import widget, gui
@@ -47,7 +48,7 @@ def add_origin(examples, filename):
     """
     Adds attribute with file location to each string variable
     Used for relative filenames stored in string variables (e.g. pictures)
-    TODO: we should consider a cleaner solution (special variable type, ...)
+    ToDO: we should consider a cleaner solution (special variable type, ...)
     """
     if not filename:
         return
@@ -269,6 +270,14 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
         box.layout().addWidget(self.reader_combo)
         layout.addWidget(box, 0, 1)
 
+        # Set an options box for special types of files that require more
+        # specifications before loading the Orange.table
+        self.options_box = gui.widgetBox(self.controlArea,
+                            orientation=QGridLayout().setSpacing(4), 
+                            box="Options")
+        # Hide the box until needed
+        self.options_box.hide()
+
         box = gui.vBox(self.controlArea, "Info")
         self.infolabel = gui.widgetLabel(box, 'No data loaded.')
 
@@ -283,6 +292,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
             autoDefault=False
         )
         gui.rubber(box)
+        
         self.apply_button = gui.button(
             box, self, "Apply", callback=self.apply_domain_edit)
         self.apply_button.setEnabled(False)
@@ -452,7 +462,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
         self.data = data
         self.openContext(data.domain)
         self.apply_domain_edit()  # sends data
-        return None
+        return None 
 
     def _get_reader(self) -> FileFormat:
         if self.source == self.LOCAL_FILE:
@@ -482,6 +492,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
         else:
             url = self.url_combo.currentText().strip()
             return UrlReader(url)
+
 
     def _update_sheet_combo(self):
         if len(self.reader.sheets) < 2:
