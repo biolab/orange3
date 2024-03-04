@@ -152,6 +152,17 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertFalse(self.widget.cb_reg_line.isEnabled())
         self.assertListEqual([], self.widget.graph.reg_line_items)
 
+    def test_ellipse_pair(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertTrue(self.widget.graph.controls.show_ellipse.isEnabled())
+        self.assertListEqual([], self.widget.graph.ellipse_items)
+        self.widget.graph.controls.show_ellipse.setChecked(True)
+        self.assertEqual(4, len(self.widget.graph.ellipse_items))
+        self.widget.cb_attr_y.activated.emit(4)
+        self.widget.cb_attr_y.setCurrentIndex(4)
+        self.assertFalse(self.widget.graph.controls.show_ellipse.isEnabled())
+        self.assertListEqual([], self.widget.graph.ellipse_items)
+
     def test_points_combo_boxes(self):
         """Check Point box combo models and values"""
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -867,6 +878,19 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, data)
         self.assertEqual(len(self.widget.graph.reg_line_items), 0)
 
+    def test_ellipse_appear(self):
+        self.widget.graph.controls.show_ellipse.setChecked(True)
+        self.assertEqual(len(self.widget.graph.ellipse_items), 0)
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertEqual(len(self.widget.graph.ellipse_items), 4)
+        simulate.combobox_activate_index(self.widget.controls.attr_color, 0)
+        self.assertEqual(len(self.widget.graph.ellipse_items), 1)
+        data = self.data.copy()
+        with data.unlocked():
+            data[:, 0] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertEqual(len(self.widget.graph.ellipse_items), 0)
+
     def test_regression_line_coeffs(self):
         widget = self.widget
         graph = widget.graph
@@ -874,7 +898,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                        [0, 1], [1, 3], [2, 5]], dtype=float)
         colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=float)
         widget.get_coordinates_data = lambda: xy.T
-        widget.can_draw_regresssion_line = lambda: True
+        widget.can_draw_regression_line = lambda: True
         widget.get_color_data = lambda: colors
         widget.is_continuous_color = lambda: False
         graph.palette = DefaultRGBColors
@@ -908,6 +932,33 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(line2.pos().y(), 1)
         self.assertAlmostEqual(line2.angle, np.degrees(np.arctan2(2, 1)))
         self.assertEqual(line2.pen.color().hue(), graph.palette[1].hue())
+
+    def test_ellipse_coeffs(self):
+        widget = self.widget
+        graph = widget.graph
+        xy = np.array([[0, 0], [1, 0], [1, 2], [2, 2],
+                       [0, 1], [1, 3], [2, 5]], dtype=float)
+        colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=float)
+        widget.get_coordinates_data = lambda: xy.T
+        widget.can_draw_regression_line = lambda: True
+        widget.get_color_data = lambda: colors
+        widget.is_continuous_color = lambda: False
+        graph.palette = DefaultRGBColors
+        graph.controls.show_ellipse.setChecked(True)
+
+        graph.update_ellipse()
+
+        item = graph.ellipse_items[1]
+        self.assertEqual(item.pos().x(), 0)
+        self.assertEqual(item.pos().y(), 0)
+        self.assertEqual(item.opts["pen"].color().hue(),
+                         graph.palette[0].hue())
+
+        item = graph.ellipse_items[2]
+        self.assertEqual(item.pos().x(), 0)
+        self.assertEqual(item.pos().y(), 0)
+        self.assertEqual(item.opts["pen"].color().hue(),
+                         graph.palette[1].hue())
 
     def test_orthonormal_line(self):
         color = QColor(1, 2, 3)
@@ -1024,7 +1075,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
                          [0, 1], [1, 3], [2, 5]], dtype=float).T
         colors = np.array([0, 0, 0, 0, 1, 1, 1], dtype=float)
         widget.get_coordinates_data = lambda: (x, y)
-        widget.can_draw_regresssion_line = lambda: True
+        widget.can_draw_regression_line = lambda: True
         widget.get_color_data = lambda: colors
         widget.is_continuous_color = lambda: False
         graph.palette = DefaultRGBColors
@@ -1189,6 +1240,7 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
 
         self.widget.graph.controls.show_reg_line.setChecked(True)
         self.assertGreater(len(graph.parameter_setter.reg_line_label_items), 0)
+        self.widget.graph.controls.show_ellipse.setChecked(True)
 
         key, value = ('Fonts', 'Line label', 'Font size'), 16
         self.widget.set_visual_settings(key, value)
@@ -1202,6 +1254,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.widget.set_visual_settings(key, value)
         for item in graph.reg_line_items:
             self.assertEqual(item.pen.width(), 10)
+        for item in graph.ellipse_items:
+            self.assertEqual(item.opts["pen"].width(), 10)
 
 
 if __name__ == "__main__":
