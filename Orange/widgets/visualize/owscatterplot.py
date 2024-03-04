@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Callable
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -267,39 +267,26 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         self.update_reg_line_label_colors()
 
     def update_regression_line(self):
-        for line in self.reg_line_items:
-            self.plot_widget.removeItem(line)
-        self.reg_line_items.clear()
-        if not (self.show_reg_line
-                and self.master.can_draw_regression_line()):
-            return
-        x, y = self.master.get_coordinates_data()
-        if x is None:
-            return
-        self._add_line(x, y, QColor("#505050"))
-        if self.master.is_continuous_color() or self.palette is None \
-                or len(self.palette) == 0:
-            return
-        c_data = self.master.get_color_data()
-        if c_data is None:
-            return
-        c_data = c_data.astype(int)
-        for val in range(c_data.max() + 1):
-            mask = c_data == val
-            if mask.sum() > 1:
-                self._add_line(x[mask], y[mask], self.palette[val].darker(135))
+        self._update_curve(self.reg_line_items,
+                           self.show_reg_line,
+                           self._add_line)
         self.update_reg_line_label_colors()
 
     def update_ellipse(self):
-        for ellipse in self.ellipse_items:
-            self.plot_widget.removeItem(ellipse)
-        self.ellipse_items.clear()
-        if not (self.show_ellipse and self.master.can_draw_regression_line()):
+        self._update_curve(self.ellipse_items,
+                           self.show_ellipse,
+                           self._add_ellipse)
+
+    def _update_curve(self, items: List, show: bool, add: Callable):
+        for item in items:
+            self.plot_widget.removeItem(item)
+        items.clear()
+        if not (show and self.master.can_draw_regression_line()):
             return
         x, y = self.master.get_coordinates_data()
         if x is None:
             return
-        self._add_ellipse(x, y, QColor("#505050"))
+        add(x, y, QColor("#505050"))
         if self.master.is_continuous_color() or self.palette is None \
                 or len(self.palette) == 0:
             return
@@ -310,8 +297,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         for val in range(c_data.max() + 1):
             mask = c_data == val
             if mask.sum() > 1:
-                self._add_ellipse(x[mask], y[mask],
-                                  self.palette[val].darker(135))
+                add(x[mask], y[mask], self.palette[val].darker(135))
 
     def _add_ellipse(self, x: np.ndarray, y: np.ndarray, color: QColor) -> np.ndarray:
         # https://stats.stackexchange.com/questions/577628/trying-to-understand-how-to-calculate-a-hotellings-t2-confidence-ellipse
