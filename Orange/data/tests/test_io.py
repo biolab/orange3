@@ -6,9 +6,10 @@ import numpy as np
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, \
     TimeVariable, Domain, Table
-from Orange.data.io import TabReader, ExcelReader
+from Orange.data.io import TabReader, ExcelReader, HDF5Reader
 from Orange.data.io_util import guess_data_type
 from Orange.misc.collections import natural_sorted
+from Orange.tests import named_file
 
 
 class TestTableFilters(unittest.TestCase):
@@ -154,6 +155,16 @@ class\tmeta\t\t
             np.testing.assert_equal(data.domain, self.data.domain)
         finally:
             os.remove(fname)
+
+    def test_roundtrip_hdf5(self):
+        with named_file('', suffix='.hdf5') as fn:
+            HDF5Reader.write(fn, self.data)
+            data = HDF5Reader(fn).read()
+            np.testing.assert_equal(data.X, self.data.X)
+            np.testing.assert_equal(data.Y, self.data.Y)
+            np.testing.assert_equal(data.metas[:2], self.data.metas[:2])
+            self.assertEqual(data.metas[2, 0], "")
+            np.testing.assert_equal(data.domain, self.data.domain)
 
 
 if __name__ == "__main__":
