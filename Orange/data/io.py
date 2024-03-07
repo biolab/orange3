@@ -21,6 +21,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
+import pandas as pd
 
 import xlrd
 import xlsxwriter
@@ -610,6 +611,8 @@ class HDF5Reader(FileFormat):
                 f.create_dataset("Y", data=data.Y)
             if data.metas.size:
                 for i, attr in enumerate(data.domain.metas):
-                    col_type = 'S' if isinstance(attr, StringVariable) else 'f'
+                    col_type = h5py.string_dtype() if isinstance(attr, StringVariable) else 'f'
                     col_data = data.metas[:, [i]].astype(col_type)
-                    f.create_dataset(f'metas/{i}', data=col_data)
+                    if col_type is not 'f':
+                        col_data[pd.isnull(col_data)] = ""
+                    f.create_dataset(f'metas/{i}', data=col_data, dtype=col_type)
