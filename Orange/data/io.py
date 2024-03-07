@@ -1,5 +1,6 @@
 import contextlib
 import csv
+import json
 import locale
 import pickle
 import re
@@ -18,13 +19,15 @@ from urllib.parse import urlparse, urlsplit, urlunsplit, \
 from urllib.request import urlopen, Request
 from pathlib import Path
 
+import h5py
 import numpy as np
 
 import xlrd
 import xlsxwriter
 import openpyxl
 
-from Orange.data import _io, Table, Domain, ContinuousVariable, update_origin
+from Orange.data import _io, Table, Domain, ContinuousVariable, update_origin, DiscreteVariable, TimeVariable, \
+    StringVariable
 from Orange.data import Compression, open_compressed, detect_encoding, \
     isnastr, guess_data_type, sanitize_variable
 from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PROTOCOL
@@ -511,3 +514,93 @@ class UrlReader(FileFormat):
         matches = re.findall(r"filename\*?=(?:\"|.{0,10}?'[^']*')([^\"]+)",
                              content_disposition or '')
         return urlunquote(matches[-1]) if matches else default_name
+
+class HDF5Reader(FileFormat):
+    """Reader for Orange HDF5 files"""
+    EXTENSIONS = ('.hdf5',)
+    DESCRIPTION = 'Orange on-disk data'
+    SUPPORT_COMPRESSED = False
+    SUPPORT_SPARSE_DATA = False
+
+    def read(self):
+        h5file = f = h5py.File(self.filename, "r")
+
+        def read_domain(sub):
+            d = f['domain']
+            subdomain = d[sub].asstr() if sub in d else []
+            subdomain_args = d[f'{sub}_args'].asstr() \
+                if f'{sub}_args' in d else ['{}'] * len(subdomain)
+            for attr, args in zip(subdomain, subdomain_args):
+                yield attr[0], attr[1], json.loads(args)
+
+        def make_var(name, header, args):
+            var_cls = [var for var in (ContinuousVariable,
+                                       DiscreteVariable,
+                                       StringVariable,
+                                       TimeVariable) if header in var.TYPE_HEADERS][0]
+            new_var = var_cls(name, **{key: val for key, val in args.items()
+                                       if key != "attributes"})
+            new_var.attributes = args.get("attributes", {})
+            return new_var
+
+        def read_hdf5(name, as_str=False):
+            if name in f:
+                if as_str:
+                    return f[name].asstr()[:]
+                return f[name]
+            return None
+
+        assert 'domain' in f
+
+        domain = Domain(*[[make_var(*args) for args in read_domain(subdomain)]
+                          for subdomain in ['attributes', 'class_vars', 'metas']])
+
+        X = read_hdf5("X")
+        Y = read_hdf5("Y")
+
+
+        if len(domain.metas) > 1:
+            metas = np.hstack([read_hdf5(f'metas/{i}',
+                                              isinstance(attr, StringVariable))
+                               for i, attr in enumerate(domain.metas)])
+        elif len(domain.metas) == 1:
+            metas = read_hdf5('metas/0',
+                                   isinstance(domain.metas[0], StringVariable)
+                                   )
+        else:
+            metas = None
+
+        table = Table.from_numpy(domain, X, Y, metas)
+        if isinstance(self.filename, str):
+            table.name = path.splitext(path.split(self.filename)[-1])[0]
+
+        return table
+
+    @classmethod
+    def write_file(cls, filename, data):
+        def parse(attr):
+            params = (attr.name, attr.TYPE_HEADERS[1], {"attributes": attr.attributes})
+            if isinstance(attr, DiscreteVariable):
+                params[2].update(values=attr.values)
+            elif isinstance(attr, TimeVariable):
+                params[2].update(have_date=attr.have_date,
+                                 have_time=attr.have_time)
+            elif isinstance(attr, ContinuousVariable):
+                params[2].update(number_of_decimals=attr.number_of_decimals)
+            return params
+
+        with h5py.File(filename, 'w') as f:
+            for subdomain in ['attributes', 'class_vars', 'metas']:
+                parsed = [parse(feature) for feature in getattr(data.domain, subdomain)]
+                domain = np.array([[name, header] for name, header, _ in parsed], 'S')
+                domain_args = np.array([json.dumps(args) for *_, args in parsed], 'S')
+                f.create_dataset(f'domain/{subdomain}', data=domain)
+                f.create_dataset(f'domain/{subdomain}_args', data=domain_args)
+            f.create_dataset("X", data=data.X)
+            if data.Y.size:
+                f.create_dataset("Y", data=data.Y)
+            if data.metas.size:
+                for i, attr in enumerate(data.domain.metas):
+                    col_type = 'S' if isinstance(attr, StringVariable) else 'f'
+                    col_data = data.metas[:, [i]].astype(col_type)
+                    f.create_dataset(f'metas/{i}', data=col_data)
