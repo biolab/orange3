@@ -32,6 +32,15 @@ from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PR
 from Orange.util import flatten
 
 
+try:
+    # temporary fix for file not closed issue until openpyxl prepare release
+    from Orange.misc.openpyxl_patch import read_worksheets
+
+    openpyxl.reader.excel.ExcelReader.read_worksheets = read_worksheets
+except:  # pylint: disable=bare-except
+    pass
+
+
 # Support values longer than 128K (i.e. text contents features)
 csv.field_size_limit(100*1024*1024)
 
