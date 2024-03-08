@@ -302,7 +302,9 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     def _add_ellipse(self, x: np.ndarray, y: np.ndarray, color: QColor) -> np.ndarray:
         # https://stats.stackexchange.com/questions/577628/trying-to-understand-how-to-calculate-a-hotellings-t2-confidence-ellipse
         # https://stackoverflow.com/questions/66179256/how-to-check-if-a-point-is-in-an-ellipse-in-python
-        f = ss.f.ppf(0.95, 2, len(x) - 2)
+        n = len(x)
+        f = ss.f.ppf(0.95, 2, n - 2)
+        f = np.sqrt(f * 2 * (n - 1) / (n - 2))
         m = [np.pi * i / 100 for i in range(201)]
         cx = np.cos(m) * np.std(x) * f + np.mean(x)
         cy = np.sin(m) * np.std(y) * f + np.mean(y)
