@@ -812,6 +812,14 @@ class TestDenseTablePandas(TestTablePandas):
         else:
             self.fail()
 
+    def test_array_copy(self):
+        df = OrangeDataFrame(self.table)  # by default array not copied
+        self.assertTrue(np.shares_memory(df.values, self.table.X))
+        df = OrangeDataFrame(self.table, copy=False)
+        self.assertTrue(np.shares_memory(df.values, self.table.X))
+        df = OrangeDataFrame(self.table, copy=True)
+        self.assertFalse(np.shares_memory(df.values, self.table.X))
+
 
 class TestSparseTablePandas(TestTablePandas):
     features = (
