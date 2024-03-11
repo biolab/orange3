@@ -122,13 +122,16 @@ def isnastr(arr, out=None):
     return __isnastr(arr, out=out, casting="unsafe")
 
 
+_as_string_array = np.frompyfunc(str, 1, 1)
+
+
 def guess_data_type(orig_values, namask=None):
     """
     Use heuristics to guess data type.
     """
     valuemap, values = None, orig_values
     is_discrete = is_discrete_values(orig_values)
-    orig_values = np.asarray(orig_values, dtype=str)
+    orig_values = _as_string_array(orig_values)
     if namask is None:
         namask = isnastr(orig_values)
     if is_discrete:
