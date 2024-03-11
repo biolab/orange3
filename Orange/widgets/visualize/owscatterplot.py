@@ -1,3 +1,4 @@
+import math
 from typing import List, Callable
 from xml.sax.saxutils import escape
 
@@ -302,12 +303,25 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     def _add_ellipse(self, x: np.ndarray, y: np.ndarray, color: QColor) -> np.ndarray:
         # https://stats.stackexchange.com/questions/577628/trying-to-understand-how-to-calculate-a-hotellings-t2-confidence-ellipse
         # https://stackoverflow.com/questions/66179256/how-to-check-if-a-point-is-in-an-ellipse-in-python
+        points = np.vstack([x, y]).T
+        mu = np.mean(points, axis=0)
+        cov = np.cov(*(points - mu).T)
+        vals, vects = np.linalg.eig(cov)
+        angle = math.atan2(vects[1, 0], vects[0, 0])
+        matrix = np.array([[np.cos(angle), -np.sin(angle)],
+                           [np.sin(angle), np.cos(angle)]])
+
         n = len(x)
         f = ss.f.ppf(0.95, 2, n - 2)
-        f = np.sqrt(f * 2 * (n - 1) / (n - 2))
+        f = f * 2 * (n - 1) / (n - 2)
         m = [np.pi * i / 100 for i in range(201)]
-        cx = np.cos(m) * np.std(x) * f + np.mean(x)
-        cy = np.sin(m) * np.std(y) * f + np.mean(y)
+        cx = np.cos(m) * np.sqrt(cov[0, 0] * f)
+        cy = np.sin(m) * np.sqrt(cov[1, 1] * f)
+
+        pts = np.vstack([cx, cy])
+        pts = matrix.dot(pts)
+        cx = pts[0] + mu[0]
+        cy = pts[1] + mu[1]
 
         width = self.parameter_setter.reg_line_settings[Updater.WIDTH_LABEL]
         alpha = self.parameter_setter.reg_line_settings[Updater.ALPHA_LABEL]
