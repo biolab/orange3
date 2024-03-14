@@ -285,7 +285,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         if not (show and self.master.can_draw_regression_line()):
             return
         x, y = self.master.get_coordinates_data()
-        if x is None:
+        if x is None or len(x) < 2:
             return
         add(x, y, QColor("#505050"))
         if self.master.is_continuous_color() or self.palette is None \
