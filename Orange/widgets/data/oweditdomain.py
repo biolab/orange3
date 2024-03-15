@@ -83,19 +83,6 @@ class _DataType:
     def __hash__(self):
         return hash((type(self), super().__hash__()))
 
-    def name_type(self):
-        """
-        Returns a tuple with name and type of the variable.
-        It is used since it is forbidden to use names of variables in settings.
-        """
-        type_number = {
-            "Categorical": 0,
-            "Real": 2,
-            "Time": 3,
-            "String": 4
-        }
-        return self.name, type_number[type(self).__name__]
-
 
 #: An ordered sequence of key, value pairs (variable annotations)
 AnnotationsType = Tuple[Tuple[str, str], ...]
@@ -2201,7 +2188,7 @@ class OWEditDomain(widget.OWWidget):
 
         # Restore the current variable selection
         selected_rows = [i for i, vec in enumerate(model)
-                         if vec.vtype.name_type()[0] in self._selected_items]
+                         if vec.vtype.name in self._selected_items]
         if not selected_rows and model.rowCount():
             selected_rows = [0]
         itemmodels.select_rows(self.variables_view, selected_rows)
