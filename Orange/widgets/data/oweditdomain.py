@@ -46,7 +46,7 @@ from Orange.misc.collections import DictMissingConst
 from Orange.util import frompyfunc
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import itemmodels, ftry, disconnected
+from Orange.widgets.utils import itemmodels, ftry, disconnected, unique_everseen as unique
 from Orange.widgets.utils.buttons import FixedSizeButton
 from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -60,14 +60,6 @@ V = TypeVar("V", bound=Orange.data.Variable)  # pylint: disable=invalid-name
 H = TypeVar("H", bound=Hashable)  # pylint: disable=invalid-name
 
 MAX_HINTS = 1000
-
-
-def unique(sequence: Iterable[H]) -> Iterable[H]:
-    """
-    Return unique elements in `sequence`, preserving their (first seen) order.
-    """
-    # depending on Python >= 3.6 'ordered' dict implementation detail.
-    return iter(dict.fromkeys(sequence))
 
 
 class _DataType:
