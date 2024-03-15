@@ -125,7 +125,7 @@ def format_summary(summary: Union[ApproxSummary, Summary]) -> List[str]:
             text[-1] += " (no missing data)"
 
     nattrs = len(summary.domain.attributes)
-    text.append(f"{nattrs}  {pl(nattrs, 'feature')}"
+    text.append(f"{nattrs} {pl(nattrs, 'feature')}"
                 + format_part(summary.X))
 
     if not summary.domain.class_vars:
