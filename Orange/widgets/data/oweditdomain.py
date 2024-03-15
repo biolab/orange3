@@ -5,6 +5,7 @@ Edit Domain
 A widget for manual editing of a domain's attributes.
 
 """
+from __future__ import annotations
 import warnings
 from xml.sax.saxutils import escape
 from itertools import zip_longest, repeat, chain
@@ -17,6 +18,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+
 from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLineEdit, QAction, QActionGroup, QGroupBox,
@@ -35,6 +37,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
+from orangecanvas.utils import assocf
 from orangewidget.utils.listview import ListViewSearch
 
 import Orange.data
@@ -2008,9 +2011,17 @@ class OWEditDomain(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         duplicate_var_name = widget.Msg("A variable name is duplicated.")
 
+    class Warning(widget.OWWidget.Warning):
+        transform_restore_failed = widget.Msg(
+            "Failed to restore transform {} for column {}"
+        )
+        cat_mapping_does_not_apply = widget.Msg(
+            "Categories mapping for {} does not apply to current input"
+        )
+
     settings_version = 4
 
-    _domain_change_hints = Setting({}, schema_only=True)
+    _domain_change_hints: dict = Setting({}, schema_only=True)
     _merge_dialog_settings = Setting({}, schema_only=True)
     output_table_name = Setting("", schema_only=True)
 
@@ -2101,8 +2112,8 @@ class OWEditDomain(widget.OWWidget):
         self.data = None
         self.variables_model.clear()
         self.clear_editor()
-
         self._merge_dialog_settings = {}
+        self.Warning.clear()
 
     def reset_selected(self):
         """Reset the currently selected variable to its original state."""
@@ -2157,6 +2168,27 @@ class OWEditDomain(widget.OWWidget):
         for i, d in enumerate(columns):
             model.setData(model.index(i), d, Qt.EditRole)
 
+    def _sanitize_transform(
+            self, var: Variable, trs: Sequence[Transform]
+    ) -> Sequence[Transform]:
+        def does_categories_mapping_apply(
+                var: Categorical, tr: CategoriesMapping) -> bool:
+            return set(var.categories) \
+                == set(ci for ci, _ in tr.mapping if ci is not None)
+        if isinstance(var, Categorical):
+            trs_ = []
+            for tr in trs:
+                if isinstance(tr, CategoriesMapping):
+                    if does_categories_mapping_apply(var, tr):
+                        trs_.append(tr)
+                    else:
+                        self.Warning.cat_mapping_does_not_apply(var.name)
+                else:
+                    trs_.append(tr)
+            return trs_
+        else:
+            return trs
+
     def _restore(self):
         """
         Restore the edit transform from saved state.
@@ -2167,15 +2199,19 @@ class OWEditDomain(widget.OWWidget):
         for i in range(model.rowCount()):
             midx = model.index(i, 0)
             coldesc = model.data(midx, Qt.EditRole)  # type: DataVector
-            tr, key = self._restore_transform(coldesc.vtype)
-            if tr:
-                model.setData(midx, tr, TransformRole)
-                if first_key is None:
-                    first_key = key
+            res = self._find_stored_transform(coldesc.vtype)
+            if res:
+                key, tr = res
+                if tr:
+                    self._store_transform(coldesc.vtype, tr, key)
+                    tr = self._sanitize_transform(coldesc.vtype, tr)
+                    model.setData(midx, tr, TransformRole)
+                    if first_key is None:
+                        first_key = key
         # Reduce the number of hints to MAX_HINTS, but keep all current hints
         # Current hints start with `first_key`.
         while len(hints) > MAX_HINTS and \
-                (key := next(iter(hints))) is not first_key:
+                (key := next(iter(hints))) != first_key:
             del hints[key]  # pylint: disable=unsupported-delete-operation
 
         # Restore the current variable selection
@@ -2236,8 +2272,9 @@ class OWEditDomain(widget.OWWidget):
             self._store_transform(var, transform)
         self._invalidate()
 
-    def _store_transform(self, var, transform, deconvar=None):
-        # type: (Variable, List[Transform]) -> None
+    def _store_transform(
+            self, var: Variable, transform: Iterable[Transform], deconvar=None
+    ) -> None:
         deconvar = deconvar or deconstruct(var)
         # Remove the existing key (if any) to put the new one at the end,
         # to make sure it comes after the sentinel
@@ -2246,25 +2283,32 @@ class OWEditDomain(widget.OWWidget):
         self._domain_change_hints[deconvar] = \
             [deconstruct(t) for t in transform]
 
-    def _restore_transform(self, var):
-        # type: (Variable) -> List[Transform]
-        key = deconstruct(var)
-        tr_ = self._domain_change_hints.get(key, [])
-        tr = []
+    def _find_stored_transform(
+            self, var: Variable
+    ) -> Tuple[tuple, Sequence[Transform]] | None:
+        """Find stored transform for `var`."""
+        def reconstruct_transform(tr_: list[tuple]) -> list[Transform]:
+            trs = []
+            for t in tr_:
+                try:
+                    trs.append(cast(Transform, reconstruct(*t)))
+                except (AttributeError, TypeError, NameError):
+                    self.Warning.transform_restore_failed(
+                        str(t), var.name, exc_info=True,
+                    )
+            return trs
 
-        for t in tr_:
-            try:
-                tr.append(reconstruct(*t))
-            except (NameError, TypeError) as err:
-                warnings.warn(
-                    f"Failed to restore transform: {t}, {err}",
-                    UserWarning, stacklevel=2
-                )
-        if tr:
-            self._store_transform(var, tr, key)
-        else:
-            key = None
-        return tr, key
+        hints = self._domain_change_hints
+        key = deconstruct(var)
+        tr = hints.get(key)  # exact match
+        if tr is not None:
+            return key, reconstruct_transform(tr)
+
+        # match by name and type only
+        item = assocf(hints.items(),
+                      lambda k: k[0] == key[0] and k[1][0] == var.name)
+        if item is not None:
+            return item[0], reconstruct_transform(item[1])
 
     def _invalidate(self):
         self._set_modified(True)

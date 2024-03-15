@@ -362,6 +362,31 @@ class TestOWEditDomain(WidgetTest):
         tr = model.data(model.index(4), TransformRole)
         self.assertEqual(tr, [AsString(), Rename("Z")])
 
+        restore({viris: [("CategoriesMapping", ([("Iris-setosa", "setosa"),
+                                                 ("Iris-versicolor", "versicolor"),
+                                                 ("Iris-virginica", "virginica")],)),
+                         ("Rename", ("Species",))]})
+        tr = model.data(model.index(4), TransformRole)
+        self.assertEqual(tr, [CategoriesMapping([("Iris-setosa", "setosa"),
+                                                 ("Iris-versicolor", "versicolor"),
+                                                 ("Iris-virginica", "virginica")]),
+                              Rename("Species")])
+
+        viris_1 = ("Categorical", ("iris", ("A", "B"), ()))
+        restore({viris_1: [("Rename", ("K",),),
+                           ("CategoriesMapping", ([("A", "AA"), ("B", "BB")],))]})
+        self.assertTrue(w.Warning.cat_mapping_does_not_apply.is_shown())
+        w.commit()
+        output = self.get_output(w.Outputs.data)
+        self.assertEqual(output.domain.class_var.name, "K")
+        self.assertEqual(output.domain.class_var.values,
+                         ("Iris-setosa", "Iris-versicolor", "Iris-virginica"))
+
+        restore({viris: [("Rename", ("A")), ("NonexistantTransform", ("AA",))]})
+        tr = model.data(model.index(4), TransformRole)
+        self.assertEqual(tr, [Rename("A")])
+        self.assertTrue(w.Warning.transform_restore_failed.is_shown())
+
     def test_reset_selected(self):
         w = self.widget
         model = w.domain_view.model()
