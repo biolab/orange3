@@ -203,8 +203,8 @@ util.py:
             unsafe: false
 version.py:
     3.37.0: false
-    3.37.0.dev0+9c2b0da: false
-    9c2b0dad0d28ca89fbe643a30662a28783f5e84a: false
+    3.37.0.dev0+f49e020: false
+    f49e020957eaf15fea4bab426141dd2942f9deac: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -1209,6 +1209,7 @@ data/pandas_compat.py:
             orange_role: false
             _o: false
             csc: false
+            copy: false
         def `__patch_constructor`:
             def `new_method`:
                 pandas.DataFrame: false
@@ -2351,6 +2352,11 @@ misc/lazy_module.py:
         def `_do_import`:
             Orange.: false
             Orange: false
+misc/openpyxl_patch.py:
+    def `read_worksheets`:
+        "Cell '{0}':{1} is part of a merged range but has a comment which will ": false
+        be removed because merged cells cannot contain any data.: false
+        chartsheet: false
 misc/server_embedder.py:
     TaskItem: false
     id: false
@@ -4235,15 +4241,7 @@ widgets/widget.py:
 widgets/data/__init__.py:
     Data: Podatki
     orange.widgets.data: false
-    Widgets for data manipulation.: Gradniki za obdelavo podatkov
-    '
-This category contains widgets for data manipulation. This includes
-loading, importing, saving, preprocessing, selection, etc.
-
-': '
-Kategorija vsebuje gradnike za delo s podatki, na primer branje,
-shranjevanje spreminjanje, izbiranje in podobno.
-'
+    Data manipulation: Delo s podatki
     icons/Category-Data.svg: false
     '#FFD39F': false
 widgets/data/owaggregatecolumns.py:
@@ -4898,10 +4896,10 @@ widgets/data/owcsvimport.py:
         def `browse`:
             text/plain: false
             Import Options: Nastavitve branja
-        def `_activate_import_dialog`:
-            Import Options: Nastavitve branja
+        def `_activate_import_dialog_for_item`:
+            Import Options: Nastavitve uvoza
             size: false
-            def `store_size`:
+            def `onfinished`:
                 size: false
         path: false
         options: false
@@ -4941,6 +4939,8 @@ widgets/data/owcsvimport.py:
             basedir: false
         def `_restoreState`:
             Failed to restore '%s': false
+        def `canDropUrl`:
+            text/plain: false
         def `migrate_settings`:
             compatibility_mode: false
             _session_items: false
@@ -8206,7 +8206,7 @@ widgets/data/utils/tablesummary.py:
         {ninst} {pl(ninst, 'instance')}: {ninst} {plsi(ninst, "primer")}
         ~{ninst} {pl(ninst, 'instance')}: ~{ninst} {plsi(ninst, "primer")}
         ' (no missing data)': ' (ni manjkajočih podatkov)'
-        {nattrs}  {pl(nattrs, 'feature')}: {nattrs}  {plsi(nattrs, 'spremenljivka')}
+        {nattrs} {pl(nattrs, 'feature')}: {nattrs} {plsi(nattrs, 'spremenljivka')}
         No target variable.: Ni ciljne spremenljivke.
         {nclasses} {pl(nclasses, 'outcome')}: {nclasses} {plsi(nclasses, 'ciljna spremenljivka|ciljni spremenljivki|ciljne spremenljivke|ciljnih spremenljivk')}
         Numeric outcome: Številska ciljna spremenljivka
@@ -8594,7 +8594,8 @@ widgets/data/utils/pythoneditor/tests/run_all.py:
     Failed: false
 widgets/evaluate/__init__.py:
     Evaluate: Vrednotenje
-    Evaluate classification/regression performance.: Vrednotenje napovednih modelov
+    orange.widgets.evaluate: false
+    Evaluate model performance: Vrednotenje uspešnosti modela
     '#C3F3F3': false
     icons/Category-Evaluate.svg: false
 widgets/evaluate/owcalibrationplot.py:
@@ -9399,7 +9400,8 @@ widgets/evaluate/tests/base.py:
             Evaluation Results: Rezultati vrednotenja
 widgets/model/__init__.py:
     Model: true
-    Prediction.: Modeliranje in napovedovanje
+    orange.widgets.model: false
+    Prediction: Napoved
     '#FAC1D9': false
     icons/Category-Model.svg: false
 widgets/model/owadaboost.py:
@@ -10566,6 +10568,7 @@ widgets/tests/utils.py:
         iris: false
 widgets/unsupervised/__init__.py:
     Unsupervised: Nenadzorovano učenje
+    orange.widgets.unsupervised: false
     Unsupervised learning.: Nenadzorovano učenje
     '#CAE1EF': true
     icons/Category-Unsupervised.svg: false
@@ -12201,6 +12204,7 @@ widgets/utils/filedialogs.py:
     RecentPathsWidgetMixin: false
     RecentPathsWComboMixin: false
     stored_recent_paths_prepend: false
+    OWUrlDropBase: false
     def `dialog_formats`:
         All readable files ({});;: Vse berljive datoteke ({});;
         *: false
@@ -12822,9 +12826,7 @@ widgets/utils/webview.py:
 widgets/utils/widgetpreview.py:
     WidgetPreview: false
 widgets/utils/localization/__init__.py:
-    def `pl`:
-        '|': false
-        s: false
+    pl: false
 widgets/utils/plot/owpalette.py:
     create_palette: false
     OWPalette: false
@@ -13191,7 +13193,7 @@ widgets/utils/tests/concurrent_example.py:
 widgets/visualize/__init__.py:
     Visualize: Vizualizacija
     orange.widgets.visualize: false
-    Widgets for data visualization.: Gradniki za slikovni prikaz podatkov
+    Data visualization: Vizualizacija podatkov
     '#FFB7B1': false
     icons/Category-Visualize.svg: false
 widgets/visualize/owbarplot.py:
