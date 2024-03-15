@@ -2,7 +2,8 @@
 # pylint: disable=missing-docstring
 import pickle
 import unittest
-from distutils.version import LooseVersion
+
+from packaging.version import Version
 
 import Orange
 
@@ -137,7 +138,7 @@ class TestSklLearner(unittest.TestCase):
     def test_supports_weights_property(self):
         """This test is to be included in the 3.37 release and will fail in
         version 3.39. This serves as a reminder."""
-        if LooseVersion(Orange.__version__) >= LooseVersion("3.39"):
+        if Version(Orange.__version__) >= Version("3.39"):
             self.fail(
                 "`SklLearner.supports_weights` as a property that parses fit() "
                 "was deprecated in 3.37. Replace it with `supports_weights = False`"

@@ -633,9 +633,8 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.widget.selection_store.unregister = Mock()
-        prev_model = self.widget.predictionsview.model()
         self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
-        self.widget.selection_store.unregister.called_with(prev_model)
+        self.widget.selection_store.unregister.assert_called_once()
 
     def test_multi_inputs(self):
         w = self.widget
