@@ -723,6 +723,13 @@ class TestOWSOM(WidgetTest):
         restart_button.click()
         self.assertFalse(w.Information.modified.is_shown())
 
+    def test_make_domain_without_class_vars(self):
+        widget = self.widget
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        widget.data.domain.class_vars = None
+        widget.update_output()
+        self.assertIsNotNone(self.get_output(widget.Outputs.annotated_data))
+
 
 class TestComputeValues(unittest.TestCase):
     def test_eq_hash(self):
