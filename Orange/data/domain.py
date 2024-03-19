@@ -1,5 +1,6 @@
 import itertools
 import warnings
+import weakref
 
 from math import log
 from collections.abc import Iterable
@@ -169,6 +170,7 @@ class Domain:
         self.anonymous = False
 
         self._hash = None  # cache for __hash__()
+        self._eq_wdict = {}  # cache for __eq__()
 
     def _ensure_indices(self):
         if self._indices is None:
@@ -185,6 +187,7 @@ class Domain:
         self._variables = self.attributes + self.class_vars
         self._indices = None
         self._hash = None
+        self._eq_wdict = {}
 
     def __getstate__(self):
         # Do not pickle dictionaries because unpickling dictionaries that
@@ -195,6 +198,7 @@ class Domain:
         del state["_variables"]
         del state["_indices"]
         del state["_hash"]
+        del state["_eq_wdict"]
         return state
 
     # noinspection PyPep8Naming
@@ -518,11 +522,30 @@ class Domain:
         if not isinstance(other, Domain):
             return False
 
-        return (self.attributes == other.attributes and
-                self.class_vars == other.class_vars and
-                self.metas == other.metas)
+        # cache by ID because
+        eq = _idcache_restore(self._eq_wdict, (other,))
+        if eq is None:
+            eq = (self.attributes == other.attributes and
+                  self.class_vars == other.class_vars and
+                  self.metas == other.metas)
+            _idcache_save(self._eq_wdict, (other,), eq)
+
+        return eq
 
     def __hash__(self):
         if self._hash is None:
             self._hash = hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
         return self._hash
+
+
+def _idcache_save(cachedict, keys, value):
+    cachedict[tuple(map(id, keys))] = \
+        value, [weakref.ref(k) for k in keys]
+
+
+def _idcache_restore(cachedict, keys):
+    shared, weakrefs = cachedict.get(tuple(map(id, keys)), (None, []))
+    for r in weakrefs:
+        if r() is None:
+            return None
+    return shared
