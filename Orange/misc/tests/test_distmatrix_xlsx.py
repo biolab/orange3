@@ -115,6 +115,12 @@ class ReadMatrixTest(unittest.TestCase):
             self.assertTrue({"E15", "sheet", "empty"} & set(str(exc).split()))
 
 
+def test_write_nan_values():
+    fname = "C:/Users/anama/Documents/Orange_issue_6599/testfile.xlsx"
+    matrix = DistMatrix([[1, np.nan, 3], [4, np.nan, 6]])
+    write_matrix(matrix, fname)
+
+
 class FunctionsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -245,6 +251,19 @@ class FunctionsTest(unittest.TestCase):
             self.assertIsNone(row_items)
             self.assertEqual(col_items, mcol_items)
 
+    def test_nan_values(self):
+        with named_file("", suffix=".xlsx") as fname:
+            matrix = DistMatrix([[np.nan, 2, 3], [4, np.nan, np.nan]])
+            write_matrix(matrix, fname)
+
+    def test_read_matrix_with_nan_values(self):
+        with named_file("", suffix=".xlsx") as fname:
+            matrix = DistMatrix([[np.nan, 2, 3], [4, np.nan, np.nan]])
+            write_matrix(matrix, fname)
+            matrix, row_labels, col_labels, _ = read_matrix(fname)
+        self.assertTrue(np.isnan(matrix[0, 0]))
+        self.assertTrue(np.isnan(matrix[1, 1]))
+        self.assertTrue(np.isnan(matrix[1, 2]))
 
 if __name__ == "__main__":
     unittest.main()
