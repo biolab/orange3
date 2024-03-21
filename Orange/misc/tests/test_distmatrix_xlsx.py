@@ -113,13 +113,7 @@ class ReadMatrixTest(unittest.TestCase):
             self.assertIsNotNone(matrix)
         except ValueError as exc:
             self.assertTrue({"E15", "sheet", "empty"} & set(str(exc).split()))
-
-
-def test_write_nan_values():
-    fname = "C:/Users/anama/Documents/Orange_issue_6599/testfile.xlsx"
-    matrix = DistMatrix([[1, np.nan, 3], [4, np.nan, 6]])
-    write_matrix(matrix, fname)
-
+            
 
 class FunctionsTest(unittest.TestCase):
     @classmethod
