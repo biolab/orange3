@@ -123,9 +123,8 @@ def write_matrix(matrix: "DistMatrix", filename):
     has_diagonal = int(np.any(np.diag(matrix) != 0))
     for y in range(matrix.shape[0]):
         for x in range(y + has_diagonal if symmetric else matrix.shape[1]):
-            if np.isnan(matrix[y, x]):
-                sheet.cell(y + row_off, x + col_off).value = ""
-            else:
-                sheet.cell(y + row_off, x + col_off).value = matrix[y, x]
+            value = matrix[y, x]
+            if not np.isnan(value):
+                sheet.cell(y + row_off, x + col_off).value = value
 
     wb.save(filename)
