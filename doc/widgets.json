@@ -723,6 +723,15 @@
     ]
    },
    {
+    "text": "PLS",
+    "doc": null,
+    "icon": "../Orange/widgets/model/icons/PLS.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "partial least squares"
+    ]
+   },
+   {
     "text": "Curve Fit",
     "doc": "visual-programming/source/widgets/model/curvefit.md",
     "icon": "../Orange/widgets/model/icons/CurveFit.svg",
