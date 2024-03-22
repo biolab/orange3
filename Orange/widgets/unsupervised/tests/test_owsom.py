@@ -723,7 +723,7 @@ class TestOWSOM(WidgetTest):
         restart_button.click()
         self.assertFalse(w.Information.modified.is_shown())
 
-        def test_make_domain_without_class_vars(self):
+    def test_make_domain_without_class_vars(self):
         widget = self.widget
         data = self.iris.transform(Domain(self.iris.domain.attributes))
         self.send_signal(self.widget.Inputs.data, data)
