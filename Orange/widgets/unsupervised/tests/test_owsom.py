@@ -723,6 +723,18 @@ class TestOWSOM(WidgetTest):
         restart_button.click()
         self.assertFalse(w.Information.modified.is_shown())
 
+    def test_make_domain_without_class_vars(self):
+        widget = self.widget
+        data = self.iris.transform(Domain(self.iris.domain.attributes))
+        self.send_signal(self.widget.Inputs.data, data)
+
+        domain = self.get_output((widget.Outputs.annotated_data)).domain
+        self.assertEqual(domain.attributes, data.domain.attributes)
+        self.assertEqual(domain.class_var.name, ANNOTATED_DATA_FEATURE_NAME)
+        self.assertEqual([var.name for var in domain.metas],
+                         ["som_cell", "som_row", "som_col", "som_error"])
+
+
 
 class TestComputeValues(unittest.TestCase):
     def test_eq_hash(self):
