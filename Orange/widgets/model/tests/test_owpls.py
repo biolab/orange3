@@ -60,16 +60,16 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
     def test_output_components(self):
         self.send_signal(self.widget.Inputs.data, self._data)
         components = self.get_output(self.widget.Outputs.components)
-        self.assertEqual(components.X.shape, (2, 13))
-        self.assertEqual(components.Y.shape, (2,))
-        self.assertEqual(components.metas.shape, (2, 1))
+        self.assertEqual(components.X.shape, (4, 13))
+        self.assertEqual(components.Y.shape, (4,))
+        self.assertEqual(components.metas.shape, (4, 1))
 
     def test_output_components_multi_target(self):
         self.send_signal(self.widget.Inputs.data, self._data_multi_target)
         components = self.get_output(self.widget.Outputs.components)
-        self.assertEqual(components.X.shape, (2, 12))
-        self.assertEqual(components.Y.shape, (2, 2))
-        self.assertEqual(components.metas.shape, (2, 1))
+        self.assertEqual(components.X.shape, (4, 12))
+        self.assertEqual(components.Y.shape, (4, 2))
+        self.assertEqual(components.metas.shape, (4, 1))
 
 
 if __name__ == "__main__":
