@@ -132,15 +132,18 @@ class PLSModel(SklModelRegression):
 
         meta_vars = [StringVariable(name=meta_name)]
         metas = np.array(
-            [[f"Component {i + 1}" for i in range(n_components)]], dtype=object
+            [[f"Component {i + 1}" for i in range(n_components)] +
+             [f"Rotation {i + 1}" for i in range(n_components)]], dtype=object
         ).T
         dom = Domain(
             [ContinuousVariable(a.name) for a in orig_domain.attributes],
             [ContinuousVariable(a.name) for a in orig_domain.class_vars],
             metas=meta_vars)
         components = Table(dom,
-                           self.skl_model.x_loadings_.T,
-                           Y=self.skl_model.y_loadings_.T,
+                           np.vstack((self.skl_model.x_loadings_.T,
+                                      self.skl_model.x_rotations_.T)),
+                           Y=np.vstack((self.skl_model.y_loadings_.T,
+                                        self.skl_model.y_rotations_.T)),
                            metas=metas)
         components.name = 'components'
         return components
