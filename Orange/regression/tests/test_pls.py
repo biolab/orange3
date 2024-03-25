@@ -81,9 +81,13 @@ class TestPLSRegressionLearner(unittest.TestCase):
             scikit_model = PLSRegression().fit(d.X, d.Y)
             components = orange_model.components()
             np.testing.assert_almost_equal(scikit_model.x_loadings_,
-                                           components.X.T)
+                                           components.X.T[:, :2])
             np.testing.assert_almost_equal(scikit_model.y_loadings_,
-                                           t2d(components.Y).T)
+                                           t2d(components.Y).T[:, :2])
+            np.testing.assert_almost_equal(scikit_model.x_rotations_,
+                                           components.X.T[:, 2:])
+            np.testing.assert_almost_equal(scikit_model.y_rotations_,
+                                           t2d(components.Y).T[:, 2:])
 
     def test_coefficients(self):
         for d in [table(10, 5, 1), table(10, 5, 3)]:
