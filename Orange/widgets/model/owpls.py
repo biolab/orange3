@@ -62,11 +62,17 @@ class OWPLS(OWBaseLearner):
 
     def _create_output_data(self) -> Table:
         projection = self.model.project(self.data)
+        normal_probs = self.model.residuals_normal_probability(self.data)
         data_domain = self.data.domain
         proj_domain = projection.domain
-        metas = proj_domain.metas + proj_domain.attributes
+        nprobs_domain = normal_probs.domain
+        metas = proj_domain.metas + proj_domain.attributes + \
+            nprobs_domain.attributes
         domain = Domain(data_domain.attributes, data_domain.class_vars, metas)
-        return self.data.transform(domain)
+        data: Table = self.data.transform(domain)
+        with data.unlocked(data.metas):
+            data.metas[:, -2 * len(self.data.domain.class_vars):] = normal_probs.X
+        return data
 
     @OWBaseLearner.Inputs.data
     def set_data(self, data):

@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.stats as ss
 import sklearn.cross_decomposition as skl_pls
 
 from Orange.data import Table, Domain, Variable, \
@@ -102,9 +103,8 @@ class PLSModel(SklModelRegression):
         transformer = _PLSCommonTransform(self)
 
         def trvar(i, name):
-            return ContinuousVariable(name,
-                                      compute_value=PLSProjector(transformer,
-                                                                 i))
+            return ContinuousVariable(
+                name, compute_value=PLSProjector(transformer, i))
 
         n_components = self.skl_model.x_loadings_.shape[1]
 
@@ -154,6 +154,34 @@ class PLSModel(SklModelRegression):
         coef_table = Table.from_numpy(domain, X=coeffs, metas=waves)
         coef_table.name = "coefficients"
         return coef_table
+
+    def residuals_normal_probability(self, data: Table) -> Table:
+        pred = self(data)
+        n = len(data)
+        m = len(data.domain.class_vars)
+
+        err = data.Y - pred
+        if m == 1:
+            err = err[:, None]
+
+        theoretical_percentiles = (np.arange(1.0, n + 1)) / (n + 1)
+        quantiles = ss.norm.ppf(theoretical_percentiles)
+        ind = np.argsort(err, axis=0)
+        theoretical_quantiles = np.zeros((n, m), dtype=float)
+        for i in range(m):
+            theoretical_quantiles[ind[:, i], i] = quantiles
+
+        # check names so that tables could later be merged
+        proposed = [f"{name} ({var.name})" for var in data.domain.class_vars
+                    for name in ("Sample Quantiles", "Theoretical Quantiles")]
+        names = get_unique_names(data.domain, proposed)
+        domain = Domain([ContinuousVariable(name) for name in names])
+        X = np.zeros((n, m * 2), dtype=float)
+        X[:, 0::2] = err
+        X[:, 1::2] = theoretical_quantiles
+        res_table = Table.from_numpy(domain, X)
+        res_table.name = "residuals normal probability"
+        return res_table
 
 
 class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):
