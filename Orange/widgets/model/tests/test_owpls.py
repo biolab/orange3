@@ -48,14 +48,29 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(output.X.shape, (506, 13))
         self.assertEqual(output.Y.shape, (506,))
-        self.assertEqual(output.metas.shape, (506, 5))
+        self.assertEqual(output.metas.shape, (506, 7))
+        self.assertEqual([v.name for v in self._data.domain.variables],
+                         [v.name for v in output.domain.variables])
+        metas = ["PLS U1", "PLS U2", "PLS T1", "PLS T2",
+                 "Sample Quantiles (MEDV)", "Theoretical Quantiles (MEDV)"]
+        self.assertEqual([v.name for v in self._data.domain.metas] + metas,
+                         [v.name for v in output.domain.metas])
 
     def test_output_data_multi_target(self):
         self.send_signal(self.widget.Inputs.data, self._data_multi_target)
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(output.X.shape, (506, 12))
         self.assertEqual(output.Y.shape, (506, 2))
-        self.assertEqual(output.metas.shape, (506, 5))
+        self.assertEqual(output.metas.shape, (506, 9))
+        orig_domain = self._data_multi_target.domain
+        self.assertEqual([v.name for v in orig_domain.variables],
+                         [v.name for v in output.domain.variables])
+        metas = ["PLS U1", "PLS U2", "PLS T1", "PLS T2",
+                 "Sample Quantiles (MEDV)", "Theoretical Quantiles (MEDV)",
+                 "Sample Quantiles (CRIM)", "Theoretical Quantiles (CRIM)"]
+        self.assertEqual([v.name for v in orig_domain.metas] + metas,
+                         [v.name for v in output.domain.metas])
+
 
     def test_output_components(self):
         self.send_signal(self.widget.Inputs.data, self._data)
