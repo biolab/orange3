@@ -442,6 +442,7 @@ class OWROCAnalysis(widget.OWWidget):
             self._initialize(self.results)
             self.openContext(self.results.domain.class_var,
                              self.classifier_names)
+            self._set_target_prior()
             self._setup_plot()
         else:
             self.warning()
