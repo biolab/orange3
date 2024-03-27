@@ -278,6 +278,14 @@ class TestOWROCAnalysis(EvaluateTest):
         simulate.combobox_activate_item(w.controls.target_index, "soft")
         self.assertEqual(np.round(5/12 * 100), w.target_prior)
 
+    def test_target_prior_reload(self):
+        w = self.widget
+        self.send_signal(w.Inputs.evaluation_results, self.res)
+        simulate.combobox_activate_item(w.controls.target_index, "soft")
+        self.assertEqual(np.round(5/12 * 100), w.target_prior)
+        self.send_signal(w.Inputs.evaluation_results, self.res)
+        self.assertEqual(np.round(5/12 * 100), w.target_prior)
+
     @patch("Orange.widgets.evaluate.owrocanalysis.ThresholdClassifier")
     def test_apply_no_output(self, *_):
         """Test no output warnings"""
