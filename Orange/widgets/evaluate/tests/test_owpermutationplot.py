@@ -77,7 +77,7 @@ class TestOWPermutationPlot(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.learner, self.rf_reg)
         self.wait_until_finished()
-        self.assertTrue(self.widget.Error.incompatible_learner.is_shown())
+        self.assertTrue(self.widget.Error.multiple_targets_data.is_shown())
 
     def test_sample_data(self):
         self.send_signal(self.widget.Inputs.learner, self.rf_cls)

@@ -15,6 +15,7 @@ from Orange.util import dummy_callback
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
+from Orange.widgets.utils.multi_target import check_multiple_targets_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import LegendItem
 from Orange.widgets.visualize.utils.customizableplot import \
@@ -256,6 +257,7 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
         gui.rubber(self.controlArea)
 
     @Inputs.data
+    @check_multiple_targets_input
     def set_data(self, data: Table):
         self.Error.not_enough_data.clear()
         self._data = data
