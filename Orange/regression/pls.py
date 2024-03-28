@@ -1,6 +1,7 @@
 import numpy as np
 import scipy.stats as ss
 import sklearn.cross_decomposition as skl_pls
+from sklearn.preprocessing import StandardScaler
 
 from Orange.data import Table, Domain, Variable, \
     ContinuousVariable, StringVariable
@@ -182,6 +183,33 @@ class PLSModel(SklModelRegression):
         res_table = Table.from_numpy(domain, X)
         res_table.name = "residuals normal probability"
         return res_table
+
+    def dmodx(self, data: Table) -> Table:
+        data = self.data_to_model_domain(data)
+
+        n_comp = self.skl_model.n_components
+        resids_ssx = self._residual_ssx(data.X)
+        s = np.sqrt(resids_ssx / (self.skl_model.x_loadings_.shape[0] - n_comp))
+        s0 = np.sqrt(resids_ssx.sum() / (
+                (self.skl_model.x_scores_.shape[0] - n_comp - 1) *
+                (data.X.shape[1] - n_comp)))
+        dist = np.sqrt((s / s0) ** 2)
+
+        name = get_unique_names(data.domain, ["DModX"])[0]
+        domain = Domain([ContinuousVariable(name)])
+        dist_table = Table.from_numpy(domain, dist[:, None])
+        dist_table.name = "DMod"
+        return dist_table
+
+    def _residual_ssx(self, X: np.ndarray) -> np.ndarray:
+        pred_scores = self.skl_model.transform(X)
+        inv_pred_scores = self.skl_model.inverse_transform(pred_scores)
+
+        scaler = StandardScaler()
+        scaler.fit(X)
+        x_recons = scaler.transform(inv_pred_scores)
+        x_scaled = scaler.transform(X)
+        return np.sum((x_scaled - x_recons) ** 2, axis=1)
 
 
 class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):
