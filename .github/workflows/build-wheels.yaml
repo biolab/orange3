@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install cibuildwheel
         # Nb. keep cibuildwheel version pin consistent with job below
-        run: pipx install cibuildwheel==2.14.1
+        run: pipx install cibuildwheel==2.16.5
       - id: set-matrix
         run: |
           MATRIX=$(
@@ -50,19 +50,19 @@ jobs:
 
       - name: Set up QEMU
         if: runner.os == 'Linux'
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: all
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.15.0
+        uses: pypa/cibuildwheel@v2.16.5
         with:
           only: ${{ matrix.only }}
 
       - uses: actions/upload-artifact@v4
         with:
+          name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
           path: ./wheelhouse/*.whl
-          name: Orange3-wheels
 
   build_sdist:
     name: Build source distribution
@@ -82,7 +82,7 @@ jobs:
       - name: Upload sdist
         uses: actions/upload-artifact@v4
         with:
-          name: Orange3-source
+          name: cibw-sdist
           path: dist/*.tar.gz
 
   upload_release_assets:
@@ -96,8 +96,9 @@ jobs:
         id: download_artifact
         uses: actions/download-artifact@v4
         with:
-          name: Orange3-wheels
+          pattern: cibw-wheels-*
           path: ~/downloads
+          merge-multiple: true
 
       - name: List downloaded artifacts
         run: ls -la ~/downloads
@@ -120,14 +121,9 @@ jobs:
       - name: Download bdist files
         uses: actions/download-artifact@v4
         with:
-          name: Orange3-wheels
+          pattern: cibw-*
           path: downloads/
-
-      - name: Download sdist files
-        uses: actions/download-artifact@v4
-        with:
-          name: Orange3-source
-          path: downloads/
+          merge-multiple: true
 
       - name: Display structure of downloaded files
         run: ls -R downloads/

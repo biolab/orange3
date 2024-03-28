@@ -1,5 +1,5 @@
 """Tests for OWPredictions"""
-# pylint: disable=protected-access
+# pylint: disable=protected-access,too-many-lines,too-many-public-methods
 import os
 import unittest
 from functools import partial
@@ -18,7 +18,8 @@ from Orange.classification.majority import ConstantModel, MajorityLearner
 from Orange.data.io import TabReader
 from Orange.evaluation.scoring import TargetScore
 from Orange.preprocess import Remove
-from Orange.regression import LinearRegressionLearner, MeanLearner
+from Orange.regression import LinearRegressionLearner, MeanLearner, \
+    PLSRegressionLearner
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.evaluate.owpredictions import (
     OWPredictions, SharedSelectionModel, SharedSelectionStore, DataModel,
@@ -633,9 +634,8 @@ class TestOWPredictions(WidgetTest):
         self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
         self.send_signal(self.widget.Inputs.data, self.iris)
         self.widget.selection_store.unregister = Mock()
-        prev_model = self.widget.predictionsview.model()
         self.send_signal(self.widget.Inputs.predictors, log_reg_iris)
-        self.widget.selection_store.unregister.called_with(prev_model)
+        self.widget.selection_store.unregister.assert_called_once()
 
     def test_multi_inputs(self):
         w = self.widget
@@ -1318,6 +1318,28 @@ class TestOWPredictions(WidgetTest):
         self.assertAlmostEqual(pred.metas[0, 9], 0.113, 3)
         self.assertTrue(np.isnan(pred.metas[1, 4]))
         self.assertTrue(np.isnan(pred.metas[1, 9]))
+
+    def test_multiple_targets_pls(self):
+        class_vars = [self.housing.domain.class_var,
+                      self.housing.domain.attributes[0]]
+        domain = Domain(self.housing.domain.attributes[1:],
+                        class_vars=class_vars)
+        multiple_targets_data = self.housing.transform(domain)
+
+        self.send_signal(self.widget.Inputs.data, multiple_targets_data)
+        self.send_signal(self.widget.Inputs.predictors,
+                         PLSRegressionLearner()(multiple_targets_data))
+        self.assertTrue(self.widget.Error.predictor_failed.is_shown())
+        self.assertIn("Multiple targets are not supported.",
+                      str(self.widget.Error.predictor_failed))
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.send_signal(self.widget.Inputs.predictors, None)
+
+        self.send_signal(self.widget.Inputs.data, self.housing)
+        self.send_signal(self.widget.Inputs.predictors,
+                         PLSRegressionLearner()(self.housing))
+        self.assertFalse(self.widget.Error.predictor_failed.is_shown())
 
 
 class SelectionModelTest(unittest.TestCase):

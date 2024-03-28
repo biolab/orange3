@@ -19,7 +19,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.9
+          python-version: '3.10'
 
       - name: Install Tox
         run: |
@@ -37,12 +37,12 @@ jobs:
       fail-fast: False
       matrix:
         os: [ubuntu-22.04]
-        python-version: [3.9, '3.10', '3.11']
+        python-version: [3.9, '3.10', '3.11', '3.12']
         tox_env: [orange-released]
         name: [Released]
         include:
           - os: ubuntu-22.04
-            python-version: '3.11'
+            python-version: '3.12'
             tox_env: orange-latest
             name: Latest
           - os: ubuntu-20.04
@@ -54,7 +54,7 @@ jobs:
             tox_env: pyqt6
             name: PyQt6
           - os: ubuntu-22.04
-            python-version: '3.11'
+            python-version: '3.12'
             tox_env: beta
             name: "Scientific Python nightly wheels"
 
@@ -100,7 +100,7 @@ jobs:
 
       - name: Skip testing workflows at coverage
         if: |
-          matrix.python-version == '3.11' && matrix.tox_env == 'orange-released'
+          matrix.python-version == '3.12' && matrix.tox_env == 'orange-released'
         run: |
           echo 'SKIP_EXAMPLE_WORKFLOWS=1' >> $GITHUB_ENV
 
@@ -111,7 +111,7 @@ jobs:
           ORANGE_TEST_DB_URI: postgres://postgres_user:postgres_password@localhost:5432/postgres_db|mssql://SA:sqlServerPassw0rd@localhost:1433
 
       - name: Upload code coverage
-        if: matrix.python-version == '3.11' && matrix.tox_env == 'orange-released'
+        if: matrix.python-version == '3.12' && matrix.tox_env == 'orange-released'
         uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: true
@@ -125,16 +125,16 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
-        python-version: [3.9, '3.10', '3.11']
+        python-version: [3.9, '3.10', '3.11', '3.12']
         tox_env: [orange-released]
         name: [Released]
         include:
           - os: windows-latest
-            python-version: '3.11'
+            python-version: '3.12'
             tox_env: orange-latest
             name: Latest
           - os: macos-latest
-            python-version: '3.11'
+            python-version: '3.12'
             tox_env: orange-latest
             name: Latest
           - os: windows-latest

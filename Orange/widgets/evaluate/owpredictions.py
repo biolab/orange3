@@ -34,6 +34,7 @@ from Orange.widgets.widget import OWWidget, Msg, Input, Output, MultiInput
 from Orange.widgets.utils.itemmodels import TableModel
 from Orange.widgets.utils.annotated_data import lazy_annotated_table, \
     domain_with_annotation_column, create_annotated_table
+from Orange.widgets.utils.multi_target import multiple_targets_msg
 from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
@@ -423,6 +424,10 @@ class OWPredictions(OWWidget):
                 backmappers, n_values = predictor.get_backmappers(self.data)
                 prob = predictor.backmap_probs(prob, n_values, backmappers)
                 pred = predictor.backmap_value(pred, prob, n_values, backmappers)
+            if len(pred.shape) > 1 and pred.shape[1] > 1:
+                self.predictors[index] = \
+                    slot._replace(results=multiple_targets_msg)
+                continue
             results.predicted = pred.reshape((1, len(self.data)))
             results.probabilities = prob.reshape((1,) + prob.shape)
 
