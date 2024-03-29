@@ -134,6 +134,6 @@ def write_matrix(matrix: "DistMatrix", filename):
         for x in range(y + has_diagonal if symmetric else matrix.shape[1]):
             value = matrix[y, x]
             if not np.isnan(value):
-                 sheet.cell(y + row_off, x + col_off).value = value
+                sheet.cell(y + row_off, x + col_off).value = value
 
     wb.save(filename)
