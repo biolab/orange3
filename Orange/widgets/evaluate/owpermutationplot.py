@@ -187,6 +187,9 @@ class PermutationPlot(PlotWidget):
         self.clear()
         self.setLabel(axis="left", text=score_name)
 
+        y = 0.5 if score_name == "AUC" else 0
+        line = pg.InfiniteLine(pos=(0, y), angle=0, pen=pg.mkPen("#000"))
+
         x = np.array([0, 100])
         pen = pg.mkPen("#000", width=2, style=Qt.DashLine)
         line_tr = pg.PlotCurveItem(x, intercept_tr + slope_tr * x, pen=pen)
@@ -203,10 +206,11 @@ class PermutationPlot(PlotWidget):
         kwargs.update(kwargs_cv)
         points_cv = pg.ScatterPlotItem(corr, scores_cv, **kwargs)
 
-        self.addItem(line_tr)
-        self.addItem(line_cv)
         self.addItem(points_tr)
         self.addItem(points_cv)
+        self.addItem(line)
+        self.addItem(line_tr)
+        self.addItem(line_cv)
 
         self.legend.clear()
         self.legend.addItem(pg.ScatterPlotItem(**kwargs_tr), "Train")
