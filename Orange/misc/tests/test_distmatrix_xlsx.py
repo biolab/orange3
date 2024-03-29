@@ -254,7 +254,7 @@ class FunctionsTest(unittest.TestCase):
         with named_file("", suffix=".xlsx") as fname:
             matrix = DistMatrix([[np.nan, 2, 3], [4, np.nan, np.nan]])
             write_matrix(matrix, fname)
-            matrix, row_labels, col_labels, _ = read_matrix(fname)
+            matrix, _, _, _ = read_matrix(fname)
         self.assertTrue(np.isnan(matrix[0, 0]))
         self.assertTrue(np.isnan(matrix[1, 1]))
         self.assertTrue(np.isnan(matrix[1, 2]))
