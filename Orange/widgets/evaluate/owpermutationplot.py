@@ -196,7 +196,8 @@ class PermutationPlot(PlotWidget):
         kwargs_tr = {"pen": point_pen, "symbol": "o", "brush": "#6fa255"}
         kwargs_cv = {"pen": point_pen, "symbol": "s", "brush": "#3a78b6"}
 
-        kwargs = {"size": 12}
+        kwargs = {"size": 12, "hoverable": True,
+                  "tip": 'x: {x:.3g}\ny: {y:.3g}'.format}
         kwargs.update(kwargs_tr)
         points_tr = pg.ScatterPlotItem(corr, scores_tr, **kwargs)
         kwargs.update(kwargs_cv)
