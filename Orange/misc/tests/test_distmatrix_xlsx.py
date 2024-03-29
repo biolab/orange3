@@ -245,6 +245,19 @@ class FunctionsTest(unittest.TestCase):
             self.assertIsNone(row_items)
             self.assertEqual(col_items, mcol_items)
 
+    def test_nan_values(self):
+        with named_file("", suffix=".xlsx") as fname:
+            matrix = DistMatrix([[np.nan, 2, 3], [4, np.nan, np.nan]])
+            write_matrix(matrix, fname)
+
+    def test_read_matrix_with_nan_values(self):
+        with named_file("", suffix=".xlsx") as fname:
+            matrix = DistMatrix([[np.nan, 2, 3], [4, np.nan, np.nan]])
+            write_matrix(matrix, fname)
+            matrix, _, _, _ = read_matrix(fname)
+        self.assertTrue(np.isnan(matrix[0, 0]))
+        self.assertTrue(np.isnan(matrix[1, 1]))
+        self.assertTrue(np.isnan(matrix[1, 2]))
 
 if __name__ == "__main__":
     unittest.main()
