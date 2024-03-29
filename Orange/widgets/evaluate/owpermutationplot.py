@@ -10,7 +10,9 @@ from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog, \
 from Orange.base import Learner
 from Orange.data import Table
 from Orange.data.table import DomainTransformationError
-from Orange.evaluation import CrossValidation, R2, TestOnTrainingData, Results
+from Orange.evaluation import CrossValidation, R2, AUC, TestOnTrainingData, \
+    Results
+from Orange.evaluation.scoring import Score
 from Orange.util import dummy_callback
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -24,21 +26,26 @@ from Orange.widgets.visualize.utils.plotutils import PlotWidget
 from Orange.widgets.widget import OWWidget, Input, Msg
 
 N_FOLD = 7
-PermutationResults = Tuple[np.ndarray, List, float, float, List, float, float]
+PermutationResults = \
+    Tuple[np.ndarray, List, float, float, List, float, float, str]
 
 
 def _correlation(y: np.ndarray, y_pred: np.ndarray) -> float:
     return spearmanr(y, y_pred)[0] * 100
 
 
-def _validate(data: Table, learner: Learner) -> Tuple[float, float]:
+def _validate(
+        data: Table,
+        learner: Learner,
+        scorer: Score
+) -> Tuple[float, float]:
     # dummy call - Validation would silence the exceptions
     learner(data)
 
     res: Results = TestOnTrainingData()(data, [learner])
     res_cv: Results = CrossValidation(k=N_FOLD)(data, [learner])
     # pylint: disable=unsubscriptable-object
-    return R2(res)[0], R2(res_cv)[0]
+    return scorer(res)[0], scorer(res_cv)[0]
 
 
 def permutation(
@@ -47,9 +54,11 @@ def permutation(
         n_perm: int = 100,
         progress_callback: Callable = dummy_callback
 ) -> PermutationResults:
-    r2, q2 = _validate(data, learner)
-    r2_scores = [r2]
-    q2_scores = [q2]
+    scorer = AUC if data.domain.has_discrete_class else R2
+
+    score_tr, score_cv = _validate(data, learner, scorer)
+    scores_tr = [score_tr]
+    scores_cv = [score_cv]
     correlations = [100.0]
     progress_callback(0, "Calculating...")
     np.random.seed(0)
@@ -58,21 +67,19 @@ def permutation(
     for i in range(n_perm):
         progress_callback(i / n_perm)
         np.random.shuffle(data_perm.Y)
-        r2, q2 = _validate(data_perm, learner)
+        score_tr, score_cv = _validate(data_perm, learner, scorer)
         correlations.append(_correlation(data.Y, data_perm.Y))
-        r2_scores.append(r2)
-        q2_scores.append(q2)
+        scores_tr.append(score_tr)
+        scores_cv.append(score_cv)
 
     correlations = np.abs(correlations)
-    r2_res = linregress([correlations[0], np.mean(correlations[1:])],
-                        [r2_scores[0], np.mean(r2_scores[1:])])
-    q2_res = linregress([correlations[0], np.mean(correlations[1:])],
-                        [q2_scores[0], np.mean(q2_scores[1:])])
+    res_tr = linregress([correlations[0], np.mean(correlations[1:])],
+                        [scores_tr[0], np.mean(scores_tr[1:])])
+    res_cv = linregress([correlations[0], np.mean(correlations[1:])],
+                        [scores_cv[0], np.mean(scores_cv[1:])])
 
-    return (correlations,
-            r2_scores, r2_res.intercept, r2_res.slope,
-            q2_scores, q2_res.intercept, q2_res.slope,
-            data.domain.class_var.name)
+    return (correlations, scores_tr, res_tr.intercept, res_tr.slope,
+            scores_cv, res_cv.intercept, res_cv.slope, scorer.name)
 
 
 def run(
@@ -158,7 +165,6 @@ class PermutationPlot(PlotWidget):
         self.showGrid(True, True)
         text = "Correlation between original Y and permuted Y (%)"
         self.setLabel(axis="bottom", text=text)
-        self.setLabel(axis="left", text="R2, Q2")
 
     def _create_legend(self) -> LegendItem:
         legend = LegendItem()
@@ -170,49 +176,46 @@ class PermutationPlot(PlotWidget):
     def set_data(
             self,
             corr: np.ndarray,
-            r2_scores: List,
-            r2_intercept: float,
-            r2_slope: float,
-            q2_scores: List,
-            q2_intercept: float,
-            q2_slope: float,
-            name: str
+            scores_tr: List,
+            intercept_tr: float,
+            slope_tr: float,
+            scores_cv: List,
+            intercept_cv: float,
+            slope_cv: float,
+            score_name: str
     ):
         self.clear()
-        title = f"{name} Intercepts: " \
-                f"R2=(0.0, {round(r2_intercept, 4)}), " \
-                f"Q2=(0.0, {round(q2_intercept, 4)})"
-        self.setTitle(title)
+        self.setLabel(axis="left", text=score_name)
 
         x = np.array([0, 100])
         pen = pg.mkPen("#000", width=2, style=Qt.DashLine)
-        r2_line = pg.PlotCurveItem(x, r2_intercept + r2_slope * x, pen=pen)
-        q2_line = pg.PlotCurveItem(x, q2_intercept + q2_slope * x, pen=pen)
+        line_tr = pg.PlotCurveItem(x, intercept_tr + slope_tr * x, pen=pen)
+        line_cv = pg.PlotCurveItem(x, intercept_cv + slope_cv * x, pen=pen)
 
         point_pen = pg.mkPen("#333")
-        r2_kwargs = {"pen": point_pen, "symbol": "o", "brush": "#6fa255"}
-        q2_kwargs = {"pen": point_pen, "symbol": "s", "brush": "#3a78b6"}
+        kwargs_tr = {"pen": point_pen, "symbol": "o", "brush": "#6fa255"}
+        kwargs_cv = {"pen": point_pen, "symbol": "s", "brush": "#3a78b6"}
 
         kwargs = {"size": 12}
-        kwargs.update(r2_kwargs)
-        r2_points = pg.ScatterPlotItem(corr, r2_scores, **kwargs)
-        kwargs.update(q2_kwargs)
-        q2_points = pg.ScatterPlotItem(corr, q2_scores, **kwargs)
+        kwargs.update(kwargs_tr)
+        points_tr = pg.ScatterPlotItem(corr, scores_tr, **kwargs)
+        kwargs.update(kwargs_cv)
+        points_cv = pg.ScatterPlotItem(corr, scores_cv, **kwargs)
 
-        self.addItem(r2_line)
-        self.addItem(q2_line)
-        self.addItem(r2_points)
-        self.addItem(q2_points)
+        self.addItem(line_tr)
+        self.addItem(line_cv)
+        self.addItem(points_tr)
+        self.addItem(points_cv)
 
         self.legend.clear()
-        self.legend.addItem(pg.ScatterPlotItem(**r2_kwargs), "R2")
-        self.legend.addItem(pg.ScatterPlotItem(**q2_kwargs), "Q2")
+        self.legend.addItem(pg.ScatterPlotItem(**kwargs_tr), "Train")
+        self.legend.addItem(pg.ScatterPlotItem(**kwargs_cv), "CV")
         self.legend.show()
 
 
 class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
     name = "Permutation Plot"
-    description = "Permutation analysis plotting R2 and Q2"
+    description = "Permutation analysis plotting"
     icon = "icons/PermutationPlot.svg"
     priority = 1100
 
@@ -322,11 +325,7 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
 
 
 if __name__ == "__main__":
-    from Orange.regression import LinearRegressionLearner
-
-    housing = Table("housing")
-    pls = LinearRegressionLearner()
-    # permutation(housing, pls)
+    from Orange.classification import LogisticRegressionLearner
 
     WidgetPreview(OWPermutationPlot).run(
-        set_data=housing, set_learner=pls)
+        set_data=Table("iris"), set_learner=LogisticRegressionLearner())
