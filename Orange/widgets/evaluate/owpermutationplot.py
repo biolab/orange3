@@ -1,8 +1,9 @@
-from typing import Optional, Tuple, Callable, List, Dict
+from typing import Optional, Tuple, Callable, List, Dict, Union
 
 import numpy as np
 from scipy.stats import spearmanr, linregress
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QLabel
 import pyqtgraph as pg
 
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog, \
@@ -26,8 +27,18 @@ from Orange.widgets.visualize.utils.plotutils import PlotWidget
 from Orange.widgets.widget import OWWidget, Input, Msg
 
 N_FOLD = 7
+# corr, scores_tr, intercept_tr, slope_tr,
+# scores_cv, intercept_cv, slope_cv, score_name
 PermutationResults = \
     Tuple[np.ndarray, List, float, float, List, float, float, str]
+
+
+def _f_lin(
+        intercept: float,
+        slope: float,
+        x: Union[float, np.ndarray]
+) -> Union[float, np.ndarray]:
+    return intercept + slope * x
 
 
 def _correlation(y: np.ndarray, y_pred: np.ndarray) -> float:
@@ -192,8 +203,10 @@ class PermutationPlot(PlotWidget):
 
         x = np.array([0, 100])
         pen = pg.mkPen("#000", width=2, style=Qt.DashLine)
-        line_tr = pg.PlotCurveItem(x, intercept_tr + slope_tr * x, pen=pen)
-        line_cv = pg.PlotCurveItem(x, intercept_cv + slope_cv * x, pen=pen)
+        y_tr = _f_lin(intercept_tr, slope_tr, x)
+        y_cv = _f_lin(intercept_cv, slope_cv, x)
+        line_tr = pg.PlotCurveItem(x, y_tr, pen=pen)
+        line_cv = pg.PlotCurveItem(x, y_cv, pen=pen)
 
         point_pen = pg.mkPen("#333")
         kwargs_tr = {"pen": point_pen, "symbol": "o", "brush": "#6fa255"}
@@ -230,7 +243,7 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
 
     class Inputs:
         data = Input("Data", Table)
-        learner = Input("Lerner", Learner)
+        learner = Input("Learner", Learner)
 
     class Error(OWWidget.Error):
         domain_transform_err = Msg("{}")
@@ -243,6 +256,7 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
         ConcurrentWidgetMixin.__init__(self)
         self._data: Optional[Table] = None
         self._learner: Optional[Learner] = None
+        self._info: QLabel = None
         self.graph: PermutationPlot = None
         self.setup_gui()
         VisualSettingsDialog(
@@ -263,6 +277,38 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
         gui.spin(box, self, "n_permutations", label="Permutations:",
                  minv=1, maxv=1000, callback=self._run)
         gui.rubber(self.controlArea)
+
+        box = gui.vBox(self.controlArea, "Info")
+        self._info = gui.label(box, self, "", textFormat=Qt.RichText,
+                               minimumWidth=180)
+        self.__set_info(None)
+
+    def __set_info(self, result: PermutationResults):
+        html = "No data available."
+        if result is not None:
+            intercept_tr, slope_tr, _, intercept_cv, slope_cv = result[2: -1]
+            y_tr = _f_lin(intercept_tr, slope_tr, 100)
+            y_cv = _f_lin(intercept_cv, slope_cv, 100)
+            html = f"""
+<table width=100% align="center" style="font-size:11px">
+    <tr style="background:#fefefe">
+        <th style="background:transparent;padding: 2px 4px"></th>
+        <th style="background:transparent;padding: 2px 4px">Corr = 0</th>
+        <th style="background:transparent;padding: 2px 4px">Corr = 100</th>
+    </tr>
+    <tr style="background:#fefefe">
+        <th style="padding: 2px 4px" align=right>Train</th>
+        <td style="padding: 2px 4px" align=right>{intercept_tr:.4f}</td>
+        <td style="padding: 2px 4px" align=right>{y_tr:.4f}</td>
+    </tr>
+    <tr style="background:#fefefe">
+        <th style="padding: 2px 4px" align=right>CV</th>
+        <td style="padding: 2px 4px" align=right>{intercept_cv:.4f}</td>
+        <td style="padding: 2px 4px" align=right>{y_cv:.4f}</td>
+    </tr>
+</table>
+            """
+        self._info.setText(html)
 
     @Inputs.data
     @check_multiple_targets_input
@@ -296,6 +342,7 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
         self.cancel()
         self.graph.clear()
         self.graph.setTitle()
+        self.__set_info(None)
 
     def _run(self):
         if self._data is None or self._learner is None:
@@ -304,6 +351,7 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
 
     def on_done(self, result: PermutationResults):
         self.graph.set_data(*result)
+        self.__set_info(result)
 
     def on_exception(self, ex: Exception):
         if isinstance(ex, DomainTransformationError):
@@ -321,6 +369,9 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
     def send_report(self):
         if self._data is None or self._learner is None:
             return
+        self.report_items("Settings", [("Permutations", self.n_permutations)])
+        self.report_raw("Info", self._info.text())
+        self.report_name("Plot")
         self.report_plot()
 
     def set_visual_settings(self, key: KeyType, value: ValueType):

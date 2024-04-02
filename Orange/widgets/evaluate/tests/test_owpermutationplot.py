@@ -1,4 +1,4 @@
-# pylint: disable=missing-docstring
+# pylint: disable=missing-docstring,protected-access
 import unittest
 
 from Orange.classification import RandomForestLearner, \
@@ -86,6 +86,29 @@ class TestOWPermutationPlot(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self.heart[:7])
         self.assertFalse(self.widget.Error.not_enough_data.is_shown())
         self.wait_until_finished()
+
+    def test_info(self):
+        self.send_signal(self.widget.Inputs.learner, self.rf_cls)
+        self.send_signal(self.widget.Inputs.data, self.heart)
+        self.wait_until_finished()
+        self.assertIn("0.5021", self.widget._info.text())
+        self.assertIn('<th style="padding: 2px 4px" align=right>CV</th>',
+                      self.widget._info.text())
+        self.assertIn('<th style="padding: 2px 4px" align=right>Train</th>',
+                      self.widget._info.text())
+
+        text = """<th style="padding: 2px 4px" align=right>Train</th>
+        <td style="padding: 2px 4px" align=right>0.9980</td>
+        <td style="padding: 2px 4px" align=right>0.9996</td>"""
+        self.assertIn(text, self.widget._info.text())
+
+        text = """<th style="padding: 2px 4px" align=right>CV</th>
+        <td style="padding: 2px 4px" align=right>0.5021</td>
+        <td style="padding: 2px 4px" align=right>0.8948</td>"""
+        self.assertIn(text, self.widget._info.text())
+
+        self.send_signal(self.widget.Inputs.learner, None)
+        self.assertEqual(self.widget._info.text(), "No data available.")
 
     def test_send_report(self):
         self.widget.send_report()
