@@ -31,6 +31,19 @@ class TableViewTest(GuiTest):
         model.setRichHeaderFlags(RichTableModel.Name)
         self.assertEqual(view.cornerText(), "")
 
+    def test_tableview_empty_model(self):
+        data = Orange.data.Table.from_list(
+            Orange.data.Domain([], None),
+            [],
+        )
+        view = RichTableView()
+        model = RichTableModel(data)
+        view.setModel(model)
+        self.assertIsInstance(view.selectionModel(), BlockSelectionModel)
+        model.setRichHeaderFlags(RichTableModel.Name | RichTableModel.Labels |
+                                 RichTableModel.Icon)
+        view.grab()
+
     def test_tableview_toggle_select_all(self):
         view = RichTableView()
         model = RichTableModel(self.data)
