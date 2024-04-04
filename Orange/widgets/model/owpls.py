@@ -1,7 +1,8 @@
-from AnyQt.QtCore import Qt
+import numpy as np
 import scipy.sparse as sp
+from AnyQt.QtCore import Qt
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression import PLSRegressionLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -24,6 +25,7 @@ class OWPLS(OWBaseLearner):
         coefsdata = Output("Coefficients", Table, explicit=True)
         data = Output("Data", Table)
         components = Output("Components", Table)
+        loadings = Output("Loadings", Table)
 
     class Warning(OWBaseLearner.Warning):
         sparse_data = Msg(
@@ -49,16 +51,16 @@ class OWPLS(OWBaseLearner):
 
     def update_model(self):
         super().update_model()
-        coef_table = None
-        data = None
-        components = None
+        coef_table = data = components = loadings = None
         if self.model is not None:
             coef_table = self.model.coefficients_table()
             data = self._create_output_data()
             components = self.model.components()
+            loadings = self._create_output_loadings()
         self.Outputs.coefsdata.send(coef_table)
         self.Outputs.data.send(data)
         self.Outputs.components.send(components)
+        self.Outputs.loadings.send(loadings)
 
     def _create_output_data(self) -> Table:
         projection = self.model.project(self.data)
@@ -77,6 +79,24 @@ class OWPLS(OWBaseLearner):
                 normal_probs.X
             data.metas[:, -1] = dmodx.X[:, 0]
         return data
+
+    def _create_output_loadings(self) -> Table:
+        components = self.model.components()
+        n_comp = len(components) // 2
+
+        names = [f"Loading {i + 1}" for i in range(n_comp)]
+        domain = Domain([ContinuousVariable(n) for n in names],
+                        metas=[StringVariable("Feature name")])
+
+        rotations = components[n_comp: n_comp * 2].X.T
+        loadings = components[:n_comp].Y.T
+        X = np.vstack([rotations, loadings])
+
+        M = np.array([[v.name] for v in components.domain.variables])
+
+        table = Table.from_numpy(domain, X, metas=M)
+        table.name = "Loadings"
+        return table
 
     @OWBaseLearner.Inputs.data
     def set_data(self, data):

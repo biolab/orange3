@@ -87,6 +87,37 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(components.Y.shape, (4, 2))
         self.assertEqual(components.metas.shape, (4, 1))
 
+    def test_output_loadings(self):
+        self.send_signal(self.widget.Inputs.data, self._data)
+        loadings = self.get_output(self.widget.Outputs.loadings)
+        self.assertEqual(loadings.name, "Loadings")
+        self.assertEqual(loadings.X.shape, (14, 2))
+        self.assertEqual(loadings.Y.shape, (14, 0,))
+        self.assertEqual(loadings.metas.shape, (14, 1))
+        self.assertEqual(["Loading 1", "Loading 2"],
+                         [v.name for v in loadings.domain.attributes])
+        self.assertEqual(["Feature name"],
+                         [v.name for v in loadings.domain.metas])
+        self.assertAlmostEqual(loadings.X[0, 0], 0.237, 3)
+        self.assertAlmostEqual(loadings.X[13, 0], -0.304, 3)
+
+    def test_output_loadings_multi_target(self):
+        self.send_signal(self.widget.Inputs.data, self._data_multi_target)
+        loadings = self.get_output(self.widget.Outputs.loadings)
+        self.assertEqual(loadings.name, "Loadings")
+        self.assertEqual(loadings.X.shape, (14, 2))
+        self.assertEqual(loadings.Y.shape, (14, 0))
+        self.assertEqual(loadings.metas.shape, (14, 1))
+        self.assertEqual(["Loading 1", "Loading 2"],
+                         [v.name for v in loadings.domain.attributes])
+        self.assertEqual(["Feature name"],
+                         [v.name for v in loadings.domain.metas])
+        metas = [[v.name] for v in self._data_multi_target.domain.variables]
+        self.assertTrue((loadings.metas == metas).all())
+        self.assertAlmostEqual(loadings.X[0, 0], -0.198, 3)
+        self.assertAlmostEqual(loadings.X[12, 0], -0.288, 3)
+        self.assertAlmostEqual(loadings.X[13, 0], 0.243, 3)
+
 
 if __name__ == "__main__":
     unittest.main()
