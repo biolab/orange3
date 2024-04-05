@@ -237,7 +237,7 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
     icon = "icons/PermutationPlot.svg"
     priority = 1100
 
-    n_permutations = Setting(100)
+    n_permutations = Setting(20)
     visual_settings = Setting({}, schema_only=True)
     graph_name = "graph.plotItem"
 
