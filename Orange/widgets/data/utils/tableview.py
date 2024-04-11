@@ -168,7 +168,8 @@ class RichTableView(DataTableView):
             model = self.model()
             model = source_model(model)
             if isinstance(model, RichTableModel) and \
-                    model.richHeaderFlags() & RichTableModel.Labels:
+                    model.richHeaderFlags() & RichTableModel.Labels and \
+                    model.columnCount() > 0:
                 items = model.headerData(
                     0, Qt.Horizontal, RichTableModel.LabelsItemsRole
                 )
