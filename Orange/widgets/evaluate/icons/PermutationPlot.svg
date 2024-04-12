@@ -29,12 +29,12 @@
           fill="#333333" width="0.999" height="2.864"/>
     <polygon fill="#B2B2B2"
              points="9.073,40 8,40 8,37.451 8,6 6,6 6,40 6,42 8,42 42,42 42,40 "/>
-    <circle fill="#666666" cx="12" cy="35" r="3"/>
-    <circle fill="#666666" cx="19" cy="36" r="3"/>
-    <circle fill="#666666" cx="26" cy="37" r="3"/>
-    <circle fill="#666666" cx="40" cy="13" r="3"/>
+    <circle fill="#666666" cx="12" cy="38" r="3"/>
+    <circle fill="#666666" cx="19" cy="37" r="3"/>
+    <circle fill="#666666" cx="16" cy="45" r="3"/>
+    <circle fill="#666666" cx="40" cy="14" r="3"/>
     <rect fill="#999999" x="9" y="25" width="6" height="6"/>
     <rect fill="#999999" x="16" y="24" width="6" height="6"/>
-    <rect fill="#999999" x="23" y="27" width="6" height="6"/>
-    <rect fill="#999999" x="38" y="7" width="6" height="6"/>
+    <rect fill="#999999" x="12" y="18" width="6" height="6"/>
+    <rect fill="#999999" x="37" y="4" width="6" height="6"/>
 </svg>

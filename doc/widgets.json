@@ -858,6 +858,13 @@
      "calibration",
      "plot"
     ]
+   },
+   {
+    "text": "Permutation Plot",
+    "doc": "visual-programming/source/widgets/evaluate/permutationplot.md",
+    "icon": "../Orange/widgets/evaluate/icons/PermutationPlot.svg",
+    "background": "#C3F3F3",
+    "keywords": []
    }
   ]
  ],

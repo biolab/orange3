@@ -132,6 +132,7 @@ Evaluate
    widgets/evaluate/predictions
    widgets/evaluate/rocanalysis
    widgets/evaluate/testandscore
+   widgets/evaluate/permutationplot
 
 
 .. toctree::
