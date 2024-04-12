@@ -301,12 +301,11 @@ class OWScatterPlotGraph(OWScatterPlotBase):
                 add(x[mask], y[mask], self.palette[val].darker(135))
 
     def _add_ellipse(self, x: np.ndarray, y: np.ndarray, color: QColor) -> np.ndarray:
-        # https://stats.stackexchange.com/questions/577628/trying-to-understand-how-to-calculate-a-hotellings-t2-confidence-ellipse
-        # https://stackoverflow.com/questions/66179256/how-to-check-if-a-point-is-in-an-ellipse-in-python
+        # https://github.com/ChristianGoueguel/HotellingEllipse/blob/master/R/ellipseCoord.R
         points = np.vstack([x, y]).T
         mu = np.mean(points, axis=0)
         cov = np.cov(*(points - mu).T)
-        _, vects = np.linalg.eig(cov)
+        vals, vects = np.linalg.eig(cov)
         angle = math.atan2(vects[1, 0], vects[0, 0])
         matrix = np.array([[np.cos(angle), -np.sin(angle)],
                            [np.sin(angle), np.cos(angle)]])
@@ -315,8 +314,8 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         f = ss.f.ppf(0.95, 2, n - 2)
         f = f * 2 * (n - 1) / (n - 2)
         m = [np.pi * i / 100 for i in range(201)]
-        cx = np.cos(m) * np.sqrt(cov[0, 0] * f)
-        cy = np.sin(m) * np.sqrt(cov[1, 1] * f)
+        cx = np.cos(m) * np.sqrt(vals[0] * f)
+        cy = np.sin(m) * np.sqrt(vals[1] * f)
 
         pts = np.vstack([cx, cy])
         pts = matrix.dot(pts)
@@ -413,7 +412,8 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
         gui.checkBox(
             self._plot_box, self,
             value="graph.show_ellipse",
-            label="Show ellipse",
+            label="Show confidence ellipse",
+            tooltip="Hotelling's T² confidence ellipse (α=95%)",
             callback=self.graph.update_ellipse)
 
     def _add_controls_axis(self):
