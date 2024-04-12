@@ -1,6 +1,9 @@
+import math
+from typing import List, Callable
 from xml.sax.saxutils import escape
 
 import numpy as np
+import scipy.stats as ss
 from scipy.stats import linregress
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
@@ -104,6 +107,8 @@ class ParameterSetter(ScatterBaseParameterSetter):
             self.reg_line_settings.update(**settings)
             Updater.update_inf_lines(self.reg_line_items,
                                      **self.reg_line_settings)
+            Updater.update_lines(self.ellipse_items,
+                                 **self.reg_line_settings)
             self.master.update_reg_line_label_colors()
 
         def update_line_label(**settings):
@@ -129,20 +134,27 @@ class ParameterSetter(ScatterBaseParameterSetter):
         return [line.label for line in self.master.reg_line_items
                 if hasattr(line, "label")]
 
+    @property
+    def ellipse_items(self):
+        return self.master.ellipse_items
+
 
 class OWScatterPlotGraph(OWScatterPlotBase):
     show_reg_line = Setting(False)
     orthonormal_regression = Setting(False)
+    show_ellipse = Setting(False)
     jitter_continuous = Setting(False)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
         self.parameter_setter = ParameterSetter(self)
         self.reg_line_items = []
+        self.ellipse_items: List[pg.PlotCurveItem] = []
 
     def clear(self):
         super().clear()
         self.reg_line_items.clear()
+        self.ellipse_items.clear()
 
     def update_coordinates(self):
         super().update_coordinates()
@@ -153,6 +165,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     def update_colors(self):
         super().update_colors()
         self.update_regression_line()
+        self.update_ellipse()
 
     def jitter_coordinates(self, x, y):
         def get_span(attr):
@@ -255,17 +268,28 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         self.update_reg_line_label_colors()
 
     def update_regression_line(self):
-        for line in self.reg_line_items:
-            self.plot_widget.removeItem(line)
-        self.reg_line_items.clear()
-        if not (self.show_reg_line
-                and self.master.can_draw_regresssion_line()):
+        self._update_curve(self.reg_line_items,
+                           self.show_reg_line,
+                           self._add_line)
+        self.update_reg_line_label_colors()
+
+    def update_ellipse(self):
+        self._update_curve(self.ellipse_items,
+                           self.show_ellipse,
+                           self._add_ellipse)
+
+    def _update_curve(self, items: List, show: bool, add: Callable):
+        for item in items:
+            self.plot_widget.removeItem(item)
+        items.clear()
+        if not (show and self.master.can_draw_regression_line()):
             return
         x, y = self.master.get_coordinates_data()
-        if x is None:
+        if x is None or len(x) < 2:
             return
-        self._add_line(x, y, QColor("#505050"))
-        if self.master.is_continuous_color() or self.palette is None:
+        add(x, y, QColor("#505050"))
+        if self.master.is_continuous_color() or self.palette is None \
+                or len(self.palette) == 0:
             return
         c_data = self.master.get_color_data()
         if c_data is None:
@@ -274,8 +298,40 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         for val in range(c_data.max() + 1):
             mask = c_data == val
             if mask.sum() > 1:
-                self._add_line(x[mask], y[mask], self.palette[val].darker(135))
-        self.update_reg_line_label_colors()
+                add(x[mask], y[mask], self.palette[val].darker(135))
+
+    def _add_ellipse(self, x: np.ndarray, y: np.ndarray, color: QColor) -> np.ndarray:
+        # https://github.com/ChristianGoueguel/HotellingEllipse/blob/master/R/ellipseCoord.R
+        points = np.vstack([x, y]).T
+        mu = np.mean(points, axis=0)
+        cov = np.cov(*(points - mu).T)
+        vals, vects = np.linalg.eig(cov)
+        angle = math.atan2(vects[1, 0], vects[0, 0])
+        matrix = np.array([[np.cos(angle), -np.sin(angle)],
+                           [np.sin(angle), np.cos(angle)]])
+
+        n = len(x)
+        f = ss.f.ppf(0.95, 2, n - 2)
+        f = f * 2 * (n - 1) / (n - 2)
+        m = [np.pi * i / 100 for i in range(201)]
+        cx = np.cos(m) * np.sqrt(vals[0] * f)
+        cy = np.sin(m) * np.sqrt(vals[1] * f)
+
+        pts = np.vstack([cx, cy])
+        pts = matrix.dot(pts)
+        cx = pts[0] + mu[0]
+        cy = pts[1] + mu[1]
+
+        width = self.parameter_setter.reg_line_settings[Updater.WIDTH_LABEL]
+        alpha = self.parameter_setter.reg_line_settings[Updater.ALPHA_LABEL]
+        style = self.parameter_setter.reg_line_settings[Updater.STYLE_LABEL]
+        style = Updater.LINE_STYLES[style]
+        color.setAlpha(alpha)
+
+        pen = pg.mkPen(color=color, width=width, style=style)
+        ellipse = pg.PlotCurveItem(cx, cy, pen=pen)
+        self.plot_widget.addItem(ellipse)
+        self.ellipse_items.append(ellipse)
 
 
 class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
@@ -353,6 +409,12 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
             "If checked, fit line to group (minimize distance from points);\n"
             "otherwise fit y as a function of x (minimize vertical distances)",
             disabledBy=self.cb_reg_line)
+        gui.checkBox(
+            self._plot_box, self,
+            value="graph.show_ellipse",
+            label="Show confidence ellipse",
+            tooltip="Hotelling's T² confidence ellipse (α=95%)",
+            callback=self.graph.update_ellipse)
 
     def _add_controls_axis(self):
         common_options = dict(
@@ -492,7 +554,7 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
                 text = "<b>{}</b><br/><br/>{}".format(text, others)
         return text
 
-    def can_draw_regresssion_line(self):
+    def can_draw_regression_line(self):
         return self.data is not None and \
                self.data.domain is not None and \
                self.attr_x is not None and self.attr_y is not None and \
@@ -552,7 +614,9 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
         if self._domain_invalidated:
             self.graph.update_axes()
             self._domain_invalidated = False
-        self.cb_reg_line.setEnabled(self.can_draw_regresssion_line())
+        can_plot = self.can_draw_regression_line()
+        self.cb_reg_line.setEnabled(can_plot)
+        self.graph.controls.show_ellipse.setEnabled(can_plot)
 
     @Inputs.features
     def set_shown_attributes(self, attributes):
@@ -578,7 +642,9 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
         self.vizrankAutoSelect.emit([self.attr_x, self.attr_y])
 
     def attr_changed(self):
-        self.cb_reg_line.setEnabled(self.can_draw_regresssion_line())
+        can_plot = self.can_draw_regression_line()
+        self.cb_reg_line.setEnabled(can_plot)
+        self.graph.controls.show_ellipse.setEnabled(can_plot)
         self.setup_plot()
         self.commit.deferred()
 
