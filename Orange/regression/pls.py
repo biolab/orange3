@@ -34,7 +34,16 @@ class _PLSCommonTransform:
         u = y_center @ pls.y_rotations_
         """
         pls = self.pls_model.skl_model
-        t, u = pls.transform(X, Y)
+        mask = np.isnan(Y).any(axis=1)
+        n_comp = pls.n_components
+        t = np.full((len(X), n_comp), np.nan, dtype=float)
+        u = np.full((len(X), n_comp), np.nan, dtype=float)
+        if (~mask).sum() > 0:
+            t_, u_ = pls.transform(X[~mask], Y[~mask])
+            t[~mask] = t_
+            u[~mask] = u_
+        if mask.sum() > 0:
+            t[mask] = pls.transform(X[mask])
         return np.hstack((t, u))
 
     def __call__(self, data):

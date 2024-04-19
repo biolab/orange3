@@ -141,6 +141,38 @@ class TestPLSCommonTransform(unittest.TestCase):
         m = PLSRegressionLearner()(table(10, 5, 2))
         self.assertNotEqual(hash(transformer), hash(_PLSCommonTransform(m)))
 
+    def test_missing_target(self):
+        data = table(10, 5, 1)
+        with data.unlocked(data.Y):
+            data.Y[::3] = np.nan
+        pls = PLSRegressionLearner()(data)
+        proj = pls.project(data)
+        self.assertFalse(np.isnan(proj.X).any())
+        self.assertFalse(np.isnan(proj.metas[1::3]).any())
+        self.assertFalse(np.isnan(proj.metas[2::3]).any())
+        self.assertTrue(np.isnan(proj.metas[::3]).all())
+
+    def test_missing_target_multitarget(self):
+        data = table(10, 5, 3)
+        with data.unlocked(data.Y):
+            data.Y[0] = np.nan
+            data.Y[1, 1] = np.nan
+
+        pls = PLSRegressionLearner()(data)
+        proj = pls.project(data)
+        self.assertFalse(np.isnan(proj.X).any())
+        self.assertFalse(np.isnan(proj.metas[2:]).any())
+        self.assertTrue(np.isnan(proj.metas[:2]).all())
+
+    def test_apply_domain_classless_data(self):
+        data = Table("housing")
+        pls = PLSRegressionLearner()(data)
+        classless_data = data.transform(Domain(data.domain.attributes))[:5]
+
+        proj = pls.project(classless_data)
+        self.assertFalse(np.isnan(proj.X).any())
+        self.assertTrue(np.isnan(proj.metas).all())
+
 
 if __name__ == "__main__":
     unittest.main()
