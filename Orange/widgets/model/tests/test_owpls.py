@@ -32,16 +32,42 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
     def test_output_coefsdata(self):
         self.send_signal(self.widget.Inputs.data, self._data)
         coefsdata = self.get_output(self.widget.Outputs.coefsdata)
-        self.assertEqual(coefsdata.X.shape, (13, 1))
-        self.assertEqual(coefsdata.Y.shape, (13, 0))
-        self.assertEqual(coefsdata.metas.shape, (13, 1))
+        self.assertEqual(coefsdata.name, "Coefficients and Loadings")
+        self.assertEqual(coefsdata.X.shape, (14, 3))
+        self.assertEqual(coefsdata.Y.shape, (14, 0))
+        self.assertEqual(coefsdata.metas.shape, (14, 2))
+
+        self.assertEqual(["coef (MEDV)", "Loading 1", "Loading 2"],
+                         [v.name for v in coefsdata.domain.attributes])
+        self.assertEqual(["Variable name", "Variable role"],
+                         [v.name for v in coefsdata.domain.metas])
+        metas = [v.name for v in self._data.domain.variables]
+        self.assertTrue((coefsdata.metas[:, 0] == metas).all())
+        self.assertTrue((coefsdata.metas[:-1, 1] == 0).all())
+        self.assertTrue((coefsdata.metas[-1, 1] == 1))
+        self.assertAlmostEqual(coefsdata.X[0, 1], 0.237, 3)
+        self.assertAlmostEqual(coefsdata.X[13, 1], -0.304, 3)
 
     def test_output_coefsdata_multi_target(self):
         self.send_signal(self.widget.Inputs.data, self._data_multi_target)
         coefsdata = self.get_output(self.widget.Outputs.coefsdata)
-        self.assertEqual(coefsdata.X.shape, (12, 2))
-        self.assertEqual(coefsdata.Y.shape, (12, 0))
-        self.assertEqual(coefsdata.metas.shape, (12, 1))
+        self.assertEqual(coefsdata.name, "Coefficients and Loadings")
+        self.assertEqual(coefsdata.X.shape, (14, 4))
+        self.assertEqual(coefsdata.Y.shape, (14, 0))
+        self.assertEqual(coefsdata.metas.shape, (14, 2))
+
+        attr_names = ["coef (MEDV)", "coef (CRIM)", "Loading 1", "Loading 2"]
+        self.assertEqual(attr_names,
+                         [v.name for v in coefsdata.domain.attributes])
+        self.assertEqual(["Variable name", "Variable role"],
+                         [v.name for v in coefsdata.domain.metas])
+        metas = [v.name for v in self._data_multi_target.domain.variables]
+        self.assertTrue((coefsdata.metas[:, 0] == metas).all())
+        self.assertTrue((coefsdata.metas[:-2, 1] == 0).all())
+        self.assertTrue((coefsdata.metas[-2:, 1] == 1).all())
+        self.assertAlmostEqual(coefsdata.X[0, 2], -0.198, 3)
+        self.assertAlmostEqual(coefsdata.X[12, 2], -0.288, 3)
+        self.assertAlmostEqual(coefsdata.X[13, 2], 0.243, 3)
 
     def test_output_data(self):
         self.send_signal(self.widget.Inputs.data, self._data)

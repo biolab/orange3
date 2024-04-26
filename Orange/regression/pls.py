@@ -1,3 +1,5 @@
+from typing import Tuple
+
 import numpy as np
 import sklearn.cross_decomposition as skl_pls
 
@@ -154,6 +156,14 @@ class PLSModel(SklModelRegression):
         coef_table = Table.from_numpy(domain, X=coeffs, metas=waves)
         coef_table.name = "coefficients"
         return coef_table
+
+    @property
+    def rotations(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self.skl_model.x_rotations_, self.skl_model.y_rotations_
+
+    @property
+    def loadings(self) -> Tuple[np.ndarray, np.ndarray]:
+        return self.skl_model.x_loadings_, self.skl_model.y_loadings_
 
 
 class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):
