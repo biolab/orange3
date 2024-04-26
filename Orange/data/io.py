@@ -34,7 +34,7 @@ from Orange.data import Compression, open_compressed, detect_encoding, \
 from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PROTOCOL
 
 from Orange.util import flatten
-
+from Orange.version import short_version as ORANGE_VERSION
 
 # Support values longer than 128K (i.e. text contents features)
 csv.field_size_limit(100*1024*1024)
@@ -551,7 +551,10 @@ class HDF5Reader(FileFormat):
                 return f[name]
             return None
 
-        assert 'domain' in f
+        try:
+            assert f.attrs['creator'] == "Orange"
+        except KeyError:
+            assert 'domain' in f
 
         domain = Domain(*[[make_var(*args) for args in read_domain(subdomain)]
                           for subdomain in ['attributes', 'class_vars', 'metas']])
@@ -591,6 +594,10 @@ class HDF5Reader(FileFormat):
             return params
 
         with h5py.File(filename, 'w') as f:
+            f.attrs['creator'] = "Orange"
+            f.attrs['Orange_version'] = ORANGE_VERSION
+            f.attrs['HDF5_Version'] = h5py.version.hdf5_version
+            f.attrs['h5py_version'] = h5py.version.version
             for subdomain in ['attributes', 'class_vars', 'metas']:
                 parsed = [parse(feature) for feature in getattr(data.domain, subdomain)]
                 domain = np.array([[name, header] for name, header, _ in parsed], 'S')
@@ -604,6 +611,6 @@ class HDF5Reader(FileFormat):
                 for i, attr in enumerate(data.domain.metas):
                     col_type = h5py.string_dtype() if isinstance(attr, StringVariable) else 'f'
                     col_data = data.metas[:, [i]].astype(col_type)
-                    if col_type is not 'f':
+                    if col_type != 'f':
                         col_data[pd.isnull(col_data)] = ""
                     f.create_dataset(f'metas/{i}', data=col_data, dtype=col_type)
