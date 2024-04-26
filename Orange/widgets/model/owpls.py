@@ -22,7 +22,7 @@ class OWPLS(OWBaseLearner):
 
     class Outputs(OWBaseLearner.Outputs):
         coefsdata = Output("Coefficients", Table, explicit=True)
-        data = Output("Data", Table)
+        data = Output("Data with Scores", Table)
         components = Output("Components", Table)
 
     class Warning(OWBaseLearner.Warning):
