@@ -586,7 +586,7 @@ class HDF5Reader(FileFormat):
         table = Table.from_numpy(domain, X, Y, metas)
         if isinstance(self.filename, str):
             table.name = path.splitext(path.split(self.filename)[-1])[0]
-
+        self.set_table_metadata(self.filename, table)
         return table
 
     @classmethod
@@ -623,3 +623,4 @@ class HDF5Reader(FileFormat):
                     if col_type != 'f':
                         col_data[pd.isnull(col_data)] = ""
                     f.create_dataset(f'metas/{i}', data=col_data, dtype=col_type)
+        cls.write_table_metadata(filename, data)
