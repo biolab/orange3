@@ -524,8 +524,6 @@ class HDF5Reader(FileFormat):
     SUPPORT_SPARSE_DATA = False
 
     def read(self):
-        h5file = f = h5py.File(self.filename, "r")
-
         def read_domain(sub):
             d = f['domain']
             subdomain = d[sub].asstr() if sub in d else []
@@ -551,32 +549,32 @@ class HDF5Reader(FileFormat):
                 return f[name]
             return None
 
-        try:
-            assert f.attrs['creator'] == "Orange"
-        except KeyError:
-            assert 'domain' in f
+        with h5py.File(self.filename, "r") as f:
+            try:
+                assert f.attrs['creator'] == "Orange"
+            except KeyError:
+                assert 'domain' in f
 
-        domain = Domain(*[[make_var(*args) for args in read_domain(subdomain)]
-                          for subdomain in ['attributes', 'class_vars', 'metas']])
+            domain = Domain(*[[make_var(*args) for args in read_domain(subdomain)]
+                              for subdomain in ['attributes', 'class_vars', 'metas']])
 
-        X = read_hdf5("X")
-        Y = read_hdf5("Y")
+            X = read_hdf5("X")
+            Y = read_hdf5("Y")
 
+            if len(domain.metas) > 1:
+                metas = np.hstack([read_hdf5(f'metas/{i}',
+                                                  isinstance(attr, StringVariable))
+                                   for i, attr in enumerate(domain.metas)])
+            elif len(domain.metas) == 1:
+                metas = read_hdf5('metas/0',
+                                       isinstance(domain.metas[0], StringVariable)
+                                       )
+            else:
+                metas = None
 
-        if len(domain.metas) > 1:
-            metas = np.hstack([read_hdf5(f'metas/{i}',
-                                              isinstance(attr, StringVariable))
-                               for i, attr in enumerate(domain.metas)])
-        elif len(domain.metas) == 1:
-            metas = read_hdf5('metas/0',
-                                   isinstance(domain.metas[0], StringVariable)
-                                   )
-        else:
-            metas = None
-
-        table = Table.from_numpy(domain, X, Y, metas)
-        if isinstance(self.filename, str):
-            table.name = path.splitext(path.split(self.filename)[-1])[0]
+            table = Table.from_numpy(domain, X, Y, metas)
+            if isinstance(self.filename, str):
+                table.name = path.splitext(path.split(self.filename)[-1])[0]
         self.set_table_metadata(self.filename, table)
         return table
 
