@@ -7,8 +7,8 @@ from Orange.data import Table, Domain, Variable, \
     ContinuousVariable, StringVariable
 from Orange.data.util import get_unique_names, SharedComputeValue
 from Orange.preprocess.score import LearnerScorer
-from Orange.regression.base_regression import SklLearnerRegression, \
-    SklModelRegression
+from Orange.regression.base_regression import SklLearnerRegression
+from Orange.regression.linear import LinearModel
 
 __all__ = ["PLSRegressionLearner"]
 
@@ -75,13 +75,9 @@ class PLSProjector(SharedComputeValue):
         return hash((super().__hash__(), self.feature))
 
 
-class PLSModel(SklModelRegression):
+class PLSModel(LinearModel):
     var_prefix_X = "PLS T"
     var_prefix_Y = "PLS U"
-
-    @property
-    def coefficients(self):
-        return self.skl_model.coef_
 
     def predict(self, X):
         vals = self.skl_model.predict(X)
