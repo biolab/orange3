@@ -1,5 +1,7 @@
 import numpy as np
+import scipy.stats as ss
 import sklearn.cross_decomposition as skl_pls
+from sklearn.preprocessing import StandardScaler
 
 from Orange.data import Table, Domain, Variable, \
     ContinuousVariable, StringVariable
@@ -102,9 +104,8 @@ class PLSModel(SklModelRegression):
         transformer = _PLSCommonTransform(self)
 
         def trvar(i, name):
-            return ContinuousVariable(name,
-                                      compute_value=PLSProjector(transformer,
-                                                                 i))
+            return ContinuousVariable(
+                name, compute_value=PLSProjector(transformer, i))
 
         n_components = self.skl_model.x_loadings_.shape[1]
 
@@ -154,6 +155,61 @@ class PLSModel(SklModelRegression):
         coef_table = Table.from_numpy(domain, X=coeffs, metas=waves)
         coef_table.name = "coefficients"
         return coef_table
+
+    def residuals_normal_probability(self, data: Table) -> Table:
+        pred = self(data)
+        n = len(data)
+        m = len(data.domain.class_vars)
+
+        err = data.Y - pred
+        if m == 1:
+            err = err[:, None]
+
+        theoretical_percentiles = (np.arange(1.0, n + 1)) / (n + 1)
+        quantiles = ss.norm.ppf(theoretical_percentiles)
+        ind = np.argsort(err, axis=0)
+        theoretical_quantiles = np.zeros((n, m), dtype=float)
+        for i in range(m):
+            theoretical_quantiles[ind[:, i], i] = quantiles
+
+        # check names so that tables could later be merged
+        proposed = [f"{name} ({var.name})" for var in data.domain.class_vars
+                    for name in ("Sample Quantiles", "Theoretical Quantiles")]
+        names = get_unique_names(data.domain, proposed)
+        domain = Domain([ContinuousVariable(name) for name in names])
+        X = np.zeros((n, m * 2), dtype=float)
+        X[:, 0::2] = err
+        X[:, 1::2] = theoretical_quantiles
+        res_table = Table.from_numpy(domain, X)
+        res_table.name = "residuals normal probability"
+        return res_table
+
+    def dmodx(self, data: Table) -> Table:
+        data = self.data_to_model_domain(data)
+
+        n_comp = self.skl_model.n_components
+        resids_ssx = self._residual_ssx(data.X)
+        s = np.sqrt(resids_ssx / (self.skl_model.x_loadings_.shape[0] - n_comp))
+        s0 = np.sqrt(resids_ssx.sum() / (
+                (self.skl_model.x_scores_.shape[0] - n_comp - 1) *
+                (data.X.shape[1] - n_comp)))
+        dist = np.sqrt((s / s0) ** 2)
+
+        name = get_unique_names(data.domain, ["DModX"])[0]
+        domain = Domain([ContinuousVariable(name)])
+        dist_table = Table.from_numpy(domain, dist[:, None])
+        dist_table.name = "DMod"
+        return dist_table
+
+    def _residual_ssx(self, X: np.ndarray) -> np.ndarray:
+        pred_scores = self.skl_model.transform(X)
+        inv_pred_scores = self.skl_model.inverse_transform(pred_scores)
+
+        scaler = StandardScaler()
+        scaler.fit(X)
+        x_recons = scaler.transform(inv_pred_scores)
+        x_scaled = scaler.transform(X)
+        return np.sum((x_scaled - x_recons) ** 2, axis=1)
 
 
 class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):

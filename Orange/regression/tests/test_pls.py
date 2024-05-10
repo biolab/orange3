@@ -93,6 +93,19 @@ class TestPLSRegressionLearner(unittest.TestCase):
             np.testing.assert_almost_equal(scikit_model.coef_.T,
                                            coef_table.X)
 
+    def test_residuals_normal_probability(self):
+        for d in [table(10, 5, 1), table(10, 5, 3)]:
+            orange_model = PLSRegressionLearner()(d)
+            res_table = orange_model.residuals_normal_probability(d)
+            n_target = len(d.domain.class_vars)
+            self.assertEqual(res_table.X.shape, (len(d), 2 * n_target))
+
+    def test_dmodx(self):
+        for d in (table(10, 5, 1), table(10, 5, 3)):
+            orange_model = PLSRegressionLearner()(d)
+            dist_table = orange_model.dmodx(d)
+            self.assertEqual(dist_table.X.shape, (len(d), 1))
+
     def test_eq_hash(self):
         data = Table("housing")
         pls1 = PLSRegressionLearner()(data)
