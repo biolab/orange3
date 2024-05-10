@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 
 from Orange.data import Table, Domain, StringVariable
 from Orange.widgets.model.owpls import OWPLS
@@ -86,6 +87,21 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(components.X.shape, (2, 12))
         self.assertEqual(components.Y.shape, (2, 2))
         self.assertEqual(components.metas.shape, (2, 1))
+
+    def test_missing_target(self):
+        data = self._data[:5].copy()
+        data.Y[[0, 4]] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertFalse(np.isnan(output.metas[:, 3:].astype(float)).any())
+        self.assertTrue(np.isnan(output.metas[0, 1:3].astype(float)).all())
+        self.assertTrue(np.isnan(output.metas[4, 1:3].astype(float)).all())
+        self.assertFalse(np.isnan(output.metas[1:4, 1:3].astype(float)).any())
+
+        with data.unlocked(data.Y):
+            data.Y[:] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
 
 if __name__ == "__main__":
