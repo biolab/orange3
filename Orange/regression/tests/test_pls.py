@@ -93,6 +93,19 @@ class TestPLSRegressionLearner(unittest.TestCase):
             np.testing.assert_almost_equal(scikit_model.coef_.T,
                                            coef_table.X)
 
+    def test_residuals_normal_probability(self):
+        for d in [table(10, 5, 1), table(10, 5, 3)]:
+            orange_model = PLSRegressionLearner()(d)
+            res_table = orange_model.residuals_normal_probability(d)
+            n_target = len(d.domain.class_vars)
+            self.assertEqual(res_table.X.shape, (len(d), 2 * n_target))
+
+    def test_dmodx(self):
+        for d in (table(10, 5, 1), table(10, 5, 3)):
+            orange_model = PLSRegressionLearner()(d)
+            dist_table = orange_model.dmodx(d)
+            self.assertEqual(dist_table.X.shape, (len(d), 1))
+
     def test_eq_hash(self):
         data = Table("housing")
         pls1 = PLSRegressionLearner()(data)
@@ -140,6 +153,38 @@ class TestPLSCommonTransform(unittest.TestCase):
 
         m = PLSRegressionLearner()(table(10, 5, 2))
         self.assertNotEqual(hash(transformer), hash(_PLSCommonTransform(m)))
+
+    def test_missing_target(self):
+        data = table(10, 5, 1)
+        with data.unlocked(data.Y):
+            data.Y[::3] = np.nan
+        pls = PLSRegressionLearner()(data)
+        proj = pls.project(data)
+        self.assertFalse(np.isnan(proj.X).any())
+        self.assertFalse(np.isnan(proj.metas[1::3]).any())
+        self.assertFalse(np.isnan(proj.metas[2::3]).any())
+        self.assertTrue(np.isnan(proj.metas[::3]).all())
+
+    def test_missing_target_multitarget(self):
+        data = table(10, 5, 3)
+        with data.unlocked(data.Y):
+            data.Y[0] = np.nan
+            data.Y[1, 1] = np.nan
+
+        pls = PLSRegressionLearner()(data)
+        proj = pls.project(data)
+        self.assertFalse(np.isnan(proj.X).any())
+        self.assertFalse(np.isnan(proj.metas[2:]).any())
+        self.assertTrue(np.isnan(proj.metas[:2]).all())
+
+    def test_apply_domain_classless_data(self):
+        data = Table("housing")
+        pls = PLSRegressionLearner()(data)
+        classless_data = data.transform(Domain(data.domain.attributes))[:5]
+
+        proj = pls.project(classless_data)
+        self.assertFalse(np.isnan(proj.X).any())
+        self.assertTrue(np.isnan(proj.metas).all())
 
 
 if __name__ == "__main__":

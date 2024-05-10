@@ -1,4 +1,5 @@
 import unittest
+import numpy as np
 
 from Orange.data import Table, Domain, StringVariable
 from Orange.widgets.model.owpls import OWPLS
@@ -74,14 +75,30 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(output.X.shape, (506, 13))
         self.assertEqual(output.Y.shape, (506,))
-        self.assertEqual(output.metas.shape, (506, 5))
+        self.assertEqual(output.metas.shape, (506, 8))
+        self.assertEqual([v.name for v in self._data.domain.variables],
+                         [v.name for v in output.domain.variables])
+        metas = ["PLS U1", "PLS U2", "PLS T1", "PLS T2",
+                 "Sample Quantiles (MEDV)", "Theoretical Quantiles (MEDV)",
+                 "DModX"]
+        self.assertEqual([v.name for v in self._data.domain.metas] + metas,
+                         [v.name for v in output.domain.metas])
 
     def test_output_data_multi_target(self):
         self.send_signal(self.widget.Inputs.data, self._data_multi_target)
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(output.X.shape, (506, 12))
         self.assertEqual(output.Y.shape, (506, 2))
-        self.assertEqual(output.metas.shape, (506, 5))
+        self.assertEqual(output.metas.shape, (506, 10))
+        orig_domain = self._data_multi_target.domain
+        self.assertEqual([v.name for v in orig_domain.variables],
+                         [v.name for v in output.domain.variables])
+        metas = ["PLS U1", "PLS U2", "PLS T1", "PLS T2",
+                 "Sample Quantiles (MEDV)", "Theoretical Quantiles (MEDV)",
+                 "Sample Quantiles (CRIM)", "Theoretical Quantiles (CRIM)",
+                 "DModX"]
+        self.assertEqual([v.name for v in orig_domain.metas] + metas,
+                         [v.name for v in output.domain.metas])
 
     def test_output_components(self):
         self.send_signal(self.widget.Inputs.data, self._data)
@@ -96,6 +113,21 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(components.X.shape, (2, 12))
         self.assertEqual(components.Y.shape, (2, 2))
         self.assertEqual(components.metas.shape, (2, 1))
+
+    def test_missing_target(self):
+        data = self._data[:5].copy()
+        data.Y[[0, 4]] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertFalse(np.isnan(output.metas[:, 3:].astype(float)).any())
+        self.assertTrue(np.isnan(output.metas[0, 1:3].astype(float)).all())
+        self.assertTrue(np.isnan(output.metas[4, 1:3].astype(float)).all())
+        self.assertFalse(np.isnan(output.metas[1:4, 1:3].astype(float)).any())
+
+        with data.unlocked(data.Y):
+            data.Y[:] = np.nan
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
 
 if __name__ == "__main__":
