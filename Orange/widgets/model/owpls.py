@@ -1,7 +1,9 @@
+import numpy as np
 from AnyQt.QtCore import Qt
 import scipy.sparse as sp
 
-from Orange.data import Table, Domain
+from Orange.data import Table, Domain, ContinuousVariable, StringVariable, \
+    DiscreteVariable
 from Orange.regression import PLSRegressionLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -21,7 +23,7 @@ class OWPLS(OWBaseLearner):
     LEARNER = PLSRegressionLearner
 
     class Outputs(OWBaseLearner.Outputs):
-        coefsdata = Output("Coefficients", Table, explicit=True)
+        coefsdata = Output("Coefficients and Loadings", Table, explicit=True)
         data = Output("Data with Scores", Table)
         components = Output("Components", Table)
 
@@ -53,12 +55,40 @@ class OWPLS(OWBaseLearner):
         data = None
         components = None
         if self.model is not None:
-            coef_table = self.model.coefficients_table()
+            coef_table = self._create_output_coeffs_loadings()
             data = self._create_output_data()
             components = self.model.components()
         self.Outputs.coefsdata.send(coef_table)
         self.Outputs.data.send(data)
         self.Outputs.components.send(components)
+
+    def _create_output_coeffs_loadings(self) -> Table:
+        coefficients = self.model.coefficients.T
+        _, y_loadings = self.model.loadings
+        x_rotations, _ = self.model.rotations
+
+        n_features, n_targets = coefficients.shape
+        n_components = x_rotations.shape[1]
+
+        names = [f"coef ({v.name})" for v in self.model.domain.class_vars]
+        names += [f"Loading {i + 1}" for i in range(n_components)]
+        domain = Domain(
+            [ContinuousVariable(n) for n in names],
+            metas=[StringVariable("Variable name"),
+                   DiscreteVariable("Variable role", ("Feature", "Target"))]
+        )
+
+        X = np.vstack((np.hstack((coefficients, x_rotations)),
+                       np.full((n_targets, n_targets + n_components), np.nan)))
+        X[-n_targets:, n_targets:] = y_loadings
+
+        M = np.array([[v.name for v in self.model.domain.variables],
+                      [0] * n_features + [1] * n_targets],
+                     dtype=object).T
+
+        table = Table.from_numpy(domain, X=X, metas=M)
+        table.name = "Coefficients and Loadings"
+        return table
 
     def _create_output_data(self) -> Table:
         projection = self.model.project(self.data)
