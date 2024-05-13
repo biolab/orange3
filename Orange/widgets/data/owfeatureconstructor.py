@@ -39,7 +39,6 @@ import Orange
 from Orange.preprocess.transformation import MappingTransform
 from Orange.util import frompyfunc
 from Orange.data import Variable, Table, Value, Instance
-from Orange.data.util import get_unique_names
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting, DomainContextHandler
 from Orange.widgets.utils import (
@@ -543,9 +542,11 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
         invalid_expressions = Msg("Invalid expressions: {}.")
         transform_error = Msg("{}")
 
-    class Warning(OWWidget.Warning):
-        renamed_var = Msg("Recently added variable has been renamed, "
-                          "to avoid duplicates.\n")
+    class Information(OWWidget.Information):
+        replaces_existing = Msg(
+            "A new variable that is named the same as an existing one will "
+            "replace it on the output."
+        )
 
     def __init__(self):
         super().__init__()
@@ -581,12 +582,15 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
             shortcut=QKeySequence.New
         )
 
+        def reserved_names():
+            return set(desc.name for desc in self.featuremodel)
+
         def unique_name(fmt, reserved):
             candidates = (fmt.format(i) for i in count(1))
             return next(c for c in candidates if c not in reserved)
 
         def generate_newname(fmt):
-            return unique_name(fmt, self.reserved_names())
+            return unique_name(fmt, reserved_names())
 
         menu = QMenu(self.addbutton)
         cont = menu.addAction("Numeric")
@@ -678,19 +682,17 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
 
     def _on_modified(self):
         if self.currentIndex >= 0:
-            self.Warning.clear()
+            self.Information.clear()
             editor = self.editorstack.currentWidget()
-            proposed = editor.editorData().name
-            uniq = get_unique_names(self.reserved_names(self.currentIndex),
-                                    proposed)
-
-            feature = editor.editorData()
-            if editor.editorData().name != uniq:
-                self.Warning.renamed_var()
-                feature = feature.__class__(uniq, *feature[1:])
-
-            self.featuremodel[self.currentIndex] = feature
+            self.featuremodel[self.currentIndex] = editor.editorData()
             self.descriptors = list(self.featuremodel)
+            editor_names = [v.name for v in self.descriptors]
+            if self.data is not None:
+                exist_names = [v.name for v in self.data.domain]
+            else:
+                exist_names = []
+            if set(editor_names).intersection(exist_names):
+                self.Information.replaces_existing()
 
     def setDescriptors(self, descriptors):
         """
@@ -698,15 +700,6 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
         """
         self.descriptors = descriptors
         self.featuremodel[:] = list(self.descriptors)
-
-    def reserved_names(self, idx_=None):
-        varnames = []
-        if self.data is not None:
-            varnames = [var.name for var in
-                        self.data.domain.variables + self.data.domain.metas]
-        varnames += [desc.name for idx, desc in enumerate(self.featuremodel)
-                     if idx != idx_]
-        return set(varnames)
 
     @Inputs.data
     @check_sql_input
@@ -816,7 +809,7 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
         self.start(run, self.data, desc, self.expressions_with_values)
 
     def on_done(self, result: "Result") -> None:
-        data, attrs = result.data, result.attributes
+        data, attrs = result.data, result.new_variables
         disc_attrs_not_ok = self.check_attrs_values(
             [var for var in attrs if var.is_discrete], data)
         if disc_attrs_not_ok:
@@ -916,23 +909,56 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
 @dataclass
 class Result:
     data: Table
-    attributes: List[Variable]
-    metas: List[Variable]
+    new_variables: List[Variable]
 
 
 def run(data: Table, desc, use_values, task: TaskState) -> Result:
     if task.is_interruption_requested():
         raise CancelledError  # pragma: no cover
-    new_variables, new_metas = construct_variables(desc, data, use_values)
+    new_variables = construct_variables(desc, data, use_values)
     # Explicit cancellation point after `construct_variables` which can
     # already run `compute_value`.
     if task.is_interruption_requested():
         raise CancelledError  # pragma: no cover
-    new_domain = Orange.data.Domain(
-        data.domain.attributes + new_variables,
-        data.domain.class_vars,
-        metas=data.domain.metas + new_metas
-    )
+    attrs, class_vars, metas = [], [], []
+    metas_new = []
+    new_vars = {v.name: (d, v) for d, v in zip(desc, new_variables)}
+
+    def append_replace_move(vars_: List[Variable], var: Variable, moving=True):
+        """
+        Append, replace or move to metas the `var` to `vars_` list
+        depending on if an entry exist in the `new_vars` (note: `new_vars` is
+        modified in place). If `moving` is `False` move to metas is not
+        allowed i.e. we are processing metas themselves.
+        """
+        new = new_vars.get(var.name, None)
+        if new is not None:  # replacing an existing variable
+            d, new_var = new
+            if d.meta and moving:  # moving to meta
+                metas_new.append(new_var)
+            else:
+                vars_.append(new_var)
+            new_vars.pop(var.name)
+        else:
+            vars_.append(var)
+
+    for var in data.domain.attributes:
+        append_replace_move(attrs, var)
+
+    for var in data.domain.class_vars:
+        append_replace_move(class_vars, var)
+
+    for var in data.domain.metas:
+        append_replace_move(metas, var, moving=False)
+
+    # existing names that were moved to metas will precede new named vars.
+    metas.extend(metas_new)
+    # remaining `new_vars` entries are new; append to corresponding variables
+    # list
+    attrs.extend(v for d, v in new_vars.values() if not d.meta)
+    metas.extend(v for d, v in new_vars.values() if d.meta)
+
+    new_domain = Orange.data.Domain(attrs, class_vars, metas)
     try:
         for variable in new_variables:
             variable.compute_value.mask_exceptions = False
@@ -940,7 +966,7 @@ def run(data: Table, desc, use_values, task: TaskState) -> Result:
     finally:
         for variable in new_variables:
             variable.compute_value.mask_exceptions = True
-    return Result(data, new_variables, new_metas)
+    return Result(data, list(new_variables))
 
 
 def validate_exp(exp):
@@ -1017,15 +1043,13 @@ def validate_exp(exp):
 
 
 def construct_variables(descriptions, data, use_values=False):
-    # subs
-    variables = []
-    metas = []
+    variables: List[Variable] = []
     source_vars = data.domain.variables + data.domain.metas
     for desc in descriptions:
         desc, func = bind_variable(desc, source_vars, data, use_values)
         var = make_variable(desc, func)
-        [variables, metas][desc.meta].append(var)
-    return tuple(variables), tuple(metas)
+        variables.append(var)
+    return tuple(variables)
 
 
 def sanitized_name(name):
