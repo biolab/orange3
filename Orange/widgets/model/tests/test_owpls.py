@@ -38,7 +38,7 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(coefsdata.Y.shape, (14, 0))
         self.assertEqual(coefsdata.metas.shape, (14, 2))
 
-        self.assertEqual(["coef (MEDV)", "Loading 1", "Loading 2"],
+        self.assertEqual(["coef (MEDV)", "w*c 1", "w*c 2"],
                          [v.name for v in coefsdata.domain.attributes])
         self.assertEqual(["Variable name", "Variable role"],
                          [v.name for v in coefsdata.domain.metas])
@@ -57,7 +57,7 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(coefsdata.Y.shape, (14, 0))
         self.assertEqual(coefsdata.metas.shape, (14, 2))
 
-        attr_names = ["coef (MEDV)", "coef (CRIM)", "Loading 1", "Loading 2"]
+        attr_names = ["coef (MEDV)", "coef (CRIM)", "w*c 1", "w*c 2"]
         self.assertEqual(attr_names,
                          [v.name for v in coefsdata.domain.attributes])
         self.assertEqual(["Variable name", "Variable role"],

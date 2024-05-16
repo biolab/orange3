@@ -71,7 +71,7 @@ class OWPLS(OWBaseLearner):
         n_components = x_rotations.shape[1]
 
         names = [f"coef ({v.name})" for v in self.model.domain.class_vars]
-        names += [f"Loading {i + 1}" for i in range(n_components)]
+        names += [f"w*c {i + 1}" for i in range(n_components)]
         domain = Domain(
             [ContinuousVariable(n) for n in names],
             metas=[StringVariable("Variable name"),
