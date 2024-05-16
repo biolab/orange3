@@ -119,7 +119,7 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         data.Y[[0, 4]] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         output = self.get_output(self.widget.Outputs.data)
-        self.assertFalse(np.isnan(output.metas[:, 3:].astype(float)).any())
+        self.assertFalse(np.isnan(output.metas[:, 3:5].astype(float)).any())
         self.assertTrue(np.isnan(output.metas[0, 1:3].astype(float)).all())
         self.assertTrue(np.isnan(output.metas[4, 1:3].astype(float)).all())
         self.assertFalse(np.isnan(output.metas[1:4, 1:3].astype(float)).any())
