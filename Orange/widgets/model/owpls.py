@@ -98,7 +98,7 @@ class OWPLS(OWBaseLearner):
         proj_domain = projection.domain
         nprobs_domain = normal_probs.domain
         dmodx_domain = dmodx.domain
-        metas = proj_domain.metas + proj_domain.attributes + \
+        metas = data_domain.metas + proj_domain.attributes + proj_domain.metas + \
             nprobs_domain.attributes + dmodx_domain.attributes
         domain = Domain(data_domain.attributes, data_domain.class_vars, metas)
         data: Table = self.data.transform(domain)

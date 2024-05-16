@@ -78,7 +78,7 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.assertEqual(output.metas.shape, (506, 8))
         self.assertEqual([v.name for v in self._data.domain.variables],
                          [v.name for v in output.domain.variables])
-        metas = ["PLS U1", "PLS U2", "PLS T1", "PLS T2",
+        metas = ["PLS T1", "PLS T2", "PLS U1", "PLS U2",
                  "Sample Quantiles (MEDV)", "Theoretical Quantiles (MEDV)",
                  "DModX"]
         self.assertEqual([v.name for v in self._data.domain.metas] + metas,
@@ -93,7 +93,7 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         orig_domain = self._data_multi_target.domain
         self.assertEqual([v.name for v in orig_domain.variables],
                          [v.name for v in output.domain.variables])
-        metas = ["PLS U1", "PLS U2", "PLS T1", "PLS T2",
+        metas = ["PLS T1", "PLS T2", "PLS U1", "PLS U2",
                  "Sample Quantiles (MEDV)", "Theoretical Quantiles (MEDV)",
                  "Sample Quantiles (CRIM)", "Theoretical Quantiles (CRIM)",
                  "DModX"]
@@ -119,10 +119,10 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         data.Y[[0, 4]] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         output = self.get_output(self.widget.Outputs.data)
-        self.assertFalse(np.isnan(output.metas[:, 3:5].astype(float)).any())
-        self.assertTrue(np.isnan(output.metas[0, 1:3].astype(float)).all())
-        self.assertTrue(np.isnan(output.metas[4, 1:3].astype(float)).all())
-        self.assertFalse(np.isnan(output.metas[1:4, 1:3].astype(float)).any())
+        self.assertFalse(np.isnan(output.metas[:, 1:3].astype(float)).any())
+        self.assertTrue(np.isnan(output.metas[0, 3:4].astype(float)).all())
+        self.assertTrue(np.isnan(output.metas[4, 3:5].astype(float)).all())
+        self.assertFalse(np.isnan(output.metas[1:4, 3:5].astype(float)).any())
 
         with data.unlocked(data.Y):
             data.Y[:] = np.nan
