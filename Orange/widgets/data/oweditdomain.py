@@ -8,9 +8,10 @@ A widget for manual editing of a domain's attributes.
 from __future__ import annotations
 import warnings
 from xml.sax.saxutils import escape
-from itertools import zip_longest, repeat, chain
+from itertools import zip_longest, repeat, chain, groupby
 from collections import namedtuple, Counter
 from functools import singledispatch, partial
+from operator import itemgetter
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
     FrozenSet, Type, Callable, TypeVar, Mapping, Hashable, cast, Set
@@ -2170,11 +2171,12 @@ class OWEditDomain(widget.OWWidget):
 
     def _sanitize_transform(
             self, var: Variable, trs: Sequence[Transform]
-    ) -> Sequence[Transform]:
+    ) -> tuple[Sequence[Transform], Sequence[tuple[Msg, str]]]:
         def does_categories_mapping_apply(
                 var: Categorical, tr: CategoriesMapping) -> bool:
             return set(var.categories) \
                 == set(ci for ci, _ in tr.mapping if ci is not None)
+        msgs = []
         if isinstance(var, Categorical):
             trs_ = []
             for tr in trs:
@@ -2182,12 +2184,13 @@ class OWEditDomain(widget.OWWidget):
                     if does_categories_mapping_apply(var, tr):
                         trs_.append(tr)
                     else:
-                        self.Warning.cat_mapping_does_not_apply(var.name)
+
+                        msgs.append((self.Warning.cat_mapping_does_not_apply, var.name))
                 else:
                     trs_.append(tr)
-            return trs_
+            return trs_, msgs
         else:
-            return trs
+            return trs, msgs
 
     def _restore(self):
         """
@@ -2196,6 +2199,7 @@ class OWEditDomain(widget.OWWidget):
         model = self.variables_model
         hints = self._domain_change_hints
         first_key = None
+        msgs = []
         for i in range(model.rowCount()):
             midx = model.index(i, 0)
             coldesc = model.data(midx, Qt.EditRole)  # type: DataVector
@@ -2204,8 +2208,9 @@ class OWEditDomain(widget.OWWidget):
                 key, tr = res
                 if tr:
                     self._store_transform(coldesc.vtype, tr, key)
-                    tr = self._sanitize_transform(coldesc.vtype, tr)
+                    tr, msgs_ = self._sanitize_transform(coldesc.vtype, tr)
                     model.setData(midx, tr, TransformRole)
+                    msgs.extend(msgs_)
                     if first_key is None:
                         first_key = key
         # Reduce the number of hints to MAX_HINTS, but keep all current hints
@@ -2213,6 +2218,10 @@ class OWEditDomain(widget.OWWidget):
         while len(hints) > MAX_HINTS and \
                 (key := next(iter(hints))) != first_key:
             del hints[key]  # pylint: disable=unsupported-delete-operation
+
+        # Show warnings for non-applicable transforms
+        for msg, names in groupby(msgs, key=itemgetter(0)):
+            msg(", ".join(map(itemgetter(1), names)))
 
         # Restore the current variable selection
         selected_rows = [i for i, vec in enumerate(model)
