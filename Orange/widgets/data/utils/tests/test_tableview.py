@@ -44,17 +44,6 @@ class TableViewTest(GuiTest):
                                  RichTableModel.Icon)
         view.grab()
 
-    def test_tableview_toggle_select_all(self):
-        view = RichTableView()
-        model = RichTableModel(self.data)
-        view.setModel(model)
-        b = view.findChild(QAbstractButton)
-        b.click()
-        self.assertEqual(len(view.selectionModel().selectedRows(0)),
-                         model.rowCount())
-        b.click()
-        self.assertEqual(len(view.selectionModel().selectedRows(0)), 0)
-
     def test_selection(self):
         view = RichTableView()
         model = RichTableModel(self.data)

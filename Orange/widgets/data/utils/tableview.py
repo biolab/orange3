@@ -62,8 +62,6 @@ class DataTableView(TableView):
         self.__cornerButton = btn = self.findChild(QAbstractButton)
         self.__cornerButtonFilter = DataTableView.__CornerPainter(self)
         btn.installEventFilter(self.__cornerButtonFilter)
-        btn.clicked.disconnect(self.selectAll)
-        btn.clicked.connect(self.cornerButtonClicked)
         if sys.platform == "darwin":
             btn.setAttribute(Qt.WA_MacSmallSize)
 
@@ -85,21 +83,6 @@ class DataTableView(TableView):
     def cornerText(self):
         """Return the corner text."""
         return self.__cornerText
-
-    def cornerButtonClicked(self):
-        model = self.model()
-        selection = self.selectionModel()
-        selection = selection.selection()
-        if len(selection) == 1:
-            srange = selection[0]
-            if srange.top() == 0 and srange.left() == 0 \
-                    and srange.right() == model.columnCount() - 1 \
-                    and srange.bottom() == model.rowCount() - 1:
-                self.clearSelection()
-            else:
-                self.selectAll()
-        else:
-            self.selectAll()
 
 
 def source_model(model: QAbstractItemModel) -> Optional[QAbstractItemModel]:
