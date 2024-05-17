@@ -122,7 +122,6 @@ class PLSModel(LinearModel):
         domain = Domain(
             [trvar(i, var_names_X[i]) for i in range(n_components)],
             data.domain.class_vars,
-            list(data.domain.metas) +
             [trvar(n_components + i, var_names_Y[i]) for i in
              range(n_components)]
         )
