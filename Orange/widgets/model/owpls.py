@@ -33,6 +33,7 @@ class OWPLS(OWBaseLearner):
 
     n_components = Setting(2)
     max_iter = Setting(500)
+    scale = Setting(True)
 
     def add_main_layout(self):
         optimization_box = gui.vBox(
@@ -48,6 +49,9 @@ class OWPLS(OWBaseLearner):
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed,
             checkCallback=self.settings_changed)
+        gui.checkBox(optimization_box, self, "scale",
+                     "Scale features and target",
+                     callback=self.settings_changed)
 
     def update_model(self):
         super().update_model()
@@ -133,6 +137,7 @@ class OWPLS(OWBaseLearner):
     def create_learner(self):
         common_args = {'preprocessors': self.preprocessors}
         return PLSRegressionLearner(n_components=self.n_components,
+                                    scale=self.scale,
                                     max_iter=self.max_iter,
                                     **common_args)
 

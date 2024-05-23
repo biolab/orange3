@@ -129,6 +129,14 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.send_signal(self.widget.Inputs.data, data)
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
+    def test_scale(self):
+        self.widget.auto_apply = True
+        self.send_signal(self.widget.Inputs.data, self._data)
+        output1 = self.get_output(self.widget.Outputs.data)
+        self.widget.controls.scale.setChecked(False)
+        output2 = self.get_output(self.widget.Outputs.data)
+        self.assertTrue(abs(output1.metas[0, 1] - output2.metas[0, 1]) > 100)
+
 
 if __name__ == "__main__":
     unittest.main()
