@@ -67,6 +67,7 @@ class OWPLS(OWBaseLearner):
         self.Outputs.components.send(components)
 
     def _create_output_coeffs_loadings(self) -> Table:
+        intercept = self.model.intercept
         coefficients = self.model.coefficients.T
         _, y_loadings = self.model.loadings
         x_rotations, _ = self.model.rotations
@@ -83,11 +84,12 @@ class OWPLS(OWBaseLearner):
         )
 
         X = np.vstack((np.hstack((coefficients, x_rotations)),
-                       np.full((n_targets, n_targets + n_components), np.nan)))
-        X[-n_targets:, n_targets:] = y_loadings
+                       np.full((n_targets + 1, n_targets + n_components), np.nan)))
+        X[-n_targets - 1: -1, n_targets:] = y_loadings
+        X[-1, :n_targets] = intercept
 
-        M = np.array([[v.name for v in self.model.domain.variables],
-                      [0] * n_features + [1] * n_targets],
+        M = np.array([[v.name for v in self.model.domain.variables] + ["intercept"],
+                      [0] * n_features + [1] * n_targets + [np.nan]],
                      dtype=object).T
 
         table = Table.from_numpy(domain, X=X, metas=M)
