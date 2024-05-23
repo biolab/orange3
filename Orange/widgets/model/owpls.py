@@ -67,7 +67,7 @@ class OWPLS(OWBaseLearner):
         self.Outputs.components.send(components)
 
     def _create_output_coeffs_loadings(self) -> Table:
-        intercept = self.model.intercept
+        intercept = self.model.intercept.T[None, :]
         coefficients = self.model.coefficients.T
         _, y_loadings = self.model.loadings
         x_rotations, _ = self.model.rotations
@@ -76,6 +76,7 @@ class OWPLS(OWBaseLearner):
         n_components = x_rotations.shape[1]
 
         names = [f"coef ({v.name})" for v in self.model.domain.class_vars]
+        names += [f"coef/X_sd ({v.name})" for v in self.model.domain.class_vars]
         names += [f"w*c {i + 1}" for i in range(n_components)]
         domain = Domain(
             [ContinuousVariable(n) for n in names],
@@ -83,12 +84,24 @@ class OWPLS(OWBaseLearner):
                    DiscreteVariable("Variable role", ("Feature", "Target"))]
         )
 
-        X = np.vstack((np.hstack((coefficients, x_rotations)),
-                       np.full((n_targets + 1, n_targets + n_components), np.nan)))
-        X[-n_targets - 1: -1, n_targets:] = y_loadings
-        X[-1, :n_targets] = intercept
+        data = self.model.data_to_model_domain(self.data)
+        x_std = np.std(data.X, axis=0)
+        coeffs_x_std = coefficients.T / x_std
+        X_features = np.hstack((coefficients,
+                                coeffs_x_std.T,
+                                x_rotations))
+        X_targets = np.hstack((np.full((n_targets, n_targets), np.nan),
+                               np.full((n_targets, n_targets), np.nan),
+                               y_loadings))
 
-        M = np.array([[v.name for v in self.model.domain.variables] + ["intercept"],
+        coeffs = coeffs_x_std * np.mean(data.X, axis=0)
+        X_intercepts = np.hstack((intercept,
+                                  intercept - coeffs.sum(),
+                                  np.full((1, n_components), np.nan)))
+        X = np.vstack((X_features, X_targets, X_intercepts))
+
+        variables = self.model.domain.variables
+        M = np.array([[v.name for v in variables] + ["intercept"],
                       [0] * n_features + [1] * n_targets + [np.nan]],
                      dtype=object).T
 
