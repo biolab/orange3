@@ -34,41 +34,50 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.send_signal(self.widget.Inputs.data, self._data)
         coefsdata = self.get_output(self.widget.Outputs.coefsdata)
         self.assertEqual(coefsdata.name, "Coefficients and Loadings")
-        self.assertEqual(coefsdata.X.shape, (14, 3))
-        self.assertEqual(coefsdata.Y.shape, (14, 0))
-        self.assertEqual(coefsdata.metas.shape, (14, 2))
+        self.assertEqual(coefsdata.X.shape, (15, 4))
+        self.assertEqual(coefsdata.Y.shape, (15, 0))
+        self.assertEqual(coefsdata.metas.shape, (15, 2))
 
-        self.assertEqual(["coef (MEDV)", "w*c 1", "w*c 2"],
+        self.assertEqual(["coef (MEDV)", "coef/X_sd (MEDV)", "w*c 1", "w*c 2"],
                          [v.name for v in coefsdata.domain.attributes])
         self.assertEqual(["Variable name", "Variable role"],
                          [v.name for v in coefsdata.domain.metas])
-        metas = [v.name for v in self._data.domain.variables]
+        metas = [v.name for v in self._data.domain.variables] + ["intercept"]
         self.assertTrue((coefsdata.metas[:, 0] == metas).all())
-        self.assertTrue((coefsdata.metas[:-1, 1] == 0).all())
-        self.assertTrue((coefsdata.metas[-1, 1] == 1))
-        self.assertAlmostEqual(coefsdata.X[0, 1], 0.237, 3)
-        self.assertAlmostEqual(coefsdata.X[13, 1], -0.304, 3)
+        self.assertTrue((coefsdata.metas[:-2, 1] == 0).all())
+        self.assertTrue((coefsdata.metas[-2, 1] == 1))
+        self.assertTrue(np.isnan(coefsdata.metas[-1, 1]))
+        self.assertAlmostEqual(coefsdata.X[0, 2], 0.237, 3)
+        self.assertAlmostEqual(coefsdata.X[13, 2], -0.304, 3)
+        self.assertAlmostEqual(coefsdata.X[-1, 0], 22.5, 1)
+        self.assertTrue(np.isnan(coefsdata.X[-1, 2:]).all())
 
     def test_output_coefsdata_multi_target(self):
         self.send_signal(self.widget.Inputs.data, self._data_multi_target)
         coefsdata = self.get_output(self.widget.Outputs.coefsdata)
         self.assertEqual(coefsdata.name, "Coefficients and Loadings")
-        self.assertEqual(coefsdata.X.shape, (14, 4))
-        self.assertEqual(coefsdata.Y.shape, (14, 0))
-        self.assertEqual(coefsdata.metas.shape, (14, 2))
+        self.assertEqual(coefsdata.X.shape, (15, 6))
+        self.assertEqual(coefsdata.Y.shape, (15, 0))
+        self.assertEqual(coefsdata.metas.shape, (15, 2))
 
-        attr_names = ["coef (MEDV)", "coef (CRIM)", "w*c 1", "w*c 2"]
+        attr_names = ["coef (MEDV)", "coef (CRIM)", "coef/X_sd (MEDV)",
+                      "coef/X_sd (CRIM)", "w*c 1", "w*c 2"]
         self.assertEqual(attr_names,
                          [v.name for v in coefsdata.domain.attributes])
         self.assertEqual(["Variable name", "Variable role"],
                          [v.name for v in coefsdata.domain.metas])
         metas = [v.name for v in self._data_multi_target.domain.variables]
+        metas += ["intercept"]
         self.assertTrue((coefsdata.metas[:, 0] == metas).all())
-        self.assertTrue((coefsdata.metas[:-2, 1] == 0).all())
-        self.assertTrue((coefsdata.metas[-2:, 1] == 1).all())
-        self.assertAlmostEqual(coefsdata.X[0, 2], -0.198, 3)
-        self.assertAlmostEqual(coefsdata.X[12, 2], -0.288, 3)
-        self.assertAlmostEqual(coefsdata.X[13, 2], 0.243, 3)
+        self.assertTrue((coefsdata.metas[:-3, 1] == 0).all())
+        self.assertTrue((coefsdata.metas[-2:-1, 1] == 1).all())
+        self.assertTrue(np.isnan(coefsdata.metas[-1, 1]))
+        self.assertAlmostEqual(coefsdata.X[0, 4], -0.198, 3)
+        self.assertAlmostEqual(coefsdata.X[12, 4], -0.288, 3)
+        self.assertAlmostEqual(coefsdata.X[13, 4], 0.243, 3)
+        self.assertAlmostEqual(coefsdata.X[-1, 0], 22.5, 1)
+        self.assertAlmostEqual(coefsdata.X[-1, 1], 3.6, 1)
+        self.assertTrue(np.isnan(coefsdata.X[-1, 4:]).all())
 
     def test_output_data(self):
         self.send_signal(self.widget.Inputs.data, self._data)
@@ -128,6 +137,14 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
             data.Y[:] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
+
+    def test_scale(self):
+        self.widget.auto_apply = True
+        self.send_signal(self.widget.Inputs.data, self._data)
+        output1 = self.get_output(self.widget.Outputs.data)
+        self.widget.controls.scale.setChecked(False)
+        output2 = self.get_output(self.widget.Outputs.data)
+        self.assertTrue(abs(output1.metas[0, 1] - output2.metas[0, 1]) > 100)
 
 
 if __name__ == "__main__":

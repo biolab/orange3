@@ -33,6 +33,7 @@ class OWPLS(OWBaseLearner):
 
     n_components = Setting(2)
     max_iter = Setting(500)
+    scale = Setting(True)
 
     def add_main_layout(self):
         optimization_box = gui.vBox(
@@ -48,6 +49,9 @@ class OWPLS(OWBaseLearner):
             alignment=Qt.AlignRight, controlWidth=100,
             callback=self.settings_changed,
             checkCallback=self.settings_changed)
+        gui.checkBox(optimization_box, self, "scale",
+                     "Scale features and target",
+                     callback=self.settings_changed)
 
     def update_model(self):
         super().update_model()
@@ -63,6 +67,7 @@ class OWPLS(OWBaseLearner):
         self.Outputs.components.send(components)
 
     def _create_output_coeffs_loadings(self) -> Table:
+        intercept = self.model.intercept.T[None, :]
         coefficients = self.model.coefficients.T
         _, y_loadings = self.model.loadings
         x_rotations, _ = self.model.rotations
@@ -71,6 +76,7 @@ class OWPLS(OWBaseLearner):
         n_components = x_rotations.shape[1]
 
         names = [f"coef ({v.name})" for v in self.model.domain.class_vars]
+        names += [f"coef/X_sd ({v.name})" for v in self.model.domain.class_vars]
         names += [f"w*c {i + 1}" for i in range(n_components)]
         domain = Domain(
             [ContinuousVariable(n) for n in names],
@@ -78,12 +84,25 @@ class OWPLS(OWBaseLearner):
                    DiscreteVariable("Variable role", ("Feature", "Target"))]
         )
 
-        X = np.vstack((np.hstack((coefficients, x_rotations)),
-                       np.full((n_targets, n_targets + n_components), np.nan)))
-        X[-n_targets:, n_targets:] = y_loadings
+        data = self.model.data_to_model_domain(self.data)
+        x_std = np.std(data.X, axis=0)
+        coeffs_x_std = coefficients.T / x_std
+        X_features = np.hstack((coefficients,
+                                coeffs_x_std.T,
+                                x_rotations))
+        X_targets = np.hstack((np.full((n_targets, n_targets), np.nan),
+                               np.full((n_targets, n_targets), np.nan),
+                               y_loadings))
 
-        M = np.array([[v.name for v in self.model.domain.variables],
-                      [0] * n_features + [1] * n_targets],
+        coeffs = coeffs_x_std * np.mean(data.X, axis=0)
+        X_intercepts = np.hstack((intercept,
+                                  intercept - coeffs.sum(),
+                                  np.full((1, n_components), np.nan)))
+        X = np.vstack((X_features, X_targets, X_intercepts))
+
+        variables = self.model.domain.variables
+        M = np.array([[v.name for v in variables] + ["intercept"],
+                      [0] * n_features + [1] * n_targets + [np.nan]],
                      dtype=object).T
 
         table = Table.from_numpy(domain, X=X, metas=M)
@@ -133,6 +152,7 @@ class OWPLS(OWBaseLearner):
     def create_learner(self):
         common_args = {'preprocessors': self.preprocessors}
         return PLSRegressionLearner(n_components=self.n_components,
+                                    scale=self.scale,
                                     max_iter=self.max_iter,
                                     **common_args)
 
