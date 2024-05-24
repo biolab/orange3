@@ -64,7 +64,7 @@ requirements:
     - python-louvain >=0.13
     - pyyaml
     - requests
-    - scikit-learn >=1.3.0
+    - scikit-learn >= 1.3.0,<1.5.0
     - scipy >=1.9
     - setuptools >=51.0.0
     - xgboost >=1.7.4
