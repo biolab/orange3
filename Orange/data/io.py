@@ -27,8 +27,8 @@ import xlrd
 import xlsxwriter
 import openpyxl
 
-from Orange.data import _io, Table, Domain, ContinuousVariable, update_origin, DiscreteVariable, TimeVariable, \
-    StringVariable
+from Orange.data import _io, Table, Domain, ContinuousVariable, update_origin, DiscreteVariable, \
+    TimeVariable, StringVariable
 from Orange.data import Compression, open_compressed, detect_encoding, \
     isnastr, guess_data_type, sanitize_variable
 from Orange.data.io_base import FileFormatBase, Flags, DataTableMixin, PICKLE_PROTOCOL
