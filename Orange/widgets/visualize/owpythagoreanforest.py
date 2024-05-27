@@ -186,7 +186,7 @@ class PythagorasTreeDelegate(QStyledItemDelegate):
         # be painted in the centre of the rect
         offset_w = (option.rect.width() - scene_w) / 2
         offset_h = (option.rect.height() - scene_h) / 2
-        offset = option.rect.topLeft() + QPointF(offset_w, offset_h)
+        offset = QPointF(option.rect.topLeft()) + QPointF(offset_w, offset_h)
         # Finally, we have all the data for the new rect in which to render
         target_rect = QRectF(offset, QSizeF(scene_w, scene_h))
 

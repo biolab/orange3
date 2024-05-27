@@ -362,11 +362,14 @@ class WidgetLearnerTestMixin:
     def test_output_model_name(self):
         """Check if model's name properly changes"""
         new_name = "Model Name"
-        self.widget.name_line_edit.setText(new_name)
         self.send_signal(self.widget.Inputs.data, self.data)
         self.click_apply()
-        self.wait_until_stop_blocking()
-        self.assertEqual(self.get_output(self.widget.Outputs.model).name, new_name)
+        self.assertEqual(self.get_output(self.widget.Outputs.model).name,
+                         self.widget.effective_learner_name())
+        self.widget.name_line_edit.setText(new_name)
+        self.click_apply()
+        self.assertEqual(self.get_output(self.widget.Outputs.model).name,
+                         new_name)
 
     def test_output_model_picklable(self):
         """Check if model can be pickled"""

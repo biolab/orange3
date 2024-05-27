@@ -3,7 +3,7 @@ import os
 import numpy as np
 
 from AnyQt.QtWidgets import QSizePolicy, QStyle, QMessageBox, QFileDialog
-from AnyQt.QtCore import QTimer
+from AnyQt.QtCore import QTimer, QUrl
 
 from orangewidget.settings import Setting
 from orangewidget.widget import Msg
@@ -13,12 +13,12 @@ from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.data import get_sample_datasets_dir
 from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, RecentPath, \
-    stored_recent_paths_prepend
+    stored_recent_paths_prepend, OWUrlDropBase
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
 
-class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
+class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
     name = "Distance File"
     id = "orange.widgets.unsupervised.distancefile"
     description = "Read distances from a file."
@@ -78,9 +78,6 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
 
         self.set_file_list()
         QTimer.singleShot(0, self.open_file)
-
-    def set_file_list(self):
-        super().set_file_list()
 
     def reload(self):
         return self.open_file()
@@ -147,6 +144,17 @@ class OWDistanceFile(widget.OWWidget, RecentPathsWComboMixin):
             self.report_paragraph("No data was loaded.")
         else:
             self.report_items([("File name", self.distances.name)])
+
+    def canDropUrl(self, url: QUrl) -> bool:
+        if url.isLocalFile():
+            return OWDistanceFileDropHandler().canDropFile(url.toLocalFile())
+        else:
+            return False
+
+    def handleDroppedUrl(self, url: QUrl) -> None:
+        if url.isLocalFile():
+            self.add_path(url.toLocalFile())
+            self.open_file()
 
 
 class OWDistanceFileDropHandler(SingleFileDropHandler):

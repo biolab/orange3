@@ -2,6 +2,15 @@ import numpy as np
 import openpyxl
 
 
+try:
+    # temporary fix for file not closed issue until openpyxl prepare release
+    from Orange.misc.openpyxl_patch import read_worksheets
+
+    openpyxl.reader.excel.ExcelReader.read_worksheets = read_worksheets
+except:  # pylint: disable=bare-except
+    pass
+
+
 def read_matrix(filename, sheet_name=None):
     sheet = _get_sheet(filename, sheet_name)
     cells, empty_cols, empty_rows = _non_empty_cells(sheet)
@@ -123,6 +132,8 @@ def write_matrix(matrix: "DistMatrix", filename):
     has_diagonal = int(np.any(np.diag(matrix) != 0))
     for y in range(matrix.shape[0]):
         for x in range(y + has_diagonal if symmetric else matrix.shape[1]):
-            sheet.cell(y + row_off, x + col_off).value = matrix[y, x]
+            value = matrix[y, x]
+            if not np.isnan(value):
+                sheet.cell(y + row_off, x + col_off).value = value
 
     wb.save(filename)

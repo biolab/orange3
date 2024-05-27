@@ -19,20 +19,24 @@ class TestOWDataInfo(WidgetTest):
         # combinations that must not crash
         a, b, c = (DiscreteVariable(n) for n in "abc")
         x, y, z = (ContinuousVariable(n) for n in "xyz")
-        m, n = (StringVariable(n) for n in "nm")
+        m, n = (StringVariable(n) for n in "mn")
+        meta_s = np.array([["foo", "bar", ""]]).T
+        meta_c = np.array([[3.14, np.nan, np.nan]]).T
+        metadata = np.hstack((meta_s, meta_c))
         self.widget.send_report()
-        for attrs, classes, metas in (((a, b, c), (), ()),
-                                      ((a, b, c, x), (y,), ()),
-                                      ((a, b, c), (y, x), (m, )),
-                                      ((a, b), (y, x, c), (m, )),
-                                      ((a, ), (b, c), (m, )),
-                                      ((a, b, x), (c, ), (m, y)),
-                                      ((), (c, ), (m, y))):
+        for attrs, classes, metas, metad in (((a, b, c), (), (), None),
+                                             ((a, b, c, x), (y,), (), None),
+                                             ((a, b, c), (y, x), (m, ), meta_s),
+                                             ((a, b, c), (y, ), (x, ), meta_c),
+                                             ((a, b), (y, x, c), (m, ), meta_s),
+                                             ((a, ), (b, c), (m, ), meta_s),
+                                             ((a, b, x), (c, ), (m, y), metadata),
+                                             ((), (c, ), (m, y), metadata)):
             data = Table.from_numpy(
                 Domain(attrs, classes, metas),
                 np.zeros((3, len(attrs))),
                 np.zeros((3, len(classes))),
-                np.full((3, len(metas)), object()))
+                metad)
             data.attributes = {"att 1": 1, "att 2": True, "att 3": 3}
             if metas:
                 data.name = "name"

@@ -5,6 +5,39 @@ Change Log
 ------------
 
 
+[3.37.0] - 2024-05-27
+--------------------
+##### Enhancements
+* Permutation Plot: Add widget ([#6762](../../pull/6762))
+* PLS: Move from Orange-spectroscopy ([#6734](../../pull/6734))
+* Open draged files on CSV Import, Load Model and Distance File widgets ([#6747](../../pull/6747))
+* Predictions: Output annotated table
+* Update t-SNE widget ([#6345](../../pull/6345))
+* CSV Import: Skip multi rows edit ([#6691](../../pull/6691))
+* Remove use of pkg_resources ([#6655](../../pull/6655))
+* Data Info: Show statistics about missing values ([#6623](../../pull/6623))
+
+##### Bugfixes
+* Edit Domain: Partial restore state on categories mismatch ([#6776](../../pull/6776))
+* Distances: Spearman actually computes Spearman instead of Pearson ([#6804](../../pull/6804))
+* tableview: Remove toggle selection on corner widget click ([#6802](../../pull/6802))
+* _simple_tree.c: Fix compilation error with gcc 14 ([#6800](../../pull/6800))
+* OWSom: Fix crash for data without class variable ([#6763](../../pull/6763))
+* io_util: Fix memory usage when parsing columns ([#6757](../../pull/6757))
+* pythoneditor/editor: Change order in `terminate` ([#6756](../../pull/6756))
+* Minor fixes to reenable falling CI ([#6751](../../pull/6751))
+* Fix failing tests on Python 3.11.8 on Windows ([#6737](../../pull/6737))
+* Table.add_column - Do not try to insert data in locked empty array ([#6743](../../pull/6743))
+* test_owcsvimport: Workaround for segfault in tests on macos ([#6735](../../pull/6735))
+* Domain Editor - Adapt to dark mode ([#6727](../../pull/6727))
+* Predictions: Output annotated table
+* CSV Import: Add explicit datetime conversion ([#6696](../../pull/6696))
+* setup.py: Replace use of imp module ([#6680](../../pull/6680))
+* Writers: Store nans in StringVariable as empty strings instead of 'nan' ([#6670](../../pull/6670))
+* Fix impute.Model for derived domains ([#6668](../../pull/6668))
+* CN2 Rule Induction: Fix model's effective name ([#6652](../../pull/6652))
+
+
 [3.36.2] - 2023-10-31
 --------------------
 ##### Enhancements
@@ -1841,7 +1874,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.36.2..HEAD
+[next]: https://github.com/biolab/orange3/compare/3.37.0..HEAD
+[3.37.0]: https://github.com/biolab/orange3/compare/3.36.2...3.37.0
 [3.36.2]: https://github.com/biolab/orange3/compare/3.36.1...3.36.2
 [3.36.1]: https://github.com/biolab/orange3/compare/3.36.0...3.36.1
 [3.36.0]: https://github.com/biolab/orange3/compare/3.35.0...3.36.0

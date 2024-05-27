@@ -1,11 +1,12 @@
 # pylint: disable=protected-access
-
-import unittest
-from unittest.mock import patch
 import copy
+import unittest
+from unittest.mock import patch, Mock
+
 import numpy as np
 import pyqtgraph as pg
 from AnyQt.QtWidgets import QToolTip
+from AnyQt.QtCore import QItemSelection
 
 from Orange.data import Table
 import Orange.evaluation
@@ -15,7 +16,6 @@ from Orange.evaluation import Results
 from Orange.widgets.evaluate import owrocanalysis
 from Orange.widgets.evaluate.owrocanalysis import OWROCAnalysis
 from Orange.widgets.evaluate.tests.base import EvaluateTest
-from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import mouseMove, simulate
 from Orange.tests import test_filename
 
@@ -75,7 +75,7 @@ class TestROC(unittest.TestCase):
                 self.assertFalse(rocdata.avg_threshold.is_valid)
 
 
-class TestOWROCAnalysis(WidgetTest, EvaluateTest):
+class TestOWROCAnalysis(EvaluateTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -111,6 +111,15 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
         self.widget.onDeleteWidget()
         self.widgets.remove(self.widget)
         self.widget = None
+
+    @staticmethod
+    def _set_list_selection(listview, selection):
+        model = listview.model()
+        selectionmodel = listview.selectionModel()
+        itemselection = QItemSelection()
+        for item in selection:
+            itemselection.select(model.index(item, 0), model.index(item, 0))
+        selectionmodel.select(itemselection, selectionmodel.ClearAndSelect)
 
     def test_basic(self):
         res = self.res
@@ -268,6 +277,103 @@ class TestOWROCAnalysis(WidgetTest, EvaluateTest):
 
         simulate.combobox_activate_item(w.controls.target_index, "soft")
         self.assertEqual(np.round(5/12 * 100), w.target_prior)
+
+    def test_target_prior_reload(self):
+        w = self.widget
+        self.send_signal(w.Inputs.evaluation_results, self.res)
+        simulate.combobox_activate_item(w.controls.target_index, "soft")
+        self.assertEqual(np.round(5/12 * 100), w.target_prior)
+        self.send_signal(w.Inputs.evaluation_results, self.res)
+        self.assertEqual(np.round(5/12 * 100), w.target_prior)
+
+    @patch("Orange.widgets.evaluate.owrocanalysis.ThresholdClassifier")
+    def test_apply_no_output(self, *_):
+        """Test no output warnings"""
+        # Similar to test_owcalibrationplot, but just a little different, hence
+        # pylint: disable=duplicate-code
+        widget = self.widget
+        model_list = widget.controls.selected_classifiers
+
+        multiple_folds, multiple_selected, no_models, non_binary_class = "abcd"
+        messages = {
+            multiple_folds:
+                "each training data sample produces a different model",
+            no_models:
+                "test results do not contain stored models - try testing on "
+                "separate data or on training data",
+            multiple_selected:
+                "select a single model - the widget can output only one",
+            non_binary_class:
+                "cannot calibrate non-binary models"}
+
+        def test_shown(shown):
+            widget_msg = widget.Information.no_output
+            output = self.get_output(widget.Outputs.calibrated_model)
+            if not shown:
+                self.assertFalse(widget_msg.is_shown())
+                self.assertIsNotNone(output)
+            else:
+                self.assertTrue(widget_msg.is_shown())
+                self.assertIsNone(output)
+                for msg_id in shown:
+                    msg = messages[msg_id]
+                    self.assertIn(msg, widget_msg.formatted,
+                                  f"{msg} not included in the message")
+
+        self.send_signal(widget.Inputs.evaluation_results, self.results)
+        test_shown({multiple_selected})
+
+        self._set_list_selection(model_list, [0])
+        test_shown(())
+        widget.controls.display_perf_line.click()
+        output = self.get_output(widget.Outputs.calibrated_model)
+        self.assertIsNone(output)
+        widget.controls.display_perf_line.click()
+        output = self.get_output(widget.Outputs.calibrated_model)
+        self.assertIsNotNone(output)
+
+        self._set_list_selection(model_list, [0, 1])
+
+        self.results.models = None
+        self.send_signal(widget.Inputs.evaluation_results, self.results)
+        test_shown({multiple_selected, no_models})
+
+        self.send_signal(widget.Inputs.evaluation_results, self.lenses_results)
+        test_shown({multiple_selected, non_binary_class})
+
+        self._set_list_selection(model_list, [0])
+        test_shown({non_binary_class})
+
+        self.results.folds = [slice(0, 5), slice(5, 10), slice(10, 19)]
+        self.results.models = np.array([[Mock(), Mock()]] * 3)
+
+        self.send_signal(widget.Inputs.evaluation_results, self.results)
+        test_shown({multiple_selected, multiple_folds})
+
+        self._set_list_selection(model_list, [0])
+        test_shown({multiple_folds})
+
+    @patch("Orange.widgets.evaluate.owrocanalysis.ThresholdClassifier")
+    def test_calibrated_output(self, tc):
+        widget = self.widget
+        model_list = widget.controls.selected_classifiers
+
+        self.send_signal(widget.Inputs.evaluation_results, self.results)
+        self._set_list_selection(model_list, [0])
+
+        model, threshold = tc.call_args[0]
+        self.assertIs(model, self.results.models[0][0])
+        self.assertAlmostEqual(threshold, 0.47)
+
+        widget.controls.fp_cost.setValue(1000)
+        model, threshold = tc.call_args[0]
+        self.assertIs(model, self.results.models[0][0])
+        self.assertAlmostEqual(threshold, 0.9)
+
+        self._set_list_selection(model_list, [1])
+        model, threshold = tc.call_args[0]
+        self.assertIs(model, self.results.models[0][1])
+        self.assertAlmostEqual(threshold, 0.45)
 
 
 if __name__ == "__main__":

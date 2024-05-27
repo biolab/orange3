@@ -62,8 +62,6 @@ class DataTableView(TableView):
         self.__cornerButton = btn = self.findChild(QAbstractButton)
         self.__cornerButtonFilter = DataTableView.__CornerPainter(self)
         btn.installEventFilter(self.__cornerButtonFilter)
-        btn.clicked.disconnect(self.selectAll)
-        btn.clicked.connect(self.cornerButtonClicked)
         if sys.platform == "darwin":
             btn.setAttribute(Qt.WA_MacSmallSize)
 
@@ -85,21 +83,6 @@ class DataTableView(TableView):
     def cornerText(self):
         """Return the corner text."""
         return self.__cornerText
-
-    def cornerButtonClicked(self):
-        model = self.model()
-        selection = self.selectionModel()
-        selection = selection.selection()
-        if len(selection) == 1:
-            srange = selection[0]
-            if srange.top() == 0 and srange.left() == 0 \
-                    and srange.right() == model.columnCount() - 1 \
-                    and srange.bottom() == model.rowCount() - 1:
-                self.clearSelection()
-            else:
-                self.selectAll()
-        else:
-            self.selectAll()
 
 
 def source_model(model: QAbstractItemModel) -> Optional[QAbstractItemModel]:
@@ -139,6 +122,7 @@ class RichTableView(DataTableView):
             select_rows = self.selectionBehavior() == TableView.SelectRows
             sel_model = BlockSelectionModel(model, selectBlocks=not select_rows)
             self.setSelectionModel(sel_model)
+            self.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
 
             sortable = self.isModelSortable(model)
             self.setSortingEnabled(sortable)
@@ -167,7 +151,8 @@ class RichTableView(DataTableView):
             model = self.model()
             model = source_model(model)
             if isinstance(model, RichTableModel) and \
-                    model.richHeaderFlags() & RichTableModel.Labels:
+                    model.richHeaderFlags() & RichTableModel.Labels and \
+                    model.columnCount() > 0:
                 items = model.headerData(
                     0, Qt.Horizontal, RichTableModel.LabelsItemsRole
                 )

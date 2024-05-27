@@ -968,12 +968,12 @@ class PythonEditor(QPlainTextEdit):
         some other interesting effects
         Call it on close to free memory and stop background highlighting
         """
-        self.text = ''
         if self._completer:
             self._completer.terminate()
 
         if self._vim is not None:
             self._vim.terminate()
+        self.text = ''
 
     def __enter__(self):
         """Context management method.

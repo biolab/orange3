@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse as sp
 
 import Orange.data
+from Orange.data.table import DomainTransformationError
 from Orange.statistics import distribution, basic_stats
 from Orange.util import Reprable
 from .transformation import Transformation, Lookup
@@ -172,7 +173,7 @@ class FixedValueByType(BaseImputeMethod):
         return FixedValueByType(*self.defaults.values())
 
 
-class ReplaceUnknownsModel(Reprable):
+class ReplaceUnknownsModel(Transformation):
     """
     Replace unknown values with predicted values using a `Orange.base.Model`
 
@@ -185,15 +186,14 @@ class ReplaceUnknownsModel(Reprable):
     """
     def __init__(self, variable, model):
         assert model.domain.class_var == variable
-        self.variable = variable
+        super().__init__(variable)
         self.model = model
 
     def __call__(self, data):
         if isinstance(data, Orange.data.Instance):
             data = Orange.data.Table.from_list(data.domain, [data])
         domain = data.domain
-        column = data.get_column(self.variable, copy=True)
-
+        column = data.transform(self._target_domain).get_column(self.variable, copy=True)
         mask = np.isnan(column)
         if not np.any(mask):
             return column
@@ -203,9 +203,16 @@ class ReplaceUnknownsModel(Reprable):
             data = data.transform(
                 Orange.data.Domain(domain.attributes, None, domain.metas)
             )
-        predicted = self.model(data[mask])
-        column[mask] = predicted
+        try:
+            column[mask] = self.model(data[mask])
+        except DomainTransformationError:
+            # owpredictions showed error when imputing target using a Model
+            # based imputer (owpredictions removes the target before predicing)
+            pass
         return column
+
+    def transform(self, c):
+        assert False, "abstract in Transformation, never used here"
 
     def __eq__(self, other):
         return type(self) is type(other) \

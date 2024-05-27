@@ -1,13 +1,16 @@
+import math
+from typing import List, Callable
 from xml.sax.saxutils import escape
 
 import numpy as np
+import scipy.stats as ss
 from scipy.stats import linregress
 from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
-from AnyQt.QtCore import Qt, QTimer, QPointF, Signal
+from AnyQt.QtCore import Qt, QTimer, QPointF
 from AnyQt.QtGui import QColor, QFont
-from AnyQt.QtWidgets import QGroupBox, QPushButton
+from AnyQt.QtWidgets import QGroupBox
 
 import pyqtgraph as pg
 
@@ -26,47 +29,20 @@ from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase, \
     ScatterBaseParameterSetter
-from Orange.widgets.visualize.utils import VizRankDialogAttrPair
+from Orange.widgets.visualize.utils.vizrank import VizRankDialogAttrPair, \
+    VizRankMixin
 from Orange.widgets.visualize.utils.customizableplot import Updater
 from Orange.widgets.visualize.utils.widget import OWDataProjectionWidget
 from Orange.widgets.widget import AttributeList, Msg, Input, Output
 
 
 class ScatterPlotVizRank(VizRankDialogAttrPair):
-    captionTitle = "Score Plots"
     minK = 10
-    attr_color = None
-
-    def __init__(self, master):
-        super().__init__(master)
-        self.attr_color = self.master.attr_color
-
-    def initialize(self):
-        self.attr_color = self.master.attr_color
-        super().initialize()
-
-    def check_preconditions(self):
-        self.Information.add_message(
-            "color_required", "Color variable is not selected")
-        self.Information.color_required.clear()
-        if not super().check_preconditions():
-            return False
-        if not self.attr_color:
-            self.Information.color_required()
-            return False
-        return True
-
-    def iterate_states(self, initial_state):
-        # If we put initialization of `self.attrs` to `initialize`,
-        # `score_heuristic` would be run on every call to `set_data`.
-        if initial_state is None:  # on the first call, compute order
-            self.attrs = self.score_heuristic()
-        yield from super().iterate_states(initial_state)
 
     def compute_score(self, state):
         # pylint: disable=invalid-unary-operand-type
-        attrs = [self.attrs[i] for i in state]
-        data = self.master.data
+        attrs = [self.attr_order[i] for i in state]
+        data = self.data
         data = data.transform(Domain(attrs, self.attr_color))
         data = data[~np.isnan(data.X).any(axis=1) & ~np.isnan(data.Y).T]
         if len(data) < self.minK:
@@ -79,20 +55,17 @@ class ScatterPlotVizRank(VizRankDialogAttrPair):
                    n_neighbors / len(data.Y)
         else:
             return -r2_score(data.Y, np.mean(data.Y[ind], axis=1)) * \
-                   (len(data.Y) / len(self.master.data))
+                   (len(data.Y) / len(self.data))
 
-    def bar_length(self, score):
-        return max(0, -score)
-
-    def score_heuristic(self):
+    def score_attributes(self):
         assert self.attr_color is not None
-        vars = [
+        attrs = [
             v
-            for v in self.master.xy_model  # same attributes that are in xy combos
+            for v in self.attrs  # same attributes that are in xy combos
             if v is not self.attr_color and v.is_primitive()
         ]
-        domain = Domain(attributes=vars, class_vars=self.attr_color)
-        data = self.master.data.transform(domain)
+        domain = Domain(attributes=attrs, class_vars=self.attr_color)
+        data = self.data.transform(domain)
         relief = ReliefF if isinstance(domain.class_var, DiscreteVariable) \
             else RReliefF
         weights = relief(
@@ -134,6 +107,8 @@ class ParameterSetter(ScatterBaseParameterSetter):
             self.reg_line_settings.update(**settings)
             Updater.update_inf_lines(self.reg_line_items,
                                      **self.reg_line_settings)
+            Updater.update_lines(self.ellipse_items,
+                                 **self.reg_line_settings)
             self.master.update_reg_line_label_colors()
 
         def update_line_label(**settings):
@@ -159,20 +134,27 @@ class ParameterSetter(ScatterBaseParameterSetter):
         return [line.label for line in self.master.reg_line_items
                 if hasattr(line, "label")]
 
+    @property
+    def ellipse_items(self):
+        return self.master.ellipse_items
+
 
 class OWScatterPlotGraph(OWScatterPlotBase):
     show_reg_line = Setting(False)
     orthonormal_regression = Setting(False)
+    show_ellipse = Setting(False)
     jitter_continuous = Setting(False)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
         self.parameter_setter = ParameterSetter(self)
         self.reg_line_items = []
+        self.ellipse_items: List[pg.PlotCurveItem] = []
 
     def clear(self):
         super().clear()
         self.reg_line_items.clear()
+        self.ellipse_items.clear()
 
     def update_coordinates(self):
         super().update_coordinates()
@@ -183,6 +165,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     def update_colors(self):
         super().update_colors()
         self.update_regression_line()
+        self.update_ellipse()
 
     def jitter_coordinates(self, x, y):
         def get_span(attr):
@@ -285,17 +268,28 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         self.update_reg_line_label_colors()
 
     def update_regression_line(self):
-        for line in self.reg_line_items:
-            self.plot_widget.removeItem(line)
-        self.reg_line_items.clear()
-        if not (self.show_reg_line
-                and self.master.can_draw_regresssion_line()):
+        self._update_curve(self.reg_line_items,
+                           self.show_reg_line,
+                           self._add_line)
+        self.update_reg_line_label_colors()
+
+    def update_ellipse(self):
+        self._update_curve(self.ellipse_items,
+                           self.show_ellipse,
+                           self._add_ellipse)
+
+    def _update_curve(self, items: List, show: bool, add: Callable):
+        for item in items:
+            self.plot_widget.removeItem(item)
+        items.clear()
+        if not (show and self.master.can_draw_regression_line()):
             return
         x, y = self.master.get_coordinates_data()
-        if x is None:
+        if x is None or len(x) < 2:
             return
-        self._add_line(x, y, QColor("#505050"))
-        if self.master.is_continuous_color() or self.palette is None:
+        add(x, y, QColor("#505050"))
+        if self.master.is_continuous_color() or self.palette is None \
+                or len(self.palette) == 0:
             return
         c_data = self.master.get_color_data()
         if c_data is None:
@@ -304,11 +298,43 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         for val in range(c_data.max() + 1):
             mask = c_data == val
             if mask.sum() > 1:
-                self._add_line(x[mask], y[mask], self.palette[val].darker(135))
-        self.update_reg_line_label_colors()
+                add(x[mask], y[mask], self.palette[val].darker(135))
+
+    def _add_ellipse(self, x: np.ndarray, y: np.ndarray, color: QColor) -> np.ndarray:
+        # https://github.com/ChristianGoueguel/HotellingEllipse/blob/master/R/ellipseCoord.R
+        points = np.vstack([x, y]).T
+        mu = np.mean(points, axis=0)
+        cov = np.cov(*(points - mu).T)
+        vals, vects = np.linalg.eig(cov)
+        angle = math.atan2(vects[1, 0], vects[0, 0])
+        matrix = np.array([[np.cos(angle), -np.sin(angle)],
+                           [np.sin(angle), np.cos(angle)]])
+
+        n = len(x)
+        f = ss.f.ppf(0.95, 2, n - 2)
+        f = f * 2 * (n - 1) / (n - 2)
+        m = [np.pi * i / 100 for i in range(201)]
+        cx = np.cos(m) * np.sqrt(vals[0] * f)
+        cy = np.sin(m) * np.sqrt(vals[1] * f)
+
+        pts = np.vstack([cx, cy])
+        pts = matrix.dot(pts)
+        cx = pts[0] + mu[0]
+        cy = pts[1] + mu[1]
+
+        width = self.parameter_setter.reg_line_settings[Updater.WIDTH_LABEL]
+        alpha = self.parameter_setter.reg_line_settings[Updater.ALPHA_LABEL]
+        style = self.parameter_setter.reg_line_settings[Updater.STYLE_LABEL]
+        style = Updater.LINE_STYLES[style]
+        color.setAlpha(alpha)
+
+        pen = pg.mkPen(color=color, width=width, style=style)
+        ellipse = pg.PlotCurveItem(cx, cy, pen=pen)
+        self.plot_widget.addItem(ellipse)
+        self.ellipse_items.append(ellipse)
 
 
-class OWScatterPlot(OWDataProjectionWidget):
+class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
     """Scatterplot visualization with explorative analysis and intelligent
     data visualization enhancements."""
 
@@ -335,8 +361,6 @@ class OWScatterPlot(OWDataProjectionWidget):
     graph = SettingProvider(OWScatterPlotGraph)
     embedding_variables_names = None
 
-    xy_changed_manually = Signal(Variable, Variable)
-
     class Warning(OWDataProjectionWidget.Warning):
         missing_coords = Msg(
             "Plot cannot be displayed because '{}' or '{}' "
@@ -352,8 +376,6 @@ class OWScatterPlot(OWDataProjectionWidget):
         self.xy_model: DomainModel = None
         self.cb_attr_x: ComboBoxSearch = None
         self.cb_attr_y: ComboBoxSearch = None
-        self.vizrank: ScatterPlotVizRank = None
-        self.vizrank_button: QPushButton = None
         self.sampling: QGroupBox = None
         self._xy_invalidated: bool = True
 
@@ -387,6 +409,12 @@ class OWScatterPlot(OWDataProjectionWidget):
             "If checked, fit line to group (minimize distance from points);\n"
             "otherwise fit y as a function of x (minimize vertical distances)",
             disabledBy=self.cb_reg_line)
+        gui.checkBox(
+            self._plot_box, self,
+            value="graph.show_ellipse",
+            label="Show confidence ellipse",
+            tooltip="Hotelling's T² confidence ellipse (α=95%)",
+            callback=self.graph.update_ellipse)
 
     def _add_controls_axis(self):
         common_options = dict(
@@ -408,8 +436,9 @@ class OWScatterPlot(OWDataProjectionWidget):
             model=self.xy_model, **common_options,
         )
         vizrank_box = gui.hBox(self.attr_box)
-        self.vizrank, self.vizrank_button = ScatterPlotVizRank.add_vizrank(
-            vizrank_box, self, "Find Informative Projections", self.set_attr)
+        button = self.vizrank_button("Find Informative Projections")
+        vizrank_box.layout().addWidget(button)
+        self.vizrankSelectionChanged.connect(self.set_attr)
 
     def _add_controls_sampling(self):
         self.sampling = gui.auto_commit(
@@ -428,8 +457,7 @@ class OWScatterPlot(OWDataProjectionWidget):
             eff_var = [self.attr_x]
         return self.data.transform(Domain(eff_var))
 
-    def _vizrank_color_change(self):
-        self.vizrank.initialize()
+    def init_vizrank(self):
         err_msg = ""
         if self.data is None:
             err_msg = "No data on input"
@@ -441,13 +469,15 @@ class OWScatterPlot(OWDataProjectionWidget):
             err_msg = "Color variable is not selected"
         elif np.isnan(self.data.get_column(self.attr_color)).all():
             err_msg = "Color variable has no values"
-        self.vizrank_button.setEnabled(not err_msg)
-        self.vizrank_button.setToolTip(err_msg)
+        if not err_msg:
+            super().init_vizrank(self.data, list(self.xy_model), self.attr_color)
+        else:
+            self.disable_vizrank(err_msg)
 
     @OWDataProjectionWidget.Inputs.data
     def set_data(self, data):
         super().set_data(data)
-        self._vizrank_color_change()
+        self.init_vizrank()
 
         def findvar(name, iterable):
             """Find a Orange.data.Variable in `iterable` by name"""
@@ -524,7 +554,7 @@ class OWScatterPlot(OWDataProjectionWidget):
                 text = "<b>{}</b><br/><br/>{}".format(text, others)
         return text
 
-    def can_draw_regresssion_line(self):
+    def can_draw_regression_line(self):
         return self.data is not None and \
                self.data.domain is not None and \
                self.attr_x is not None and self.attr_y is not None and \
@@ -571,11 +601,9 @@ class OWScatterPlot(OWDataProjectionWidget):
     # called when all signals are received, so the graph is updated only once
     def handleNewSignals(self):
         self.attr_box.setEnabled(True)
-        self.vizrank.setEnabled(True)
         if self.attribute_selection_list and self.data is not None and \
                 self.data.domain is not None:
             self.attr_box.setEnabled(False)
-            self.vizrank.setEnabled(False)
             if all(attr in self.xy_model for attr in self.attribute_selection_list):
                 self.attr_x, self.attr_y = self.attribute_selection_list
             else:
@@ -586,7 +614,9 @@ class OWScatterPlot(OWDataProjectionWidget):
         if self._domain_invalidated:
             self.graph.update_axes()
             self._domain_invalidated = False
-        self.cb_reg_line.setEnabled(self.can_draw_regresssion_line())
+        can_plot = self.can_draw_regression_line()
+        self.cb_reg_line.setEnabled(can_plot)
+        self.graph.controls.show_ellipse.setEnabled(can_plot)
 
     @Inputs.features
     def set_shown_attributes(self, attributes):
@@ -602,17 +632,19 @@ class OWScatterPlot(OWDataProjectionWidget):
                 self.init_attr_values()
             self.attribute_selection_list = None
 
-    def set_attr(self, attr_x, attr_y):
-        if attr_x != self.attr_x or attr_y != self.attr_y:
-            self.attr_x, self.attr_y = attr_x, attr_y
+    def set_attr(self, attrs):
+        if attrs != [self.attr_x,self.attr_y]:
+            self.attr_x, self.attr_y = attrs
             self.attr_changed()
 
     def set_attr_from_combo(self):
         self.attr_changed()
-        self.xy_changed_manually.emit(self.attr_x, self.attr_y)
+        self.vizrankAutoSelect.emit([self.attr_x, self.attr_y])
 
     def attr_changed(self):
-        self.cb_reg_line.setEnabled(self.can_draw_regresssion_line())
+        can_plot = self.can_draw_regression_line()
+        self.cb_reg_line.setEnabled(can_plot)
+        self.graph.controls.show_ellipse.setEnabled(can_plot)
         self.setup_plot()
         self.commit.deferred()
 
@@ -621,7 +653,7 @@ class OWScatterPlot(OWDataProjectionWidget):
 
     def colors_changed(self):
         super().colors_changed()
-        self._vizrank_color_change()
+        self.init_vizrank()
 
     @gui.deferred
     def commit(self):

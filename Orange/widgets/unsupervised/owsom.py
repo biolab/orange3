@@ -1018,7 +1018,7 @@ class OWSOM(OWWidget):
                 compute_value=GetGroups(id_to_group, default_grp, offset))
 
             if not self.data.domain.class_vars:
-                class_vars, metas = grp_var, som_attrs
+                class_vars, metas = (grp_var,), som_attrs
             else:
                 class_vars, metas = (), (grp_var,) + som_attrs
             return add_columns(self.data.domain, (), class_vars, metas)

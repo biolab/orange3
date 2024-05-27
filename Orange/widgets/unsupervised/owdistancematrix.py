@@ -72,6 +72,9 @@ class OWDistanceMatrix(widget.OWWidget):
         distances = Output("Distances", DistMatrix, dynamic=False)
         table = Output("Selected Data", Table, replaces=["Table"])
 
+    class Error(widget.OWWidget.Error):
+        empty_matrix = widget.Msg("Distance matrix is empty.")
+
     settingsHandler = DistanceMatrixContextHandler()
     settings_version = 2
     auto_commit = Setting(True)
@@ -107,7 +110,12 @@ class OWDistanceMatrix(widget.OWWidget):
 
     @Inputs.distances
     def set_distances(self, distances):
+        self.clear_messages()
         self.closeContext()
+        if distances is not None:
+            if len(distances) == 0:
+                distances = None
+                self.Error.empty_matrix()
         self.distances = distances
         self.tablemodel.set_data(self.distances)
         self.items = None

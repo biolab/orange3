@@ -4,6 +4,7 @@ import unittest
 from unittest.mock import Mock
 import numpy as np
 
+from orangewidget.tests.base import GuiTest
 from Orange.data import Table
 from Orange.widgets.tests.base import (
     WidgetTest, WidgetOutputsTestMixin,
@@ -33,10 +34,10 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
             if data is not None and data.domain.class_var in \
                     self.widget.controls.attr_color.model():
                 self.widget.attr_color = data.domain.class_var
-            if self.widget.btn_vizrank.isEnabled():
-                vizrank = RadvizVizRank(self.widget)
-                states = [state for state in vizrank.iterate_states(None)]
-                self.assertIsNotNone(vizrank.compute_score(states[0]))
+            if self.widget.vizrank_button().isEnabled():
+                vizrank = self.widget.vizrank_dialog
+                self.assertIsNotNone(
+                    vizrank.compute_score(next(vizrank.state_generator())))
 
         check_vizrank(self.data)
         check_vizrank(self.data[:, :3])
@@ -131,15 +132,45 @@ class TestOWRadviz(WidgetTest, AnchorProjectionWidgetTestMixin,
         self.send_signal(self.widget.Inputs.data, self.data)
         self.widget.setup_plot.assert_called_once()
 
-    def test_score_plots_feature_update(self):
-        self.send_signal(self.widget.Inputs.data, self.data)
-        selected_vars = set(self.widget.selected_vars)
-        output1 = self.get_output(self.widget.Outputs.components)
-        self.widget.vizrank.toggle()
-        self.process_events(until=lambda: not self.widget.vizrank.keep_running)
-        self.assertNotEqual(selected_vars, set(self.widget.selected_vars))
-        output2 = self.get_output(self.widget.Outputs.components)
-        self.assertNotEqual(output1, output2)
+
+class TestRadvizVizrank(GuiTest):
+    def test_count_and_states(self):
+        data = Table("iris")
+        dialog = RadvizVizRank(
+            None,
+            data, data.domain.attributes, data.domain.class_var,
+            4)
+        self.assertEqual(dialog.state_count(), 7)
+        self.assertEqual(list(dialog.state_generator()),
+                         [(0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3),
+                          (0, 1, 2, 3), (0, 1, 3, 2), (0, 2, 1, 3)])
+
+        dialog = RadvizVizRank(
+            None,
+            data, data.domain.attributes, data.domain.class_var,
+            3)
+        self.assertEqual(dialog.state_count(), 4)
+        self.assertEqual(list(dialog.state_generator()),
+                         [(0, 1, 2), (0, 1, 3), (0, 2, 3), (1, 2, 3)])
+
+    def test_ranking_and_scoring(self):
+        data = Table("iris")
+        dialog = RadvizVizRank(
+            None,
+            data, data.domain.attributes, data.domain.class_var,
+            3)
+        # Don't crash, and return 4 different things
+        self.assertEqual(len({dialog.compute_score(state)
+                              for state in dialog.state_generator()}), 4)
+        self.assertEqual(set(dialog.score_attributes()),
+                         set(data.domain.attributes))
+        with data.unlocked(data.X):
+            data.X[0, :3] = np.nan
+        # Tolerate missing values, and return 4 different things
+        self.assertEqual(len({dialog.compute_score(state)
+                              for state in dialog.state_generator()}), 4)
+        self.assertEqual(set(dialog.score_attributes()),
+                         set(data.domain.attributes))
 
 
 if __name__ == "__main__":

@@ -4,17 +4,16 @@
 import os
 import sysconfig
 
-import pkg_resources
-
 from orangecanvas.registry import CategoryDescription
 from orangecanvas.registry.utils import category_from_package_globals
+from orangecanvas.utils.pkgmeta import get_distribution
 import orangewidget.workflow.discovery
 
 
 # Entry point for main Orange categories/widgets discovery
 def widget_discovery(discovery):
     # type: (orangewidget.workflow.discovery.WidgetDiscovery) -> None
-    dist = pkg_resources.get_distribution("Orange3")
+    dist = get_distribution("Orange3")
     pkgs = [
         "Orange.widgets.data",
         "Orange.widgets.visualize",

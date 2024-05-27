@@ -151,8 +151,8 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output(self.widget.Inputs.data)
         self.assertTrue(output.is_sparse())
 
-    @patch('Orange.widgets.visualize.owsieve.SieveRank.on_manual_change')
-    def test_vizrank_receives_manual_change(self, on_manual_change):
+    @patch('Orange.widgets.visualize.owsieve.SieveRank.auto_select')
+    def test_vizrank_receives_manual_change(self, auto_select):
         # Recreate the widget so the patch kicks in
         self.widget = self.create_widget(OWSieveDiagram)
         data = Table("iris.tab")
@@ -161,10 +161,9 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.widget.attr_x = model[2]
         self.widget.attr_y = model[3]
         simulate.combobox_activate_index(self.widget.controls.attr_x, 4)
-        call_args = on_manual_change.call_args[0]
-        self.assertEqual(len(call_args), 2)
-        self.assertEqual(call_args[0].name, data.domain[2].name)
-        self.assertEqual(call_args[1].name, data.domain[1].name)
+        call_args = auto_select.call_args[0][0]
+        self.assertEqual([v.name for v in call_args],
+                         [data.domain[2].name, data.domain[1].name])
 
     def test_input_features(self):
         self.assertTrue(self.widget.attr_box.isEnabled())
@@ -172,10 +171,10 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         self.send_signal(self.widget.Inputs.features,
                          AttributeList(self.iris.domain.attributes))
         self.assertFalse(self.widget.attr_box.isEnabled())
-        self.assertFalse(self.widget.vizrank.isEnabled())
+        self.assertFalse(self.widget.vizrank_button().isEnabled())
         self.send_signal(self.widget.Inputs.features, None)
         self.assertTrue(self.widget.attr_box.isEnabled())
-        self.assertTrue(self.widget.vizrank.isEnabled())
+        self.assertTrue(self.widget.vizrank_button().isEnabled())
 
 
 if __name__ == "__main__":

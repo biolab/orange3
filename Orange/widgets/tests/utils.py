@@ -5,6 +5,7 @@ from AnyQt.QtTest import QTest
 from AnyQt.QtGui import QContextMenuEvent
 from AnyQt.QtWidgets import QApplication, QWidget, QButtonGroup
 
+from orangecanvas.gui.test import dragDrop
 from orangewidget.tests.utils import (
     simulate, excepthook_catch, EventSpy, mouseMove
 )
@@ -16,6 +17,7 @@ EventSpy = EventSpy
 excepthook_catch = excepthook_catch
 simulate = simulate
 mouseMove = mouseMove
+dragDrop = dragDrop
 
 
 def qbuttongroup_emit_clicked(bg: QButtonGroup, id_: int):

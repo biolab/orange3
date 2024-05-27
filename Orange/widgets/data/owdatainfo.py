@@ -1,17 +1,24 @@
 import threading
 import textwrap
 
-from Orange.data import \
-    Table, StringVariable, DiscreteVariable, ContinuousVariable
-try:
-    from Orange.data.sql.table import SqlTable
-except ImportError:
-    SqlTable = None
+import numpy as np
 
 from Orange.widgets import widget, gui
 from Orange.widgets.utils.localization import pl
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input
+
+from Orange.data import \
+    Table, StringVariable, DiscreteVariable, ContinuousVariable
+
+try:
+    from Orange.data.sql.table import SqlTable
+except ImportError:
+    def is_sql(_):
+        return False
+else:
+    def is_sql(data):
+        return isinstance(data, SqlTable)
 
 
 class OWDataInfo(widget.OWWidget):
@@ -53,12 +60,13 @@ class OWDataInfo(widget.OWWidget):
                                     ("Size", self._p_size),
                                     ("Features", self._p_features),
                                     ("Targets", self._p_targets),
-                                    ("Metas", self._p_metas))
+                                    ("Metas", self._p_metas),
+                                    ("Missing data", self._p_missing))
                 if bool(value := func(data))}
             self.data_attrs = data.attributes
             self.update_info()
 
-            if SqlTable is not None and isinstance(data, SqlTable):
+            if is_sql(data):
                 def set_exact_length():
                     self.data_desc["Size"] = self._p_size(data, exact=True)
                     self.update_info()
@@ -101,16 +109,18 @@ class OWDataInfo(widget.OWWidget):
 
     @staticmethod
     def _p_location(data):
-        if SqlTable is not None and isinstance(data, SqlTable):
-            connection_string = ' '.join(
-                f'{key}={value}'
-                for key, value in data.connection_params.items()
-                if value is not None and key != 'password')
-            return f"SQL Table using connection:<br/>{connection_string}"
+        if not is_sql(data):
+            return None
+
+        connection_string = ' '.join(
+            f'{key}={value}'
+            for key, value in data.connection_params.items()
+            if value is not None and key != 'password')
+        return f"SQL Table using connection:<br/>{connection_string}"
 
     @staticmethod
     def _p_size(data, exact=False):
-        exact = exact or SqlTable is None or not isinstance(data, SqlTable)
+        exact = exact or is_sql(data)
         if exact:
             n = len(data)
             desc = f"{n} {pl(n, 'row')}"
@@ -151,6 +161,25 @@ class OWDataInfo(widget.OWWidget):
     @classmethod
     def _p_metas(cls, data):
         return cls._pack_var_counts(data.domain.metas)
+
+    @staticmethod
+    def _p_missing(data: Table):
+        if is_sql(data):
+            return "(not checked for SQL data)"
+
+        counts = []
+        for name, part, n_miss in ((pl(len(data.domain.attributes), "feature"),
+                                    data.X, data.get_nan_count_attribute()),
+                                   (pl(len(data.domain.class_vars), "targets"),
+                                    data.Y, data.get_nan_count_class()),
+                                   (pl(len(data.domain.metas), "meta variable"),
+                                    data.metas, data.get_nan_count_metas())):
+            if n_miss:
+                counts.append(
+                    f"{n_miss} ({n_miss / np.prod(part.shape):.1%}) in {name}")
+        if not counts:
+            return "none"
+        return ", ".join(counts)
 
     @staticmethod
     def _count(s, tpe):

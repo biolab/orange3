@@ -17,14 +17,13 @@ from Orange.data import (Table, Domain, StringVariable,
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import PyListModel
+from Orange.widgets.utils.concurrent import TaskState
 from Orange.widgets.data.owfeatureconstructor import (
     DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
     construct_variables, OWFeatureConstructor,
     FeatureEditor, DiscreteFeatureEditor, FeatureConstructorHandler,
-    DateTimeDescriptor, StringFeatureEditor)
-
-from Orange.widgets.data.owfeatureconstructor import (
-    freevars, validate_exp, FeatureFunc
+    DateTimeDescriptor, StringFeatureEditor, freevars, validate_exp,
+    FeatureFunc, run
 )
 
 
@@ -40,7 +39,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                 values=values, ordered=True)]
         )
         data = data.transform(Domain(data.domain.attributes +
-                                     construct_variables(desc, data)[0],
+                                     construct_variables(desc, data),
                                      data.domain.class_vars,
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], DiscreteVariable))
@@ -58,7 +57,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                 values=values, ordered=False)]
         )
         data = data.transform(Domain(data.domain.attributes +
-                                     construct_variables(desc, data)[0],
+                                     construct_variables(desc, data),
                                      data.domain.class_vars,
                                      data.domain.metas))
         newvar = data.domain[name]
@@ -77,7 +76,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                   number_of_decimals=2)]
         )
         data = data.transform(Domain(data.domain.attributes +
-                                     construct_variables(featuremodel, data)[0],
+                                     construct_variables(featuremodel, data),
                                      data.domain.class_vars,
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], ContinuousVariable))
@@ -93,7 +92,7 @@ class FeatureConstructorTest(unittest.TestCase):
             [DateTimeDescriptor(name=name, expression=expression)]
         )
         data = data.transform(Domain(data.domain.attributes +
-                                     construct_variables(featuremodel, data)[0],
+                                     construct_variables(featuremodel, data),
                                      data.domain.class_vars,
                                      data.domain.metas))
         self.assertTrue(isinstance(data.domain[name], TimeVariable))
@@ -111,7 +110,7 @@ class FeatureConstructorTest(unittest.TestCase):
         data = data.transform(Domain(data.domain.attributes,
                                      data.domain.class_vars,
                                      data.domain.metas +
-                                     construct_variables(desc, data)[1]))
+                                     construct_variables(desc, data)))
         self.assertTrue(isinstance(data.domain[name], StringVariable))
         for i in range(3):
             self.assertEqual(data[i * 50, name],
@@ -129,7 +128,7 @@ class FeatureConstructorTest(unittest.TestCase):
                                   meta=False,
                                   number_of_decimals=3)]
         )
-        nv, _ = construct_variables(desc, data)
+        nv = construct_variables(desc, data)
         ndata = data.transform(Domain(nv))
         np.testing.assert_array_equal(ndata.X[:, 0],
                                       data.X[:, :2].sum(axis=1))
@@ -137,13 +136,17 @@ class FeatureConstructorTest(unittest.TestCase):
     def test_construct_placement(self):
         domain = Domain([ContinuousVariable(x) for x in "ab"])
         data = Table.from_numpy(domain, np.arange(4).reshape(2, 2))
-        desc = PyListModel(
-            [ContinuousDescriptor("x", "a + b", 1, False),
-             ContinuousDescriptor("y", "a + b", 1, True),
-             StringDescriptor("z", "a + b", True)])
-        attrs, metas = construct_variables(desc, data)
-        self.assertEqual([var.name for var in attrs], ["x"])
-        self.assertEqual([var.name for var in metas], ["y", "z"])
+        desc = [ContinuousDescriptor("x", "a + b", 1, False),
+                ContinuousDescriptor("y", "a + b", 1, True),
+                StringDescriptor("z", "a + b", True),
+                ContinuousDescriptor("a", "a + 1", 1, False),
+                ContinuousDescriptor("b", "a + 1", 1, True),
+                ]
+        res = run(data, desc, False, TaskState())
+        self.assertEqual([var.name for var in res.data.domain.attributes],
+                         ["a", "x"])
+        self.assertEqual([var.name for var in res.data.domain.metas],
+                         ["b", "y", "z"])
 
     @staticmethod
     def test_unicode_normalization():
@@ -158,7 +161,7 @@ class FeatureConstructorTest(unittest.TestCase):
         data = Table.from_numpy(domain, np.arange(5).reshape(5, 1))
         data = data.transform(Domain(data.domain.attributes,
                                      [],
-                                     construct_variables(desc, data)[0]))
+                                     construct_variables(desc, data)))
         np.testing.assert_equal(data.X, data.metas)
 
     @staticmethod
@@ -171,7 +174,7 @@ class FeatureConstructorTest(unittest.TestCase):
         data = Table.from_numpy(domain, X)
         data_ = data.transform(Domain(data.domain.attributes,
                                       [],
-                                      construct_variables(desc, data)[0]))
+                                      construct_variables(desc, data)))
         np.testing.assert_equal(data.get_column(0), data_.get_column(0)
         )
 
@@ -409,7 +412,7 @@ class OWFeatureConstructorTests(WidgetTest):
         self.wait_until_finished(self.widget)
         self.assertFalse(self.widget.Error.transform_error.is_shown())
 
-    def test_renaming_duplicate_vars(self):
+    def test_replace_existing_vars(self):
         data = Table("iris")
         self.widget.setData(data)
         self.widget.addFeature(
@@ -417,8 +420,11 @@ class OWFeatureConstructorTests(WidgetTest):
         )
         self.widget.apply()
         output = self.get_output(self.widget.Outputs.data)
-        self.assertEqual(len(set(var.name for var in output.domain.variables)),
-                         len(output.domain.variables))
+        domain = output.domain
+        self.assertEqual(len(domain.attributes), 4)
+        self.assertEqual(len(domain.class_vars), 1)
+        self.assertIsInstance(domain.class_vars[0], ContinuousVariable)
+        self.assertEqual(domain.class_vars[0].name, "iris")
 
     def test_discrete_no_values(self):
         """

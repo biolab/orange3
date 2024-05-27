@@ -1,4 +1,5 @@
-# pylint: disable=no-self-use,protected-access,invalid-name,arguments-differ
+# pylint: disable=protected-access,invalid-name,arguments-differ
+import tempfile
 import unittest
 from unittest import mock
 from contextlib import ExitStack, contextmanager
@@ -10,9 +11,10 @@ import json
 from typing import Type, TypeVar, Optional
 
 import numpy as np
+import pandas as pd
 from numpy.testing import assert_array_equal
 
-from AnyQt.QtCore import QSettings, Qt
+from AnyQt.QtCore import QSettings, Qt, QUrl
 from AnyQt.QtGui import QIcon
 from AnyQt.QtWidgets import QFileDialog
 from AnyQt.QtTest import QSignalSpy
@@ -26,7 +28,7 @@ from Orange.tests import named_file
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.data import owcsvimport
 from Orange.widgets.data.owcsvimport import (
-    OWCSVFileImport, pandas_to_table, ColumnType, RowSpec,
+    OWCSVFileImport, pandas_to_table, ColumnType, RowSpec, ImportItem,
 )
 from Orange.widgets.utils.pathutils import PathItem, samepath
 from Orange.widgets.utils.settings import QSettings_writeArray
@@ -281,6 +283,34 @@ class TestOWCSVFileImport(WidgetTest):
             mb.assert_called()
         self.assertIsNone(widget.current_item())
 
+    @staticmethod
+    @contextmanager
+    def activate_recent_and_get_dialog(
+            widget: OWCSVFileImport, recent_index: int = 0
+    ) -> QFileDialog:
+        """
+        Activate the recent item (which MUST be missing on FS) and
+        yield the QFileDialog which is shown.
+        """
+        browse_dialog = widget._browse_dialog
+        with mock.patch.object(widget, "_browse_dialog") as r:
+            dlg = browse_dialog()
+            # segfaults in tests when using 'sheet' dialog on macos when parent
+            # is destroyed (before the dialog fully hides - animation)?
+            dlg.setParent(None)
+            # calling selectFile when using native (macOS) dialog does not have
+            # an effect - at least not immediately;
+            dlg.setOption(QFileDialog.DontUseNativeDialog)
+            r.return_value = dlg
+            with mock.patch.object(dlg, "open") as r:
+                widget.activate_recent(recent_index)
+                r.assert_called()
+        try:
+            yield dlg
+        finally:
+            dlg.deleteLater()
+        return
+
     def test_browse_for_missing(self):
         missing = os.path.dirname(__file__) + "/this file does not exist.csv"
         widget = self.create_widget(
@@ -290,19 +320,14 @@ class TestOWCSVFileImport(WidgetTest):
                 ]
             }
         )
-        widget.activate_recent(0)
-        dlg = widget.findChild(QFileDialog)
-        assert dlg is not None
-        # calling selectFile when using native (macOS) dialog does not have
-        # an effect - at least not immediately;
-        dlg.setOption(QFileDialog.DontUseNativeDialog)
-        dlg.selectFile(self.data_regions_path)
-        dlg.accept()
-        cur = widget.current_item()
-        self.assertTrue(samepath(self.data_regions_path, cur.path()))
-        self.assertEqual(
-            self.data_regions_options.as_dict(), cur.options().as_dict()
-        )
+        with self.activate_recent_and_get_dialog(widget) as dlg:
+            dlg.selectFile(self.data_regions_path)
+            dlg.accept()
+            cur = widget.current_item()
+            self.assertTrue(samepath(self.data_regions_path, cur.path()))
+            self.assertEqual(
+                self.data_regions_options.as_dict(), cur.options().as_dict()
+            )
 
     def test_browse_for_missing_prefixed(self):
         path = self.data_regions_path
@@ -316,21 +341,16 @@ class TestOWCSVFileImport(WidgetTest):
             },
             env={"basedir": basedir}
         )
-        widget.activate_recent(0)
-        dlg = widget.findChild(QFileDialog)
-        assert dlg is not None
-        # calling selectFile when using native (macOS) dialog does not have
-        # an effect - at least not immediately;
-        dlg.setOption(QFileDialog.DontUseNativeDialog)
-        dlg.selectFile(path)
-        dlg.accept()
-        cur = widget.current_item()
-        self.assertTrue(samepath(path, cur.path()))
-        self.assertEqual(
-            cur.varPath(), PathItem.VarPath("basedir", "data-regions.tab"))
-        self.assertEqual(
-            self.data_regions_options.as_dict(), cur.options().as_dict()
-        )
+        with self.activate_recent_and_get_dialog(widget) as dlg:
+            dlg.selectFile(path)
+            dlg.accept()
+            cur = widget.current_item()
+            self.assertTrue(samepath(path, cur.path()))
+            self.assertEqual(
+                cur.varPath(), PathItem.VarPath("basedir", "data-regions.tab"))
+            self.assertEqual(
+                self.data_regions_options.as_dict(), cur.options().as_dict()
+            )
 
     def test_browse_for_missing_prefixed_parent(self):
         path = self.data_regions_path
@@ -346,18 +366,62 @@ class TestOWCSVFileImport(WidgetTest):
             env={"basedir": basedir}
         )
         mb = widget._path_must_be_relative_mb = mock.Mock()
-        widget.activate_recent(0)
-        dlg = widget.findChild(QFileDialog)
-        assert dlg is not None
-        # calling selectFile when using native (macOS) dialog does not have
-        # an effect - at least not immediately;
-        dlg.setOption(QFileDialog.DontUseNativeDialog)
-        dlg.selectFile(path)
-        dlg.accept()
-        mb.assert_called()
-        cur = widget.current_item()
-        self.assertEqual(item[0], cur.varPath())
-        self.assertEqual(item[1].as_dict(), cur.options().as_dict())
+        with self.activate_recent_and_get_dialog(widget) as dlg:
+            dlg.selectFile(path)
+            dlg.accept()
+            mb.assert_called()
+            cur = widget.current_item()
+            self.assertEqual(item[0], cur.varPath())
+            self.assertEqual(item[1].as_dict(), cur.options().as_dict())
+
+    def test_activate_import_dialog(self):
+        path = self.data_regions_path
+        item = ImportItem.fromPath(path)
+        self.widget.import_items_model.appendRow(ImportItem.fromPath(path))
+        opts = item.options()
+        self.assertIsNone(opts)
+        with mock.patch.object(owcsvimport.CSVImportDialog, "show"):
+            self.widget.import_options_button.click()
+            dlg = self.widget.findChild(owcsvimport.CSVImportDialog)
+            dlg.accept()
+        item_ = self.widget.current_item()
+        self.assertEqual(item.path(), item_.path())
+        self.assertIsNotNone(item_.options())
+
+    def test_drop_file(self):
+        self.assertFalse(self.widget.canDropUrl(QUrl("https://aa-bb.com")))
+        url = QUrl.fromLocalFile(self.data_regions_path)
+        self.assertTrue(self.widget.canDropUrl(url))
+
+        with mock.patch.object(owcsvimport.CSVImportDialog, "show"):
+            self.widget.handleDroppedUrl(url)
+            dlg = self.widget.findChild(owcsvimport.CSVImportDialog)
+            dlg.reject()
+        item = self.widget.current_item()
+        self.assertIsNone(item, "Rejecting the dialog should not record the recent file")
+
+        with mock.patch.object(owcsvimport.CSVImportDialog, "show"):
+            self.widget.handleDroppedUrl(url)
+            dlg = self.widget.findChild(owcsvimport.CSVImportDialog)
+            dlg.accept()
+        item = self.widget.current_item()
+        self.assertEqual(item.path(), url.toLocalFile())
+        out = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(len(out.domain), 3)
+
+    def test_long_data(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "test.csv")
+            nums = np.tile([-3, -2, -1, 0, 1, 2], 100000)
+            pd.DataFrame(
+                {"A": np.hstack((nums, ["ABC"], nums))}
+            ).to_csv(path, index=False)
+
+            with self._browse_setup(self.widget, path):
+                self.widget.browse()
+            out = self.get_output(self.widget.Outputs.data)
+            self.assertIsInstance(out.domain.attributes[0], DiscreteVariable)
+            self.assertTupleEqual((6 * 100000 * 2 + 1, 1), out.X.shape)
 
 
 class TestImportDialog(GuiTest):

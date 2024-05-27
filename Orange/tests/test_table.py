@@ -2366,31 +2366,58 @@ class InterfaceTest(unittest.TestCase):
 
 class TestTableStats(TableTests):
     def test_get_nan_frequency(self):
+        metas = [DiscreteVariable("x", values=tuple("abc")), StringVariable("s")]
+        meta_data = np.array([list(range(self.nrows)), ["x"] * self.nrows]).T
         domain = self.create_domain(self.attributes, self.class_vars)
-        table = data.Table(domain, self.data, self.class_data)
-        self.assertEqual(table.get_nan_frequency_attribute(), 0)
-        self.assertEqual(table.get_nan_frequency_class(), 0)
+        domain = Domain(domain.attributes, domain.class_vars, metas)
+        table = data.Table(domain, self.data, self.class_data, meta_data)
+
+        def test_counts(at, cl, me):
+            x, y, metas = table.X, table.Y, table.metas
+            for _ in range(2):
+                self.assertEqual(table.get_nan_count_attribute(), at)
+                self.assertEqual(table.get_nan_count_class(), cl)
+                self.assertEqual(table.get_nan_count_metas(), me)
+                self.assertEqual(table.get_nan_frequency_attribute(), at / np.prod(x.shape))
+                self.assertEqual(table.get_nan_frequency_class(), cl / np.prod(y.shape))
+                self.assertEqual(table.get_nan_frequency_metas(), me / np.prod(metas.shape))
+                with table.unlocked():
+                    table.X = sp.csr_matrix(x)
+                    table.Y = sp.csr_matrix(y)
+            with table.unlocked():
+                table.X, table.Y = x, y
+
+        test_counts(0, 0, 0)
 
         with table.unlocked():
             table.X[1, 2] = table.X[4, 5] = np.nan
-        self.assertEqual(table.get_nan_frequency_attribute(), 2 / table.X.size)
-        self.assertEqual(table.get_nan_frequency_class(), 0)
+        test_counts(2, 0, 0)
 
         with table.unlocked():
             table.Y[3:6] = np.nan
-        self.assertEqual(table.get_nan_frequency_attribute(), 2 / table.X.size)
-        self.assertEqual(table.get_nan_frequency_class(), 3 / table.Y.size)
+        test_counts(2, 3, 0)
 
         with table.unlocked():
             table.X[1, 2] = table.X[4, 5] = 0
-        self.assertEqual(table.get_nan_frequency_attribute(), 0)
-        self.assertEqual(table.get_nan_frequency_class(), 3 / table.Y.size)
+        test_counts(0, 3, 0)
+
+        with table.unlocked():
+            table.metas[1, 0] = table.metas[3, 0] = np.nan
+        test_counts(0, 3, 2)
+
+        with table.unlocked():
+            table.metas[5, 1] = ""
+        test_counts(0, 3, 3)
 
     def test_get_nan_frequency_empty_table(self):
         domain = self.create_domain(self.attributes, self.class_vars)
         table = data.Table.from_domain(domain)
+        self.assertEqual(table.get_nan_count_attribute(), 0)
+        self.assertEqual(table.get_nan_count_class(), 0)
+        self.assertEqual(table.get_nan_count_metas(), 0)
         self.assertEqual(table.get_nan_frequency_attribute(), 0)
         self.assertEqual(table.get_nan_frequency_class(), 0)
+        self.assertEqual(table.get_nan_frequency_metas(), 0)
 
 
 class TestRowInstance(unittest.TestCase):

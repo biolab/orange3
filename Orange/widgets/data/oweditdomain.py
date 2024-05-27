@@ -5,11 +5,13 @@ Edit Domain
 A widget for manual editing of a domain's attributes.
 
 """
+from __future__ import annotations
 import warnings
 from xml.sax.saxutils import escape
-from itertools import zip_longest, repeat, chain
+from itertools import zip_longest, repeat, chain, groupby
 from collections import namedtuple, Counter
 from functools import singledispatch, partial
+from operator import itemgetter
 from typing import (
     Tuple, List, Any, Optional, Union, Dict, Sequence, Iterable, NamedTuple,
     FrozenSet, Type, Callable, TypeVar, Mapping, Hashable, cast, Set
@@ -17,6 +19,7 @@ from typing import (
 
 import numpy as np
 import pandas as pd
+
 from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
     QLineEdit, QAction, QActionGroup, QGroupBox,
@@ -35,6 +38,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
+from orangecanvas.utils import assocf
 from orangewidget.utils.listview import ListViewSearch
 
 import Orange.data
@@ -46,7 +50,7 @@ from Orange.misc.collections import DictMissingConst
 from Orange.util import frompyfunc
 from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
-from Orange.widgets.utils import itemmodels, ftry, disconnected
+from Orange.widgets.utils import itemmodels, ftry, disconnected, unique_everseen as unique
 from Orange.widgets.utils.buttons import FixedSizeButton
 from Orange.widgets.utils.itemmodels import signal_blocking
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -62,14 +66,6 @@ H = TypeVar("H", bound=Hashable)  # pylint: disable=invalid-name
 MAX_HINTS = 1000
 
 
-def unique(sequence: Iterable[H]) -> Iterable[H]:
-    """
-    Return unique elements in `sequence`, preserving their (first seen) order.
-    """
-    # depending on Python >= 3.6 'ordered' dict implementation detail.
-    return iter(dict.fromkeys(sequence))
-
-
 class _DataType:
     def __eq__(self, other):
         """Equal if `other` has the same type and all elements compare equal."""
@@ -83,19 +79,6 @@ class _DataType:
     def __hash__(self):
         return hash((type(self), super().__hash__()))
 
-    def name_type(self):
-        """
-        Returns a tuple with name and type of the variable.
-        It is used since it is forbidden to use names of variables in settings.
-        """
-        type_number = {
-            "Categorical": 0,
-            "Real": 2,
-            "Time": 3,
-            "String": 4
-        }
-        return self.name, type_number[type(self).__name__]
-
 
 #: An ordered sequence of key, value pairs (variable annotations)
 AnnotationsType = Tuple[Tuple[str, str], ...]
@@ -107,8 +90,7 @@ class Categorical(
     _DataType, NamedTuple("Categorical", [
         ("name", str),
         ("categories", Tuple[str, ...]),
-        ("annotations", AnnotationsType),
-        ("linked", bool)
+        ("annotations", AnnotationsType)
     ])): pass
 
 
@@ -117,24 +99,21 @@ class Real(
         ("name", str),
         # a precision (int, and a format specifier('f', 'g', or '')
         ("format", Tuple[int, str]),
-        ("annotations", AnnotationsType),
-        ("linked", bool)
+        ("annotations", AnnotationsType)
     ])): pass
 
 
 class String(
     _DataType, NamedTuple("String", [
         ("name", str),
-        ("annotations", AnnotationsType),
-        ("linked", bool)
+        ("annotations", AnnotationsType)
     ])): pass
 
 
 class Time(
     _DataType, NamedTuple("Time", [
         ("name", str),
-        ("annotations", AnnotationsType),
-        ("linked", bool)
+        ("annotations", AnnotationsType)
     ])): pass
 
 
@@ -248,7 +227,7 @@ class AsString(_DataType, NamedTuple("AsString", [])):
         if isinstance(var, String):
             return vector
         return StringVector(
-            String(var.name, var.annotations, False),
+            String(var.name, var.annotations),
             lambda: as_string(vector.data()),
         )
 
@@ -268,11 +247,11 @@ class AsContinuous(_DataType, NamedTuple("AsContinuous", [])):
                 a = categorical_to_string_vector(d, var.values)
                 return MArray(as_float_or_nan(a, where=a.mask), mask=a.mask)
             return RealVector(
-                Real(var.name, (6, 'g'), var.annotations, var.linked), data
+                Real(var.name, (6, 'g'), var.annotations), data
             )
         elif isinstance(var, Time):
             return RealVector(
-                Real(var.name, (6, 'g'), var.annotations, var.linked),
+                Real(var.name, (6, 'g'), var.annotations),
                 lambda: vector.data().astype(float)
             )
         elif isinstance(var, String):
@@ -280,7 +259,7 @@ class AsContinuous(_DataType, NamedTuple("AsContinuous", [])):
                 s = vector.data()
                 return MArray(as_float_or_nan(s, where=s.mask), mask=s.mask)
             return RealVector(
-                Real(var.name, (6, "g"), var.annotations, var.linked), data
+                Real(var.name, (6, "g"), var.annotations), data
             )
         raise AssertionError
 
@@ -296,7 +275,7 @@ class AsCategorical(_DataType, namedtuple("AsCategorical", [])):
         if isinstance(var, (Real, Time, String)):
             data, values = categorical_from_vector(vector.data())
             return CategoricalVector(
-                Categorical(var.name, values, var.annotations, var.linked),
+                Categorical(var.name, values, var.annotations),
                 lambda: data
             )
         raise AssertionError
@@ -310,7 +289,7 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
             return vector
         elif isinstance(var, Real):
             return TimeVector(
-                Time(var.name, var.annotations, var.linked),
+                Time(var.name, var.annotations),
                 lambda: vector.data().astype("M8[us]")
             )
         elif isinstance(var, Categorical):
@@ -320,7 +299,7 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
                 dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
                 return MArray(dt, mask=d.mask)
             return TimeVector(
-                Time(var.name, var.annotations, var.linked), data
+                Time(var.name, var.annotations), data
             )
         elif isinstance(var, String):
             def data():
@@ -328,7 +307,7 @@ class AsTime(_DataType, namedtuple("AsTime", [])):
                 dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
                 return MArray(dt, mask=s.mask)
             return TimeVector(
-                Time(var.name, var.annotations, var.linked), data
+                Time(var.name, var.annotations), data
             )
         raise AssertionError
 
@@ -636,7 +615,7 @@ class VariableEditor(BaseEditor):
         else:
             self.add_label_action.actionGroup().setEnabled(False)
 
-        self.unlink_var_cb.setDisabled(var is None or not var.linked)
+        self.unlink_var_cb.setDisabled(var is None)
 
     def get_data(self):
         """Retrieve the modified variable.
@@ -650,7 +629,7 @@ class VariableEditor(BaseEditor):
             tr.append(Rename(name))
         if self.var.annotations != labels:
             tr.append(Annotate(labels))
-        if self.var.linked and self.unlink_var_cb.isChecked():
+        if self.unlink_var_cb.isChecked():
             tr.append(Unlink())
         return self.var, tr
 
@@ -2033,9 +2012,17 @@ class OWEditDomain(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         duplicate_var_name = widget.Msg("A variable name is duplicated.")
 
-    settings_version = 3
+    class Warning(widget.OWWidget.Warning):
+        transform_restore_failed = widget.Msg(
+            "Failed to restore transform {} for column {}"
+        )
+        cat_mapping_does_not_apply = widget.Msg(
+            "Categories mapping for {} does not apply to current input"
+        )
 
-    _domain_change_hints = Setting({}, schema_only=True)
+    settings_version = 4
+
+    _domain_change_hints: dict = Setting({}, schema_only=True)
     _merge_dialog_settings = Setting({}, schema_only=True)
     output_table_name = Setting("", schema_only=True)
 
@@ -2126,8 +2113,8 @@ class OWEditDomain(widget.OWWidget):
         self.data = None
         self.variables_model.clear()
         self.clear_editor()
-
         self._merge_dialog_settings = {}
+        self.Warning.clear()
 
     def reset_selected(self):
         """Reset the currently selected variable to its original state."""
@@ -2182,6 +2169,29 @@ class OWEditDomain(widget.OWWidget):
         for i, d in enumerate(columns):
             model.setData(model.index(i), d, Qt.EditRole)
 
+    def _sanitize_transform(
+            self, var: Variable, trs: Sequence[Transform]
+    ) -> tuple[Sequence[Transform], Sequence[tuple[Msg, str]]]:
+        def does_categories_mapping_apply(
+                var: Categorical, tr: CategoriesMapping) -> bool:
+            return set(var.categories) \
+                == set(ci for ci, _ in tr.mapping if ci is not None)
+        msgs = []
+        if isinstance(var, Categorical):
+            trs_ = []
+            for tr in trs:
+                if isinstance(tr, CategoriesMapping):
+                    if does_categories_mapping_apply(var, tr):
+                        trs_.append(tr)
+                    else:
+
+                        msgs.append((self.Warning.cat_mapping_does_not_apply, var.name))
+                else:
+                    trs_.append(tr)
+            return trs_, msgs
+        else:
+            return trs, msgs
+
     def _restore(self):
         """
         Restore the edit transform from saved state.
@@ -2189,23 +2199,33 @@ class OWEditDomain(widget.OWWidget):
         model = self.variables_model
         hints = self._domain_change_hints
         first_key = None
+        msgs = []
         for i in range(model.rowCount()):
             midx = model.index(i, 0)
             coldesc = model.data(midx, Qt.EditRole)  # type: DataVector
-            tr, key = self._restore_transform(coldesc.vtype)
-            if tr:
-                model.setData(midx, tr, TransformRole)
-                if first_key is None:
-                    first_key = key
+            res = self._find_stored_transform(coldesc.vtype)
+            if res:
+                key, tr = res
+                if tr:
+                    self._store_transform(coldesc.vtype, tr, key)
+                    tr, msgs_ = self._sanitize_transform(coldesc.vtype, tr)
+                    model.setData(midx, tr, TransformRole)
+                    msgs.extend(msgs_)
+                    if first_key is None:
+                        first_key = key
         # Reduce the number of hints to MAX_HINTS, but keep all current hints
         # Current hints start with `first_key`.
         while len(hints) > MAX_HINTS and \
-                (key := next(iter(hints))) is not first_key:
+                (key := next(iter(hints))) != first_key:
             del hints[key]  # pylint: disable=unsupported-delete-operation
+
+        # Show warnings for non-applicable transforms
+        for msg, names in groupby(msgs, key=itemgetter(0)):
+            msg(", ".join(map(itemgetter(1), names)))
 
         # Restore the current variable selection
         selected_rows = [i for i, vec in enumerate(model)
-                         if vec.vtype.name_type()[0] in self._selected_items]
+                         if vec.vtype.name in self._selected_items]
         if not selected_rows and model.rowCount():
             selected_rows = [0]
         itemmodels.select_rows(self.variables_view, selected_rows)
@@ -2261,8 +2281,9 @@ class OWEditDomain(widget.OWWidget):
             self._store_transform(var, transform)
         self._invalidate()
 
-    def _store_transform(self, var, transform, deconvar=None):
-        # type: (Variable, List[Transform]) -> None
+    def _store_transform(
+            self, var: Variable, transform: Iterable[Transform], deconvar=None
+    ) -> None:
         deconvar = deconvar or deconstruct(var)
         # Remove the existing key (if any) to put the new one at the end,
         # to make sure it comes after the sentinel
@@ -2271,25 +2292,32 @@ class OWEditDomain(widget.OWWidget):
         self._domain_change_hints[deconvar] = \
             [deconstruct(t) for t in transform]
 
-    def _restore_transform(self, var):
-        # type: (Variable) -> List[Transform]
-        key = deconstruct(var)
-        tr_ = self._domain_change_hints.get(key, [])
-        tr = []
+    def _find_stored_transform(
+            self, var: Variable
+    ) -> Tuple[tuple, Sequence[Transform]] | None:
+        """Find stored transform for `var`."""
+        def reconstruct_transform(tr_: list[tuple]) -> list[Transform]:
+            trs = []
+            for t in tr_:
+                try:
+                    trs.append(cast(Transform, reconstruct(*t)))
+                except (AttributeError, TypeError, NameError):
+                    self.Warning.transform_restore_failed(
+                        str(t), var.name, exc_info=True,
+                    )
+            return trs
 
-        for t in tr_:
-            try:
-                tr.append(reconstruct(*t))
-            except (NameError, TypeError) as err:
-                warnings.warn(
-                    f"Failed to restore transform: {t}, {err}",
-                    UserWarning, stacklevel=2
-                )
-        if tr:
-            self._store_transform(var, tr, key)
-        else:
-            key = None
-        return tr, key
+        hints = self._domain_change_hints
+        key = deconstruct(var)
+        tr = hints.get(key)  # exact match
+        if tr is not None:
+            return key, reconstruct_transform(tr)
+
+        # match by name and type only
+        item = assocf(hints.items(),
+                      lambda k: k[0] == key[0] and k[1][0] == var.name)
+        if item is not None:
+            return item[0], reconstruct_transform(item[1])
 
     def _invalidate(self):
         self._set_modified(True)
@@ -2324,8 +2352,7 @@ class OWEditDomain(widget.OWWidget):
         state = [state(i) for i in range(model.rowCount())]
         input_vars = data.domain.variables + data.domain.metas
         if self.output_table_name in ("", data.name) \
-                and not any(requires_transform(var, trs)
-                            for var, (_, trs) in zip(input_vars, state)):
+                and all(tr is None or not tr for _, tr in state):
             self.Outputs.data.send(data)
             return
 
@@ -2475,6 +2502,13 @@ class OWEditDomain(widget.OWWidget):
                 del hints[next(iter(hints))]
             settings["_domain_change_hints"] = hints
             del settings["context_settings"]
+
+        if version < 4 and "_domain_change_hints" in settings:
+            settings["_domain_change_hints"] = {
+                (name, desc[:-1]): trs
+                for (name, desc), trs in settings["_domain_change_hints"].items()
+            }
+
 
 def enumerate_columns(
         table: Orange.data.Table
@@ -2649,15 +2683,14 @@ def abstract(var):
         (key, str(value))
         for key, value in var.attributes.items()
     ))
-    linked = var.compute_value is not None
     if isinstance(var, Orange.data.DiscreteVariable):
-        return Categorical(var.name, tuple(var.values), annotations, linked)
+        return Categorical(var.name, tuple(var.values), annotations)
     elif isinstance(var, Orange.data.TimeVariable):
-        return Time(var.name, annotations, linked)
+        return Time(var.name, annotations)
     elif isinstance(var, Orange.data.ContinuousVariable):
-        return Real(var.name, (var.number_of_decimals, 'f'), annotations, linked)
+        return Real(var.name, (var.number_of_decimals, 'f'), annotations)
     elif isinstance(var, Orange.data.StringVariable):
-        return String(var.name, annotations, linked)
+        return String(var.name, annotations)
     else:
         raise TypeError
 
@@ -2687,21 +2720,11 @@ def apply_transform(var, table, trs):
 
 
 def requires_unlink(var: Orange.data.Variable, trs: List[Transform]) -> bool:
-    # Variable is only unlinked if it has compute_value  or if it has other
-    # transformations (that might had added compute_value)
+    # Variable is only unlinked if it has compute_value or if it has other
+    # transformations (that might have added compute_value)
     return trs is not None \
            and any(isinstance(tr, Unlink) for tr in trs) \
            and (var.compute_value is not None or len(trs) > 1)
-
-
-def requires_transform(var: Orange.data.Variable, trs: List[Transform]) -> bool:
-    # Unlink is treated separately: Unlink is required only if the variable
-    # has compute_value. Hence tranform is required if it has any
-    # transformations other than Unlink, or if unlink is indeed required.
-    return trs is not None and (
-        not all(isinstance(tr, Unlink) for tr in trs)
-        or requires_unlink(var, trs)
-    )
 
 
 @singledispatch

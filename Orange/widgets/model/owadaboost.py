@@ -80,7 +80,7 @@ class OWAdaBoost(OWBaseLearner):
         if self.base_estimator is None:
             return None
         return self.LEARNER(
-            base_estimator=self.base_estimator,
+            estimator=self.base_estimator,
             n_estimators=self.n_estimators,
             learning_rate=self.learning_rate,
             random_state=self.random_seed,

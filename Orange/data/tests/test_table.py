@@ -263,6 +263,22 @@ class TestTableInit(unittest.TestCase):
             tabw.metas,
             np.hstack((tab.metas, np.array(list("abcde")).reshape(5, -1))))
 
+    def test_add_column_empty(self):
+        a, b = ContinuousVariable("a"), ContinuousVariable("b")
+        table = Table.from_list(Domain([a]), [])
+
+        new_table = table.add_column(b, [], to_metas=True)
+        self.assertTupleEqual(new_table.domain.attributes, (a,))
+        self.assertTupleEqual(new_table.domain.metas, (b,))
+        self.assertTupleEqual((0, 1), new_table.X.shape)
+        self.assertTupleEqual((0, 1), new_table.metas.shape)
+
+        new_table = table.add_column(ContinuousVariable("b"), [], to_metas=False)
+        self.assertTupleEqual(new_table.domain.attributes, (a, b))
+        self.assertTupleEqual(new_table.domain.metas, ())
+        self.assertTupleEqual((0, 2), new_table.X.shape)
+        self.assertTupleEqual((0, 0), new_table.metas.shape)
+
     def test_copy(self):
         domain = Domain([ContinuousVariable("x")],
                         ContinuousVariable("y"),

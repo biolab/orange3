@@ -1,3 +1,6 @@
+#if (defined __GLIBC__ || defined __GNU__ || defined __linux__)
+#define _GNU_SOURCE
+#endif
 #include <math.h>
 #include <float.h>
 #include <assert.h>

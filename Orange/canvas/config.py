@@ -2,6 +2,8 @@
 Orange Canvas Configuration
 
 """
+import pkgutil
+
 import random
 import uuid
 import warnings
@@ -11,15 +13,16 @@ import sys
 from typing import Dict, Any, Optional, Iterable, List
 
 import packaging.version
-import pkg_resources
 import requests
 
 from AnyQt.QtGui import (
-    QPainter, QFont, QFontMetrics, QColor, QPixmap, QIcon, QGuiApplication
+    QPainter, QFont, QFontMetrics, QColor, QImage, QPixmap, QIcon,
+    QGuiApplication
 )
 from AnyQt.QtCore import Qt, QPoint, QRect, QSettings
 
 from orangecanvas import config as occonfig
+from orangecanvas.config import entry_points, EntryPoint
 from orangecanvas.utils.settings import config_slot
 from orangewidget.workflow import config
 from orangewidget.settings import set_widget_settings_dir_components
@@ -61,6 +64,11 @@ spec = [
 spec = [config_slot(*t) for t in spec]
 
 
+def _pixmap_from_pkg_data(package, path, format):
+    contents = pkgutil.get_data(package, path)
+    return QPixmap.fromImage(QImage.fromData(contents, format))
+
+
 class Config(config.Config):
     """
     Orange application configuration
@@ -96,17 +104,16 @@ class Config(config.Config):
         """
         Return the main application icon.
         """
-        path = pkg_resources.resource_filename(
-            __name__, "icons/orange-256.png"
+        return QIcon(
+            _pixmap_from_pkg_data(__package__, "icons/orange-256.png", "png")
         )
-        return QIcon(path)
 
     @staticmethod
     def splash_screen():
         splash_n = random.randint(1, 3)
-        path = pkg_resources.resource_filename(
-            __name__, f"icons/orange-splash-screen-{splash_n:02}.png")
-        pm = QPixmap(path)
+        pm = _pixmap_from_pkg_data(
+            __name__, f"icons/orange-splash-screen-{splash_n:02}.png", "png"
+        )
 
         version = Config.ApplicationVersion
         if version:
@@ -138,9 +145,9 @@ class Config(config.Config):
         # Ensure the 'this' distribution's ep is the first. iter_entry_points
         # yields them in unspecified order.
         all_eps = sorted(
-            pkg_resources.iter_entry_points(WIDGETS_ENTRY),
+            entry_points(group=WIDGETS_ENTRY),
             key=lambda ep:
-                0 if ep.dist.project_name.lower() == "orange3" else 1
+                0 if ep.dist.name.lower() == "orange3" else 1
         )
         return iter(all_eps)
 
@@ -173,18 +180,18 @@ class Config(config.Config):
 
     @staticmethod
     def examples_entry_points():
-        # type: () -> Iterable[pkg_resources.EntryPoint]
+        # type: () -> Iterable[EntryPoint]
         """
         Return an iterator over the entry points yielding 'Example Workflows'
         """
         # `iter_entry_points` yields them in unspecified order, so we order
         # them by name. The default is at the beginning, unless another
         # entrypoint precedes it alphabetically (e.g. starting with '!').
-        default_ep = pkg_resources.EntryPoint(
-            "000-Orange3", "Orange.canvas.workflows",
-            dist=pkg_resources.get_distribution("Orange3"))
+        default_ep = EntryPoint(
+            "000-Orange3", "Orange.canvas.workflows", "orange.widgets.tutorials",
+        )
 
-        all_ep = list(pkg_resources.iter_entry_points("orange.widgets.tutorials"))
+        all_ep = list(entry_points(group="orange.widgets.tutorials"))
         all_ep.append(default_ep)
         all_ep.sort(key=lambda x: x.name)
         return iter(all_ep)

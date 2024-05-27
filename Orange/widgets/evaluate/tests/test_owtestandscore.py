@@ -18,7 +18,7 @@ from Orange.evaluation.scoring import ClassificationScore, RegressionScore, \
     Score
 from Orange.base import Learner, Model
 from Orange.modelling import ConstantLearner
-from Orange.regression import MeanLearner
+from Orange.regression import MeanLearner, PLSRegressionLearner
 from Orange.widgets.evaluate.owtestandscore import (
     OWTestAndScore, results_one_vs_rest)
 from Orange.widgets.settings import (
@@ -753,7 +753,7 @@ class TestOWTestAndScore(WidgetTest):
                         ])
         data = Table.from_list(domain, [[1, 5, 0], [2, 10, 1], [2, 10, 1]])
 
-        mock_model = Mock(spec=Model, return_value=np.asarray([[0.2, 0.1, 0.2]]))
+        mock_model = Mock(spec=Model, return_value=np.asarray([0.2, 0.1, 0.2]))
         mock_model.name = 'Mockery'
         mock_model.domain = domain
         mock_learner = Mock(spec=Learner, return_value=mock_model)
@@ -768,6 +768,19 @@ class TestOWTestAndScore(WidgetTest):
         self.assertTrue(len(widget.scorers) == 1)
         self.assertTrue(NewScorer in widget.scorers)
         self.assertTrue(len(widget._successful_slots()) == 1)
+
+    def test_multiple_targets_pls(self):
+        housing = Table("housing")
+        class_vars = [housing.domain.class_var, housing.domain.attributes[0]]
+        domain = Domain(housing.domain.attributes[1:], class_vars=class_vars)
+        multiple_targets_data = housing.transform(domain)
+
+        self.widget.error = Mock()
+        self.send_signal(self.widget.Inputs.train_data, multiple_targets_data)
+        self.send_signal(self.widget.Inputs.learner, PLSRegressionLearner())
+        self.wait_until_finished()
+        self.assertIn("Multiple targets are not supported.",
+                      self.widget.error.call_args[0][0])
 
 
 class TestHelpers(unittest.TestCase):

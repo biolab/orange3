@@ -44,7 +44,7 @@ class DistMatrixModel(QAbstractTableModel):
         self.beginResetModel()
         self.distances = distances
         self.__header_data = dict.fromkeys(self.__header_data, LabelData())
-        if distances is None:
+        if distances is None or len(distances) == 0:
             self.__span = self.colors = self.brushes = None
             return
         minc = min(0, np.min(distances))

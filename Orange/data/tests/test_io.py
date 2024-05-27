@@ -122,7 +122,7 @@ class TestWriters(unittest.TestCase):
             self.domain,
             np.array([[1, 0.5], [2, np.nan], [np.nan, 1.0625]]),
             np.array([3, 1, 7]),
-            np.array(["foo bar baz".split()]).T
+            np.array([["foo", "bar", np.nan]], dtype=object).T
         )
 
     def test_write_tab(self):
@@ -137,7 +137,7 @@ continuous\tstring\tx y z\tcontinuous
 class\tmeta\t\t
 3\tfoo\ty\t0.500
 1\tbar\tz\t
-7\tbaz\t\t1.06250""".strip())
+7\t\t\t1.06250""".strip())
         finally:
             os.remove(fname)
 
@@ -149,7 +149,8 @@ class\tmeta\t\t
             data = ExcelReader(fname).read()
             np.testing.assert_equal(data.X, self.data.X)
             np.testing.assert_equal(data.Y, self.data.Y)
-            np.testing.assert_equal(data.metas, self.data.metas)
+            np.testing.assert_equal(data.metas[:2], self.data.metas[:2])
+            self.assertEqual(data.metas[2, 0], "")
             np.testing.assert_equal(data.domain, self.data.domain)
         finally:
             os.remove(fname)

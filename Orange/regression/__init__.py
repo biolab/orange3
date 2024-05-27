@@ -13,6 +13,7 @@ from .svm import *
 from .random_forest import *
 from .tree import *
 from .neural_network import *
+from .pls import *
 from ..classification.simple_tree import *
 try:
     from .catgb import *
