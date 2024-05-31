@@ -5,7 +5,7 @@ catboost>=1.0.1
 chardet>=3.0.2
 httpx>=0.21.0
 # Multiprocessing abstraction
-joblib>=1.1.1
+joblib>=1.2.0
 keyring
 keyrings.alt    # for alternative keyring implementations
 networkx
