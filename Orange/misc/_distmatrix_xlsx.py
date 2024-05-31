@@ -2,15 +2,6 @@ import numpy as np
 import openpyxl
 
 
-try:
-    # temporary fix for file not closed issue until openpyxl prepare release
-    from Orange.misc.openpyxl_patch import read_worksheets
-
-    openpyxl.reader.excel.ExcelReader.read_worksheets = read_worksheets
-except:  # pylint: disable=bare-except
-    pass
-
-
 def read_matrix(filename, sheet_name=None):
     sheet = _get_sheet(filename, sheet_name)
     cells, empty_cols, empty_rows = _non_empty_cells(sheet)
