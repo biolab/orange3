@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.sparse as sp
 from sklearn import decomposition as skl_decomposition
 
 import Orange.data
@@ -38,6 +39,15 @@ class PCA(SklProjector, _FeatureScorerMixin):
         params = self.params.copy()
         if params["n_components"] is not None:
             params["n_components"] = min(min(X.shape), params["n_components"])
+
+        # scikit-learn doesn't support requesting the same number of PCs as
+        # there are columns when the data is sparse. In this case, densify the
+        # data. Since we're essentially requesting back a PC matrix of the same
+        # size as the original data, we will assume the matrix is small enough
+        # to densify as well
+        if sp.issparse(X) and params["n_components"] == min(X.shape):
+            X = X.toarray()
+
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
         return PCAModel(proj, self.domain, len(proj.components_))
