@@ -223,7 +223,7 @@ class TestOWPCA(WidgetTest):
         x = (x - x.mean(0)) / x.std(0)
         U, S, Va = np.linalg.svd(x)
         U, S, Va = U[:, :2], S[:2], Va[:2]
-        U, Va = svd_flip(U, Va)
+        U, Va = svd_flip(U, Va, u_based_decision=False)
         pca_embedding = U * S
 
         np.testing.assert_almost_equal(widget_result.X, pca_embedding)
