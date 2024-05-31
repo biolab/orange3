@@ -20,6 +20,7 @@ from .rules import *
 from .sgd import *
 from .neural_network import *
 from .calibration import *
+from .scoringsheet import *
 try:
     from .catgb import *
 except ModuleNotFoundError:
