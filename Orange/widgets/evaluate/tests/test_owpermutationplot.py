@@ -17,8 +17,8 @@ class TestOWPermutationPlot(WidgetTest):
         super().setUpClass()
         cls.heart = Table("heart_disease")
         cls.housing = Table("housing")
-        cls.rf_cls = RandomForestLearner(random_state=0)
-        cls.rf_reg = RandomForestRegressionLearner(random_state=0)
+        cls.log_reg = LogisticRegressionLearner()
+        cls.lin_reg = LinearRegressionLearner()
 
     def setUp(self):
         self.widget = self.create_widget(OWPermutationPlot,
@@ -26,7 +26,7 @@ class TestOWPermutationPlot(WidgetTest):
 
     def test_input_disc_target(self):
         self.send_signal(self.widget.Inputs.data, self.heart)
-        self.send_signal(self.widget.Inputs.learner, self.rf_cls)
+        self.send_signal(self.widget.Inputs.learner, self.log_reg)
         self.wait_until_finished()
 
         lin_reg = LinearRegressionLearner()
@@ -39,7 +39,7 @@ class TestOWPermutationPlot(WidgetTest):
 
     def test_input_cont_target(self):
         self.send_signal(self.widget.Inputs.data, self.housing)
-        self.send_signal(self.widget.Inputs.learner, self.rf_reg)
+        self.send_signal(self.widget.Inputs.learner, self.lin_reg)
         self.wait_until_finished()
 
         log_reg = LogisticRegressionLearner()
@@ -66,7 +66,7 @@ class TestOWPermutationPlot(WidgetTest):
         domain = Domain(self.housing.domain.attributes)
         data = self.housing.transform(domain)
         self.send_signal(self.widget.Inputs.data, data)
-        self.send_signal(self.widget.Inputs.learner, self.rf_reg)
+        self.send_signal(self.widget.Inputs.learner, self.lin_reg)
         self.wait_until_finished()
         self.assertTrue(self.widget.Error.incompatible_learner.is_shown())
 
@@ -75,12 +75,12 @@ class TestOWPermutationPlot(WidgetTest):
                         self.housing.domain.attributes[-2:])
         data = self.housing.transform(domain)
         self.send_signal(self.widget.Inputs.data, data)
-        self.send_signal(self.widget.Inputs.learner, self.rf_reg)
+        self.send_signal(self.widget.Inputs.learner, self.lin_reg)
         self.wait_until_finished()
         self.assertTrue(self.widget.Error.multiple_targets_data.is_shown())
 
     def test_sample_data(self):
-        self.send_signal(self.widget.Inputs.learner, self.rf_cls)
+        self.send_signal(self.widget.Inputs.learner, self.log_reg)
         self.send_signal(self.widget.Inputs.data, self.heart[:6])
         self.assertTrue(self.widget.Error.not_enough_data.is_shown())
         self.send_signal(self.widget.Inputs.data, self.heart[:7])
@@ -88,23 +88,23 @@ class TestOWPermutationPlot(WidgetTest):
         self.wait_until_finished()
 
     def test_info(self):
-        self.send_signal(self.widget.Inputs.learner, self.rf_cls)
+        self.send_signal(self.widget.Inputs.learner, self.log_reg)
         self.send_signal(self.widget.Inputs.data, self.heart)
         self.wait_until_finished()
-        self.assertIn("0.5021", self.widget._info.text())
+        print(self.widget._info.text())
         self.assertIn('<th style="padding: 2px 4px" align=right>CV</th>',
                       self.widget._info.text())
         self.assertIn('<th style="padding: 2px 4px" align=right>Train</th>',
                       self.widget._info.text())
 
         text = """<th style="padding: 2px 4px" align=right>Train</th>
-        <td style="padding: 2px 4px" align=right>0.9980</td>
-        <td style="padding: 2px 4px" align=right>0.9996</td>"""
+        <td style="padding: 2px 4px" align=right>0.6453</td>
+        <td style="padding: 2px 4px" align=right>0.9325</td>"""
         self.assertIn(text, self.widget._info.text())
 
         text = """<th style="padding: 2px 4px" align=right>CV</th>
-        <td style="padding: 2px 4px" align=right>0.5021</td>
-        <td style="padding: 2px 4px" align=right>0.8948</td>"""
+        <td style="padding: 2px 4px" align=right>0.5324</td>
+        <td style="padding: 2px 4px" align=right>0.9106</td>"""
         self.assertIn(text, self.widget._info.text())
 
         self.send_signal(self.widget.Inputs.learner, None)
@@ -113,14 +113,14 @@ class TestOWPermutationPlot(WidgetTest):
     def test_send_report(self):
         self.widget.send_report()
         self.send_signal(self.widget.Inputs.data, self.heart[:10])
-        self.send_signal(self.widget.Inputs.learner, self.rf_cls)
+        self.send_signal(self.widget.Inputs.learner, self.log_reg)
         self.wait_until_finished()
         self.widget.send_report()
         self.send_signal(self.widget.Inputs.data, self.housing[:10])
-        self.send_signal(self.widget.Inputs.learner, self.rf_reg)
+        self.send_signal(self.widget.Inputs.learner, self.lin_reg)
         self.wait_until_finished()
         self.send_signal(self.widget.Inputs.data, None)
-        self.send_signal(self.widget.Inputs.learner, self.rf_reg)
+        self.send_signal(self.widget.Inputs.learner, self.lin_reg)
         self.widget.send_report()
 
 
