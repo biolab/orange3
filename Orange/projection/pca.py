@@ -48,6 +48,13 @@ class PCA(SklProjector, _FeatureScorerMixin):
         if sp.issparse(X) and params["n_components"] == min(X.shape):
             X = X.toarray()
 
+        # In scikit-learn==1.4.0, only the arpack solver is supported for sparse
+        # data and `svd_solver="auto"` doesn't auto-resolve to this. This is
+        # fixed in scikit-learn 1.5.0, but for the time being, override these
+        # settings here
+        if sp.issparse(X) and params["svd_solver"] == "auto":
+            params["svd_solver"] = "arpack"
+
         proj = self.__wraps__(**params)
         proj = proj.fit(X, Y)
         return PCAModel(proj, self.domain, len(proj.components_))

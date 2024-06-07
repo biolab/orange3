@@ -223,10 +223,17 @@ class TestOWPCA(WidgetTest):
         x = (x - x.mean(0)) / x.std(0)
         U, S, Va = np.linalg.svd(x)
         U, S, Va = U[:, :2], S[:2], Va[:2]
-        U, Va = svd_flip(U, Va, u_based_decision=False)
-        pca_embedding = U * S
+        x_pca = U * S
 
-        np.testing.assert_almost_equal(widget_result.X, pca_embedding)
+        # In scikit-learn==1.4.0, the svd_flip function requires a `V` matrix,
+        # therefore, we provide a dummy matrix of the correct size, so we can
+        # call the function. In scikit-learn==1.5.0, we can remove this since
+        # V can be None if we are passing `u_based_decision=True`.
+        dummy_v = np.zeros_like(x_pca.T)
+        x_pca, _ = svd_flip(x_pca, dummy_v, u_based_decision=True)
+        x_widget, _ = svd_flip(widget_result.X.copy(), dummy_v, u_based_decision=True)
+
+        np.testing.assert_almost_equal(x_widget, x_pca)
 
     def test_do_not_mask_features(self):
         # the widget used to replace cached variables when creating the
