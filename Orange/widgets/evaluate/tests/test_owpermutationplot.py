@@ -1,12 +1,10 @@
 # pylint: disable=missing-docstring,protected-access
 import unittest
 
-from Orange.classification import RandomForestLearner, \
-    LogisticRegressionLearner
+from Orange.classification import LogisticRegressionLearner
 from Orange.data import Table, Domain
 from Orange.ensembles import StackedFitter
-from Orange.regression import RandomForestRegressionLearner, \
-    LinearRegressionLearner
+from Orange.regression import LinearRegressionLearner
 from Orange.widgets.evaluate.owpermutationplot import OWPermutationPlot
 from Orange.widgets.tests.base import WidgetTest
 
@@ -91,7 +89,6 @@ class TestOWPermutationPlot(WidgetTest):
         self.send_signal(self.widget.Inputs.learner, self.log_reg)
         self.send_signal(self.widget.Inputs.data, self.heart)
         self.wait_until_finished()
-        print(self.widget._info.text())
         self.assertIn('<th style="padding: 2px 4px" align=right>CV</th>',
                       self.widget._info.text())
         self.assertIn('<th style="padding: 2px 4px" align=right>Train</th>',
