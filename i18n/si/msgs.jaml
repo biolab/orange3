@@ -2192,6 +2192,8 @@ evaluation/testing.py:
             test_data: false
         def `fit`:
             Validation.fit is deprecated; use the call operator: false
+        def `_collect_part_results`:
+            Multiple targets are not supported.: Ocenjevanje modelov z več razredi ni podprto.
     class `CrossValidation`:
         def `get_indices`:
             Using non-stratified sampling.: false
@@ -3183,6 +3185,41 @@ regression/neural_network.py:
     class `NNRegressionLearner`:
         def `_initialize_wrapped`:
             callback: false
+regression/pls.py:
+    PLSRegressionLearner: false
+    class `PLSModel`:
+        PLS T: false
+        PLS U: false
+        def `__str__`:
+            PLSModel {self.skl_model}: false
+        def `_get_var_names`:
+            {prefix}{postfix}: false
+        def `project`:
+            PLSModel can only project tables: false
+        def `components`:
+            components: komponente
+            Component {i + 1}: Komponenta {i + 1}
+        def `coefficients_table`:
+            coef {i}: koef {i}
+            name: ime
+            coefficients: koeficienti
+        def `residuals_normal_probability`:
+            {name} ({var.name}): true
+            Sample Quantiles: vzorčni kvantili
+            Theoretical Quantiles: teoretični kvantili
+            residuals normal probability: verjetnost normalnih ostankov
+        def `dmodx`:
+            DModX: false
+            DMod: false
+    class `PLSRegressionLearner`:
+        def `fit`:
+            n_components: false
+        def `incompatibility_reason`:
+            Numeric targets expected.: Metoda zahteva številčne ciljne spremenljivke.
+            Only numeric target variables expected.: Metoda deluje le za številčne ciljne spremenljivke.
+    __main__: false
+    housing: false
+    'learner: {learner}\nRMSE: {ca}\n': false
 regression/random_forest.py:
     RandomForestRegressionLearner: false
     class `RandomForestRegressor`:
@@ -4257,7 +4294,7 @@ widgets/data/owaggregatecolumns.py:
         class `Outputs`:
             Data: Podatki
         class `Warning`:
-            Some input features are categorical:\n{}: Nekatere vhodne spremenljivke so kategorične:\{}
+            Some input features are categorical:\n{}: Nekatere vhodne spremenljivke so kategorične:\n{}
             Some input features are missing:\n{}: Nekatere vhodne spremenljivke manjkajo:\n{}
         Sum: Vsota
         Product: Produkt
@@ -5829,9 +5866,9 @@ Categorical features are passed as strings
             Categorical feature {} needs more values.: Kategorična spremenljivka {} potrebuje več vrednosti.
             'Invalid expressions: {}.': Nepravilen izraz: {}
             {}: false
-        class `Warning`:
-            'Recently added variable has been renamed, ': 'Nove spremenljivke so preimenovane '
-            to avoid duplicates.\n: zaradi ponovljenih imen.
+        class `Information`:
+            'A new variable that is named the same as an existing one will ': 'Nova spremenljivka z enakim imenom kot obstoječa bo '
+            replace it on the output.: zamenjala obstoječo.
         def `__init__`:
             Variable Definitions: Definicije spremenljivk
             New: Nova
@@ -8917,6 +8954,96 @@ widgets/evaluate/owliftcurve.py:
         array dimensions don't match: false
         mergesort: false
     __main__: false
+widgets/evaluate/owpermutationplot.py:
+    def `permutation`:
+        Calculating...: Računanje...
+    class `ParameterSetter`:
+        Gridlines: Mreža
+        Show: Pokaži
+        def `axis_items`:
+            item: false
+    class `PermutationPlot`:
+        def `__init__`:
+            Correlation between original Y and permuted Y (%): Korelacija med izvirnim Y in permutiranim Y (%)
+            bottom: false
+        def `set_data`:
+            left: false
+            AUC: true
+            '#000': true
+            '#333': true
+            pen: false
+            symbol: false
+            o: false
+            brush: false
+            '#6fa255': true
+            s: false
+            '#3a78b6': true
+            size: false
+            hoverable: false
+            tip: false
+            'x: {x:.3g}\ny: {y:.3g}': true
+            Train: Učna
+            CV: Prečno
+    class `OWPermutationPlot`:
+        Permutation Plot: Permutacijski grafikon
+        Permutation analysis plotting: Grafični prikaz permutacijske analize
+        icons/PermutationPlot.svg: false
+        graph.plotItem: false
+        class `Inputs`:
+            Data: Podatki
+            Learner: Učni algoritem
+        class `Error`:
+            {}: false
+            At least {N_FOLD} instances are needed.: Potrebujemo vsaj {N_FOLD} primerov.
+        def `_add_controls`:
+            Settings: Nastavitve
+            n_permutations: false
+            Permutations:: Permutacije:
+            Info: Informacije
+        def `__set_info`:
+            No data available.: Ni podatkov.
+            '
+<table width=100% align="center" style="font-size:11px">
+    <tr style="background:#fefefe">
+        <th style="background:transparent;padding: 2px 4px"></th>
+        <th style="background:transparent;padding: 2px 4px">Kor. = 0</th>
+        <th style="background:transparent;padding: 2px 4px">Kor. = 100</th>
+    </tr>
+    <tr style="background:#fefefe">
+        <th style="padding: 2px 4px" align=right>Train</th>
+        <td style="padding: 2px 4px" align=right>{intercept_tr:.4f}</td>
+        <td style="padding: 2px 4px" align=right>{y_tr:.4f}</td>
+    </tr>
+    <tr style="background:#fefefe">
+        <th style="padding: 2px 4px" align=right>CV</th>
+        <td style="padding: 2px 4px" align=right>{intercept_cv:.4f}</td>
+        <td style="padding: 2px 4px" align=right>{y_cv:.4f}</td>
+    </tr>
+</table>
+            ': '<table width=100% align="center" style="font-size:11px">
+    <tr style="background:#fefefe">
+        <th style="background:transparent;padding: 2px 4px"></th>
+        <th style="background:transparent;padding: 2px 4px">Corr = 0</th>
+        <th style="background:transparent;padding: 2px 4px">Corr = 100</th>
+    </tr>
+    <tr style="background:#fefefe">
+        <th style="padding: 2px 4px" align=right>Učni</th>
+        <td style="padding: 2px 4px" align=right>{intercept_tr:.4f}</td>
+        <td style="padding: 2px 4px" align=right>{y_tr:.4f}</td>
+    </tr>
+    <tr style="background:#fefefe">
+        <th style="padding: 2px 4px" align=right>Prečno</th>
+        <td style="padding: 2px 4px" align=right>{intercept_cv:.4f}</td>
+        <td style="padding: 2px 4px" align=right>{y_cv:.4f}</td>
+    </tr>
+</table>'
+        def `send_report`:
+            Settings: Nastavitve
+            Permutations: Permutacije
+            Info: Informacije
+            Plot: Grafikon
+    __main__: false
+    iris: false
 widgets/evaluate/owpredictions.py:
     PredictorSlot: false
     predictor: false
@@ -8958,7 +9085,7 @@ widgets/evaluate/owpredictions.py:
         Classes in data and model: razrede iz tabele in modelov
         Don't show probabilities: Ne kaži verjetnosti
         Show probabilities for classes in the data: Pokaži verjetnosti razredov v tabeli
-        Show probabilities for classes known to the model,\n: Pokaži verjetnosti razredov, ki jih napovedujejo modeli,\m
+        Show probabilities for classes known to the model,\n: Pokaži verjetnosti razredov, ki jih napovedujejo modeli,\n
         including those that don't appear in this data: vključno s temi, ki jih v podatkih ni.
         Show probabilities for classes in data that are also\n: Pokaži verjetnosti razredov, ki se pojavijo v podatkih\n
         known to the model: in so znani tudi modelom.
@@ -9275,7 +9402,7 @@ widgets/evaluate/owtestandscore.py:
         def `update_stats_model`:
             {:.3f}: false
             {} (error): {} (napaka)
-            {name} failed with error:\n: {name} je javil napako\:n
+            {name} failed with error:\n: {name} je javil napako:\n
             '{exc.__class__.__name__}: {exc!s}': false
             \n: false
         def `_scores_by_folds`:
@@ -9933,6 +10060,39 @@ widgets/model/owneuralnetwork.py:
             alpha_index: false
     __main__: false
     iris: false
+widgets/model/owpls.py:
+    class `OWPLS`:
+        PLS: true
+        Partial Least Squares Regression widget for multivariate data analysis: PLS regresija za multivariatno analizo podatkov
+        icons/PLS.svg: false
+        partial least squares: partial least squares, pls, regresija
+        class `Outputs`:
+            Coefficients and Loadings: Koeficienti in uteži
+            Data with Scores: Podatki z vrednostmi
+            Components: Komponente
+        class `Warning`:
+            'Sparse input data: default preprocessing is to scale it.': 'Redki vhodni podatki: privzeta predobdelava je skaliranje.'
+        def `add_main_layout`:
+            Optimization Parameters: Optimizacijski parametri
+            n_components: false
+            'Components: ': 'Komponente: '
+            max_iter: false
+            'Iteration limit: ': 'Omejitev iteracij: '
+        def `_create_output_coeffs_loadings`:
+            coef ({v.name}): koef ({v.name})
+            Loading {i + 1}: Utež {i + 1}
+            Variable name: Ime spremenljivke
+            Variable role: Vloga spremenljivke
+            Feature: Značilka
+            Target: Cilj
+            Coefficients and Loadings: Koeficienti in uteži
+        def `set_data`:
+            Data has no target variable.\n: Podatki nimajo ciljne spremenljivke.\n
+            Select one with the Select Columns widget.: Izberite jo z gradnikom Izberi stolpce.
+        def `create_learner`:
+            preprocessors: false
+    __main__: false
+    housing: false
 widgets/model/owrandomforest.py:
     class `OWRandomForest`:
         Random Forest: Naključni gozd
@@ -12379,6 +12539,11 @@ widgets/utils/messages.py:
     MessageGroup: false
     MessagesMixin: false
     WidgetMessagesMixin: false
+widgets/utils/multi_target.py:
+    Multiple targets are not supported.: Delo z več cilji ni podprto.
+    def `check_multiple_targets_input`:
+        def `new_f`:
+            multiple_targets_data: false
 widgets/utils/overlay.py:
     OverlayWidget: false
     MessageWidget: false
@@ -14294,8 +14459,8 @@ widgets/visualize/owscatterplot.py:
             label: false
         def `update_reg_line_label_colors`:
             label: false
-        def `update_regression_line`:
-            '#505050': false
+        def `_update_curve`:
+            '#505050': true
     class `OWScatterPlot`:
         Scatter Plot: Razsevni diagram
         'Interactive scatter plot visualization with ': Interaktivni prikaz podatkov z razsevnim diagramom.
@@ -14317,6 +14482,9 @@ widgets/visualize/owscatterplot.py:
             Treat variables as independent: Obravnavaj spremenljivki kot neodvisni
             If checked, fit line to group (minimize distance from points);\n: Če je opcija izbrana, je črta postavljena čim bližje točkam;
             otherwise fit y as a function of x (minimize vertical distances): sicer pa minimizira samo razdaljo v smeri y.
+            graph.show_ellipse: false
+            Show confidence ellipse: Prikaz elipse zaupanja
+            Hotelling's T² confidence ellipse (α=95%): Elipsa zaupanja po Hotellingu (α=95%)
         def `_add_controls_axis`:
             Axes: Osi
             attr_x: false
