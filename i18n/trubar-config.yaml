@@ -1,0 +1,13 @@
+languages:
+  en:
+    name: English
+    original: true
+  si:
+    name: Slovenščina
+    international-name: Slovenian
+    auto-import: from orangecanvas.utils.localization.si import plsi, plsi_sz, z_besedo  # pylint: disable=wrong-import-order
+auto-import: |2
+  from orangecanvas.utils.localization import Translator  # pylint: disable=wrong-import-order
+  _tr = Translator("Orange", "biolab.si", "Orange")
+  del Translator
+encoding: "utf-8"
