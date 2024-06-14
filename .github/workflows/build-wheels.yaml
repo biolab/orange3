@@ -128,7 +128,7 @@ jobs:
       - name: Display structure of downloaded files
         run: ls -R downloads/
 
-      - name: Publish packages to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages_dir: downloads/
+#      - name: Publish packages to PyPI
+#        uses: pypa/gh-action-pypi-publish@release/v1
+#        with:
+#          packages_dir: downloads/
