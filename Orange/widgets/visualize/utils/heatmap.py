@@ -1055,7 +1055,7 @@ class HeatmapGridWidget(QGraphicsWidget):
             indices = np.hstack([r.normalized_indices for r in self.parts.rows])
         else:
             indices = []
-        condition = np.in1d(indices, selection)
+        condition = np.isin(indices, selection)
         visual_indices = np.flatnonzero(condition)
         self.__selection_manager.select_rows(visual_indices.tolist())
 

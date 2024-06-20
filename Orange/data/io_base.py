@@ -381,7 +381,7 @@ class _TableBuilder:
                  (self.cols_W, float))
         X, Y, M, W = [self._list_into_ndarray(lst, dt) for lst, dt in lists]
         if X is None:
-            X = np.empty((self.data.shape[0], 0), dtype=np.float_)
+            X = np.empty((self.data.shape[0], 0), dtype=np.float64)
         return X, Y, M, W
 
     @staticmethod
@@ -393,7 +393,7 @@ class _TableBuilder:
         if dtype is not None:
             array.astype(dtype)
         else:
-            assert array.dtype == np.float_
+            assert array.dtype == np.float64
         return array
 
 

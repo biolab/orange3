@@ -44,7 +44,7 @@ class Discretizer(Transformation):
         if sp.issparse(c):
             return self.digitize(c, self.points)
         elif c.size:
-            return np.where(np.isnan(c), np.NaN, self.digitize(c, self.points))
+            return np.where(np.isnan(c), np.nan, self.digitize(c, self.points))
         else:
             return np.array([], dtype=int)
 

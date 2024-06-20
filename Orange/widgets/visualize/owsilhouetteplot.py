@@ -1074,7 +1074,7 @@ class SilhouettePlot(QGraphicsWidget):
     def __selectionChanged(self, selected, deselected):
         for item, grp in zip(self.__plotItems(), self.__groups):
             select = np.flatnonzero(
-                np.in1d(grp.indices, selected, assume_unique=True))
+                np.isin(grp.indices, selected, assume_unique=True))
             items = item.items()
             if select.size:
                 for i in select:
@@ -1082,7 +1082,7 @@ class SilhouettePlot(QGraphicsWidget):
                     items[i].setBrush(QBrush(QColor(*color)))
 
             deselect = np.flatnonzero(
-                np.in1d(grp.indices, deselected, assume_unique=True))
+                np.isin(grp.indices, deselected, assume_unique=True))
             if deselect.size:
                 for i in deselect:
                     items[i].setBrush(QBrush(QColor(*grp.color)))
