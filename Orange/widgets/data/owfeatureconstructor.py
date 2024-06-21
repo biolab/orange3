@@ -803,12 +803,11 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
         self.Outputs.data.send(data)
 
     def on_exception(self, ex: Exception):
-        log = logging.getLogger(__name__)
-        log.error("", exc_info=ex)
         self.Error.transform_error(
             "".join(format_exception_only(type(ex), ex)).rstrip(),
             exc_info=ex
         )
+        self.Outputs.data.send(None)
 
     def on_partial_result(self, _):
         pass
