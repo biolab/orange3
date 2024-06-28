@@ -1,7 +1,7 @@
 # pylint: disable=missing-docstring,protected-access
 import unittest
 
-from Orange.classification import LogisticRegressionLearner
+from Orange.classification import LogisticRegressionLearner, NaiveBayesLearner
 from Orange.data import Table, Domain
 from Orange.ensembles import StackedFitter
 from Orange.regression import LinearRegressionLearner
@@ -15,7 +15,7 @@ class TestOWPermutationPlot(WidgetTest):
         super().setUpClass()
         cls.heart = Table("heart_disease")
         cls.housing = Table("housing")
-        cls.log_reg = LogisticRegressionLearner()
+        cls.naive_bayes = NaiveBayesLearner()
         cls.lin_reg = LinearRegressionLearner()
 
     def setUp(self):
@@ -24,7 +24,7 @@ class TestOWPermutationPlot(WidgetTest):
 
     def test_input_disc_target(self):
         self.send_signal(self.widget.Inputs.data, self.heart)
-        self.send_signal(self.widget.Inputs.learner, self.log_reg)
+        self.send_signal(self.widget.Inputs.learner, self.naive_bayes)
         self.wait_until_finished()
 
         lin_reg = LinearRegressionLearner()
@@ -78,7 +78,7 @@ class TestOWPermutationPlot(WidgetTest):
         self.assertTrue(self.widget.Error.multiple_targets_data.is_shown())
 
     def test_sample_data(self):
-        self.send_signal(self.widget.Inputs.learner, self.log_reg)
+        self.send_signal(self.widget.Inputs.learner, self.naive_bayes)
         self.send_signal(self.widget.Inputs.data, self.heart[:6])
         self.assertTrue(self.widget.Error.not_enough_data.is_shown())
         self.send_signal(self.widget.Inputs.data, self.heart[:7])
@@ -86,7 +86,7 @@ class TestOWPermutationPlot(WidgetTest):
         self.wait_until_finished()
 
     def test_info(self):
-        self.send_signal(self.widget.Inputs.learner, self.log_reg)
+        self.send_signal(self.widget.Inputs.learner, self.naive_bayes)
         self.send_signal(self.widget.Inputs.data, self.heart)
         self.wait_until_finished()
         self.assertIn('<th style="padding: 2px 4px" align=right>CV</th>',
@@ -95,13 +95,13 @@ class TestOWPermutationPlot(WidgetTest):
                       self.widget._info.text())
 
         text = """<th style="padding: 2px 4px" align=right>Train</th>
-        <td style="padding: 2px 4px" align=right>0.6453</td>
-        <td style="padding: 2px 4px" align=right>0.9325</td>"""
+        <td style="padding: 2px 4px" align=right>0.6686</td>
+        <td style="padding: 2px 4px" align=right>0.9200</td>"""
         self.assertIn(text, self.widget._info.text())
 
         text = """<th style="padding: 2px 4px" align=right>CV</th>
-        <td style="padding: 2px 4px" align=right>0.5324</td>
-        <td style="padding: 2px 4px" align=right>0.9106</td>"""
+        <td style="padding: 2px 4px" align=right>0.5292</td>
+        <td style="padding: 2px 4px" align=right>0.9076</td>"""
         self.assertIn(text, self.widget._info.text())
 
         self.send_signal(self.widget.Inputs.learner, None)
@@ -110,7 +110,7 @@ class TestOWPermutationPlot(WidgetTest):
     def test_send_report(self):
         self.widget.send_report()
         self.send_signal(self.widget.Inputs.data, self.heart[:10])
-        self.send_signal(self.widget.Inputs.learner, self.log_reg)
+        self.send_signal(self.widget.Inputs.learner, self.naive_bayes)
         self.wait_until_finished()
         self.widget.send_report()
         self.send_signal(self.widget.Inputs.data, self.housing[:10])
