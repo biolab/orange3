@@ -835,8 +835,9 @@ class Table(Sequence, Storage):
                 self.W = source.W[row_indices]
                 self.name = getattr(source, 'name', '')
                 self.ids = source.ids[row_indices]
+                self.attributes = getattr(source, 'attributes', {})
                 if new_cache:  # only deepcopy attributes for the outermost transformation
-                    self.attributes = deepcopy(getattr(source, 'attributes', {}))
+                    self.attributes = deepcopy(self.attributes)
                 _idcache_save(_thread_local.conversion_cache, (domain, source), self)
             return self
         finally:
@@ -895,8 +896,9 @@ class Table(Sequence, Storage):
             self.W = source.W[row_indices]
             self.name = getattr(source, 'name', '')
             self.ids = source.ids[row_indices]
+            self.attributes = getattr(source, 'attributes', {})
             if is_outermost_transformation:
-                self.attributes = deepcopy(getattr(source, 'attributes', {}))
+                self.attributes = deepcopy(self.attributes)
         return self
 
     @classmethod
