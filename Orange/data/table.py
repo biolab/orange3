@@ -881,6 +881,7 @@ class Table(Sequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
+        is_outermost_transformation = _thread_local.conversion_cache is None
         self = cls()
         self.domain = source.domain
         with self.unlocked_reference():
@@ -894,7 +895,8 @@ class Table(Sequence, Storage):
             self.W = source.W[row_indices]
             self.name = getattr(source, 'name', '')
             self.ids = source.ids[row_indices]
-            self.attributes = deepcopy(getattr(source, 'attributes', {}))
+            if is_outermost_transformation:
+                self.attributes = deepcopy(getattr(source, 'attributes', {}))
         return self
 
     @classmethod
