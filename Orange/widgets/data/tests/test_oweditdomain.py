@@ -2,6 +2,7 @@
 # pylint: disable=all
 import pickle
 import unittest
+from datetime import datetime, timezone
 from functools import partial
 from itertools import product, chain
 from unittest import TestCase
@@ -341,6 +342,38 @@ class TestOWEditDomain(WidgetTest):
         self.widget.commit()
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))
+
+    def test_custom_format(self):
+        time_variable = StringVariable("Date")
+        data = [
+            ["2024-001"],
+            ["2024-032"],
+            ["2024-150"],
+            ["2024-365"]
+        ]
+        table = Table.from_list(Domain([], metas=[time_variable]), data)
+        self.send_signal(self.widget.Inputs.data, table)
+        index = self.widget.variables_view.model().index
+        self.widget.variables_view.setCurrentIndex(index(0))
+
+        editor = self.widget.findChild(VariableEditor)
+        tc = editor.layout().currentWidget().findChild(QComboBox,
+                                                       name="type-combo")
+        tc.setCurrentIndex(3)  # time variable
+        tc.activated.emit(3)
+
+        # le = editor.layout().currentWidget().findChild(QLineEdit)
+        # le.setText("%Y-%j")
+        # le.editingFinished.emit()
+
+        self.widget.commit()
+        output = self.get_output(self.widget.Outputs.data)
+        print(output)
+        self.assertEqual(table.metas[0, 0], "2024-001")
+        self.assertEqual(output.metas[0, 0],
+                         datetime.strptime("2024-001",
+                                           "%Y-%j").replace(
+                             tzinfo=timezone.utc).timestamp())
 
     def test_restore(self):
         iris = self.iris
