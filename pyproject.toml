@@ -1,7 +1,7 @@
 [build-system]
 requires = [
     "cython>=3.0",
-    "oldest-supported-numpy",
+    "numpy>=2.0",
     "recommonmark",
     "setuptools>=51.0",
     "sphinx",
