@@ -10,8 +10,6 @@ from distutils.command.build_ext import build_ext
 from distutils.command import config, build
 from distutils.core import Extension
 
-if sys.version_info < (3, 4):
-    sys.exit('Orange requires Python >= 3.4')
 
 try:
     import numpy
@@ -80,6 +78,9 @@ CLASSIFIERS = [
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
 ]
+
+PYTHON_REQUIRES = ">=3.9"
+
 
 requirements = ['requirements-core.txt', 'requirements-gui.txt']
 
@@ -512,6 +513,7 @@ def setup_package():
         data_files=DATA_FILES,
         install_requires=INSTALL_REQUIRES,
         extras_require=EXTRAS_REQUIRE,
+        python_requires=PYTHON_REQUIRES,
         entry_points=ENTRY_POINTS,
         zip_safe=False,
         test_suite='Orange.tests.suite',
