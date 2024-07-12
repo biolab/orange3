@@ -11,7 +11,6 @@ import functools
 import builtins
 import math
 import random
-import logging
 import ast
 import types
 import unicodedata
@@ -448,8 +447,6 @@ def freevars(exp: ast.AST, env: List[str]):
     elif etype == ast.Starred:
         # a 'starred' call parameter (e.g. a and b in `f(x, *a, *b)`
         return freevars(exp.value, env)
-    elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes, ast.NameConstant]:
-        return []
     elif etype == ast.Constant:
         return []
     elif etype == ast.Attribute:
@@ -466,10 +463,6 @@ def freevars(exp: ast.AST, env: List[str]):
         return sum((freevars(e, env)
                     for e in filter(None, [exp.lower, exp.upper, exp.step])),
                    [])
-    elif etype == ast.ExtSlice:
-        return sum((freevars(e, env) for e in exp.dims), [])
-    elif etype == ast.Index:
-        return freevars(exp.value, env)
     elif etype == ast.keyword:
         return freevars(exp.value, env)
     else:
@@ -997,8 +990,6 @@ def validate_exp(exp):
         return all(map(validate_exp, subexp))
     elif etype == ast.Starred:
         return validate_exp(exp.value)
-    elif etype in [ast.Num, ast.Str, ast.Bytes, ast.Ellipsis, ast.NameConstant]:
-        return True
     elif etype == ast.Constant:
         return True
     elif etype == ast.Attribute:

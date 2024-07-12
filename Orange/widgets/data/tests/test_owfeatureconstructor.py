@@ -203,13 +203,15 @@ class TestTools(unittest.TestCase):
         self.assertEqual(freevars_("a + b", ["a", "b"]), [])
         self.assertEqual(freevars_("a[b]"), ["a", "b"])
         self.assertEqual(freevars_("a[b]", ["a", "b"]), [])
+        self.assertEqual(freevars_("a[b:3]", ["a", "b"]), [])
+        self.assertEqual(freevars_("a[b:c:d]", ["a", "b", "c", "d"]), [])
+
         self.assertEqual(freevars_("f(x, *a)", ["f"]), ["x", "a"])
         self.assertEqual(freevars_("f(x, *a, y=1)", ["f"]), ["x", "a"])
         self.assertEqual(freevars_("f(x, *a, y=1, **k)", ["f"]),
                          ["x", "a", "k"])
-        if sys.version_info >= (3, 5):
-            self.assertEqual(freevars_("f(*a, *b, k=c, **d, **e)", ["f"]),
-                             ["a", "b", "c", "d", "e"])
+        self.assertEqual(freevars_("f(*a, *b, k=c, **d, **e)", ["f"]),
+                         ["a", "b", "c", "d", "e"])
 
         self.assertEqual(freevars_("True"), [])
         self.assertEqual(freevars_("'True'"), [])
