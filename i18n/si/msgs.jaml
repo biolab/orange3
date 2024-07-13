@@ -202,9 +202,9 @@ util.py:
         def `funcv`:
             unsafe: false
 version.py:
-    3.38.0: false
-    3.38.0.dev0+b3dd2eb: false
-    b3dd2eba6a3cfa73ba06460226d6e16a8e25a23a: false
+    3.39.0: false
+    3.39.0.dev0+c2c1648: false
+    c2c16487816d19a63177fae0b9febf1f0220f982: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -2518,6 +2518,31 @@ modelling/catgb.py:
         Gradient Boosting (catboost): true
         classification: false
         regression: false
+modelling/column.py:
+    ColumnLearner: false
+    ColumnModel: false
+    def `_check_column_combinations`:
+        Regression can only be used with numeric variables: false
+        Numeric columns can only be used with binary class variables: false
+        Column contains values that are not in class variable: false
+        'Intercept and coefficient are only allowed for continuous ': false
+        variables: false
+    class `ColumnLearner`:
+        def `__init__`:
+            column '{column.name}': false
+        def `fit_storage`:
+            Class variable does not match the data: false
+    class `ColumnModel`:
+        def `__init__`:
+            Intercept and coefficient must both be provided or absent: false
+            ' ({intercept}, {coefficient})': false
+            column '{column.name}'{pars}: stolpec '{column.name}'{pars}
+        def `_predict_discrete`:
+            'Column values must be in [0, 1] range ': false
+            unless logistic function is applied: false
+        def `__str__`:
+            ' ({self.intercept}, {self.coefficient})': false
+            ColumnModel {self.column.name}{pars}: false
 modelling/constant.py:
     ConstantLearner: false
     class `ConstantLearner`:
@@ -8900,6 +8925,36 @@ widgets/evaluate/owconfusionmatrix.py:
             selected_learner: false
     __main__: false
     iris: false
+widgets/evaluate/owfeatureaspredictor.py:
+    class `OWFeatureAsPredictor`:
+        Feature as Predictor: Stolpec kot napoved
+        Use a column as probabilities or predictions: Uporabi stolpec kot verjetnosti ali napovedi
+        icons/FeatureAsPredictor.svg: false
+        column predictor: true
+        class `Inputs`:
+            Data: Podatki
+        class `Outputs`:
+            Learner: Učni algoritem
+            Model: Model
+        class `Error`:
+            Data has no target variable.: Podatki nimajo ciljne spremenljivke.
+            No useful variables: Ni uporabnih spremenljivk.
+        def `__init__`:
+            auto_apply: false
+        def `_update_controls`:
+            logistic: logistično
+            linear: linearno
+            Transform through {shape} function: Pretvori z {shape} funkcijo
+            Use {shape} regression to fit the model's coefficients: Uporabi {shape} regresijo za nastavitev koeficientov modela
+        def `send_report`:
+            Predict values from: Napoved vrednosti iz
+            Applied transformation: Uporabljena transformacija
+            logistic: logistična
+            linear: linearna
+            Intercept: Presečišče
+            Coefficient: Koeficient
+    __main__: false
+    heart_disease: false
 widgets/evaluate/owliftcurve.py:
     CurveData: false
     contacted: false
