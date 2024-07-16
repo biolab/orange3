@@ -2,11 +2,11 @@ from typing import Optional
 
 import numpy as np
 
-from Orange.data import Variable, DiscreteVariable, Domain
+from Orange.data import Variable, DiscreteVariable, Domain, Table
 from Orange.classification import Model, Learner
 
 
-__all__ = ["ColumnClassifier"]
+__all__ = ["ColumnLearner", "ColumnClassifier"]
 
 
 class ColumnLearner(Learner):
@@ -36,16 +36,21 @@ class ColumnClassifier(Model):
         super().__init__(Domain([column], class_var))
         assert class_var.is_discrete
         if column.is_continuous:
-            assert len(class_var.values) == 2
-            self.value_mapping = np.array([0, 1])
+            if len(class_var.values) != 2:
+                raise ValueError("Numeric column can only be used with "
+                                 "binary class variable")
+            self.value_mapping = None
         else:
-            assert column.is_discrete
+            assert isinstance(column, DiscreteVariable)
             assert offset is None and k is None
             if not self.check_value_sets(class_var, column):
                 raise ValueError(
                     "Column contains values that are not in class variable")
-            self.value_mapping = np.array(
-                [class_var.to_val(x) for x in column.values])
+            if class_var.values[:len(column.values)] == column.values:
+                self.value_mapping = None
+            else:
+                self.value_mapping = np.array(
+                    [class_var.to_val(x) for x in column.values])
         self.class_var = class_var
         self.column = column
         self.offset = offset
@@ -61,27 +66,32 @@ class ColumnClassifier(Model):
                          column_var: DiscreteVariable):
         return set(column_var.values) <= set(class_var.values)
 
-    def predict_storage(self, data):
+    def predict_storage(self, data: Table):
         vals = data.get_column(self.column)
         rows = np.isfinite(vals)
+        nclasses = len(self.class_var.values)
+        proba = np.full((len(data), nclasses), 1 / nclasses)
         if self.column.is_discrete:
-            proba = np.zeros((len(data), len(self.class_var.values)))
-            vals = self.value_mapping[vals[rows].astype(int)]
-            proba[rows, vals] = 1
+            mapped = vals[rows].astype(int)
+            if self.value_mapping is not None:
+                mapped = self.value_mapping[mapped]
+                vals = vals.copy()
+                vals[rows] = mapped
+            proba[rows] = 0
+            proba[rows, mapped] = 1
         else:
-            proba = np.full((len(data), len(self.class_var.values)), 0.5)
             if self.k is None:
                 if not self.check_prob_range(vals):
                     raise ValueError("Column values must be in [0, 1] range "
                                      "unless logistic function is applied")
                 proba[rows, 1] = vals[rows]
-                proba[rows, 0] = 1 - vals[rows]
-                vals = vals > 0.5
             else:
                 proba[rows, 1] = (
                     1 / (1 + np.exp(-self.k * (vals[rows] - self.offset))))
-                proba[rows, 0] = 1 - proba[:, 1]
-                vals = vals > self.offset
+
+            proba[rows, 0] = 1 - proba[rows, 1]
+            vals = (proba[:, 1] > 0.5).astype(float)
+            vals[~rows] = np.nan
         return vals, proba
 
     def __str__(self):
