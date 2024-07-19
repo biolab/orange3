@@ -21,7 +21,7 @@ requests
 scikit-learn>=1.4.0
 scipy>=1.9
 serverfiles		# for Data Sets synchronization
-xgboost>=1.7.4
+xgboost>=1.7.4,<2.1
 # Reading Excel files
 xlrd>=1.2.0
 # Writing Excel Files
