@@ -40,6 +40,7 @@ from Orange.widgets.data.oweditdomain import (
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.tests.utils import contextMenu
+from Orange.widgets.utils.itemmodels import select_row
 from Orange.widgets.utils import colorpalettes
 from Orange.tests import test_filename, assert_array_nanequal
 
@@ -381,6 +382,10 @@ class TestOWEditDomain(WidgetTest):
         self.assertEqual(output.domain.class_var.name, "K")
         self.assertEqual(output.domain.class_var.values,
                          ("Iris-setosa", "Iris-versicolor", "Iris-virginica"))
+
+        select_row(w.variables_view, 4)
+        w.reset_selected()
+        self.assertFalse(w.Warning.cat_mapping_does_not_apply.is_shown())
 
         restore({viris: [("Rename", ("A")), ("NonexistantTransform", ("AA",))]})
         tr = model.data(model.index(4), TransformRole)
