@@ -441,22 +441,24 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(domain1, domain2)
 
         var1 = ContinuousVariable('var1')
-        domain1.attributes = (var1,)
+        domain1 = Domain([var1])
         self.assertNotEqual(domain1, domain2)
 
-        domain2.attributes = (var1,)
+        domain2 = Domain([var1])
         self.assertEqual(domain1, domain2)
 
-        domain1.class_vars = (var1,)
+        var2 = ContinuousVariable('var2')
+        domain1 = Domain([var1], [var2])
         self.assertNotEqual(domain1, domain2)
 
-        domain2.class_vars = (var1,)
+        domain2 = Domain([var1], [var2])
         self.assertEqual(domain1, domain2)
 
-        domain1._metas = (var1,)
+        var3 = ContinuousVariable('var3')
+        domain1 = Domain([var1], [var2], [var3])
         self.assertNotEqual(domain1, domain2)
 
-        domain2._metas = (var1,)
+        domain2 = Domain([var1], [var2], [var3])
         self.assertEqual(domain1, domain2)
 
     def test_domain_conversion_is_fast_enough(self):

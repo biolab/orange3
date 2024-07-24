@@ -124,6 +124,14 @@ class TestPLSRegressionLearner(unittest.TestCase):
         self.assertNotEqual(hash(proj1), hash(proj2))
         self.assertNotEqual(hash(proj1.domain), hash(proj2.domain))
 
+    def test_eq_hash_fake_same_model(self):
+        data = Table("housing")
+        pls1 = PLSRegressionLearner()(data)
+        pls2 = PLSRegressionLearner()(data)
+
+        proj1 = pls1.project(data)
+        proj2 = pls2.project(data)
+
         proj2.domain[0].compute_value.compute_shared.pls_model = \
             proj1.domain[0].compute_value.compute_shared.pls_model
         # reset hash caches because object were hacked
