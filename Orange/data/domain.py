@@ -170,7 +170,7 @@ class Domain:
         self.anonymous = False
 
         self._hash = None  # cache for __hash__()
-        self._eq_cache = IDWeakrefCache({})  # cache for __eq__()
+        self._eq_cache = IDWeakrefCache(_LRS10Dict())  # cache for __eq__()
 
     def _ensure_indices(self):
         if self._indices is None:
@@ -536,3 +536,12 @@ class Domain:
         if self._hash is None:
             self._hash = hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
         return self._hash
+
+
+class _LRS10Dict(dict):
+    """ A small "least recently stored" (not LRU) dict """
+
+    def __setitem__(self, key, value):
+        if len(self) >= 10:
+            del self[next(iter(self))]
+        super().__setitem__(key, value)

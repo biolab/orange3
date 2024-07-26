@@ -488,6 +488,27 @@ class TestDomainInit(unittest.TestCase):
         domain1._eq_cache[(domain2,)] = False  # pylint: disable=protected-access
         self.assertFalse(domain1 == domain2)
 
+    def test_eq_cache_not_grow(self):
+        var = ContinuousVariable('var')
+        domain = Domain([var])
+        domains = [Domain([var]) for _ in range(10)]
+        for d in domains:
+            self.assertTrue(domain == d)
+
+        # pylint: disable=protected-access,pointless-statement
+
+        # __eq__ results to all ten domains should be cached
+        for d in domains:
+            domain._eq_cache[(d,)]
+
+        dn = Domain([var])
+        self.assertTrue(domain == dn)
+        # the last compared domain should be cached
+        domain._eq_cache[(dn,)]
+        # but the first compared should be lost in cache
+        with self.assertRaises(KeyError):
+            domain._eq_cache[(domains[0],)]
+
     def test_domain_conversion_is_fast_enough(self):
         attrs = [ContinuousVariable("f%i" % i) for i in range(10000)]
         class_vars = [ContinuousVariable("c%i" % i) for i in range(10)]
