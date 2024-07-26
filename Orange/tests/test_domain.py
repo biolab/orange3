@@ -461,6 +461,33 @@ class TestDomainInit(unittest.TestCase):
         domain2 = Domain([var1], [var2], [var3])
         self.assertEqual(domain1, domain2)
 
+    def test_eq_cached(self):
+
+        class ComputeValueEqOnce:
+            calls = 0
+
+            def __eq__(self, other):
+                if self.calls > 0:
+                    raise RuntimeError()
+                self.calls += 1
+                return type(self) is type(other)
+
+            def __hash__(self):
+                return hash(type(self))
+
+        var1 = ContinuousVariable('var1', compute_value=ComputeValueEqOnce())
+        var1a = ContinuousVariable('var1', compute_value=ComputeValueEqOnce())
+        domain1 = Domain([var1])
+        domain2 = Domain([var1a])
+        self.assertTrue(domain1 == domain2)
+
+        # the second call would crash if __eq__ was not cached
+        self.assertTrue(domain1 == domain2)
+
+        # modify the cache, see if that has an effect
+        domain1._eq_cache[(domain2,)] = False  # pylint: disable=protected-access
+        self.assertFalse(domain1 == domain2)
+
     def test_domain_conversion_is_fast_enough(self):
         attrs = [ContinuousVariable("f%i" % i) for i in range(10000)]
         class_vars = [ContinuousVariable("c%i" % i) for i in range(10)]
