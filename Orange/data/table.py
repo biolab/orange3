@@ -792,6 +792,16 @@ class Table(Sequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
+        if domain is source.domain:
+            table = cls.from_table_rows(source, row_indices)
+            # assure resulting domain is the instance passed on input
+            table.domain = domain
+            # since sparse flags are not considered when checking for
+            # domain equality, fix manually.
+            with table.unlocked_reference():
+                table = assure_domain_conversion_sparsity(table, source)
+            return table
+
         new_cache = _thread_local.conversion_cache is None
         try:
             if new_cache:
@@ -801,15 +811,6 @@ class Table(Sequence, Storage):
                 cached = _idcache_restore(_thread_local.conversion_cache, (domain, source))
                 if cached is not None:
                     return cached
-            if domain is source.domain:
-                table = cls.from_table_rows(source, row_indices)
-                # assure resulting domain is the instance passed on input
-                table.domain = domain
-                # since sparse flags are not considered when checking for
-                # domain equality, fix manually.
-                with table.unlocked_reference():
-                    table = assure_domain_conversion_sparsity(table, source)
-                return table
 
             # avoid boolean indices; also convert to slices if possible
             row_indices = _optimize_indices(row_indices, len(source))
@@ -834,7 +835,9 @@ class Table(Sequence, Storage):
                 self.W = source.W[row_indices]
                 self.name = getattr(source, 'name', '')
                 self.ids = source.ids[row_indices]
-                self.attributes = deepcopy(getattr(source, 'attributes', {}))
+                self.attributes = getattr(source, 'attributes', {})
+                if new_cache:  # only deepcopy attributes for the outermost transformation
+                    self.attributes = deepcopy(self.attributes)
                 _idcache_save(_thread_local.conversion_cache, (domain, source), self)
             return self
         finally:
@@ -879,6 +882,7 @@ class Table(Sequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
+        is_outermost_transformation = _thread_local.conversion_cache is None
         self = cls()
         self.domain = source.domain
         with self.unlocked_reference():
@@ -892,7 +896,9 @@ class Table(Sequence, Storage):
             self.W = source.W[row_indices]
             self.name = getattr(source, 'name', '')
             self.ids = source.ids[row_indices]
-            self.attributes = deepcopy(getattr(source, 'attributes', {}))
+            self.attributes = getattr(source, 'attributes', {})
+            if is_outermost_transformation:
+                self.attributes = deepcopy(self.attributes)
         return self
 
     @classmethod
