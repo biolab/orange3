@@ -178,6 +178,12 @@ class TestPCA(unittest.TestCase):
         self.assertNotEqual(hash(p1), hash(p2))
         self.assertNotEqual(hash(p1.domain), hash(p2.domain))
 
+    def test_eq_hash_fake_same_projection(self):
+        d = np.random.RandomState(0).rand(20, 20)
+        data = Table.from_numpy(None, d)
+        p1 = PCA()(data)
+        p2 = PCA()(data)
+
         # copy projection
         p2.domain[0].compute_value.compute_shared.projection = \
             p1.domain[0].compute_value.compute_shared.projection

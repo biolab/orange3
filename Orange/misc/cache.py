@@ -1,5 +1,6 @@
 """Common caching methods, using `lru_cache` sometimes has its downsides."""
 from functools import wraps, lru_cache
+from typing import MutableMapping
 import weakref
 
 
@@ -54,3 +55,31 @@ def memoize_method(*lru_args, **lru_kwargs):
         return _wrapped_func
 
     return _decorator
+
+
+class IDWeakrefCache:
+    """
+    Cache that caches keys according to their id() for speed. It also stores
+    weak references to the keys to ensure that the same keys are being accessed.
+    """
+
+    def __init__(self, cache: MutableMapping):
+        self._cache = cache
+
+    def __setitem__(self, keys, value):
+        self._cache[tuple(map(id, keys))] = \
+            value, [weakref.ref(k) for k in keys]
+
+    def __getitem__(self, keys):
+        key = tuple(map(id, keys))
+        if key not in self._cache:
+            raise KeyError()
+        shared, weakrefs = self._cache[key]
+        for r in weakrefs:
+            if r() is None:
+                del self._cache[key]
+                raise KeyError()
+        return shared
+
+    def clear(self):
+        self._cache.clear()
