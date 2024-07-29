@@ -23,6 +23,13 @@ class InitTestData(unittest.TestCase):
                              ["red", "0.5", "0.0", "0.0", "aa", "a"],
                              ["red", "0.1", "1.0", "1.0", "b", "b"],
                              ["green", "0.0", "2.0", "2.0", "c", "c"]]
+        cls.header1_flags2 = [["D#a1", "D#a2", "cD#a3", "C#a4", "S#a5",
+                               "mS#a6", "T#a7", "mT#a8", "T#a9"],
+                              ["", "0", "", "0", "a", "a",
+                               "2024-01-01", "2024-01-01", ""],
+                              ["", "1", "", "1", "b", "b",
+                               "2024-01-01", "2024-01-01", ""],
+                              ["green", "0.0", "2.0", "2.0", "c", "c"]]
         cls.header3 = [["a", "b", "c", "d", "w", "e", "f", "g"],
                        ["d", "c", "c", "c", "c", "d", "s", "yes no"],
                        ["meta", "class", "meta", "", "weight", "i", "", ""],
@@ -52,6 +59,16 @@ class TestTableHeader(InitTestData):
         self.assertListEqual(names, ["a", "b", "c", "d", "e", "f"])
         self.assertListEqual(types, ["", "c", "", "", "", ""])
         self.assertListEqual(flags, ["m", "c", "m", "", "i", ""])
+
+    def test_get_header_data_1_flags2(self):
+        names, types, flags = _TableHeader.create_header_data(
+            self.header1_flags2[:1])
+        names_ = ["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9"]
+        types_ = ["d", "d", "d", "c", "s", "s", "t", "t", "t"]
+        flags_ = ["", "", "c", "", "", "m", "", "m", ""]
+        self.assertListEqual(names, names_)
+        self.assertListEqual(types, types_)
+        self.assertListEqual(flags, flags_)
 
     def test_get_header_data_3(self):
         names, types, flags = _TableHeader.create_header_data(self.header3[:3])
