@@ -1580,6 +1580,9 @@ TransformRole = Qt.UserRole + 42
 #: Any warnings applying to the transform (`list[tuple[Msg, str]]`)
 RestoreWarningRole = TransformRole + 1
 
+#: Hint key that was used to load stored settings.
+RestoreHintKey = RestoreWarningRole + 1
+
 
 class VariableEditDelegate(QStyledItemDelegate):
     ReinterpretNames = {
@@ -2133,12 +2136,12 @@ class OWEditDomain(widget.OWWidget):
         modified = []
         for ind in self.selected_var_indices():
             midx = model.index(ind)
+            model.setData(midx, [], TransformRole)
             model.setData(midx, None, RestoreWarningRole)
-            if midx.data(TransformRole):
-                model.setData(midx, [], TransformRole)
-                var = midx.data(Qt.EditRole)
-                self._store_transform(var, [])
-                modified.append(var)
+            key = model.data(midx, RestoreHintKey)
+            var = midx.data(Qt.EditRole)
+            self._domain_change_hints.pop(key, None)
+            modified.append(var)
         if modified:
             with disconnected(editor.variable_changed,
                               self._on_variable_changed):
@@ -2154,6 +2157,8 @@ class OWEditDomain(widget.OWWidget):
                 midx = model.index(i)
                 model.setData(midx, [], TransformRole)
                 model.setData(midx, None, RestoreWarningRole)
+                key = model.data(midx, RestoreHintKey)
+                self._domain_change_hints.pop(key, None)
             self.open_editor()
             self._invalidate()
             self._update_restore_warnings()
@@ -2224,6 +2229,7 @@ class OWEditDomain(widget.OWWidget):
                     tr, msgs = self._sanitize_transform(coldesc.vtype, tr)
                     model.setData(midx, tr, TransformRole)
                     model.setData(midx, msgs, RestoreWarningRole)
+                    model.setData(midx, key, RestoreHintKey)
                     if first_key is None:
                         first_key = key
         # Reduce the number of hints to MAX_HINTS, but keep all current hints
@@ -2251,7 +2257,7 @@ class OWEditDomain(widget.OWWidget):
         )
         self.Warning.cat_mapping_does_not_apply.clear()
         # Show warnings for non-applicable transforms
-        for msg, names in groupby(msgs, key=itemgetter(0)):
+        for msg, names in groupby(sorted(msgs), key=itemgetter(0)):
             msg(", ".join(map(itemgetter(1), names)))
 
     def _on_selection_changed(self, _, deselected):
@@ -2308,15 +2314,16 @@ class OWEditDomain(widget.OWWidget):
         self._update_restore_warnings()
 
     def _store_transform(
-            self, var: Variable, transform: Iterable[Transform], deconvar=None
+            self, var: Variable, transform: Sequence[Transform] | None, deconvar=None
     ) -> None:
         deconvar = deconvar or deconstruct(var)
         # Remove the existing key (if any) to put the new one at the end,
         # to make sure it comes after the sentinel
         self._domain_change_hints.pop(deconvar, None)
         # pylint: disable=unsupported-assignment-operation
-        self._domain_change_hints[deconvar] = \
-            [deconstruct(t) for t in transform]
+        if transform:
+            self._domain_change_hints[deconvar] = \
+                [deconstruct(t) for t in transform]
 
     def _find_stored_transform(
             self, var: Variable

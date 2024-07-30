@@ -35,7 +35,8 @@ from Orange.widgets.data.oweditdomain import (
     VariableEditDelegate, TransformRole,
     RealVector, TimeVector, StringVector, make_dict_mapper,
     LookupMappingTransform, as_float_or_nan, column_str_repr,
-    GroupItemsDialog, VariableListModel, StrpTime, RestoreOriginal, BaseEditor
+    GroupItemsDialog, VariableListModel, StrpTime, RestoreOriginal, BaseEditor,
+    RestoreWarningRole
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
@@ -382,6 +383,12 @@ class TestOWEditDomain(WidgetTest):
         self.assertEqual(output.domain.class_var.name, "K")
         self.assertEqual(output.domain.class_var.values,
                          ("Iris-setosa", "Iris-versicolor", "Iris-virginica"))
+
+        restore({viris_1: [("Rename", ("K",),),
+                           ("CategoriesMapping", ([("A", "AA")],))]})
+        self.assertTrue(w.Warning.cat_mapping_does_not_apply.is_shown())
+        w.reset_all()
+        self.assertFalse(w.Warning.cat_mapping_does_not_apply.is_shown())
 
         select_row(w.variables_view, 4)
         w.reset_selected()
@@ -1226,6 +1233,13 @@ class TestDelegates(GuiTest):
                 view, opt, model.index(1),
             )
             p.assert_called_once()
+
+        set_item(1, {
+            TransformRole: Rename("bb"),
+            RestoreWarningRole: ("bb", "aa"),
+        })
+        opt = get_style_option(1)
+        self.assertEqual(opt.palette.color(QPalette.Text), QColor(Qt.yellow))
 
 
 class TestTransforms(TestCase):
