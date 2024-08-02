@@ -148,7 +148,7 @@ class OWHeatMap(widget.OWWidget):
 
     settings_version = 4
 
-    settingsHandler = settings.DomainContextHandlerPosition()
+    settingsHandler = settings.SimpleDomainContextHandler()
 
     # Disable clustering for inputs bigger than this
     MaxClustering = 25000

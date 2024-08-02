@@ -138,7 +138,7 @@ class DomainContextHandler(ContextHandler):
             domain = domain.domain
         super().open_context(widget, domain, *self.encode_domain(domain))
 
-    def filter_value(self, setting, data, domain, *args):
+    def _filter_value(self, setting, data, *args):
         value = data.get(setting.name, None)
         if isinstance(value, list):
             new_value = [item for item in value
@@ -151,6 +151,9 @@ class DomainContextHandler(ContextHandler):
         elif self.is_encoded_var(value) \
                 and not self._var_exists(setting, value,  *args):
             del data[setting.name]
+
+    def filter_value(self, setting, data, domain, *args):
+        self._filter_value(setting, data, *args)
 
     @staticmethod
     def encode_variable(var):
@@ -219,9 +222,9 @@ class DomainContextHandler(ContextHandler):
     def match(self, context, domain, attrs, metas):
         if context.attributes == attrs and context.metas == metas:
             return self.PERFECT_MATCH
-        return self._match(context, domain, attrs, metas)
+        return self._match(context, attrs, metas)
 
-    def _match(self, context, domain, *args):
+    def _match(self, context, *args):
         matches = []
         try:
             for setting, data, _ in \
@@ -295,44 +298,39 @@ class DomainContextHandler(ContextHandler):
             and value[1] >= 0
 
 
-class DomainContextHandlerPosition(DomainContextHandler):
-
-    def __init__(self, *, match_values=0, first_match=True):
-        super().__init__(match_values=match_values, first_match=first_match)
+class SimpleDomainContextHandler(DomainContextHandler):
 
     def encode_domain(self, domain):
-        match = self.match_values
-        encode = self.encode_variables
-        attributes = encode(domain.attributes, match == self.MATCH_VALUES_ALL)
-        class_vars = encode(domain.class_vars,
-                            match in (self.MATCH_VALUES_ALL, self.MATCH_VALUES_CLASS))
-        metas = encode(domain.metas, match == self.MATCH_VALUES_ALL)
-
-        return attributes, class_vars, metas
+        return tuple()
 
     new_context = ContextHandler.new_context
 
     @classmethod
-    def _var_exists(cls, setting, value, attributes, class_vars, metas):
+    def _var_exists(cls, setting, value, domain):
         assert isinstance(setting, ContextSetting)
 
         if not cls.is_encoded_var(value):
             return False
 
         attr_name, attr_type = value
-        # attr_type used to be either 1-4 for variables stored as string
-        # settings, and 101-104 for variables stored as variables. The former is
-        # no longer supported, but we play it safe and still handle both here.
-        attr_type %= 100
-        return (not setting.exclude_attributes and
-                attributes.get(attr_name, -1) == attr_type or
-                not setting.exclude_class_vars and
-                class_vars.get(attr_name, -1) == attr_type or
-                not setting.exclude_metas and
-                metas.get(attr_name, -1) == attr_type)
 
-    def match(self, context, domain, attrs, class_vars, metas):
-        return self._match(context, domain, attrs, class_vars, metas)
+        if attr_name not in domain:
+            return False
+
+        candidate = domain[attr_name]
+        idx = domain.index(candidate)
+        if (0 <= idx < len(domain.attributes) and setting.exclude_attributes
+                or idx >= len(domain.attributes) and setting.exclude_class_vars
+                or idx < 0 and setting.exclude_metas):
+            return False
+
+        return cls.encode_variable(candidate)[1] == attr_type
+
+    def filter_value(self, setting, data, domain):
+        self._filter_value(setting, data, domain)
+
+    def match(self, context, domain):
+        return self._match(context, domain)
 
 
 class ClassValuesContextHandler(ContextHandler):
