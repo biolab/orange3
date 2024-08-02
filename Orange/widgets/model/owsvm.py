@@ -35,6 +35,8 @@ class OWSVM(OWBaseLearner):
     class Warning(OWBaseLearner.Warning):
         sparse_data = Msg('Input data is sparse, default preprocessing is to scale it.')
 
+    settings_version = 2
+
     #: Different types of SVMs
     SVM, Nu_SVM = range(2)
     #: SVM type
@@ -156,8 +158,8 @@ class OWSVM(OWBaseLearner):
         gamma.setSpecialValueText(self._default_gamma)
         coef0 = gui.doubleSpin(
             inbox, self, "coef0", 0.0, 10.0, 0.01, label=" c: ", **common)
-        degree = gui.doubleSpin(
-            inbox, self, "degree", 0.0, 10.0, 0.5, label=" d: ", **common)
+        degree = gui.spin(
+            inbox, self, "degree", 0, 10, 1, label=" d: ", **common)
         self._kernel_params = [gamma, coef0, degree]
         gui.rubber(parambox)
 
@@ -254,6 +256,12 @@ class OWSVM(OWBaseLearner):
         else:
             items["Kernel"] = "Sigmoid, tanh({g:.4} x⋅y + {c:.4})".format(
                 g=gamma, c=self.coef0)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            if "degree" in settings:
+                settings["degree"] = int(settings["degree"])
 
 
 if __name__ == "__main__":  # pragma: no cover

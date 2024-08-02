@@ -102,3 +102,22 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
             data.X = csr_matrix(data.X)
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.sparse_data.is_shown())
+
+    def test_change_degree(self):
+        data = Table("iris")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.kernel_box.buttons[1].click()
+        degree_spin = self.widget._kernel_params[2]  # pylint: disable=protected-access
+        degree_spin.stepUp()
+        self.assertEqual(self.widget.degree, 4)
+        self.click_apply()
+        self.wait_until_stop_blocking()
+        self.assertFalse(self.widget.Error.fitting_failed.is_shown())
+
+    def test_migrate_degree(self):
+        settings = {}
+        OWSVM.migrate_settings(settings, 1)
+
+        settings = {"degree": 4.0}
+        OWSVM.migrate_settings(settings, 1)
+        self.assertIsInstance(settings["degree"], int)
