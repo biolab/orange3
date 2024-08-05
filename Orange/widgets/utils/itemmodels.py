@@ -37,8 +37,10 @@ from Orange.util import deprecated
 __all__ = [
     "PyListModel", "VariableListModel", "PyListModelTooltip", "DomainModel",
     "AbstractSortTableModel", "PyTableModel", "TableModel",
-    "ModelActionsWidget", "ListSingleSelectionModel"
+    "ModelActionsWidget", "ListSingleSelectionModel",
+    "select_row", "select_rows", "signal_blocking"
 ]
+
 
 @contextmanager
 def signal_blocking(obj):
