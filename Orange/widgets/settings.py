@@ -317,12 +317,29 @@ class DomainContextHandler(ContextHandler, StructuredVariableSettingMixin,
         return StructuredVariableSettingMixin.match(self, context, attrs, metas)
 
 
-class SimpleDomainContextHandler(DomainContextHandler):
+class SimpleDomainContextHandler(ContextHandler, StructuredVariableSettingMixin,
+                                 VariableEncoderMixin):
+    def __init__(self):
+        super().__init__()
+        self.first_match = True
 
-    def encode_domain(self, domain):
-        return tuple()
+    def open_context(self, widget, domain):
+        if domain is None:
+            return
+        if not isinstance(domain, Domain):
+            domain = domain.domain
+        super().open_context(widget, domain)
 
-    new_context = ContextHandler.new_context
+    def filter_value(self, setting, data, domain, *args):
+        StructuredVariableSettingMixin.filter_value(self, setting, data, *args)
+
+    def encode_setting(self, context, setting, value):
+        return StructuredVariableSettingMixin.encode_setting(
+            self, context, setting, value)
+
+    def decode_setting(self, setting, value, domain, *args):
+        return StructuredVariableSettingMixin.decode_setting(
+            self, setting, value, domain, *args)
 
     def match_variable(self, setting, value, domain):
         assert isinstance(setting, ContextSetting)
