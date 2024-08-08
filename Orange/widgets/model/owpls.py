@@ -76,7 +76,6 @@ class OWPLS(OWBaseLearner):
         n_components = x_rotations.shape[1]
 
         names = [f"coef ({v.name})" for v in self.model.domain.class_vars]
-        names += [f"coef/X_sd ({v.name})" for v in self.model.domain.class_vars]
         names += [f"w*c {i + 1}" for i in range(n_components)]
         domain = Domain(
             [ContinuousVariable(n) for n in names],
@@ -85,18 +84,13 @@ class OWPLS(OWBaseLearner):
         )
 
         data = self.model.data_to_model_domain(self.data)
-        x_std = np.std(data.X, axis=0)
-        coeffs_x_std = coefficients.T / x_std
         X_features = np.hstack((coefficients,
-                                coeffs_x_std.T,
                                 x_rotations))
         X_targets = np.hstack((np.full((n_targets, n_targets), np.nan),
-                               np.full((n_targets, n_targets), np.nan),
                                y_loadings))
 
-        coeffs = coeffs_x_std * np.mean(data.X, axis=0)
-        X_intercepts = np.hstack((intercept,
-                                  intercept - coeffs.sum(),
+        coeffs = coefficients.T * np.mean(data.X, axis=0)
+        X_intercepts = np.hstack((intercept - coeffs.sum(),
                                   np.full((1, n_components), np.nan)))
         X = np.vstack((X_features, X_targets, X_intercepts))
 
