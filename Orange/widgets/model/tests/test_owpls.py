@@ -48,11 +48,11 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.send_signal(self.widget.Inputs.data, self._data)
         coefsdata = self.get_output(self.widget.Outputs.coefsdata)
         self.assertEqual(coefsdata.name, "Coefficients and Loadings")
-        self.assertEqual(coefsdata.X.shape, (15, 3))
+        self.assertEqual(coefsdata.X.shape, (15, 4))
         self.assertEqual(coefsdata.Y.shape, (15, 0))
         self.assertEqual(coefsdata.metas.shape, (15, 2))
 
-        self.assertEqual(["coef (MEDV)", "w*c 1", "w*c 2"],
+        self.assertEqual(["coef (MEDV)", "coef * X_sd (MEDV)", "w*c 1", "w*c 2"],
                          [v.name for v in coefsdata.domain.attributes])
         self.assertEqual(["Variable name", "Variable role"],
                          [v.name for v in coefsdata.domain.metas])
@@ -61,8 +61,8 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.assertTrue((coefsdata.metas[:-2, 1] == 0).all())
         self.assertTrue((coefsdata.metas[-2, 1] == 1))
         self.assertTrue(np.isnan(coefsdata.metas[-1, 1]))
-        self.assertAlmostEqual(coefsdata.X[0, 2], 0.012, 3)
-        self.assertAlmostEqual(coefsdata.X[13, 2], 0.389, 3)
+        self.assertAlmostEqual(coefsdata.X[0, 3], 0.012, 3)
+        self.assertAlmostEqual(coefsdata.X[13, 3], 0.389, 3)
         self.assertAlmostEqual(coefsdata.X[-1, 0], 13.7, 1)
         self.assertTrue(np.isnan(coefsdata.X[-1, 2:]).all())
 
@@ -70,11 +70,12 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.send_signal(self.widget.Inputs.data, self._data_multi_target)
         coefsdata = self.get_output(self.widget.Outputs.coefsdata)
         self.assertEqual(coefsdata.name, "Coefficients and Loadings")
-        self.assertEqual(coefsdata.X.shape, (15, 4))
+        self.assertEqual(coefsdata.X.shape, (15, 6))
         self.assertEqual(coefsdata.Y.shape, (15, 0))
         self.assertEqual(coefsdata.metas.shape, (15, 2))
 
-        attr_names = ["coef (MEDV)", "coef (CRIM)", "w*c 1", "w*c 2"]
+        attr_names = ["coef (MEDV)", "coef (CRIM)", "coef * X_sd (MEDV)",
+                      "coef * X_sd (CRIM)", "w*c 1", "w*c 2"]
         self.assertEqual(attr_names,
                          [v.name for v in coefsdata.domain.attributes])
         self.assertEqual(["Variable name", "Variable role"],
@@ -85,12 +86,12 @@ class TestOWPLS(WidgetTest, WidgetLearnerTestMixin):
         self.assertTrue((coefsdata.metas[:-3, 1] == 0).all())
         self.assertTrue((coefsdata.metas[-2:-1, 1] == 1).all())
         self.assertTrue(np.isnan(coefsdata.metas[-1, 1]))
-        self.assertAlmostEqual(coefsdata.X[0, 2], -0.198, 3)
-        self.assertAlmostEqual(coefsdata.X[12, 2], -0.288, 3)
-        self.assertAlmostEqual(coefsdata.X[13, 2], 0.243, 3)
+        self.assertAlmostEqual(coefsdata.X[0, 4], -0.198, 3)
+        self.assertAlmostEqual(coefsdata.X[12, 4], -0.288, 3)
+        self.assertAlmostEqual(coefsdata.X[13, 4], 0.243, 3)
         self.assertAlmostEqual(coefsdata.X[-1, 0], 6.7, 1)
         self.assertAlmostEqual(coefsdata.X[-1, 1], -12.2, 1)
-        self.assertTrue(np.isnan(coefsdata.X[-1, 2:]).all())
+        self.assertTrue(np.isnan(coefsdata.X[-1, 4:]).all())
 
     def test_output_data(self):
         self.send_signal(self.widget.Inputs.data, self._data)
