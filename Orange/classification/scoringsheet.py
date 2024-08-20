@@ -6,6 +6,7 @@ from Orange.classification.utils.fasterrisk.fasterrisk import (
 
 from Orange.classification import Learner, Model
 from Orange.data import Table, Storage
+from Orange.data.filter import HasClass
 from Orange.preprocess import Discretize, Impute, Continuize, SelectBestFeatures
 from Orange.preprocess.discretize import Binning
 from Orange.preprocess.score import ReliefF
@@ -36,7 +37,7 @@ class ScoringSheetModel(Model):
 
 class ScoringSheetLearner(Learner):
     __returns__ = ScoringSheetModel
-    preprocessors = [Discretize(method=Binning()), Impute(), Continuize()]
+    preprocessors = [HasClass(), Discretize(method=Binning()), Impute(), Continuize()]
 
     def __init__(
         self,
@@ -54,17 +55,27 @@ class ScoringSheetLearner(Learner):
 
         if preprocessors is None:
             self.preprocessors = [
-                Discretize(method=Binning()),
-                Impute(),
-                Continuize(),
+                *self.preprocessors,
                 SelectBestFeatures(method=ReliefF(), k=num_attr_after_selection),
             ]
 
         super().__init__(preprocessors=preprocessors)
+    
+    def incompatibility_reason(self, domain):
+        reason = None
+        if len(domain.class_vars) > 1 and not self.supports_multiclass:
+            reason = "Too many target variables."
+        elif not domain.has_discrete_class:
+            reason = "Categorical class variable expected."
+        elif len(domain.class_vars[0].values) > 2:
+            reason = "Too many target variable values."
+        return reason
 
     def fit_storage(self, table):
         if not isinstance(table, Storage):
             raise TypeError("Data is not a subclass of Orange.data.Storage.")
+        elif table.get_nan_count_class() > 0:
+            raise ValueError("Class variable contains missing values.")
 
         if self.num_input_features is not None:
             self._generate_feature_group_index(table)

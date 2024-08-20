@@ -218,6 +218,10 @@ class ModelTest(unittest.TestCase):
             if learner in (ThresholdLearner, CalibratedLearner):
                 continue
 
+            # Skip learners that are incompatible with the dataset
+            if learner.incompatibility_reason(self, iris.domain):
+                continue
+
             with self.subTest(learner.__name__):
                 # model trained on only one value (but three in the domain)
                 model = learner()(iris[0:100])
@@ -257,6 +261,9 @@ class ModelTest(unittest.TestCase):
                 if learner in (ThresholdLearner, CalibratedLearner):
                     args = [LogisticRegressionLearner()]
                 data = iris_bin if learner is ThresholdLearner else iris
+                # Skip learners that are incompatible with the dataset
+                if learner.incompatibility_reason(self, data.domain):
+                    continue
                 model = learner(*args)(data)
                 transformed_iris = model.data_to_model_domain(data)
 
@@ -423,6 +430,9 @@ class LearnerAccessibility(unittest.TestCase):
             with self.subTest(learner.__name__):
                 learner = learner()
                 for ds in datasets:
+                    # Skip learners that are incompatible with the dataset
+                    if learner.incompatibility_reason(ds.domain):
+                        continue
                     model = learner(ds)
                     s = pickle.dumps(model, 0)
                     model2 = pickle.loads(s)
@@ -448,6 +458,9 @@ class LearnerAccessibility(unittest.TestCase):
                 learner = learner()
                 for ds in datasets:
                     pca_ds = Orange.projection.PCA()(ds)(ds)
+                    # Skip learners that are incompatible with the dataset
+                    if learner.incompatibility_reason(pca_ds.domain):
+                        continue
                     model = learner(pca_ds)
                     s = pickle.dumps(model, 0)
                     model2 = pickle.loads(s)
