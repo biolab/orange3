@@ -97,7 +97,7 @@ class TestOWScoringSheet(WidgetTest):
         learner = self.get_output(self.widget.Outputs.learner)
 
         self.assertIsNotNone(learner.preprocessors)
-        self.assertEqual(len(learner.preprocessors), 4)
+        self.assertEqual(len(learner.preprocessors), 5)
 
     def test_custom_preprocessors_are_used(self):
         preprocessor = Impute()
