@@ -60,7 +60,7 @@ class ScoringSheetLearner(Learner):
             ]
 
         super().__init__(preprocessors=preprocessors)
-    
+
     def incompatibility_reason(self, domain):
         reason = None
         if len(domain.class_vars) > 1 and not self.supports_multiclass:

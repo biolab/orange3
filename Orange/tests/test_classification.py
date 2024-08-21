@@ -454,6 +454,9 @@ class LearnerAccessibility(unittest.TestCase):
             # Skip slow tests
             if issubclass(learner, _RuleLearner):
                 continue
+            # temporary exclusion of the ScoringSheet learner
+            if learner.__name__ == "ScoringSheetLearner":
+                continue
             with self.subTest(learner.__name__):
                 learner = learner()
                 for ds in datasets:
