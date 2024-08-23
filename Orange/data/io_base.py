@@ -170,7 +170,8 @@ class _TableHeader:
         """
 
         def is_flag(x):
-            return bool(Flags.RE_ALL.match(cls._type_from_flag([x])[0]) or
+            return bool(cls._type_from_flag([x])[0] and
+                        _RE_TYPES.match(cls._type_from_flag([x])[0]) or
                         Flags.RE_ALL.match(cls._flag_from_flag([x])[0]))
 
         flags, names = zip(*[i.split(cls.HEADER1_FLAG_SEP, 1)
