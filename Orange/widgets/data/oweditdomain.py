@@ -30,7 +30,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtGui import (
     QStandardItemModel, QStandardItem, QKeySequence, QIcon, QBrush, QPalette,
-    QHelpEvent
+    QHelpEvent, QColor
 )
 from AnyQt.QtCore import (
     Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex, QRect,
@@ -38,6 +38,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
+from orangecanvas.gui.utils import luminance
 from orangecanvas.utils import assocf
 from orangewidget.utils.listview import ListViewSearch
 
@@ -1639,7 +1640,15 @@ class VariableEditDelegate(QStyledItemDelegate):
         if isinstance(multiplicity, int) and multiplicity > 1:
             set_color(option.palette, Qt.red)
         elif warnings_:
-            set_color(option.palette, Qt.yellow)
+            set_color(option.palette, self.warning_text_color(option.palette))
+
+    @staticmethod
+    def warning_text_color(palette: QPalette):
+        background = palette.color(QPalette.ColorRole.Base)
+        if luminance(background) > 0.5:
+            return QColor(255, 148, 11)
+        else:
+            return QColor(Qt.GlobalColor.yellow)
 
     def helpEvent(self, event: QHelpEvent, view: QAbstractItemView,
                   option: QStyleOptionViewItem, index: QModelIndex) -> bool:
