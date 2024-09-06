@@ -240,6 +240,9 @@ class OWHierarchicalClustering(widget.OWWidget):
             Msg("Subset data refers to a different table")
         pruning_disables_colors = \
             Msg("Pruned cluster doesn't show colors and indicate subset")
+        many_clusters = \
+            Msg("Variables with too many values may "
+                "degrade the performance of downstream widgets.")
 
     #: Stored (manual) selection state (from a saved workflow) to restore.
     __pending_selection_restore = None  # type: Optional[SelectionState]
@@ -361,7 +364,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             2, 0
         )
         self.top_n_spin = gui.spin(
-            self.selection_box, self, "top_n", 1, 20,
+            self.selection_box, self, "top_n", 1, 1000,
             controlWidth=spin_width, alignment=Qt.AlignRight,
             callback=self._top_n_changed, addToLayout=False)
         self.top_n_spin.lineEdit().returnPressed.connect(self._top_n_return)
@@ -766,6 +769,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     @gui.deferred
     def commit(self):
         items = getattr(self.matrix, "items", self.items)
+        self.Warning.many_clusters.clear()
         if not items:
             self.Outputs.selected_data.send(None)
             self.Outputs.annotated_data.send(None)
@@ -778,6 +782,8 @@ class OWHierarchicalClustering(widget.OWWidget):
 
         maps = [indices[node.value.first:node.value.last]
                 for node in selection]
+        if len(maps) > 20:
+            self.Warning.many_clusters()
 
         selected_indices = list(chain(*maps))
 
