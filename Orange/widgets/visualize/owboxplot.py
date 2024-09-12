@@ -972,9 +972,10 @@ class OWBoxPlot(widget.OWWidget):
         if self.stat_test:
             label = QGraphicsSimpleTextItem(self.stat_test)
             brect = self.box_scene.sceneRect()
-            label.setPos(brect.center().x() - label.boundingRect().width() / 2,
-                         8 + self._axis_font.pixelSize() * 3.6)
+            label.setPos(brect.x(),
+                         32 + self._axis_font.pixelSize() * 3.6)
             label.setFlag(QGraphicsItem.ItemIgnoresTransformations)
+            label.setFont(self._axis_font)
             self.box_scene.addItem(label)
 
     def draw_axis_disc(self):
