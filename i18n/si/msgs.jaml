@@ -6205,7 +6205,7 @@ widgets/data/owfeaturestatistics.py:
     __main__: false
     iris: false
 widgets/data/owfile.py:
-    Automatically detect type: Samodejno zaznaj vrsto datoteke
+    Determine type from the file extension: Določi vrsto iz končnice datoteke
     def `add_origin`:
         type: false
         origin: false
@@ -6240,8 +6240,10 @@ widgets/data/owfile.py:
         class `Error`:
             File not found.: Datoteka ni najdena.
             Missing reader.: Bralnik za ta tip ne obstaja.
+            Select file type.: Izberite vrsto datoteke.
             Error listing available sheets.: Napaka ob ustvarjanju seznama listov.
             Read error:\n{}: Napaka ob branju:\n{}
+            Read error, possibly due to incorrect choice of file type:\n{}: Napaka ob branju, morda zaradi napačne izbire vrste datoteke:\n{}
         'Use CSV File Import widget for advanced options ': 'Uporabi Bralnik CSV za napredne možnosti '
         for comma-separated files: za datoteke ločene z vejico
         use-csv-file-import: falxe
@@ -6276,10 +6278,11 @@ widgets/data/owfile.py:
             File: Datoteka
             Cannot find the directory with documentation datasets: Ne najdem mape s podatki iz dokumentacije
             ~/: false
+            *: false
         def `load_data`:
             No data.: Ni podatkov.
         def `_get_reader`:
-            Can not find reader "{qname}": Bralnik "{qname}" ne obstaja.
+            Can not find reader "{qname}": Ne najdem bralnika "{qname}"
         def `_describe`:
             attributes: false
             Name: Ime
