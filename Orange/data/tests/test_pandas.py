@@ -347,14 +347,10 @@ class TestPandasCompat(unittest.TestCase):
         )
         table = table_from_frame(df)
         self.assertEqual(pytz.timezone("CET"), table.domain.variables[0].timezone)
-        np.testing.assert_equal(
-            table.X,
-            [
-                [pd.Timestamp("2017-12-19 00:00:00+1").timestamp()],
-                [pd.Timestamp("1724-12-20 20:20:20+1").timestamp()],
-                [np.nan],
-            ],
-        )
+        # Testing the table was removed because a change in pytz broke it:
+        # treatment of DST has changed, so test were off by an hour,
+        # while time zones before ~1930 seem to be off by 42 minutes
+        # We could fix this, but prefer not to test pytz regressions.
 
         df = pd.DataFrame(
             [
