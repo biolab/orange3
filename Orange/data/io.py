@@ -596,10 +596,11 @@ class HDF5Reader(FileFormat):
             f.attrs['Orange_version'] = ORANGE_VERSION
             f.attrs['HDF5_Version'] = h5py.version.hdf5_version
             f.attrs['h5py_version'] = h5py.version.version
+            str_dtype = h5py.string_dtype()
             for subdomain in ['attributes', 'class_vars', 'metas']:
                 parsed = [parse(feature) for feature in getattr(data.domain, subdomain)]
-                domain = np.array([[name, header] for name, header, _ in parsed], 'S')
-                domain_args = np.array([json.dumps(args) for *_, args in parsed], 'S')
+                domain = np.array([[name, header] for name, header, _ in parsed], dtype=str_dtype)
+                domain_args = np.array([json.dumps(args) for *_, args in parsed], dtype=str_dtype)
                 f.create_dataset(f'domain/{subdomain}', data=domain)
                 f.create_dataset(f'domain/{subdomain}_args', data=domain_args)
             f.create_dataset("X", data=data.X)
@@ -607,7 +608,7 @@ class HDF5Reader(FileFormat):
                 f.create_dataset("Y", data=data.Y)
             if data.metas.size:
                 for i, attr in enumerate(data.domain.metas):
-                    col_type = h5py.string_dtype() if isinstance(attr, StringVariable) else 'f'
+                    col_type = str_dtype if isinstance(attr, StringVariable) else 'f'
                     col_data = data.metas[:, [i]].astype(col_type)
                     if col_type != 'f':
                         col_data[pd.isnull(col_data)] = ""
