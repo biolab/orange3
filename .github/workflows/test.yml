@@ -158,6 +158,15 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install --upgrade tox
 
+      - name: Install pymssql on macOS
+        if: matrix.os == 'macos-latest' && matrix.python-version >= '3.11'
+        run: |
+          brew install FreeTDS
+          export CFLAGS="-I$(brew --prefix openssl)/include  -I$(brew --prefix freetds)/include"
+          export LDFLAGS="-L$(brew --prefix openssl)/lib  -L$(brew --prefix freetds)/lib"
+          export CPPFLAGS="-I$(brew --prefix openssl)/include -I$(brew --prefix freetds)/include"
+          pip install --pre --no-binary :all: pymssql --force
+
       - name: Test with Tox
         run: |
           tox -e ${{ matrix.tox_env }}
