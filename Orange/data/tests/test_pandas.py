@@ -19,6 +19,11 @@ else:
     pytz = None
 
 class TestPandasCompat(unittest.TestCase):
+    def test_patch_for_to_dense(self):
+        if pd.__version__ >= "3" and "dev" not in pd.__version__:
+            self.fail("Try removing the patch for to_dense in pandas_compat.\n"
+                      "If successful, remove this test.")
+
     def test_table_from_frame(self):
         nan = np.nan
         df = pd.DataFrame([['a', 1, pd.Timestamp('2017-12-19')],
