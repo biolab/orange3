@@ -125,10 +125,10 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         self.assertTrue(self.widget.Warning.class_weights_used.is_shown())
 
     def test_no_penalty(self):
-        self.widget.set_penalty("none")
+        self.widget.set_penalty(None)
         self.click_apply()
         lr = self.get_output(self.widget.Outputs.learner)
-        self.assertEqual(lr.penalty, "none")
+        self.assertEqual(lr.penalty, None)
         self.assertEqual(lr.C, 1.0)
         self.assertEqual(self.widget.c_label.text(), "N/A")
         self.assertFalse(self.widget.c_slider.isEnabledTo(self.widget))

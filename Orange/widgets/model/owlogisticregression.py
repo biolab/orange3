@@ -49,7 +49,7 @@ class OWLogisticRegression(OWBaseLearner):
     max_iter = 10000
 
     penalty_types = ("Lasso (L1)", "Ridge (L2)", "None")
-    penalty_types_short = ["l1", "l2", "none"]
+    penalty_types_short = ["l1", "l2", None]
 
     class Warning(OWBaseLearner.Warning):
         class_weights_used = Msg("Weighting by class may decrease performance.")
@@ -86,7 +86,7 @@ class OWLogisticRegression(OWBaseLearner):
     def set_c(self):
         self.strength_C = self.C_s[self.C_index]
         penalty = self.penalty_types_short[self.penalty_type]
-        enable_c = penalty != "none"
+        enable_c = penalty is not None
         self.c_box.setEnabled(enable_c)
         if enable_c:
             fmt = "C={}" if self.strength_C >= 1 else "C={:.3f}"
@@ -110,7 +110,7 @@ class OWLogisticRegression(OWBaseLearner):
             self.Warning.class_weights_used()
         else:
             class_weight = None
-        if penalty == "none":
+        if penalty is None:
             C = 1.0
         else:
             C = self.strength_C
