@@ -1,8 +1,8 @@
-from collections import namedtuple
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import partial
-from typing import Any, Dict, List, Optional, Set
+from typing import \
+    Any, Dict, List, Optional, Set, Union, NamedTuple, Callable, Type
 
 import pandas as pd
 from numpy import nan
@@ -44,7 +44,14 @@ from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.widget import OWWidget
 
-Aggregation = namedtuple("Aggregation", ["function", "types"])
+
+class Aggregation(NamedTuple):
+    function: Union[str, Callable]
+    types: Set[Type[Variable]]
+    # Gives the type of the result,
+    # or True to copy the original variable,
+    # or False to create a new variable of the same type as the input
+    result_type: Union[Type[Variable], bool]
 
 
 def concatenate(x):
@@ -90,43 +97,88 @@ def span(s):
 
 
 AGGREGATIONS = {
-    "Mean": Aggregation("mean", {ContinuousVariable, TimeVariable}),
-    "Median": Aggregation("median", {ContinuousVariable, TimeVariable}),
-    "Q1": Aggregation(lambda s: s.quantile(0.25), {ContinuousVariable, TimeVariable}),
-    "Q3": Aggregation(lambda s: s.quantile(0.75), {ContinuousVariable, TimeVariable}),
-    "Min. value": Aggregation("min", {ContinuousVariable, TimeVariable}),
-    "Max. value": Aggregation("max", {ContinuousVariable, TimeVariable}),
+    "Mean": Aggregation(
+        "mean",
+        {ContinuousVariable, TimeVariable},
+        False),
+    "Median": Aggregation(
+        "median",
+        {ContinuousVariable, TimeVariable},
+        True),
+    "Q1": Aggregation(
+        lambda s: s.quantile(0.25),
+        {ContinuousVariable, TimeVariable},
+        True),
+    "Q3": Aggregation(
+        lambda s: s.quantile(0.75),
+        {ContinuousVariable, TimeVariable},
+        True),
+    "Min. value": Aggregation(
+        "min",
+        {ContinuousVariable, TimeVariable},
+        True),
+    "Max. value": Aggregation(
+        "max",
+        {ContinuousVariable, TimeVariable},
+        True),
     "Mode": Aggregation(
         lambda x: pd.Series.mode(x).get(0, nan),
-        {ContinuousVariable, DiscreteVariable, TimeVariable}
+        {ContinuousVariable, DiscreteVariable, TimeVariable},
+        True
     ),
-    "Standard deviation": Aggregation(std, {ContinuousVariable, TimeVariable}),
-    "Variance": Aggregation(var, {ContinuousVariable, TimeVariable}),
-    "Sum": Aggregation("sum", {ContinuousVariable}),
+    "Standard deviation": Aggregation(
+        std,
+        {ContinuousVariable, TimeVariable},
+        ContinuousVariable
+    ),
+    "Variance": Aggregation(
+        var,
+        {ContinuousVariable, TimeVariable},
+        ContinuousVariable
+    ),
+    "Sum": Aggregation(
+        "sum",
+        {ContinuousVariable},
+        True),
     "Concatenate": Aggregation(
         concatenate,
         {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+        StringVariable
     ),
-    "Span": Aggregation(span, {ContinuousVariable, TimeVariable}),
+    "Span": Aggregation(
+        span,
+        {ContinuousVariable, TimeVariable},
+        ContinuousVariable
+    ),
     "First value": Aggregation(
-        "first", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
+        "first",
+        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+        True
     ),
     "Last value": Aggregation(
-        "last", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
+        "last",
+        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+        True
     ),
     "Random value": Aggregation(
         lambda x: x.sample(1, random_state=0),
         {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+        True
     ),
     "Count defined": Aggregation(
-        "count", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
+        "count",
+        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+        ContinuousVariable
     ),
     "Count": Aggregation(
-        "size", {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable}
+        "size",
+        {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+        ContinuousVariable
     ),
     "Proportion defined": Aggregation(
         lambda x: x.count() / x.size,
         {ContinuousVariable, DiscreteVariable, StringVariable, TimeVariable},
+        ContinuousVariable
     ),
 }
 # list of ordered aggregation names is required on several locations so we
@@ -166,7 +218,7 @@ def _run(
 
     aggregations = {
         var: [
-            (agg, AGGREGATIONS[agg].function)
+            (agg, AGGREGATIONS[agg].function, AGGREGATIONS[agg].result_type)
             for agg in sorted(aggs, key=AGGREGATIONS_ORD.index)
         ]
         for var, aggs in aggregations.items()
