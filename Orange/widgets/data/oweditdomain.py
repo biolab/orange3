@@ -30,7 +30,7 @@ from AnyQt.QtWidgets import (
 )
 from AnyQt.QtGui import (
     QStandardItemModel, QStandardItem, QKeySequence, QIcon, QBrush, QPalette,
-    QHelpEvent
+    QHelpEvent, QColor
 )
 from AnyQt.QtCore import (
     Qt, QSize, QModelIndex, QAbstractItemModel, QPersistentModelIndex, QRect,
@@ -38,6 +38,7 @@ from AnyQt.QtCore import (
 )
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
+from orangecanvas.gui.utils import luminance
 from orangecanvas.utils import assocf
 from orangewidget.utils.listview import ListViewSearch
 
@@ -1577,6 +1578,12 @@ def variable_icon(var):
 #: (`List[Union[ReinterpretTransform, Transform]]`)
 TransformRole = Qt.UserRole + 42
 
+#: Any warnings applying to the transform (`list[tuple[Msg, str]]`)
+RestoreWarningRole = TransformRole + 1
+
+#: Hint key that was used to load stored settings.
+RestoreHintKey = RestoreWarningRole + 1
+
 
 class VariableEditDelegate(QStyledItemDelegate):
     ReinterpretNames = {
@@ -1624,9 +1631,24 @@ class VariableEditDelegate(QStyledItemDelegate):
             option.font.setItalic(True)
 
         multiplicity = index.data(MultiplicityRole)
+        warnings_ = index.data(RestoreWarningRole)
+
+        def set_color(palette: QPalette, color):
+            palette.setBrush(QPalette.Text, QBrush(color))
+            palette.setBrush(QPalette.HighlightedText, QBrush(color))
+
         if isinstance(multiplicity, int) and multiplicity > 1:
-            option.palette.setBrush(QPalette.Text, QBrush(Qt.red))
-            option.palette.setBrush(QPalette.HighlightedText, QBrush(Qt.red))
+            set_color(option.palette, Qt.red)
+        elif warnings_:
+            set_color(option.palette, self.warning_text_color(option.palette))
+
+    @staticmethod
+    def warning_text_color(palette: QPalette):
+        background = palette.color(QPalette.ColorRole.Base)
+        if luminance(background) > 0.5:
+            return QColor(255, 148, 11)
+        else:
+            return QColor(Qt.GlobalColor.yellow)
 
     def helpEvent(self, event: QHelpEvent, view: QAbstractItemView,
                   option: QStyleOptionViewItem, index: QModelIndex) -> bool:
@@ -2123,16 +2145,18 @@ class OWEditDomain(widget.OWWidget):
         modified = []
         for ind in self.selected_var_indices():
             midx = model.index(ind)
-            if midx.data(TransformRole):
-                model.setData(midx, [], TransformRole)
-                var = midx.data(Qt.EditRole)
-                self._store_transform(var, [])
-                modified.append(var)
+            model.setData(midx, [], TransformRole)
+            model.setData(midx, None, RestoreWarningRole)
+            key = model.data(midx, RestoreHintKey)
+            var = midx.data(Qt.EditRole)
+            self._domain_change_hints.pop(key, None)
+            modified.append(var)
         if modified:
             with disconnected(editor.variable_changed,
                               self._on_variable_changed):
                 self._editor.set_data(modified)
             self._invalidate()
+        self._update_restore_warnings()
 
     def reset_all(self):
         """Reset all variables to their original state."""
@@ -2141,8 +2165,12 @@ class OWEditDomain(widget.OWWidget):
             for i in range(model.rowCount()):
                 midx = model.index(i)
                 model.setData(midx, [], TransformRole)
+                model.setData(midx, None, RestoreWarningRole)
+                key = model.data(midx, RestoreHintKey)
+                self._domain_change_hints.pop(key, None)
             self.open_editor()
             self._invalidate()
+            self._update_restore_warnings()
 
     def selected_var_indices(self):
         """Return the current selected variable indices."""
@@ -2199,7 +2227,6 @@ class OWEditDomain(widget.OWWidget):
         model = self.variables_model
         hints = self._domain_change_hints
         first_key = None
-        msgs = []
         for i in range(model.rowCount()):
             midx = model.index(i, 0)
             coldesc = model.data(midx, Qt.EditRole)  # type: DataVector
@@ -2208,9 +2235,10 @@ class OWEditDomain(widget.OWWidget):
                 key, tr = res
                 if tr:
                     self._store_transform(coldesc.vtype, tr, key)
-                    tr, msgs_ = self._sanitize_transform(coldesc.vtype, tr)
+                    tr, msgs = self._sanitize_transform(coldesc.vtype, tr)
                     model.setData(midx, tr, TransformRole)
-                    msgs.extend(msgs_)
+                    model.setData(midx, msgs, RestoreWarningRole)
+                    model.setData(midx, key, RestoreHintKey)
                     if first_key is None:
                         first_key = key
         # Reduce the number of hints to MAX_HINTS, but keep all current hints
@@ -2219,9 +2247,7 @@ class OWEditDomain(widget.OWWidget):
                 (key := next(iter(hints))) != first_key:
             del hints[key]  # pylint: disable=unsupported-delete-operation
 
-        # Show warnings for non-applicable transforms
-        for msg, names in groupby(msgs, key=itemgetter(0)):
-            msg(", ".join(map(itemgetter(1), names)))
+        self._update_restore_warnings()
 
         # Restore the current variable selection
         selected_rows = [i for i, vec in enumerate(model)
@@ -2229,6 +2255,19 @@ class OWEditDomain(widget.OWWidget):
         if not selected_rows and model.rowCount():
             selected_rows = [0]
         itemmodels.select_rows(self.variables_view, selected_rows)
+
+    def _update_restore_warnings(self):
+        def messages(midx):
+            msgs = model.data(midx, RestoreWarningRole)
+            return msgs or []
+        model = self.variables_model
+        msgs = chain.from_iterable(
+            messages(model.index(i)) for i in range(model.rowCount())
+        )
+        self.Warning.cat_mapping_does_not_apply.clear()
+        # Show warnings for non-applicable transforms
+        for msg, names in groupby(sorted(msgs), key=itemgetter(0)):
+            msg(", ".join(map(itemgetter(1), names)))
 
     def _on_selection_changed(self, _, deselected):
         # If the user deselected the last item, select it back with disabled
@@ -2278,19 +2317,22 @@ class OWEditDomain(widget.OWWidget):
                                             *editor.get_data()):
             midx = model.index(idx, 0)
             model.setData(midx, transform, TransformRole)
+            model.setData(midx, None, RestoreWarningRole)
             self._store_transform(var, transform)
         self._invalidate()
+        self._update_restore_warnings()
 
     def _store_transform(
-            self, var: Variable, transform: Iterable[Transform], deconvar=None
+            self, var: Variable, transform: Sequence[Transform] | None, deconvar=None
     ) -> None:
         deconvar = deconvar or deconstruct(var)
         # Remove the existing key (if any) to put the new one at the end,
         # to make sure it comes after the sentinel
         self._domain_change_hints.pop(deconvar, None)
         # pylint: disable=unsupported-assignment-operation
-        self._domain_change_hints[deconvar] = \
-            [deconstruct(t) for t in transform]
+        if transform:
+            self._domain_change_hints[deconvar] = \
+                [deconstruct(t) for t in transform]
 
     def _find_stored_transform(
             self, var: Variable
