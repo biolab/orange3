@@ -210,7 +210,7 @@ def _convert_datetime(series, var):
     def col_type(dt):
         """Test if is date, time or datetime"""
         dt_nonnat = dt[~pd.isnull(dt)]  # nat == nat is False
-        if (dt_nonnat.dt.floor("d") == dt_nonnat).all():
+        if (dt_nonnat.dt.floor("D") == dt_nonnat).all():
             # all times are 00:00:00.0 - pure date
             return 1, 0
         elif (dt_nonnat.dt.date == pd.Timestamp("now").date()).all():
