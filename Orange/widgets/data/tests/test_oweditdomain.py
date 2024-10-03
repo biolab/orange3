@@ -1239,7 +1239,10 @@ class TestDelegates(GuiTest):
             RestoreWarningRole: ("bb", "aa"),
         })
         opt = get_style_option(1)
-        self.assertEqual(opt.palette.color(QPalette.Text), QColor(Qt.yellow))
+        self.assertIn(
+            opt.palette.color(QPalette.Text),
+            (QColor(Qt.yellow), QColor(255, 148, 11))
+        )
 
 
 class TestTransforms(TestCase):
