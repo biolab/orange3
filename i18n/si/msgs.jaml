@@ -1201,6 +1201,7 @@ data/io_util.py:
 data/pandas_compat.py:
     table_from_frame: false
     table_to_frame: false
+    3: false
     class `OrangeDataFrame`:
         orange_variables: false
         orange_weights: false
@@ -1211,9 +1212,6 @@ data/pandas_compat.py:
             _o: false
             csc: false
             copy: false
-        def `__patch_constructor`:
-            def `new_method`:
-                pandas.DataFrame: false
         def `__finalize__`:
             concat: false
             merge: false
@@ -1225,7 +1223,7 @@ data/pandas_compat.py:
         _o: false
     def `_convert_datetime`:
         def `col_type`:
-            d: false
+            D: false
             now: false
         UTC: false
         now: false
@@ -5646,7 +5644,7 @@ widgets/data/oweditdomain.py:
             Apply: Potrdi
             button-apply: false
             Apply changes and commit data on output.: Potrdi spremembe in pošlji podatke na izhod.
-        def `_restore`:
+        def `_update_restore_warnings`:
             ', ': false
         def `_set_modified`:
             button-apply: false
@@ -6187,9 +6185,6 @@ widgets/data/owfile.py:
             recent_urls: false
     __main__: false
 widgets/data/owgroupby.py:
-    Aggregation: false
-    function: false
-    types: false
     def `concatenate`:
         ' ': false
     def `var`:
@@ -9906,7 +9901,6 @@ widgets/model/owlogisticregression.py:
         None: Brez
         l1: false
         l2: false
-        none: false
         class `Warning`:
             Weighting by class may decrease performance.: Uteževanje glede na razred lahko upočasni učenje.
         def `add_main_layout`:
@@ -9921,13 +9915,11 @@ widgets/model/owlogisticregression.py:
             Balance class distribution: Uravnoteži razrede
             Weigh classes inversely proportional to their frequencies.: Uteži razrede obratno sorazmerno njihovi pogostosti
         def `set_c`:
-            none: false
             C={}: true
             C={:.3f}: true
             N/A: NN
         def `create_learner`:
             balanced: false
-            none: false
         def `get_learner_parameters`:
             Regularization: Regularizacija
             '{}, C={}, class weights: {}': {}, C={}, uteži razredov: {}
@@ -10023,7 +10015,7 @@ widgets/model/owpls.py:
             Data with Scores: Podatki z rezultati
             Components: Komponente
         class `Warning`:
-            'Sparse input data: default preprocessing is to scale it.': 'Redki vhodni podatki: privzeta predobdelava je skaliranje.'
+            'Sparse input data: default preprocessing is to scale it.': Redki vhodni podatki: privzeta predobdelava je skaliranje.
         def `add_main_layout`:
             Optimization Parameters: Optimizacijski parametri
             n_components: false
@@ -10034,7 +10026,7 @@ widgets/model/owpls.py:
             Scale features and target: Skaliraj spremenljivke in ciljno spremenljivko
         def `_create_output_coeffs_loadings`:
             coef ({v.name}): koef ({v.name})
-            coef/X_sd ({v.name}): koef/X_sd ({v.name})
+            coef * X_sd ({v.name}): koef × X_sd ({v.name})
             w*c {i + 1}: true
             Variable name: Ime spremenljivke
             Variable role: Vloga spremenljivke
@@ -12413,6 +12405,9 @@ widgets/utils/itemmodels.py:
     TableModel: false
     ModelActionsWidget: false
     ListSingleSelectionModel: false
+    select_row: false
+    select_rows: false
+    signal_blocking: false
     def `_as_contiguous_range`:
         Non-contiguous range.: false
     class `AbstractSortTableModel`:
