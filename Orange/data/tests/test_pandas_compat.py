@@ -56,6 +56,24 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(names, ['0', '1', '2'])
         self.assertEqual(types, [DiscreteVariable, ContinuousVariable, TimeVariable])
 
+        # Specify (some) variables
+        dvar = DiscreteVariable('x', values=tuple("dacb"))
+        cvar = ContinuousVariable('y')
+        table = table_from_frame(df, variables=[dvar, cvar, None])
+        self.assertIs(table.domain[0], dvar)
+        self.assertIs(table.domain[1], cvar)
+        self.assertIsInstance(table.domain[2], TimeVariable)
+
+        table = table_from_frame(df,
+                                 variables=[None, None, None],
+                                 force_nominal=True)
+        self.assertIsInstance(table.domain[0], DiscreteVariable)
+        self.assertIsInstance(table.domain[1], ContinuousVariable)
+        self.assertIsInstance(table.domain[2], TimeVariable)
+
+        self.assertRaises(AssertionError,
+                          table_from_frame, df, variables=[None, None])
+
         # Include index
         df.index = list('abaa')
         table = table_from_frame(df)
@@ -71,13 +89,6 @@ class TestPandasCompat(unittest.TestCase):
         types = [type(var) for var in table.domain.attributes]
         self.assertEqual(names, ['index', '1', '2'])
         self.assertEqual(types, [DiscreteVariable, ContinuousVariable, TimeVariable])
-
-        dvar = DiscreteVariable('x', values=tuple("dacb"))
-        cvar = ContinuousVariable('y')
-        table = table_from_frame(df, variables=[dvar, cvar, None])
-        self.assertIs(table.domain[0], dvar)
-        self.assertIs(table.domain[1], cvar)
-        self.assertIsInstance(table.domain[3], TimeVariable)
 
     def test_table_from_frame_keep_ids(self):
         """ Test if indices are correctly transferred to Table"""
