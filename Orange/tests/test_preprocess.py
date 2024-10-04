@@ -80,7 +80,7 @@ class TestRemoveNaNColumns(unittest.TestCase):
     def test_column_filtering(self):
         data = Table("iris")
         with data.unlocked():
-            data.X[:, (1, 3)] = np.NaN
+            data.X[:, (1, 3)] = np.nan
 
         new_data = RemoveNaNColumns()(data)
         self.assertEqual(len(new_data.domain.attributes),
@@ -88,7 +88,7 @@ class TestRemoveNaNColumns(unittest.TestCase):
 
         data = Table("iris")
         with data.unlocked():
-            data.X[0, 0] = np.NaN
+            data.X[0, 0] = np.nan
         new_data = RemoveNaNColumns()(data)
         self.assertEqual(len(new_data.domain.attributes),
                          len(data.domain.attributes))

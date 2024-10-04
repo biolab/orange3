@@ -1062,7 +1062,7 @@ class OWNomogram(OWWidget):
         names = list(chain.from_iterable(
             [_get_labels(a, lr and lr[i] and lr[i][0] and lr[i][cls_index],
                          OWNomogram.get_ruler_values(p.min(), p.max(),
-                                                     scale * p.ptp(), False))
+                                                     scale * np.ptp(p), False))
              for i, a, p in zip(attr_inds, attributes, points)]))
         points = list(chain.from_iterable(points))
 
@@ -1107,7 +1107,7 @@ class OWNomogram(OWWidget):
                 name_item, attr, self.log_reg_cont_data_extremes[i][cls_index],
                 self.get_ruler_values(
                     point.min(), point.max(),
-                    scale_x * point.ptp(), False),
+                    scale_x * np.ptp(point), False),
                 scale_x, name_offset, - scale_x * min_p)
             for i, attr, name_item, point in
             zip(attr_inds, attributes, name_items, points)]
@@ -1151,7 +1151,7 @@ class OWNomogram(OWWidget):
             def key(x):
                 i, attr = x
                 if attr.is_discrete:
-                    ptp = self.points[i][class_value].ptp()
+                    ptp = np.ptp(self.points[i][class_value])
                 else:
                     coef = np.abs(self.log_reg_coeffs_orig[i][class_value]).mean()
                     ptp = coef * np.ptp(self.log_reg_cont_data_extremes[i][class_value])
