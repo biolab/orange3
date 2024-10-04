@@ -72,6 +72,13 @@ class TestPandasCompat(unittest.TestCase):
         self.assertEqual(names, ['index', '1', '2'])
         self.assertEqual(types, [DiscreteVariable, ContinuousVariable, TimeVariable])
 
+        dvar = DiscreteVariable('x', values=tuple("dacb"))
+        cvar = ContinuousVariable('y')
+        table = table_from_frame(df, variables=[dvar, cvar, None])
+        self.assertIs(table.domain[0], dvar)
+        self.assertIs(table.domain[1], cvar)
+        self.assertIsInstance(table.domain[3], TimeVariable)
+
     def test_table_from_frame_keep_ids(self):
         """ Test if indices are correctly transferred to Table"""
         df = OrangeDataFrame(Table('iris')[:6])
