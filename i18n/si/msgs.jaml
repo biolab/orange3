@@ -7009,8 +7009,8 @@ widgets/data/owpreprocess.py:
             k: false
             p: false
         def `__repr__`:
-            select {self.__k} {pl(self.__k,'feature')}: izbor {self.__k} {plsi(self.__k,'primer')}
-            select {self.__p} % features: izbor {self.__p} % primerov
+            select {num} {pl(num,'feature')}: izbor {num} {plsi(num,'primer')}
+            select {perc} % features: izbor {perc} % primerov
     class `Scale`:
         Standardize to μ=0, σ²=1: Standardiziraj (μ=0, σ²=1)
         Center to μ=0: Centriraj (μ=0)
