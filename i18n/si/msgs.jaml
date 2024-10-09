@@ -2194,7 +2194,7 @@ evaluation/testing.py:
         def `fit`:
             Validation.fit is deprecated; use the call operator: false
         def `_collect_part_results`:
-            Multiple targets are not supported.: Večrazredni problemi niso podprti.
+            Multiple targets are not supported.: Ocenjevanje modelov z več razredi ni podprto.
     class `CrossValidation`:
         def `get_indices`:
             Using non-stratified sampling.: false
@@ -2600,8 +2600,8 @@ preprocess/discretize.py:
         month: mesec
         %Y: false
         year: leto
-        {step // 7} week{'s' * (step > 7)}: {step // 7} {plsi(step // 7, "teden|tedna|tedni|tednov")}
-        {step} {unit}{'s' * (step > 1)}: {step} {plsi(step, dict(dan="dan|dneva|dnevi|dni", teden="teden|tedna|tedni|tednov", mesec="mesec|meseca|meseci|mesecev", leto="leto|leti|leta|let").get(unit, unit))}
+        {step // 7} week{'s' * (step > 7)}: {step // 7} {plsi(step // 7, 'teden|tedna|tedni|tednov')}
+        {step} {unit}{'s' * (step > 1)}: {step} {plsi(step, dict(dan='dan|dneva|dnevi|dni', teden='teden|tedna|tedni|tednov', mesec='mesec|meseca|meseci|mesecev', leto='leto|leti|leta|let').get(unit, unit))}
     def `_simplified_labels`:
         42: false
         ' ': false
@@ -3167,17 +3167,17 @@ regression/pls.py:
         def `project`:
             PLSModel can only project tables: false
         def `components`:
-            components: false
-            Component {i + 1}: false
+            components: komponente
+            Component {i + 1}: Komponenta {i + 1}
         def `coefficients_table`:
-            coef {i}: false
-            name: false
-            coefficients: false
+            coef {i}: koef {i}
+            name: ime
+            coefficients: koeficienti
         def `residuals_normal_probability`:
-            {name} ({var.name}): false
-            Sample Quantiles: Vzorčni kvantili:
-            Theoretical Quantiles: Teoretični kvantili:
-            residuals normal probability: verjetnosti residualov
+            {name} ({var.name}): true
+            Sample Quantiles: Vzorčni kvantili
+            Theoretical Quantiles: Teoretični kvantili
+            residuals normal probability: verjetnost normalnih residualov
         def `dmodx`:
             DModX: false
             DMod: false
@@ -3185,11 +3185,11 @@ regression/pls.py:
         def `fit`:
             n_components: false
         def `incompatibility_reason`:
-            Numeric targets expected.: false
-            Only numeric target variables expected.: false
+            Numeric targets expected.: Metoda zahteva številčne ciljne spremenljivke.
+            Only numeric target variables expected.: Metoda deluje le za številčne ciljne spremenljivke.
     __main__: false
     housing: false
-    'learner: {learner}\nRMSE: {ca}\n': true
+    'learner: {learner}\nRMSE: {ca}\n': false
 regression/random_forest.py:
     RandomForestRegressionLearner: false
     class `RandomForestRegressor`:
@@ -4264,7 +4264,7 @@ widgets/data/owaggregatecolumns.py:
         class `Outputs`:
             Data: Podatki
         class `Warning`:
-            Some input features are categorical:\n{}: Nekatere vhodne spremenljivke so kategorične:\{}
+            Some input features are categorical:\n{}: Nekatere vhodne spremenljivke so kategorične:\n{}
             Some input features are missing:\n{}: Nekatere vhodne spremenljivke manjkajo:\n{}
         Sum: Vsota
         Product: Produkt
@@ -5646,7 +5646,7 @@ widgets/data/oweditdomain.py:
             Apply: Potrdi
             button-apply: false
             Apply changes and commit data on output.: Potrdi spremembe in pošlji podatke na izhod.
-        def `_restore`:
+        def `_update_restore_warnings`:
             ', ': false
         def `_set_modified`:
             button-apply: false
@@ -7009,8 +7009,8 @@ widgets/data/owpreprocess.py:
             k: false
             p: false
         def `__repr__`:
-            select {self.__k} {pl(self.__k,'feature')}: izbor {self.__k} {plsi(self.__k,'primer')}
-            select {self.__p} % features: izbor {self.__p} % primerov
+            select {num} {pl(num,'feature')}: izbor {num} {plsi(num,'primer')}
+            select {perc} % features: izbor {perc} % primerov
     class `Scale`:
         Standardize to μ=0, σ²=1: Standardiziraj (μ=0, σ²=1)
         Center to μ=0: Centriraj (μ=0)
@@ -8208,15 +8208,15 @@ widgets/data/utils/tablesummary.py:
             sparse: redki
             tags: oznake
             ' ({tag}, density {dens:.2f} %)': ' ({tag}, gostota {dens:.2f} %)'
-        {ninst} {pl(ninst, 'instance')}: {ninst} {plsi(ninst, "primer")}
-        ~{ninst} {pl(ninst, 'instance')}: ~{ninst} {plsi(ninst, "primer")}
+        {ninst} {pl(ninst, 'instance')}: {ninst} {plsi(ninst, 'primer')}
+        ~{ninst} {pl(ninst, 'instance')}: ~{ninst} {plsi(ninst, 'primer')}
         ' (no missing data)': ' (ni manjkajočih podatkov)'
         {nattrs} {pl(nattrs, 'feature')}: {nattrs} {plsi(nattrs, 'spremenljivka')}
         No target variable.: Ni ciljne spremenljivke.
         {nclasses} {pl(nclasses, 'outcome')}: {nclasses} {plsi(nclasses, 'ciljna spremenljivka|ciljni spremenljivki|ciljne spremenljivke|ciljnih spremenljivk')}
         Numeric outcome: Številska ciljna spremenljivka
-        Target with {nvalues} {pl(nvalues, 'value')}: Ciljna spremenljivka {plsi_sz(nvalues)} {z_besedo(nvalues, 6, "m")} {plsi(nvalues, "razredom|razredoma|razredi")}
-        {nmetas} {pl(nmetas, 'meta attribute')}: {nmetas} meta {plsi(nmetas, "spremenljivka")}
+        Target with {nvalues} {pl(nvalues, 'value')}: Ciljna spremenljivka {plsi_sz(nvalues)} {z_besedo(nvalues, 6, 'm')} {plsi(nvalues, 'razredom|razredoma|razredi')}
+        {nmetas} {pl(nmetas, 'meta attribute')}: {nmetas} meta {plsi(nmetas, 'spremenljivka')}
         No meta attributes.: Ni meta spremenljivk.
 widgets/data/utils/tableview.py:
     class `DataTableView`:
@@ -8932,29 +8932,29 @@ widgets/evaluate/owpermutationplot.py:
             item: false
     class `PermutationPlot`:
         def `__init__`:
-            Correlation between original Y and permuted Y (%): Korelacija med izvirno Y in permutiranim Y (%)
+            Correlation between original Y and permuted Y (%): Korelacija med izvirnim Y in permutiranim Y (%)
             bottom: false
         def `set_data`:
             left: false
             AUC: true
-            '#000': false
-            '#333': false
+            '#000': true
+            '#333': true
             pen: false
             symbol: false
             o: false
             brush: false
-            '#6fa255': false
+            '#6fa255': true
             s: false
-            '#3a78b6': false
+            '#3a78b6': true
             size: false
             hoverable: false
             tip: false
-            'x: {x:.3g}\ny: {y:.3g}': false
-            Train: Testni
-            CV: Prečno preverjanje
+            'x: {x:.3g}\ny: {y:.3g}': true
+            Train: Učna
+            CV: Prečno
     class `OWPermutationPlot`:
-        Permutation Plot: Permutacijska krivulja
-        Permutation analysis plotting: Prikaz permutacijske analize
+        Permutation Plot: Permutacijski grafikon
+        Permutation analysis plotting: Grafični prikaz permutacijske analize
         icons/PermutationPlot.svg: false
         graph.plotItem: false
         class `Inputs`:
@@ -8988,7 +8988,25 @@ widgets/evaluate/owpermutationplot.py:
         <td style="padding: 2px 4px" align=right>{y_cv:.4f}</td>
     </tr>
 </table>
-            ': false
+            ': '
+<table width=100% align="center" style="font-size:11px">
+    <tr style="background:#fefefe">
+        <th style="background:transparent;padding: 2px 4px"></th>
+        <th style="background:transparent;padding: 2px 4px">Kor. = 0</th>
+        <th style="background:transparent;padding: 2px 4px">Kor. = 100</th>
+    </tr>
+    <tr style="background:#fefefe">
+        <th style="padding: 2px 4px" align=right>Učni</th>
+        <td style="padding: 2px 4px" align=right>{intercept_tr:.4f}</td>
+        <td style="padding: 2px 4px" align=right>{y_tr:.4f}</td>
+    </tr>
+    <tr style="background:#fefefe">
+        <th style="padding: 2px 4px" align=right>Prečno</th>
+        <td style="padding: 2px 4px" align=right>{intercept_cv:.4f}</td>
+        <td style="padding: 2px 4px" align=right>{y_cv:.4f}</td>
+    </tr>
+</table>
+            '
         def `send_report`:
             Settings: Nastavitve
             Permutations: Permutacije
@@ -9037,7 +9055,7 @@ widgets/evaluate/owpredictions.py:
         Classes in data and model: razrede iz tabele in modelov
         Don't show probabilities: Ne kaži verjetnosti
         Show probabilities for classes in the data: Pokaži verjetnosti razredov v tabeli
-        Show probabilities for classes known to the model,\n: Pokaži verjetnosti razredov, ki jih napovedujejo modeli,\m
+        Show probabilities for classes known to the model,\n: Pokaži verjetnosti razredov, ki jih napovedujejo modeli,\n
         including those that don't appear in this data: vključno s temi, ki jih v podatkih ni.
         Show probabilities for classes in data that are also\n: Pokaži verjetnosti razredov, ki se pojavijo v podatkih\n
         known to the model: in so znani tudi modelom.
@@ -9072,7 +9090,7 @@ widgets/evaluate/owpredictions.py:
         def `_get_details`:
             Data:<br>: Podatki:<br>
             <hr>: false
-            "Model: {n_predictors} {pl(n_predictors, 'model')}": Modeli: {n_predictors} {plsi(n_predictors, "model")}
+            "Model: {n_predictors} {pl(n_predictors, 'model')}": Modeli: {n_predictors} {plsi(n_predictors, 'model')}
             ' ({n_predictors - n_valid} failed)': ' ({n_predictors - n_valid} z napako)'
             <ul>: false
             <li>{name}</li>: false
@@ -9301,7 +9319,7 @@ widgets/evaluate/owtestandscore.py:
             Missing separate test data input.: Na vhodu ni testnih primerov.
             Some scores could not be computed.: Nekaterih mer ni bilo mogoče izračunati.
             'Test data is present but unused. ': 'Testni primeri so podani, a neuporabljeni. '
-            Select 'Test on test data' to use it.: Izberite "Testiraj na testnih primerih".
+            Select 'Test on test data' to use it.: Izberite 'Testiraj na testnih primerih'.
             "Can't run stratified {}-fold cross validation; ": 'Ne morem uporabiti {}-kratnega stratificiranega prečnega preverjanja; '
             the least common class has only {} instances.: najmanjši razred ima samo {} primerov.
         class `Information`:
@@ -9354,7 +9372,7 @@ widgets/evaluate/owtestandscore.py:
         def `update_stats_model`:
             {:.3f}: false
             {} (error): {} (napaka)
-            {name} failed with error:\n: {name} je javil napako\:n
+            {name} failed with error:\n: {name} je javil napako:\n
             '{exc.__class__.__name__}: {exc!s}': false
             \n: false
         def `_scores_by_folds`:
@@ -9487,7 +9505,7 @@ widgets/model/owadaboost.py:
     class `OWAdaBoost`:
         AdaBoost: true
         'An ensemble meta-algorithm that combines weak learners ': 'Skupinski algoritem učenja, ki združuje šibke algoritme '
-        "and adapts to the 'hardness' of each training sample. ": in prilagaja "težavnosti" učnih primerov.
+        "and adapts to the 'hardness' of each training sample. ": in prilagaja 'težavnosti' učnih primerov.
         icons/AdaBoost.svg: false
         Orange.widgets.classify.owadaboost.OWAdaBoostClassification: false
         Orange.widgets.regression.owadaboostregression.OWAdaBoostRegression: false
@@ -9648,7 +9666,7 @@ widgets/model/owcurvefit.py:
             Missing a fitting parameter.\n: Manjkajoč parameter.
             Use 'Feature Constructor' widget instead.: Uporabite gradnik Sestavi značilke.
             Unknown parameter '{}'.\n: Neznan parameter '{}'.\n
-            Declare the parameter in 'Parameters' box: Deklarirajte ga v škatli "Parametri"
+            Declare the parameter in 'Parameters' box: Deklarirajte ga v škatli 'Parametri'
             'Some parameters and features have the same ': 'Nekateri parametri in spremenljivke imajo '
             name '{}'.: enaka imena '{}'.
         Select Feature: Izberite spremenljivko
@@ -9906,7 +9924,6 @@ widgets/model/owlogisticregression.py:
         None: Brez
         l1: false
         l2: false
-        none: false
         class `Warning`:
             Weighting by class may decrease performance.: Uteževanje glede na razred lahko upočasni učenje.
         def `add_main_layout`:
@@ -9921,13 +9938,11 @@ widgets/model/owlogisticregression.py:
             Balance class distribution: Uravnoteži razrede
             Weigh classes inversely proportional to their frequencies.: Uteži razrede obratno sorazmerno njihovi pogostosti
         def `set_c`:
-            none: false
             C={}: true
             C={:.3f}: true
             N/A: NN
         def `create_learner`:
             balanced: false
-            none: false
         def `get_learner_parameters`:
             Regularization: Regularizacija
             '{}, C={}, class weights: {}': {}, C={}, uteži razredov: {}
@@ -10020,10 +10035,10 @@ widgets/model/owpls.py:
         partial least squares: partial least squares, pls, regresija
         class `Outputs`:
             Coefficients and Loadings: Koeficienti in uteži
-            Data with Scores: Podatki z rezultati
+            Data with Scores: Podatki z vrednostmi
             Components: Komponente
         class `Warning`:
-            'Sparse input data: default preprocessing is to scale it.': 'Redki vhodni podatki: privzeta predobdelava je skaliranje.'
+            'Sparse input data: default preprocessing is to scale it.': Redki vhodni podatki: privzeta predobdelava je skaliranje.
         def `add_main_layout`:
             Optimization Parameters: Optimizacijski parametri
             n_components: false
@@ -10034,8 +10049,8 @@ widgets/model/owpls.py:
             Scale features and target: Skaliraj spremenljivke in ciljno spremenljivko
         def `_create_output_coeffs_loadings`:
             coef ({v.name}): koef ({v.name})
-            coef/X_sd ({v.name}): koef/X_sd ({v.name})
-            w*c {i + 1}: true
+            coef * X_sd ({v.name}): false
+            w*c {i + 1}: false
             Variable name: Ime spremenljivke
             Variable role: Vloga spremenljivke
             Feature: Značilka
@@ -11261,7 +11276,7 @@ widgets/unsupervised/owlouvainclustering.py:
             graph: false
             partition: false
         def `__set_results`:
-            {num_clusters} {pl(num_clusters, 'cluster')} found.: {plsi(num_clusters, "Najdena|Najdeni|Najdene|Najdenih")} {z_besedo(num_clusters, 1, "f")} {plsi(num_clusters, "gruča")}.
+            {num_clusters} {pl(num_clusters, 'cluster')} found.: {plsi(num_clusters, 'Najdena|Najdeni|Najdene|Najdenih')} {z_besedo(num_clusters, 1, 'f')} {plsi(num_clusters, 'gruča')}.
         def `_send_data`:
             Cluster: Gruča
             C%d: G%d
@@ -11270,7 +11285,7 @@ widgets/unsupervised/owlouvainclustering.py:
         def `clear`:
             No data on input.: Ni podatkov na vhodu.
         def `send_report`:
-            , {self.pca_components} {pl(self.pca_components, 'component')}: , {self.pca_components} {plsi(self.pca_components, "komponenta")}
+            , {self.pca_components} {pl(self.pca_components, 'component')}: , {self.pca_components} {plsi(self.pca_components, 'komponenta')}
             Normalize data: Normiranje podatkov
             PCA preprocessing: Predprocesiranje s PCA
             Metric: Mera razdalje
@@ -12413,6 +12428,9 @@ widgets/utils/itemmodels.py:
     TableModel: false
     ModelActionsWidget: false
     ListSingleSelectionModel: false
+    select_row: false
+    select_rows: false
+    signal_blocking: false
     def `_as_contiguous_range`:
         Non-contiguous range.: false
     class `AbstractSortTableModel`:
@@ -14421,7 +14439,7 @@ widgets/visualize/owscatterplot.py:
         def `update_reg_line_label_colors`:
             label: false
         def `_update_curve`:
-            '#505050': false
+            '#505050': true
     class `OWScatterPlot`:
         Scatter Plot: Razsevni diagram
         'Interactive scatter plot visualization with ': Interaktivni prikaz podatkov z razsevnim diagramom.
@@ -14445,7 +14463,7 @@ widgets/visualize/owscatterplot.py:
             otherwise fit y as a function of x (minimize vertical distances): sicer pa minimizira samo razdaljo v smeri y.
             graph.show_ellipse: false
             Show confidence ellipse: Prikaz elipse zaupanja
-            Hotelling's T² confidence ellipse (α=95%): Hotellingova elipsa zaupanja T² (α=95%)
+            Hotelling's T² confidence ellipse (α=95%): Elipsa zaupanja po Hotellingu (α=95%)
         def `_add_controls_axis`:
             Axes: Osi
             attr_x: false

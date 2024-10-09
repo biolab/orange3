@@ -4,12 +4,14 @@ import os
 import sys
 import subprocess
 from setuptools import setup, find_packages, Command
+from setuptools.command.install import install
 
 from distutils.command import install_data, sdist
 from distutils.command.build_ext import build_ext
 from distutils.command import config, build
 from distutils.core import Extension
 
+from trubar import translate
 
 try:
     import numpy
@@ -473,9 +475,23 @@ def ext_modules():
     return modules
 
 
+class InstallMultilingualCommand(install):
+    def run(self):
+        super().run()
+        self.compile_to_multilingual()
+
+    def compile_to_multilingual(self):
+        package_dir = os.path.dirname(os.path.abspath(__file__))
+        translate(
+            "msgs.jaml",
+            source_dir=os.path.join(self.install_lib, "Orange"),
+            config_file=os.path.join(package_dir, "i18n", "trubar-config.yaml"))
+
+
 def setup_package():
     write_version_py()
     cmdclass = {
+        'install': InstallMultilingualCommand,
         'lint': LintCommand,
         'coverage': CoverageCommand,
         'config': config,

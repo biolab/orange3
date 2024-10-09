@@ -16,6 +16,8 @@ recursive-include distribute *.svg *.desktop
 
 include requirements*.txt
 
+recursive-include i18n *.jaml *.yaml
+
 include README.md
 include README.pypi
 include CONTRIBUTING.md
