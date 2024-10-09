@@ -5,7 +5,6 @@ from unittest import skipIf
 
 import numpy as np
 import pandas as pd
-import pytz
 from scipy.sparse import csr_matrix
 import scipy.sparse as sp
 
@@ -14,8 +13,17 @@ from Orange.data import ContinuousVariable, DiscreteVariable, TimeVariable, Tabl
 from Orange.data.pandas_compat import OrangeDataFrame, table_from_frame
 from Orange.data.tests.test_variable import TestTimeVariable
 
+if pd.__version__ < "2":
+    import pytz
+else:
+    pytz = None
 
 class TestPandasCompat(unittest.TestCase):
+    def test_patch_for_to_dense(self):
+        if pd.__version__ >= "3" and "dev" not in pd.__version__:
+            self.fail("Try removing the patch for to_dense in pandas_compat.\n"
+                      "If successful, remove this test.")
+
     def test_table_from_frame(self):
         nan = np.nan
         df = pd.DataFrame([['a', 1, pd.Timestamp('2017-12-19')],
@@ -307,7 +315,7 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        tz = pytz.utc if pd.__version__ < "2" else timezone.utc
+        tz = pytz.utc if pytz is not None else timezone.utc
         self.assertEqual(tz, table.domain.variables[0].timezone)
         np.testing.assert_equal(
             table.X,
@@ -326,7 +334,7 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        tz = pytz.FixedOffset(60) if pd.__version__ < "2" else \
+        tz = pytz.FixedOffset(60) if pytz is not None else \
             timezone(timedelta(seconds=3600))
         self.assertEqual(tz, table.domain.variables[0].timezone)
         np.testing.assert_equal(
@@ -345,12 +353,6 @@ class TestPandasCompat(unittest.TestCase):
                 [np.nan],
             ]
         )
-        table = table_from_frame(df)
-        self.assertEqual(pytz.timezone("CET"), table.domain.variables[0].timezone)
-        # Testing the table was removed because a change in pytz broke it:
-        # treatment of DST has changed, so test were off by an hour,
-        # while time zones before ~1930 seem to be off by 42 minutes
-        # We could fix this, but prefer not to test pytz regressions.
 
         df = pd.DataFrame(
             [
@@ -360,7 +362,7 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        tz = pytz.utc if pd.__version__ < "2" else timezone.utc
+        tz = pytz.utc if pytz is not None else timezone.utc
         self.assertEqual(tz, table.domain.variables[0].timezone)
         np.testing.assert_equal(
             table.X,

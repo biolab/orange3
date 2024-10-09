@@ -510,9 +510,10 @@ class TestUtils(unittest.TestCase):
         )
         df = owcsvimport.load_csv(io.BytesIO(contents), opts)
         self.assertEqual(df.shape, (3, 5))
+        resolution = "ns" if pd.__version__ < "3.0" else "s"
         self.assertSequenceEqual(
             list(df.dtypes),
-            [np.dtype("M8[ns]"), np.dtype(float), np.dtype(object),
+            [np.dtype(f"M8[{resolution}]"), np.dtype(float), np.dtype(object),
              "category", np.dtype(float)],
         )
         opts = owcsvimport.Options(

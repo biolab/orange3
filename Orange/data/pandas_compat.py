@@ -1,11 +1,12 @@
 """Pandas DataFrame↔Table conversion helpers"""
-from unittest.mock import patch
+from functools import partial
 
 import numpy as np
 from scipy import sparse as sp
 from scipy.sparse import csr_matrix
 import pandas as pd
 from pandas.core.arrays import SparseArray
+import pandas.core.arrays.sparse.accessor
 from pandas.api.types import (
     is_object_dtype,
     is_datetime64_any_dtype,
@@ -20,6 +21,19 @@ from Orange.data import (
 from Orange.data.table import Role
 
 __all__ = ['table_from_frame', 'table_to_frame']
+
+
+# Patch a bug in pandas SparseFrameAccessor.to_dense
+# As of pandas=3.0.0.dev0+1524.g23c497bb2f, to_dense ignores _constructor
+# and alwats returns DataFrame.
+if pd.__version__ < "3":
+    def to_dense(self):
+        # pylint: disable=protected-access
+        data = {k: v.array.to_dense() for k, v in self._parent.items()}
+        constr = self._parent._constructor
+        return constr(data, index=self._parent.index, columns=self._parent.columns)
+
+    pandas.core.arrays.sparse.accessor.SparseFrameAccessor.to_dense = to_dense
 
 
 class OrangeDataFrame(pd.DataFrame):
@@ -74,8 +88,6 @@ class OrangeDataFrame(pd.DataFrame):
             data = dict(enumerate(sparrays))
             super().__init__(data, index=index, **kwargs)
             self.columns = columns
-            # a hack to keep Orange df _metadata in sparse->dense conversion
-            self.sparse.to_dense = self.__patch_constructor(self.sparse.to_dense)
         else:
             copy = kwargs.pop("copy", False)
             super().__init__(
@@ -88,21 +100,15 @@ class OrangeDataFrame(pd.DataFrame):
                                if table.W.size > 0 else {})
         self.orange_attributes = table.attributes
 
-    def __patch_constructor(self, method):
-        def new_method(*args, **kwargs):
-            with patch(
-                    'pandas.DataFrame',
-                    OrangeDataFrame
-            ):
-                df = method(*args, **kwargs)
-            df.__finalize__(self)
-            return df
-
-        return new_method
-
     @property
     def _constructor(self):
-        return OrangeDataFrame
+        return partial(self.from_existing, self)
+
+    @staticmethod
+    def from_existing(existing, *args, **kwargs):
+        self = type(existing)(*args, **kwargs)
+        self.__finalize__(existing)
+        return self
 
     def to_orange_table(self):
         return table_from_frame(self)
@@ -204,7 +210,7 @@ def _convert_datetime(series, var):
     def col_type(dt):
         """Test if is date, time or datetime"""
         dt_nonnat = dt[~pd.isnull(dt)]  # nat == nat is False
-        if (dt_nonnat.dt.floor("d") == dt_nonnat).all():
+        if (dt_nonnat.dt.floor("D") == dt_nonnat).all():
             # all times are 00:00:00.0 - pure date
             return 1, 0
         elif (dt_nonnat.dt.date == pd.Timestamp("now").date()).all():
