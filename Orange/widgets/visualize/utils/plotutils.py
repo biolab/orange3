@@ -11,7 +11,7 @@ from AnyQt.QtGui import QTransform, QFontMetrics, QStaticText, QBrush, QPen, \
     QFont, QPalette
 from AnyQt.QtWidgets import (
     QGraphicsLineItem, QGraphicsSceneMouseEvent, QPinchGesture,
-    QGraphicsItemGroup, QWidget
+    QGraphicsItemGroup, QWidget, QGraphicsWidget
 )
 
 import pyqtgraph as pg
@@ -39,7 +39,8 @@ class AnchorItem(pg.GraphicsWidget):
     def __init__(self, parent=None, line=QLineF(), text="", **kwargs):
         super().__init__(parent, **kwargs)
         self._text = text
-        self.setFlag(pg.GraphicsObject.ItemHasNoContents)
+        self.setFlag(QGraphicsWidget.ItemSendsScenePositionChanges)
+        self.setFlag(QGraphicsWidget.ItemHasNoContents)
 
         self._spine = QGraphicsLineItem(line, self)
         angle = line.angle()
@@ -56,6 +57,8 @@ class AnchorItem(pg.GraphicsWidget):
 
         if parent is not None:
             self.setParentItem(parent)
+
+        self.__updateLayout()
 
     def get_xy(self):
         point = self._spine.line().p2()
@@ -130,6 +133,18 @@ class AnchorItem(pg.GraphicsWidget):
         if event.type() == QEvent.PaletteChange:
             self._label.setColor(self.palette().color(QPalette.Text))
         super().changeEvent(event)
+
+    def itemChange(self, change, value):
+        if change in (
+                QGraphicsWidget.ItemParentHasChanged,
+                QGraphicsWidget.ItemSceneHasChanged,
+                # ItemScenePositionHasChanged seems to trigger for any scene
+                # transform change (even if the pos has not actually changed).
+                # Das ist gut.
+                QGraphicsWidget.ItemScenePositionHasChanged,
+        ):
+            self.__updateLayout()
+        return super().itemChange(change, value)
 
 
 class HelpEventDelegate(QObject):
