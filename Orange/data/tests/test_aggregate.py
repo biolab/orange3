@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock
 
 import numpy as np
 import pandas as pd
@@ -132,12 +133,68 @@ class DomainTest(unittest.TestCase):
     def test_preserve_table_class(self):
         """
         Test whether result table has the same type than the imnput table,
-        e.g. if input table corpus the resutlitn table must be corpus too.
+        e.g. if input table corpus the resulting table must be corpus too.
         """
         data = AlternativeTable.from_table(self.data.domain, self.data)
         gb = data.groupby([data.domain["a"]])
         output = gb.aggregate({data.domain["a"]: ["mean"]})
         self.assertIsInstance(output, AlternativeTable)
+
+    def test_preserve_variables(self):
+        a, _, _, dvar = self.data.domain.attributes
+        gb = self.data.groupby([a])
+
+        a.attributes = {"foo": "bar"}
+        dvar.attributes = {"foo": "baz"}
+
+        a.copy = Mock(side_effect=a.copy)
+        a.make = Mock(side_effect=a.make)
+
+        def f(*_):
+            return 0
+
+        output = gb.aggregate(
+            {a: [("copy", f, True),
+                 ("make", f, False),
+                 ("auto", f, None),
+                 ("string", f, StringVariable),
+                 ("number", f, ContinuousVariable)],
+             dvar: [("copy", f, True),
+                    ("make", f, False),
+                    ("auto", f, None),
+                    ("string", f, StringVariable),
+                    ("discrete", f, DiscreteVariable)]}
+        )
+        self.assertIsInstance(output.domain["a - copy"], ContinuousVariable)
+        a.copy.assert_called_once()
+        self.assertEqual(output.domain["a - copy"].attributes, {"foo": "bar"})
+
+        self.assertIsInstance(output.domain["a - make"], ContinuousVariable)
+        a.make.assert_called_once()
+        self.assertNotEqual(output.domain["a - make"].attributes, {"foo": "bar"})
+
+        self.assertIsInstance(output.domain["a - auto"], ContinuousVariable)
+        self.assertNotEqual(output.domain["a - auto"].attributes, {"foo": "bar"})
+
+        self.assertIsInstance(output.domain["a - string"], StringVariable)
+
+        self.assertIsInstance(output.domain["a - number"], ContinuousVariable)
+        self.assertNotEqual(output.domain["a - number"].attributes, {"foo": "bar"})
+
+        self.assertIsInstance(output.domain["dvar - copy"], DiscreteVariable)
+        self.assertEqual(output.domain["dvar - copy"].attributes, {"foo": "baz"})
+
+        self.assertIsInstance(output.domain["dvar - make"], DiscreteVariable)
+        self.assertNotEqual(output.domain["dvar - make"].attributes, {"foo": "baz"})
+
+        # f returns 0, so the column looks numeric! Let's test that it is
+        # converted to numeric.
+        self.assertIsInstance(output.domain["dvar - auto"], ContinuousVariable)
+
+        self.assertIsInstance(output.domain["dvar - string"], StringVariable)
+
+        self.assertIsInstance(output.domain["dvar - discrete"], DiscreteVariable)
+        self.assertNotEqual(output.domain["dvar - discrete"].attributes, {"foo": "baz"})
 
 
 if __name__ == "__main__":
