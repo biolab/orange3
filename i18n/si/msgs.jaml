@@ -2017,7 +2017,7 @@ ensembles/ada_boost.py:
         '`base_estimator` is deprecated (to be removed in 3.39): use `estimator` instead.': false
     class `SklAdaBoostClassificationLearner`:
         def `__init__`:
-            SAMME.R: false
+            SAMME: false
             deprecated: false
     class `SklAdaBoostRegressionLearner`:
         def `__init__`:
