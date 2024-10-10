@@ -4,7 +4,7 @@ import time
 from numbers import Number
 from typing import NamedTuple, List, Union, Callable, Optional
 import datetime
-from itertools import count
+from itertools import count, chain
 
 import numpy as np
 import scipy.sparse as sp
@@ -49,38 +49,87 @@ class Discretizer(Transformation):
             return np.array([], dtype=int)
 
     @staticmethod
-    def _fmt_interval(low, high, formatter):
-        assert low is not None or high is not None
+    def _fmt_interval(low, high, formatter, strip_zeros=True):
         assert low is None or high is None or low < high
-        if low is None or np.isinf(low):
-            return f"< {formatter(high)}"
-        if high is None or np.isinf(high):
-            return f"≥ {formatter(low)}"
-        return f"{formatter(low)} - {formatter(high)}"
+
+        def strip0(s):
+            if strip_zeros and re.match(r"^\d+\.\d+", s):
+                return s.rstrip("0").rstrip(".")
+            return s
+
+        lows = (low is not None and not np.isinf(low)
+                and strip0(formatter(low)))
+        highs = (high is not None and not np.isinf(high)
+                 and strip0(formatter(high)))
+        assert lows or highs
+        if lows == highs:
+            raise ValueError(f"Formatter returned identical thresholds: {lows}")
+
+        if not lows:
+            return f"< {highs}"
+        if not highs:
+            return f"≥ {lows}"
+        return f"{lows} - {highs}"
+
+    @classmethod
+    def _get_labels(cls, fmt, points, strip_zeros=True):
+        return [
+            cls._fmt_interval(low, high, fmt, strip_zeros=strip_zeros)
+            for low, high in zip(
+                chain([-np.inf], points),
+                chain(points, [np.inf]))]
+
+    @classmethod
+    def _get_discretized_values(cls, var, points, ndigits=None):
+        if len(points) == 0:
+            values = ["single_value"]
+            to_sql = SingleValueSql(values[0])
+            return points, values, to_sql
+
+        npoints = np.array(points, dtype=np.float64)
+        if len(points) > 1:
+            mindiff = np.min(npoints[1:] - npoints[:-1])
+            if mindiff == 0:
+                raise ValueError("Some interval thresholds are identical")
+        else:
+            mindiff = 1  # prevent warnings
+
+        if ndigits is None or len(points) == 1:
+            try:
+                values = cls._get_labels(var.str_val, points)
+            except ValueError:
+                pass
+            else:
+                if len(values) == len(set(values)):
+                    to_sql = BinSql(var, points)
+                    return points, values, to_sql
+
+        mindigits = max(ndigits or 0,
+                        int(-np.log10(mindiff)))
+        maxdigits = np.finfo(npoints.dtype).precision + 2
+        for digits in range(mindigits, maxdigits + 1):
+            npoints = np.round(points, digits)
+            if len(npoints) == len(set(npoints)):
+                def fmt_fixed(val):
+                    # We break the loop, pylint: disable=cell-var-from-loop
+                    return f"{val:.{digits}f}"
+
+                points = list(npoints)
+                break
+        else:
+            # pragma: no cover
+            assert False
+
+        values = cls._get_labels(
+            fmt_fixed, points,
+            strip_zeros=digits != ndigits)
+        assert len(values) == len(set(values))
+        to_sql = BinSql(var, points)
+        return points, values, to_sql
 
     @classmethod
     def create_discretized_var(cls, var, points, ndigits=None):
-        if ndigits is None:
-            def fmt(val):
-                sval = var.str_val(val)
-                # For decimal numbers, remove trailing 0's and . if no decimals left
-                if re.match(r"^\d+\.\d+", sval):
-                    return sval.rstrip("0").rstrip(".")
-                return sval
-        else:
-            def fmt(val):
-                return f"{val:.{ndigits}f}"
-
-        lpoints = list(points)
-        if lpoints:
-            values = [
-                cls._fmt_interval(low, high, fmt)
-                for low, high in zip([-np.inf] + lpoints, lpoints + [np.inf])]
-            to_sql = BinSql(var, lpoints)
-        else:
-            values = ["single_value"]
-            to_sql = SingleValueSql(values[0])
-
+        points, values, to_sql = cls._get_discretized_values(var, points, ndigits)
         dvar = DiscreteVariable(name=var.name, values=values,
                                 compute_value=cls(var, points),
                                 sparse=var.sparse)
