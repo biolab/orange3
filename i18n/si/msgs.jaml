@@ -9507,35 +9507,28 @@ widgets/model/owadaboost.py:
         adaboost, boost: adaboost, boost
         class `Inputs`:
             Learner: Učni algoritem
-        SAMME: true
-        SAMME.R: true
         Linear: Linearna
         Square: Kvadratna
         Exponential: Eksponentna
         class `Error`:
             The base learner does not support weights.: Učni algoritem ne podpira uteži.
         def `add_main_layout`:
-            Parameters: Parametri
-            'Base estimator: ': 'Osnovni model: '
+            Base estimator:: Osnovni model:
             n_estimators: false
             Number of estimators:: Število modelov:
             learning_rate: false
             Learning rate:: Hitrost učenja:
+            loss_index: false
+            Loss (regression):: Funkcija izgube (za regresijo)
+            Reproducibility: Ponovljivost
             random_seed: false
             Fixed seed for random generator:: Seme generatorja naključnih števil:
             use_random_seed: false
-            Boosting method: Metoda pospeševanja (boosting)
-            algorithm_index: false
-            Classification algorithm:: Algoritem (za klasifikacijo):
-            loss_index: false
-            Regression loss function:: Funkcija izgube (za regresijo):
         def `set_base_learner`:
-            'Base estimator: INVALID': Osnovni model: neveljaven
-            'Base estimator: %s': Osnovni model: %s
+            INVALID: NEVELJAVEN
         def `get_learner_parameters`:
             Base estimator: Osnovni model
             Number of estimators: Število modelov
-            Algorithm (classification): Algoritem (za klasifikacijo)
             Loss (regression): Izguba (za regresijo)
     __main__: false
     iris: false
