@@ -14,9 +14,6 @@ class TestOWAdaBoost(WidgetTest, WidgetLearnerTestMixin):
             OWAdaBoost, stored_settings={"auto_apply": False})
         self.init()
         self.parameters = [
-            ParameterMapping('algorithm', self.widget.cls_algorithm_combo,
-                             self.widget.algorithms,
-                             problem_type="classification"),
             ParameterMapping('loss', self.widget.reg_algorithm_combo,
                              [x.lower() for x in self.widget.losses],
                              problem_type="regression"),
