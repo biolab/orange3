@@ -42,6 +42,7 @@ from orangewidget.gui import (
     is_macstyle
 )
 from orangewidget.utils.itemmodels import PyTableModel
+from orangewidget.utils.listview import ListViewFilter
 
 try:
     # Some Orange widgets might expect this here
@@ -192,13 +193,15 @@ def listView(widget, master, value=None, model=None, box=None, callback=None,
     else:
         bg = widget
     view = viewType(preferred_size=sizeHint)
-    if isinstance(view.model(), QSortFilterProxyModel):
+    if isinstance(view, ListViewFilter):
         view.model().setSourceModel(model)
+        signal = view.sigSelectionChanged
     else:
         view.setModel(model)
+        signal = view.selectionModel().selectionChanged
     if value is not None:
         connectControl(master, value, callback,
-                       view.selectionModel().selectionChanged,
+                       signal,
                        CallFrontListView(view),
                        CallBackListView(model, view, master, value))
     misc.setdefault('uniformItemSizes', True)
@@ -500,8 +503,8 @@ class CallBackListView(ControlledCallback):
         from Orange.widgets.utils.itemmodels import PyListModel
 
         selection = self.view.selectionModel().selection()
-        if isinstance(self.view.model(), QSortFilterProxyModel):
-            selection = self.view.model().mapSelectionToSource(selection)
+        if isinstance(self.view, ListViewFilter):
+            selection = self.view.selection
         values = [i.row() for i in selection.indexes()]
 
         # set attribute's values
