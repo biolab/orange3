@@ -1544,6 +1544,7 @@ data/variable.py:
         categorical: false
         def `__init__`:
             values of DiscreteVariables must be strings: false
+            Duplicate values in DiscreteVariable: false
         def `get_mapper_from`:
             def `mapper`:
                 In-place mapping of sparse matrices must map 0 to 0: false
@@ -2540,13 +2541,19 @@ preprocess/discretize.py:
     BinDefinition: false
     class `Discretizer`:
         def `_fmt_interval`:
-            < {formatter(high)}: false
-            ≥ {formatter(low)}: false
-            {formatter(low)} - {formatter(high)}: false
-        def `create_discretized_var`:
-            def `fmt`:
-                {val:.{ndigits}f}: false
-            single_value: false
+            def `strip0`:
+                ^\d+\.\d+: false
+                0: false
+                .: false
+            'Formatter returned identical thresholds: {lows}': false
+            < {highs}: true
+            ≥ {lows}: true
+            {lows} - {highs}: true
+        def `_get_discretized_values`:
+            single_value: konstanta
+            Some interval thresholds are identical: false
+            def `fmt_fixed`:
+                {val:.{digits}f}: false
     class `BinSql`:
         def `__call__`:
             'width_bucket({self.var.to_sql()}, ': false
