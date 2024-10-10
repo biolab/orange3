@@ -1201,6 +1201,7 @@ data/io_util.py:
 data/pandas_compat.py:
     table_from_frame: false
     table_to_frame: false
+    3: false
     class `OrangeDataFrame`:
         orange_variables: false
         orange_weights: false
@@ -1211,9 +1212,6 @@ data/pandas_compat.py:
             _o: false
             csc: false
             copy: false
-        def `__patch_constructor`:
-            def `new_method`:
-                pandas.DataFrame: false
         def `__finalize__`:
             concat: false
             merge: false
@@ -1225,7 +1223,7 @@ data/pandas_compat.py:
         _o: false
     def `_convert_datetime`:
         def `col_type`:
-            d: false
+            D: false
             now: false
         UTC: false
         now: false
