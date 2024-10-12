@@ -6185,9 +6185,6 @@ widgets/data/owfile.py:
             recent_urls: false
     __main__: false
 widgets/data/owgroupby.py:
-    Aggregation: false
-    function: false
-    types: false
     def `concatenate`:
         ' ': false
     def `var`:
@@ -10047,8 +10044,8 @@ widgets/model/owpls.py:
             Scale features and target: Skaliraj spremenljivke in ciljno spremenljivko
         def `_create_output_coeffs_loadings`:
             coef ({v.name}): koef ({v.name})
-            coef * X_sd ({v.name}): false
-            w*c {i + 1}: false
+            coef * X_sd ({v.name}): koef × X_sd ({v.name})
+            w*c {i + 1}: true
             Variable name: Ime spremenljivke
             Variable role: Vloga spremenljivke
             Feature: Značilka
