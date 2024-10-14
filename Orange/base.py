@@ -1,9 +1,10 @@
 import inspect
 import itertools
+from collections import namedtuple
 from collections.abc import Iterable
 import re
 import warnings
-from typing import Callable, Dict, Optional
+from typing import Callable, Dict, Optional, List
 
 import numpy as np
 import scipy
@@ -87,6 +88,10 @@ class Learner(ReprableWithPreprocessors):
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
     preprocessors = ()
+    FittedParameter = namedtuple(
+        "FittedParameter",
+        ["parameter_name", "label", "tick_label", "type", "min", "max"]
+    )
 
     # Note: Do not use this class attribute.
     #       It remains here for compatibility reasons.
@@ -178,6 +183,10 @@ class Learner(ReprableWithPreprocessors):
         if (self.use_default_preprocessors and
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
+
+    @property
+    def fitted_parameters(self) -> List:
+        return []
 
     # pylint: disable=no-self-use
     def incompatibility_reason(self, _: Domain) -> Optional[str]:

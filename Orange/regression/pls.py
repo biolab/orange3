@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import numpy as np
 import scipy.stats as ss
@@ -255,6 +255,11 @@ class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):
                 if not cv.is_continuous:
                     reason = "Only numeric target variables expected."
         return reason
+
+    @property
+    def fitted_parameters(self) -> List:
+        return [self.FittedParameter("n_components", "Number of components",
+                                     "Comp", int, 1, None)]
 
 
 if __name__ == '__main__':
