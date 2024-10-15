@@ -2,8 +2,10 @@
 # pylint: disable=protected-access
 import unittest
 from unittest.mock import Mock, patch
+from packaging.version import parse as parse_version
 
 import numpy as np
+from sklearn import __version__ as sklearn_version
 from AnyQt.QtCore import Qt
 from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QApplication
@@ -367,12 +369,14 @@ class TestOWTestAndScore(WidgetTest):
             list(zip(*self.scores_table_values + [list("yyyn")]))
         )
 
+        auc = None if parse_version(sklearn_version) < parse_version("1.6dev") \
+            else 0
         self.assertTupleEqual(
             self._test_scores(
                 table, table[:3], ConstantLearner(),
                 OWTestAndScore.TestOnTest, None
             ),
-            (None, 1, 1, 1, 1)
+            (auc, 1, 1, 1, 1)
         )
 
     def test_scores_log_reg_overfitted(self):
