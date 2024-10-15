@@ -31,7 +31,7 @@ class SklAdaBoostClassificationLearner(SklLearnerClassification):
     supports_weights = True
 
     def __init__(self, estimator=None, n_estimators=50, learning_rate=1.,
-                 algorithm='SAMME.R', random_state=None, preprocessors=None,
+                 algorithm='SAMME', random_state=None, preprocessors=None,
                  base_estimator="deprecated"):
         if base_estimator != "deprecated":
             base_estimator_deprecation()

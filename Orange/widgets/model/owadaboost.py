@@ -1,4 +1,5 @@
 from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QFormLayout, QLabel
 
 from Orange.base import Learner
 from Orange.data import Table
@@ -27,14 +28,11 @@ class OWAdaBoost(OWBaseLearner):
     class Inputs(OWBaseLearner.Inputs):
         learner = Input("Learner", Learner)
 
-    #: Algorithms for classification problems
-    algorithms = ["SAMME", "SAMME.R"]
     #: Losses for regression problems
     losses = ["Linear", "Square", "Exponential"]
 
     n_estimators = Setting(50)
     learning_rate = Setting(1.)
-    algorithm_index = Setting(1)
     loss_index = Setting(0)
     use_random_seed = Setting(False)
     random_seed = Setting(0)
@@ -46,35 +44,35 @@ class OWAdaBoost(OWBaseLearner):
 
     def add_main_layout(self):
         # this is part of init, pylint: disable=attribute-defined-outside-init
-        box = gui.widgetBox(self.controlArea, "Parameters")
+        grid = QFormLayout()
+        gui.widgetBox(self.controlArea, box=True, orientation=grid)
         self.base_estimator = self.DEFAULT_BASE_ESTIMATOR
-        self.base_label = gui.label(
-            box, self, "Base estimator: " + self.base_estimator.name.title())
+        self.base_label = QLabel(self.base_estimator.name.title())
+        grid.addRow("Base estimator:", self.base_label)
 
         self.n_estimators_spin = gui.spin(
-            box, self, "n_estimators", 1, 10000, label="Number of estimators:",
-            alignment=Qt.AlignRight, controlWidth=80,
+            None, self, "n_estimators", 1, 10000,
+            controlWidth=80, alignment=Qt.AlignRight,
             callback=self.settings_changed)
+        grid.addRow("Number of estimators:", self.n_estimators_spin)
+
         self.learning_rate_spin = gui.doubleSpin(
-            box, self, "learning_rate", 1e-5, 1.0, 1e-5,
-            label="Learning rate:", decimals=5, alignment=Qt.AlignRight,
-            controlWidth=80, callback=self.settings_changed)
+            None, self, "learning_rate", 1e-5, 1.0, 1e-5, decimals=5,
+            alignment=Qt.AlignRight,
+            callback=self.settings_changed)
+        grid.addRow("Learning rate:", self.learning_rate_spin)
+
+        self.reg_algorithm_combo = gui.comboBox(
+            None, self, "loss_index", items=self.losses,
+            callback=self.settings_changed)
+        grid.addRow("Loss (regression):", self.reg_algorithm_combo)
+
+        box = gui.widgetBox(self.controlArea, box="Reproducibility")
         self.random_seed_spin = gui.spin(
             box, self, "random_seed", 0, 2 ** 31 - 1, controlWidth=80,
             label="Fixed seed for random generator:", alignment=Qt.AlignRight,
             callback=self.settings_changed, checked="use_random_seed",
             checkCallback=self.settings_changed)
-
-        # Algorithms
-        box = gui.widgetBox(self.controlArea, "Boosting method")
-        self.cls_algorithm_combo = gui.comboBox(
-            box, self, "algorithm_index", label="Classification algorithm:",
-            items=self.algorithms,
-            orientation=Qt.Horizontal, callback=self.settings_changed)
-        self.reg_algorithm_combo = gui.comboBox(
-            box, self, "loss_index", label="Regression loss function:",
-            items=self.losses,
-            orientation=Qt.Horizontal, callback=self.settings_changed)
 
     def create_learner(self):
         if self.base_estimator is None:
@@ -85,7 +83,6 @@ class OWAdaBoost(OWBaseLearner):
             learning_rate=self.learning_rate,
             random_state=self.random_seed,
             preprocessors=self.preprocessors,
-            algorithm=self.algorithms[self.algorithm_index],
             loss=self.losses[self.loss_index].lower())
 
     @Inputs.learner
@@ -97,18 +94,15 @@ class OWAdaBoost(OWBaseLearner):
             # Clear the error and reset to default base learner
             self.Error.no_weight_support()
             self.base_estimator = None
-            self.base_label.setText("Base estimator: INVALID")
+            self.base_label.setText("INVALID")
         else:
             self.base_estimator = learner or self.DEFAULT_BASE_ESTIMATOR
-            self.base_label.setText(
-                "Base estimator: %s" % self.base_estimator.name.title())
+            self.base_label.setText(self.base_estimator.name.title())
         self.learner = self.model = None
 
     def get_learner_parameters(self):
         return (("Base estimator", self.base_estimator),
                 ("Number of estimators", self.n_estimators),
-                ("Algorithm (classification)", self.algorithms[
-                    self.algorithm_index].capitalize()),
                 ("Loss (regression)", self.losses[
                     self.loss_index].capitalize()))
 
