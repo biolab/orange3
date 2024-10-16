@@ -95,7 +95,7 @@ class TestOWCalibratedLearner(WidgetTest, WidgetLearnerTestMixin):
         widget.calibration = widget.NoCalibration
         widget.threshold = widget.NoThresholdOptimization
         learner = self.widget.create_learner()
-        self.assertIs(learner, self.widget.base_learner)
+        self.assertIsNot(learner, self.widget.base_learner)
 
         widget.calibration = widget.SigmoidCalibration
         widget.threshold = widget.OptimizeF1
