@@ -5176,6 +5176,7 @@ widgets/data/owdatasets.py:
         datasets: false
         English: Slovenščina
         All Languages: (Vsi jeziki)
+        (general): (splošno)
         islocal: false
         label: false
         title: false
@@ -5202,17 +5203,22 @@ widgets/data/owdatasets.py:
             _header_index: false
             Search for data set ...: Poišči podatke ...
             'Show data sets in ': 'Prikaži zbirke podatkov v jeziku '
+            'Domain: ': 'Področje: '
             Press Return or double-click to send: Pritisni Enter ali dvoklikni za izbor
             Description: Opis
             splitter_state: false
             Initializing: Zaganjam
         def `_parse_info`:
             version: false
+        def `update_domain_combo`:
+            core: false
         def `update_model`:
             ' ': false
             '  ': false
             ', ': false
             /: false
+        def `_on_domain_changed`:
+            core: false
         def `__set_index`:
             Error while fetching updated index: false
         def `set_model`:
