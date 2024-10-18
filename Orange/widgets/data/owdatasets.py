@@ -122,6 +122,7 @@ class Namespace(SimpleNamespace):
         self.seealso = []
         self.tags = []
         self.language = "English"
+        self.domain = "core"
 
         super(Namespace, self).__init__(**kwargs)
 
@@ -144,6 +145,7 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
     def __init__(self):
         super().__init__()
         self.__language = None
+        self.__domain = None
 
     def setLanguage(self, language):
         self.__language = language
@@ -152,11 +154,21 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
     def language(self):
         return self.__language
 
+    def setDomain(self, domain):
+        self.__domain = domain
+        self.invalidateFilter()
+
+    def domain(self):
+        return self.__domain
+
     def filterAcceptsRow(self, row, parent):
         source = self.sourceModel()
         return super().filterAcceptsRow(row, parent) and (
             self.__language is None
             or source.index(row, 0).data(Qt.UserRole).language == self.__language
+        ) and (
+            self.__domain is None
+            or source.index(row, 0).data(Qt.UserRole).domain == self.__domain
         )
 
 
@@ -177,6 +189,7 @@ class OWDataSets(OWWidget):
     DATASET_DIR = "datasets"
     DEFAULT_LANG = "English"
     ALL_LANGUAGES = "All Languages"
+    ALL_DOMAINS = "(general)"
 
     # override HEADER_SCHEMA to define new columns
     # if schema is changed override methods: self.assign_delegates and
@@ -235,6 +248,7 @@ class OWDataSets(OWWidget):
             textChanged=self.filter, placeholderText="Search for data set ..."
         )
         layout.addWidget(self.filterLineEdit)
+
         layout.addSpacing(20)
         layout.addWidget(QLabel("Show data sets in "))
         lang_combo = self.language_combo = QComboBox()
@@ -245,6 +259,14 @@ class OWDataSets(OWWidget):
         lang_combo.setCurrentText(self.language)
         lang_combo.activated.connect(self._on_language_changed)
         layout.addWidget(lang_combo)
+
+        layout.addSpacing(20)
+        layout.addWidget(QLabel("Domain: "))
+        domain_combo = self.domain_combo = QComboBox()
+        domain_combo.addItem(self.ALL_DOMAINS)
+        domain_combo.activated.connect(self._on_domain_changed)
+        layout.addWidget(domain_combo)
+
         self.mainArea.layout().addLayout(layout)
 
         self.splitter = QSplitter(orientation=Qt.Vertical)
@@ -353,6 +375,7 @@ class OWDataSets(OWWidget):
 
     def create_model(self):
         self.update_language_combo()
+        self.update_domain_combo()
         return self.update_model()
 
     def update_language_combo(self):
@@ -373,6 +396,18 @@ class OWDataSets(OWWidget):
             combo.setCurrentText(self.DEFAULT_LANG)
         else:
             combo.setCurrentText(self.ALL_LANGUAGES)
+
+    def update_domain_combo(self):
+        combo = self.domain_combo
+        current_domain = combo.currentText()
+        allkeys = set(self.allinfo_local) | set(self.allinfo_remote)
+        domains = {self._parse_info(key).domain for key in allkeys}
+        domains.discard("core")
+        domains = sorted(domains)
+        combo.clear()
+        combo.addItem(self.ALL_DOMAINS)
+        combo.addItems(domains)
+        combo.setCurrentText(current_domain)
 
     def update_model(self):
         allkeys = set(self.allinfo_local) | set(self.allinfo_remote)
@@ -422,6 +457,11 @@ class OWDataSets(OWWidget):
         else:
             self.language = combo.currentText()
         self.view.model().setLanguage(self.language)
+
+    def _on_domain_changed(self):
+        combo = self.domain_combo
+        domain = "core" if combo.currentIndex() == 0 else combo.currentText()
+        self.view.model().setDomain(domain)
 
     @Slot(object)
     def __set_index(self, f):
