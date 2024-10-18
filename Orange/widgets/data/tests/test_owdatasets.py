@@ -63,6 +63,27 @@ class TestOWDataSets(WidgetTest):
         self.assertEqual(model.rowCount(), 2)
 
     @patch("Orange.widgets.data.owdatasets.list_remote",
+           Mock(side_effect=requests.exceptions.ConnectionError))
+    @patch("Orange.widgets.data.owdatasets.list_local",
+           Mock(return_value={('core', 'foo.tab'): {"domain": "core"},
+                              ('core', 'bar.tab'): {"domain": "edu"}}))
+    @patch("Orange.widgets.data.owdatasets.log", Mock())
+    def test_filtering_by_domain(self):
+        w = self.create_widget(OWDataSets)  # type: OWDataSets
+        model = w.view.model()
+        model.setDomain(None)
+        self.wait_until_stop_blocking(w)
+        self.assertEqual(model.rowCount(), 2)
+
+        model.setDomain("edu")
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(Qt.UserRole).title, "bar.tab")
+
+        model.setDomain("core")
+        self.assertEqual(model.rowCount(), 1)
+        self.assertEqual(model.index(0, 0).data(Qt.UserRole).title, "foo.tab")
+
+    @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(return_value={('core', 'foo.tab'): {"language": "English"},
                               ('core', 'bar.tab'): {"language": "Slovenščina"}}))
     @patch("Orange.widgets.data.owdatasets.list_local",
