@@ -102,6 +102,8 @@ class UniformHeightIndicatorDelegate(
 
 
 class Namespace(SimpleNamespace):
+    PUBLISHED, UNLISTED = range(2)
+
     def __init__(self, **kwargs):
         self.file_path = None
         self.prefix = None
@@ -123,6 +125,7 @@ class Namespace(SimpleNamespace):
         self.tags = []
         self.language = "English"
         self.domain = "core"
+        self.publication_status = self.PUBLISHED
 
         super(Namespace, self).__init__(**kwargs)
 
@@ -146,6 +149,11 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
         super().__init__()
         self.__language = None
         self.__domain = None
+        self.__filter = None
+
+    def setFilterFixedString(self, pattern):
+        self.__filter = pattern and pattern.casefold()
+        super().setFilterFixedString(pattern)
 
     def setLanguage(self, language):
         self.__language = language
@@ -163,12 +171,15 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
 
     def filterAcceptsRow(self, row, parent):
         source = self.sourceModel()
-        return super().filterAcceptsRow(row, parent) and (
-            self.__language is None
-            or source.index(row, 0).data(Qt.UserRole).language == self.__language
-        ) and (
-            self.__domain is None
-            or source.index(row, 0).data(Qt.UserRole).domain == self.__domain
+        data = source.index(row, 0).data(Qt.UserRole)
+        return (super().filterAcceptsRow(row, parent)
+            and (self.__language is None or data.language == self.__language)
+            and (self.__domain is None or data.domain == self.__domain)
+            and (data.publication_status == Namespace.PUBLISHED or (
+                 self.__filter is not None
+                 and len(self.__filter) >= 5
+                 and data.title.casefold().startswith(self.__filter)
+            ))
         )
 
 

@@ -5,7 +5,7 @@ import requests
 
 from AnyQt.QtCore import QItemSelectionModel, Qt
 
-from Orange.widgets.data.owdatasets import OWDataSets
+from Orange.widgets.data.owdatasets import OWDataSets, Namespace as DSNamespace
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -82,6 +82,40 @@ class TestOWDataSets(WidgetTest):
         model.setDomain("core")
         self.assertEqual(model.rowCount(), 1)
         self.assertEqual(model.index(0, 0).data(Qt.UserRole).title, "foo.tab")
+
+    @patch("Orange.widgets.data.owdatasets.list_remote",
+           Mock(side_effect=requests.exceptions.ConnectionError))
+    @patch("Orange.widgets.data.owdatasets.list_local",
+           Mock(return_value={
+               ('core', 'foo.tab'): {"title": "an unlisted data set",
+                                     "publication_status": DSNamespace.UNLISTED},
+               ('core', 'bar.tab'): {"title": "a published data set",
+                                     "publication_status": DSNamespace.PUBLISHED},
+               ('core', 'baz.tab'): {"title": "an unp unp",
+                                     "publication_status": DSNamespace.PUBLISHED}
+           }))
+    @patch("Orange.widgets.data.owdatasets.log", Mock())
+    def test_filtering_unlisted(self):
+        def titles():
+            return {
+                model.index(row, 0).data(Qt.UserRole).title
+                for row in range(model.rowCount()) }
+
+        w = self.create_widget(OWDataSets)  # type: OWDataSets
+        model = w.view.model()
+        self.assertEqual(titles(), {"a published data set", "an unp unp"})
+
+        model.setFilterFixedString("an u")
+        self.assertEqual(titles(), {"an unp unp"})
+
+        model.setFilterFixedString("an Un")
+        self.assertEqual(titles(), {"an unlisted data set", "an unp unp"})
+
+        model.setFilterFixedString("")
+        self.assertEqual(titles(), {"a published data set", "an unp unp"})
+
+        model.setFilterFixedString(None)
+        self.assertEqual(titles(), {"a published data set", "an unp unp"})
 
     @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(return_value={('core', 'foo.tab'): {"language": "English"},
