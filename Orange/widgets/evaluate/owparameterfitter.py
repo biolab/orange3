@@ -1,9 +1,10 @@
-from typing import Optional, Tuple, Callable, List, Dict, Iterable
+from typing import Optional, Tuple, Callable, List, Dict, Iterable, Sized
 
 import numpy as np
 from AnyQt.QtCore import QPointF, Qt
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
-from AnyQt.QtWidgets import QGraphicsSceneHelpEvent, QToolTip
+from AnyQt.QtWidgets import QGraphicsSceneHelpEvent, QToolTip, QSpinBox, \
+    QComboBox
 
 import pyqtgraph as pg
 
@@ -39,7 +40,7 @@ FitterResults = Tuple[List[ScoreType], str, str]
 def _validate(
         data: Table,
         learner: Learner,
-        scorer: Score
+        scorer: type[Score]
 ) -> Tuple[float, float]:
     # dummy call - Validation would silence the exceptions
     learner(data)
@@ -55,7 +56,7 @@ def _search(
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
         initial_parameters: Dict,
-        steps: Iterable,
+        steps: Sized,
         progress_callback: Callable = dummy_callback
 ) -> FitterResults:
     progress_callback(0, "Calculating...")
@@ -76,7 +77,7 @@ def run(
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
         initial_parameters: Dict,
-        steps: Iterable,
+        steps: Sized,
         state: TaskState
 ) -> FitterResults:
     def callback(i: float, status: str = ""):
@@ -188,6 +189,7 @@ class FitterPlot(PlotWidget):
     ):
         self.__data = scores
         self.clear()
+        self.setLabel(axis="bottom", text=" ")
         self.setLabel(axis="left", text=score_name)
 
         ticks = [[(i, f"{tick_name}[{val}]") for i, (val, _)
@@ -227,7 +229,7 @@ class FitterPlot(PlotWidget):
         index = self.__get_index_at(pos)
         text = ""
         if index is not None:
-            value, scores = self.__data[index]
+            _, scores = self.__data[index]
             text = f"<table align=left>" \
                    f"<tr>" \
                    f"<td><b>Train:</b></td>" \
@@ -246,8 +248,9 @@ class FitterPlot(PlotWidget):
     def __get_index_at(self, point: QPointF) -> Optional[int]:
         x = point.x()
         index = round(x)
-        heights_tr = self.__bar_item_tr.opts["height"]
-        heights_cv = self.__bar_item_cv.opts["height"]
+        # pylint: disable=unsubscriptable-object
+        heights_tr: List = self.__bar_item_tr.opts["height"]
+        heights_cv: List = self.__bar_item_cv.opts["height"]
         if 0 <= index < len(heights_tr) and abs(index - x) <= self.BAR_WIDTH:
             if index > x and 0 <= point.y() <= heights_tr[index]:
                 return index
@@ -293,9 +296,13 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         OWWidget.__init__(self)
         ConcurrentWidgetMixin.__init__(self)
         self._data: Optional[Table] = None
-        self._learner: Optional[PLSRegressionLearner] = None
+        self._learner: Optional[Learner] = None
         self.graph: FitterPlot = None
         self.__parameters_model = QStandardItemModel()
+        self.__combo: QComboBox = None
+        self.__spin_min: QSpinBox = None
+        self.__spin_max: QSpinBox = None
+        self.preview: str = ""
 
         self.__pending_parameter_index = self.parameter_index \
             if self.parameter_index != self.DEFAULT_PARAMETER_INDEX else None
@@ -387,7 +394,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
     @Inputs.data
     @check_multiple_targets_input
-    def set_data(self, data: Table):
+    def set_data(self, data: Optional[Table]):
         self.Error.not_enough_data.clear()
         self._data = data
         if self._data and len(self._data) < N_FOLD:
@@ -395,7 +402,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
             self._data = None
 
     @Inputs.learner
-    def set_learner(self, learner: Learner):
+    def set_learner(self, learner: Optional[Learner]):
         self._learner = learner
 
     def handleNewSignals(self):
