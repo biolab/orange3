@@ -1,6 +1,8 @@
-from Orange.base import RandomForestModel
+from typing import List, Union
+
+from Orange.base import RandomForestModel, Learner
 from Orange.classification import RandomForestLearner as RFClassification
-from Orange.data import Variable
+from Orange.data import Variable, Domain, Table
 from Orange.modelling import SklFitter
 from Orange.preprocess.score import LearnerScorer
 from Orange.regression import RandomForestRegressionLearner as RFRegression
@@ -24,3 +26,9 @@ class RandomForestLearner(SklFitter, _FeatureScorerMixin):
                 'regression': RFRegression}
 
     __returns__ = RandomForestModel
+
+    def fitted_parameters(
+            self,
+            problem_type: Union[str, Table, Domain]
+    ) -> List[Learner.FittedParameter]:
+        return self.get_learner(problem_type).fitted_parameters()

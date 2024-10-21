@@ -21,6 +21,11 @@ def table(rows, attr, variables):
 
 
 class TestPLSRegressionLearner(unittest.TestCase):
+    def test_fitted_parameters(self):
+        fitted_parameters = PLSRegressionLearner().fitted_parameters()
+        self.assertIsInstance(fitted_parameters, list)
+        self.assertEqual(len(fitted_parameters), 1)
+
     def test_allow_y_dim(self):
         """ The current PLS version allows only a single Y dimension. """
         learner = PLSRegressionLearner(n_components=2)

@@ -5,6 +5,7 @@ from Orange.classification import NaiveBayesLearner
 from Orange.data import Table
 from Orange.regression import PLSRegressionLearner
 from Orange.widgets.evaluate.owparameterfitter import OWParameterFitter
+from Orange.widgets.model.owrandomforest import OWRandomForest
 from Orange.widgets.tests.base import WidgetTest
 
 
@@ -40,6 +41,31 @@ class TestOWParameterFitter(WidgetTest):
 
         self.send_signal(self.widget.Inputs.learner, None)
         self.assertFalse(self.widget.Warning.no_parameters.is_shown())
+
+    def test_random_forest(self):
+        rf_widget = self.create_widget(OWRandomForest)
+        learner = self.get_output(rf_widget.Outputs.learner)
+
+        self.send_signal(self.widget.Inputs.learner, learner)
+        self.assertFalse(self.widget.Warning.no_parameters.is_shown())
+        self.assertFalse(self.widget.Error.domain_transform_err.is_shown())
+        self.assertFalse(self.widget.Error.unknown_err.is_shown())
+        self.assertFalse(self.widget.Error.not_enough_data.is_shown())
+        self.assertFalse(self.widget.Error.incompatible_learner.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, self._heart)
+        self.assertFalse(self.widget.Warning.no_parameters.is_shown())
+        self.assertFalse(self.widget.Error.domain_transform_err.is_shown())
+        self.assertFalse(self.widget.Error.unknown_err.is_shown())
+        self.assertFalse(self.widget.Error.not_enough_data.is_shown())
+        self.assertFalse(self.widget.Error.incompatible_learner.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        self.assertFalse(self.widget.Warning.no_parameters.is_shown())
+        self.assertFalse(self.widget.Error.domain_transform_err.is_shown())
+        self.assertFalse(self.widget.Error.unknown_err.is_shown())
+        self.assertFalse(self.widget.Error.not_enough_data.is_shown())
+        self.assertFalse(self.widget.Error.incompatible_learner.is_shown())
 
 
 if __name__ == "__main__":

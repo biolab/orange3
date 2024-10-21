@@ -15,6 +15,7 @@ from Orange.data import Table
 from Orange.data.table import DomainTransformationError
 from Orange.evaluation import CrossValidation, TestOnTrainingData, Results
 from Orange.evaluation.scoring import Score, AUC, R2
+from Orange.modelling import Fitter
 from Orange.util import dummy_callback
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
@@ -52,7 +53,8 @@ def _validate(
 def _search(
         data: Table,
         learner: Learner,
-        parameter_properties: Learner.FittedParameter,
+        fitted_parameter_props: Learner.FittedParameter,
+        initial_parameters: Dict,
         minimum: int,
         maximum: int,
         progress_callback: Callable = dummy_callback
@@ -65,20 +67,21 @@ def _search(
         step = int(10 ** exp)
     steps = range(minimum, maximum + step, step)
     scorer = AUC if data.domain.has_discrete_class else R2
-    parameter_name = parameter_properties.parameter_name
+    parameter_name = fitted_parameter_props.parameter_name
     for i, value in enumerate(steps):
         progress_callback(i / len(steps))
-        params = learner.params.copy()
+        params = initial_parameters.copy()
         params[parameter_name] = value
         result = _validate(data, type(learner)(**params), scorer)
         scores.append((value, result))
-    return scores, scorer.name, parameter_properties.tick_label
+    return scores, scorer.name, fitted_parameter_props.tick_label
 
 
 def run(
         data: Table,
         learner: Learner,
-        parameter_properties: Learner.FittedParameter,
+        fitted_parameter_props: Learner.FittedParameter,
+        initial_parameters: Dict,
         minimum: int,
         maximum: int,
         state: TaskState
@@ -91,8 +94,8 @@ def run(
             # pylint: disable=broad-exception-raised
             raise Exception
 
-    return _search(data, learner, parameter_properties, minimum,
-                   maximum, callback)
+    return _search(data, learner, fitted_parameter_props, initial_parameters,
+                   minimum, maximum, callback)
 
 
 class ParameterSetter(CommonParameterSetter):
@@ -176,11 +179,13 @@ class FitterPlot(PlotWidget):
         legend.hide()
         return legend
 
-    def clear(self):
-        super().clear()
+    def clear_all(self):
+        self.clear()
         self.__bar_item_tr = None
         self.__bar_item_cv = None
         self.__data = None
+        self.setLabel(axis="left", text=None)
+        self.getAxis("bottom").setTicks(None)
 
     def set_data(
             self,
@@ -194,7 +199,7 @@ class FitterPlot(PlotWidget):
 
         ticks = [[(i, f"{tick_name}[{val}]") for i, (val, _)
                   in enumerate(scores)]]
-        self.getAxis('bottom').setTicks(ticks)
+        self.getAxis("bottom").setTicks(ticks)
 
         brush_tr = "#6fa255"
         brush_cv = "#3a78b6"
@@ -335,6 +340,21 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         self._set_range_controls()
         self.commit.deferred()
 
+    @property
+    def fitted_parameters(self) -> List:
+        if not self._learner or not self._data:
+            return []
+        return self._learner.fitted_parameters(self._data) \
+            if isinstance(self._learner, Fitter) \
+            else self._learner.fitted_parameters()
+
+    @property
+    def initial_parameters(self) -> Dict:
+        if not self._learner or not self._data:
+            return {}
+        return self._learner.get_params(self._data) \
+            if isinstance(self._learner, Fitter) else self._learner.params
+
     @Inputs.data
     @check_multiple_targets_input
     def set_data(self, data: Table):
@@ -346,51 +366,10 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
     @Inputs.learner
     def set_learner(self, learner: Learner):
-        self.Warning.no_parameters.clear()
         self._learner = learner
-        self.__parameters_model.clear()
-        if self._learner:
-            for param in self._learner.fitted_parameters:
-                item = QStandardItem(param.label)
-                self.__parameters_model.appendRow(item)
-            if not self._learner.fitted_parameters:
-                self.Warning.no_parameters(self._learner.name)
-            else:
-                if self.__pending_parameter_index is not None:
-                    self.parameter_index = self.__pending_parameter_index
-                    self.__combo.setCurrentIndex(self.parameter_index)
-                    self.__pending_parameter_index = None
-                self._set_range_controls()
-                if self.__pending_minimum is not None:
-                    self.minimum = self.__pending_minimum
-                    self.__pending_minimum = None
-                if self.__pending_maximum is not None:
-                    self.maximum = self.__pending_maximum
-                    self.__pending_maximum = None
-
-    def _set_range_controls(self):
-        param = self._learner.fitted_parameters[self.parameter_index]
-
-        assert param.type == int
-
-        if param.min is not None:
-            self.__spin_min.setMinimum(param.min)
-            self.__spin_max.setMinimum(param.min)
-            self.minimum = param.min
-        else:
-            self.__spin_min.setMinimum(-MIN_MAX_SPIN)
-            self.__spin_max.setMinimum(-MIN_MAX_SPIN)
-            self.minimum = self._learner.params[param.parameter_name]
-        if param.max is not None:
-            self.__spin_min.setMaximum(param.min)
-            self.__spin_max.setMaximum(param.min)
-            self.maximum = param.max
-        else:
-            self.__spin_min.setMaximum(MIN_MAX_SPIN)
-            self.__spin_max.setMaximum(MIN_MAX_SPIN)
-            self.maximum = self._learner.params[param.parameter_name]
 
     def handleNewSignals(self):
+        self.Warning.no_parameters.clear()
         self.Error.incompatible_learner.clear()
         self.Error.unknown_err.clear()
         self.Error.domain_transform_err.clear()
@@ -403,19 +382,62 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
             self.Error.incompatible_learner(reason)
             return
 
+        for param in self.fitted_parameters:
+            item = QStandardItem(param.label)
+            self.__parameters_model.appendRow(item)
+        if not self.fitted_parameters:
+            self.Warning.no_parameters(self._learner.name)
+        else:
+            if self.__pending_parameter_index is not None:
+                self.parameter_index = self.__pending_parameter_index
+                self.__combo.setCurrentIndex(self.parameter_index)
+                self.__pending_parameter_index = None
+            self._set_range_controls()
+            if self.__pending_minimum is not None:
+                self.minimum = self.__pending_minimum
+                self.__pending_minimum = None
+            if self.__pending_maximum is not None:
+                self.maximum = self.__pending_maximum
+                self.__pending_maximum = None
+
         self.commit.now()
+
+    def _set_range_controls(self):
+        param = self.fitted_parameters[self.parameter_index]
+
+        assert param.type == int
+
+        if param.min is not None:
+            self.__spin_min.setMinimum(param.min)
+            self.__spin_max.setMinimum(param.min)
+            self.minimum = param.min
+        else:
+            self.__spin_min.setMinimum(-MIN_MAX_SPIN)
+            self.__spin_max.setMinimum(-MIN_MAX_SPIN)
+            self.minimum = self.initial_parameters[param.parameter_name]
+        if param.max is not None:
+            self.__spin_min.setMaximum(param.min)
+            self.__spin_max.setMaximum(param.min)
+            self.maximum = param.max
+        else:
+            self.__spin_min.setMaximum(MIN_MAX_SPIN)
+            self.__spin_max.setMaximum(MIN_MAX_SPIN)
+            self.maximum = self.initial_parameters[param.parameter_name]
 
     def clear(self):
         self.cancel()
-        self.graph.clear()
+        self.graph.clear_all()
+        self.__parameters_model.clear()
 
     @gui.deferred
     def commit(self):
         if self._data is None or self._learner is None or not \
-                self._learner.fitted_parameters:
+                self.fitted_parameters:
             return
+        self.graph.clear_all()
         self.start(run, self._data, self._learner,
-                   self._learner.fitted_parameters[self.parameter_index],
+                   self.fitted_parameters[self.parameter_index],
+                   self.initial_parameters,
                    self.minimum, self.maximum)
 
     def on_done(self, result: FitterResults):

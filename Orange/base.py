@@ -184,8 +184,7 @@ class Learner(ReprableWithPreprocessors):
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
 
-    @property
-    def fitted_parameters(self) -> List:
+    def fitted_parameters(self, *args, **kwargs) -> List:
         return []
 
     # pylint: disable=no-self-use

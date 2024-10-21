@@ -5,6 +5,7 @@ import scipy.stats as ss
 import sklearn.cross_decomposition as skl_pls
 from sklearn.preprocessing import StandardScaler
 
+from Orange.base import Learner
 from Orange.data import Table, Domain, Variable, \
     ContinuousVariable, StringVariable
 from Orange.data.util import get_unique_names, SharedComputeValue
@@ -256,8 +257,7 @@ class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):
                     reason = "Only numeric target variables expected."
         return reason
 
-    @property
-    def fitted_parameters(self) -> List:
+    def fitted_parameters(self) -> List[Learner.FittedParameter]:
         return [self.FittedParameter("n_components", "Number of components",
                                      "Comp", int, 1, None)]
 
