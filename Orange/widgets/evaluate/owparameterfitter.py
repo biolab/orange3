@@ -1,7 +1,9 @@
 from typing import Optional, Tuple, Callable, List, Dict
 
 import numpy as np
+from AnyQt.QtCore import QPointF
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
+from AnyQt.QtWidgets import QGraphicsSceneHelpEvent, QToolTip
 
 import pyqtgraph as pg
 
@@ -22,13 +24,15 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import LegendItem
 from Orange.widgets.visualize.utils.customizableplot import \
     CommonParameterSetter, Updater
-from Orange.widgets.visualize.utils.plotutils import PlotWidget
+from Orange.widgets.visualize.utils.plotutils import PlotWidget, \
+    HelpEventDelegate
 from Orange.widgets.widget import OWWidget, Input, Msg
 
 N_FOLD = 7
 MIN_MAX_SPIN = 100000
+ScoreType = Tuple[int, Tuple[float, float]]
 # scores, score name, tick label
-FitterResults = Tuple[List[Tuple[int, Tuple[float, float]]], str, str]
+FitterResults = Tuple[List[ScoreType], str, str]
 
 
 def _validate(
@@ -146,8 +150,13 @@ class ParameterSetter(CommonParameterSetter):
 
 
 class FitterPlot(PlotWidget):
+    BAR_WIDTH = 0.4
+
     def __init__(self):
         super().__init__(enableMenu=False)
+        self.__bar_item_tr: pg.BarGraphItem = None
+        self.__bar_item_cv: pg.BarGraphItem = None
+        self.__data: List[ScoreType] = None
         self.legend = self._create_legend()
         self.parameter_setter = ParameterSetter(self)
         self.setMouseEnabled(False, False)
@@ -157,6 +166,9 @@ class FitterPlot(PlotWidget):
         self.showGrid(y=self.parameter_setter.DEFAULT_SHOW_GRID,
                       alpha=self.parameter_setter.DEFAULT_ALPHA_GRID / 255)
 
+        self.tooltip_delegate = HelpEventDelegate(self.help_event)
+        self.scene().installEventFilter(self.tooltip_delegate)
+
     def _create_legend(self) -> LegendItem:
         legend = LegendItem()
         legend.setParentItem(self.getViewBox())
@@ -164,7 +176,19 @@ class FitterPlot(PlotWidget):
         legend.hide()
         return legend
 
-    def set_data(self, scores: List[Tuple], score_name: str, tick_name: str):
+    def clear(self):
+        super().clear()
+        self.__bar_item_tr = None
+        self.__bar_item_cv = None
+        self.__data = None
+
+    def set_data(
+            self,
+            scores: List[ScoreType],
+            score_name: str,
+            tick_name: str
+    ):
+        self.__data = scores
         self.clear()
         self.setLabel(axis="left", text=score_name)
 
@@ -175,7 +199,7 @@ class FitterPlot(PlotWidget):
         brush_tr = "#6fa255"
         brush_cv = "#3a78b6"
         pen = pg.mkPen("#333")
-        kwargs = {"pen": pen, "width": 0.4}
+        kwargs = {"pen": pen, "width": self.BAR_WIDTH}
         bar_item_tr = pg.BarGraphItem(x=np.arange(len(scores)) - 0.2,
                                       height=[(s[0]) for _, s in scores],
                                       brush=brush_tr, **kwargs)
@@ -184,6 +208,8 @@ class FitterPlot(PlotWidget):
                                       brush=brush_cv, **kwargs)
         self.addItem(bar_item_tr)
         self.addItem(bar_item_cv)
+        self.__bar_item_tr = bar_item_tr
+        self.__bar_item_cv = bar_item_cv
 
         self.legend.clear()
         kwargs = {"pen": pen, "symbol": "s"}
@@ -194,6 +220,42 @@ class FitterPlot(PlotWidget):
         Updater.update_legend_font(self.legend.items,
                                    **self.parameter_setter.legend_settings)
         self.legend.show()
+
+    def help_event(self, ev: QGraphicsSceneHelpEvent) -> bool:
+        if self.__bar_item_tr is None:
+            return False
+
+        pos = self.__bar_item_tr.mapFromScene(ev.scenePos())
+        index = self.__get_index_at(pos)
+        text = ""
+        if index is not None:
+            value, scores = self.__data[index]
+            text = f"<table align=left>" \
+                   f"<tr>" \
+                   f"<td><b>Train:</b></td>" \
+                   f"<td>{round(scores[0], 3)}</td>" \
+                   f"</tr><tr>" \
+                   f"<td><b>CV:</b></td>" \
+                   f"<td>{round(scores[1], 3)}</td>" \
+                   f"</tr>" \
+                   f"</table>"
+        if text:
+            QToolTip.showText(ev.screenPos(), text, widget=self)
+            return True
+        else:
+            return False
+
+    def __get_index_at(self, point: QPointF) -> Optional[int]:
+        x = point.x()
+        index = round(x)
+        heights_tr = self.__bar_item_tr.opts["height"]
+        heights_cv = self.__bar_item_cv.opts["height"]
+        if 0 <= index < len(heights_tr) and abs(index - x) <= self.BAR_WIDTH:
+            if index > x and 0 <= point.y() <= heights_tr[index]:
+                return index
+            if x > index and 0 <= point.y() <= heights_cv[index]:
+                return index
+        return None
 
 
 class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
