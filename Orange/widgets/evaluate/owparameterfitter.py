@@ -1,7 +1,7 @@
-from typing import Optional, Tuple, Callable, List, Dict
+from typing import Optional, Tuple, Callable, List, Dict, Iterable
 
 import numpy as np
-from AnyQt.QtCore import QPointF
+from AnyQt.QtCore import QPointF, Qt
 from AnyQt.QtGui import QStandardItemModel, QStandardItem
 from AnyQt.QtWidgets import QGraphicsSceneHelpEvent, QToolTip
 
@@ -55,17 +55,11 @@ def _search(
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
         initial_parameters: Dict,
-        minimum: int,
-        maximum: int,
+        steps: Iterable,
         progress_callback: Callable = dummy_callback
 ) -> FitterResults:
     progress_callback(0, "Calculating...")
     scores = []
-    step = 1
-    if maximum - minimum > 0:
-        exp = int(np.ceil(np.log10(maximum - minimum + 1))) - 1
-        step = int(10 ** exp)
-    steps = range(minimum, maximum + step, step)
     scorer = AUC if data.domain.has_discrete_class else R2
     parameter_name = fitted_parameter_props.parameter_name
     for i, value in enumerate(steps):
@@ -82,8 +76,7 @@ def run(
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
         initial_parameters: Dict,
-        minimum: int,
-        maximum: int,
+        steps: Iterable,
         state: TaskState
 ) -> FitterResults:
     def callback(i: float, status: str = ""):
@@ -95,7 +88,7 @@ def run(
             raise Exception
 
     return _search(data, learner, fitted_parameter_props, initial_parameters,
-                   minimum, maximum, callback)
+                   steps, callback)
 
 
 class ParameterSetter(CommonParameterSetter):
@@ -280,8 +273,11 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     DEFAULT_MINIMUM = 1
     DEFAULT_MAXIMUM = 9
     parameter_index = Setting(DEFAULT_PARAMETER_INDEX, schema_only=True)
+    FROM_RANGE, MANUAL = range(2)
+    type = Setting(FROM_RANGE)
     minimum = Setting(DEFAULT_MINIMUM, schema_only=True)
     maximum = Setting(DEFAULT_MAXIMUM, schema_only=True)
+    manual_steps = Setting("", schema_only=True)
     auto_commit = Setting(True)
 
     class Error(OWWidget.Error):
@@ -327,17 +323,36 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         self.__combo = gui.comboBox(box, self, "parameter_index",
                                     model=self.__parameters_model,
                                     callback=self.__on_parameter_changed)
-        hbox = gui.hBox(box)
+
+        buttons = gui.radioButtons(box, self, "type",
+                                   callback=self.__on_setting_changed)
+
+        gui.appendRadioButton(buttons, "Range")
+        hbox = gui.indentedBox(buttons, 20, orientation=Qt.Horizontal)
         kw = {"minv": -MIN_MAX_SPIN, "maxv": MIN_MAX_SPIN,
-              "callback": self.commit.deferred}
+              "callback": self.__on_setting_changed}
         self.__spin_min = gui.spin(hbox, self, "minimum", label="Min:", **kw)
         self.__spin_max = gui.spin(hbox, self, "maximum", label="Max:", **kw)
+
+        gui.appendRadioButton(buttons, "Manual")
+        hbox = gui.indentedBox(box, 20, orientation=Qt.Horizontal)
+        gui.lineEdit(hbox, self, "manual_steps", placeholderText="10, 20, 30",
+                     callback=self.__on_setting_changed)
+
+        box = gui.vBox(self.controlArea, "Steps preview")
+        self.preview = ""
+        gui.label(box, self, "%(preview)s", wordWrap=True)
+
         gui.rubber(self.controlArea)
 
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
     def __on_parameter_changed(self):
         self._set_range_controls()
+        self.__on_setting_changed()
+
+    def __on_setting_changed(self):
+        self._update_preview()
         self.commit.deferred()
 
     @property
@@ -354,6 +369,21 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
             return {}
         return self._learner.get_params(self._data) \
             if isinstance(self._learner, Fitter) else self._learner.params
+
+    @property
+    def steps(self) -> Iterable[int]:
+        if self.type == self.FROM_RANGE:
+            step = 1
+            diff = self.maximum - self.minimum
+            if diff > 0:
+                exp = int(np.ceil(np.log10(diff + 1))) - 1
+                step = int(10 ** exp)
+            return range(self.minimum, self.maximum + step, step)
+        else:
+            try:
+                return [int(s) for s in self.manual_steps.split(",")]
+            except ValueError:
+                return []
 
     @Inputs.data
     @check_multiple_targets_input
@@ -400,6 +430,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
                 self.maximum = self.__pending_maximum
                 self.__pending_maximum = None
 
+        self._update_preview()
         self.commit.now()
 
     def _set_range_controls(self):
@@ -424,6 +455,9 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
             self.__spin_max.setMaximum(MIN_MAX_SPIN)
             self.maximum = self.initial_parameters[param.parameter_name]
 
+    def _update_preview(self):
+        self.preview = str(list(self.steps))
+
     def clear(self):
         self.cancel()
         self.graph.clear_all()
@@ -437,8 +471,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         self.graph.clear_all()
         self.start(run, self._data, self._learner,
                    self.fitted_parameters[self.parameter_index],
-                   self.initial_parameters,
-                   self.minimum, self.maximum)
+                   self.initial_parameters, self.steps)
 
     def on_done(self, result: FitterResults):
         self.graph.set_data(*result)

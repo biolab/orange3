@@ -67,6 +67,45 @@ class TestOWParameterFitter(WidgetTest):
         self.assertFalse(self.widget.Error.not_enough_data.is_shown())
         self.assertFalse(self.widget.Error.incompatible_learner.is_shown())
 
+    def test_plot(self):
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.wait_until_finished()
+
+        x = self.widget.graph._FitterPlot__bar_item_tr.opts["x"]
+        self.assertEqual(list(x), [-0.2, 0.8])
+        x = self.widget.graph._FitterPlot__bar_item_cv.opts["x"]
+        self.assertEqual(list(x), [0.2, 1.2])
+
+    def test_manual_steps(self):
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.wait_until_finished()
+
+        self.widget.controls.manual_steps.setText("1, 2, 3")
+        self.widget.controls.type.buttons[1].click()
+        self.wait_until_finished()
+
+        x = self.widget.graph._FitterPlot__bar_item_tr.opts["x"]
+        self.assertEqual(list(x), [-0.2, 0.8, 1.8])
+        x = self.widget.graph._FitterPlot__bar_item_cv.opts["x"]
+        self.assertEqual(list(x), [0.2, 1.2, 2.2])
+
+    def test_steps_preview(self):
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.wait_until_finished()
+        self.assertEqual(self.widget.preview, "[1, 2]")
+
+        self.widget.controls.type.buttons[1].click()
+        self.wait_until_finished()
+        self.assertEqual(self.widget.preview, "[]")
+
+        self.widget.controls.manual_steps.setText("10, 15, 20, 25")
+        self.widget.controls.type.buttons[1].click()
+        self.wait_until_finished()
+        self.assertEqual(self.widget.preview, "[10, 15, 20, 25]")
+
 
 if __name__ == "__main__":
     unittest.main()
