@@ -126,15 +126,10 @@ class ParameterSetter(CommonParameterSetter):
         def update_grid(**settings):
             self.grid_settings.update(**settings)
             self.master.showGrid(
-                x=self.grid_settings[self.SHOW_GRID_LABEL],
-                y=self.grid_settings[self.SHOW_GRID_LABEL],
+                x=False, y=self.grid_settings[self.SHOW_GRID_LABEL],
                 alpha=self.grid_settings[Updater.ALPHA_LABEL] / 255)
 
         self._setters[self.PLOT_BOX] = {self.GRID_LABEL: update_grid}
-
-    @property
-    def title_item(self):
-        return self.master.getPlotItem().titleLabel
 
     @property
     def axis_items(self):
@@ -159,8 +154,7 @@ class FitterPlot(PlotWidget):
         self.setMouseEnabled(False, False)
         self.hideButtons()
 
-        self.showGrid(False, True)
-        self.showGrid(y=self.parameter_setter.DEFAULT_SHOW_GRID,
+        self.showGrid(x=False, y=self.parameter_setter.DEFAULT_SHOW_GRID,
                       alpha=self.parameter_setter.DEFAULT_ALPHA_GRID / 255)
 
         self.tooltip_delegate = HelpEventDelegate(self.help_event)
@@ -284,7 +278,6 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     auto_commit = Setting(True)
 
     class Error(OWWidget.Error):
-        domain_transform_err = Msg("{}")
         unknown_err = Msg("{}")
         not_enough_data = Msg(f"At least {N_FOLD} instances are needed.")
         incompatible_learner = Msg("{}")
@@ -409,7 +402,6 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         self.Warning.no_parameters.clear()
         self.Error.incompatible_learner.clear()
         self.Error.unknown_err.clear()
-        self.Error.domain_transform_err.clear()
         self.clear()
         if self._data is None or self._learner is None:
             return
@@ -454,8 +446,8 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
             self.__spin_max.setMinimum(-MIN_MAX_SPIN)
             self.minimum = self.initial_parameters[param.parameter_name]
         if param.max is not None:
-            self.__spin_min.setMaximum(param.min)
-            self.__spin_max.setMaximum(param.min)
+            self.__spin_min.setMaximum(param.max)
+            self.__spin_max.setMaximum(param.max)
             self.maximum = param.max
         else:
             self.__spin_min.setMaximum(MIN_MAX_SPIN)
@@ -484,10 +476,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         self.graph.set_data(*result)
 
     def on_exception(self, ex: Exception):
-        if isinstance(ex, DomainTransformationError):
-            self.Error.domain_transform_err(ex)
-        else:
-            self.Error.unknown_err(ex)
+        self.Error.unknown_err(ex)
 
     def on_partial_result(self, _):
         pass
