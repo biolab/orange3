@@ -485,6 +485,17 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         self.shutdown()
         super().onDeleteWidget()
 
+    def send_report(self):
+        if self._data is None or self._learner is None \
+                or not self._learner.fitted_parameters():
+            return
+        parameter = self.fitted_parameters[self.parameter_index].label
+        self.report_items("Settings",
+                          [("Parameter", parameter),
+                           ("Range", self.preview)])
+        self.report_name("Plot")
+        self.report_plot()
+
     def set_visual_settings(self, key: KeyType, value: ValueType):
         self.graph.parameter_setter.set_parameter(key, value)
         # pylint: disable=unsupported-assignment-operation

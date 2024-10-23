@@ -286,7 +286,17 @@ class TestOWParameterFitter(WidgetTest):
         self.assertEqual(font1.italic(), font2.italic())
 
     def test_send_report(self):
-        self.assertEqual(1, 2)
+        self.widget.send_report()
+
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.wait_until_finished()
+        self.widget.send_report()
+
+        self.send_signal(self.widget.Inputs.data, self._heart)
+        self.send_signal(self.widget.Inputs.learner, self._naive_bayes)
+        self.wait_until_finished()
+        self.widget.send_report()
 
 
 if __name__ == "__main__":
