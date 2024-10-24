@@ -1,10 +1,10 @@
 import inspect
 import itertools
-from collections import namedtuple
 from collections.abc import Iterable
 import re
 import warnings
-from typing import Callable, Dict, Optional, List
+from types import NoneType
+from typing import Callable, Optional, NamedTuple, Union, Type
 
 import numpy as np
 import scipy
@@ -88,9 +88,15 @@ class Learner(ReprableWithPreprocessors):
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
     preprocessors = ()
-    FittedParameter = namedtuple(
-        "FittedParameter",
-        ["parameter_name", "label", "tick_label", "type", "min", "max"]
+    FittedParameter = NamedTuple(
+        "FittedParameter", [
+            ("name", str),
+            ("label", str),
+            ("tick_label", str),
+            ("type", Type),
+            ("min", Union[int, NoneType]),
+            ("max", Union[int, NoneType]),
+        ]
     )
 
     # Note: Do not use this class attribute.
@@ -184,7 +190,7 @@ class Learner(ReprableWithPreprocessors):
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
 
-    def fitted_parameters(self, *args, **kwargs) -> List:
+    def fitted_parameters(self, *args, **kwargs) -> list:
         return []
 
     # pylint: disable=no-self-use
@@ -891,5 +897,5 @@ class XGBBase(SklLearner):
         self.params = kwargs
 
     @SklLearner.params.setter
-    def params(self, values: Dict):
+    def params(self, values: dict):
         self._params = values

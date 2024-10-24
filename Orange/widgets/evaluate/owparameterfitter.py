@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Callable, List, Dict, Iterable, Sized
+from typing import Optional, Callable, Iterable, Sized
 
 import numpy as np
 from AnyQt.QtCore import QPointF, Qt
@@ -13,7 +13,6 @@ from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog, \
 
 from Orange.base import Learner
 from Orange.data import Table
-from Orange.data.table import DomainTransformationError
 from Orange.evaluation import CrossValidation, TestOnTrainingData, Results
 from Orange.evaluation.scoring import Score, AUC, R2
 from Orange.modelling import Fitter
@@ -32,16 +31,16 @@ from Orange.widgets.widget import OWWidget, Input, Msg
 
 N_FOLD = 7
 MIN_MAX_SPIN = 100000
-ScoreType = Tuple[int, Tuple[float, float]]
+ScoreType = tuple[int, tuple[float, float]]
 # scores, score name, tick label
-FitterResults = Tuple[List[ScoreType], str, str]
+FitterResults = tuple[list[ScoreType], str, str]
 
 
 def _validate(
         data: Table,
         learner: Learner,
         scorer: type[Score]
-) -> Tuple[float, float]:
+) -> tuple[float, float]:
     # dummy call - Validation would silence the exceptions
     learner(data)
 
@@ -55,18 +54,18 @@ def _search(
         data: Table,
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
-        initial_parameters: Dict,
+        initial_parameters: dict,
         steps: Sized,
         progress_callback: Callable = dummy_callback
 ) -> FitterResults:
     progress_callback(0, "Calculating...")
     scores = []
     scorer = AUC if data.domain.has_discrete_class else R2
-    parameter_name = fitted_parameter_props.parameter_name
+    name = fitted_parameter_props.name
     for i, value in enumerate(steps):
         progress_callback(i / len(steps))
         params = initial_parameters.copy()
-        params[parameter_name] = value
+        params[name] = value
         result = _validate(data, type(learner)(**params), scorer)
         scores.append((value, result))
     return scores, scorer.name, fitted_parameter_props.tick_label
@@ -76,7 +75,7 @@ def run(
         data: Table,
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
-        initial_parameters: Dict,
+        initial_parameters: dict,
         steps: Sized,
         state: TaskState
 ) -> FitterResults:
@@ -97,7 +96,7 @@ class ParameterSetter(CommonParameterSetter):
     DEFAULT_ALPHA_GRID, DEFAULT_SHOW_GRID = 80, True
 
     def __init__(self, master):
-        self.grid_settings: Dict = None
+        self.grid_settings: dict = None
         self.master: FitterPlot = master
         super().__init__()
 
@@ -148,7 +147,7 @@ class FitterPlot(PlotWidget):
         super().__init__(enableMenu=False)
         self.__bar_item_tr: pg.BarGraphItem = None
         self.__bar_item_cv: pg.BarGraphItem = None
-        self.__data: List[ScoreType] = None
+        self.__data: list[ScoreType] = None
         self.legend = self._create_legend()
         self.parameter_setter = ParameterSetter(self)
         self.setMouseEnabled(False, False)
@@ -177,7 +176,7 @@ class FitterPlot(PlotWidget):
 
     def set_data(
             self,
-            scores: List[ScoreType],
+            scores: list[ScoreType],
             score_name: str,
             tick_name: str
     ):
@@ -243,8 +242,8 @@ class FitterPlot(PlotWidget):
         x = point.x()
         index = round(x)
         # pylint: disable=unsubscriptable-object
-        heights_tr: List = self.__bar_item_tr.opts["height"]
-        heights_cv: List = self.__bar_item_cv.opts["height"]
+        heights_tr: list = self.__bar_item_tr.opts["height"]
+        heights_cv: list = self.__bar_item_cv.opts["height"]
         if 0 <= index < len(heights_tr) and abs(index - x) <= self.BAR_WIDTH:
             if index > x and 0 <= point.y() <= heights_tr[index]:
                 return index
@@ -356,7 +355,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         self.commit.deferred()
 
     @property
-    def fitted_parameters(self) -> List:
+    def fitted_parameters(self) -> list:
         if not self._learner or not self._data:
             return []
         return self._learner.fitted_parameters(self._data) \
@@ -364,7 +363,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
             else self._learner.fitted_parameters()
 
     @property
-    def initial_parameters(self) -> Dict:
+    def initial_parameters(self) -> dict:
         if not self._learner or not self._data:
             return {}
         return self._learner.get_params(self._data) \
@@ -444,7 +443,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         else:
             self.__spin_min.setMinimum(-MIN_MAX_SPIN)
             self.__spin_max.setMinimum(-MIN_MAX_SPIN)
-            self.minimum = self.initial_parameters[param.parameter_name]
+            self.minimum = self.initial_parameters[param.name]
         if param.max is not None:
             self.__spin_min.setMaximum(param.max)
             self.__spin_max.setMaximum(param.max)
@@ -452,7 +451,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         else:
             self.__spin_min.setMaximum(MIN_MAX_SPIN)
             self.__spin_max.setMaximum(MIN_MAX_SPIN)
-            self.maximum = self.initial_parameters[param.parameter_name]
+            self.maximum = self.initial_parameters[param.name]
 
     def _update_preview(self):
         self.preview = str(list(self.steps))

@@ -1,5 +1,3 @@
-from typing import List
-
 import sklearn.ensemble as skl_ensemble
 
 from Orange.base import RandomForestModel, Learner
@@ -60,6 +58,6 @@ class RandomForestRegressionLearner(SklLearner, _FeatureScorerMixin):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
-    def fitted_parameters(self) -> List[Learner.FittedParameter]:
+    def fitted_parameters(self) -> list[Learner.FittedParameter]:
         return [self.FittedParameter("n_estimators", "Number of trees",
                                      "Trees", int, 1, None)]

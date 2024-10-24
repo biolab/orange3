@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import Union
 
 from Orange.base import RandomForestModel, Learner
 from Orange.classification import RandomForestLearner as RFClassification
@@ -30,5 +30,5 @@ class RandomForestLearner(SklFitter, _FeatureScorerMixin):
     def fitted_parameters(
             self,
             problem_type: Union[str, Table, Domain]
-    ) -> List[Learner.FittedParameter]:
+    ) -> list[Learner.FittedParameter]:
         return self.get_learner(problem_type).fitted_parameters()
