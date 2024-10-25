@@ -63,7 +63,10 @@ class TestOWScoringSheet(WidgetTest):
         non_zero_coefficients = [coef for coef in coefficients if coef != 0]
 
         self.assertEqual(len(coefficients), self.widget.num_attr_after_selection)
-        self.assertEqual(len(non_zero_coefficients), self.widget.num_decision_params)
+
+        # most often equal, but in some cases the optimizer finds fewer parameters
+        self.assertLessEqual(len(non_zero_coefficients), self.widget.num_decision_params)
+
         self.assertLessEqual(
             max(non_zero_coefficients, key=lambda x: abs(x)),
             self.widget.max_points_per_param,

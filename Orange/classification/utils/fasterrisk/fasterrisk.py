@@ -80,6 +80,7 @@ class RiskScoreOptimizer:
         else:
             assert type(group_sparsity) == int, "group_sparsity needs to be an integer"
             assert group_sparsity > 0, "group_sparsity needs to be > 0!"
+            assert group_sparsity > 0, "group_sparsity needs to be > 0!"
 
             assert self.featureIndex_to_groupIndex is not None, "featureIndex_to_groupIndex must be provided if group_sparsity is not None"
             assert type(self.featureIndex_to_groupIndex[0]) == np.int_, "featureIndex_to_groupIndex needs to be a NumPy integer array"
