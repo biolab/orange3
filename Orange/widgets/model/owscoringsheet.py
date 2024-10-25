@@ -88,7 +88,7 @@ class OWScoringSheet(OWBaseLearner, ConcurrentWidgetMixin):
             alignment=Qt.AlignRight,
             callback=self.settings_changed,
             controlWidth=45,
-        ),
+        )
 
         gui.spin(
             box,
@@ -102,7 +102,7 @@ class OWScoringSheet(OWBaseLearner, ConcurrentWidgetMixin):
             alignment=Qt.AlignRight,
             callback=self.settings_changed,
             controlWidth=45,
-        ),
+        )
 
         gui.checkBox(
             box,
@@ -110,7 +110,7 @@ class OWScoringSheet(OWBaseLearner, ConcurrentWidgetMixin):
             "custom_features_checkbox",
             label="Custom number of input features",
             callback=[self.settings_changed, self.custom_input_features],
-        ),
+        )
 
         self.custom_features = gui.spin(
             box,

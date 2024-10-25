@@ -5,11 +5,8 @@ from AnyQt.QtCore import Qt
 from orangewidget.tests.base import WidgetTest
 
 from Orange.data import Table
+from Orange.classification import LogisticRegressionLearner, ScoringSheetLearner
 from Orange.widgets.widget import AttributeList
-
-from Orange.classification.logistic_regression import LogisticRegressionLearner
-
-from Orange.classification.scoringsheet import ScoringSheetLearner
 from Orange.widgets.visualize.owscoringsheetviewer import OWScoringSheetViewer
 
 
