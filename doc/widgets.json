@@ -583,12 +583,14 @@
     ]
    },
    {
-    "text": "Scroing Sheet Viewer",
+    "text": "Scoring Sheet Viewer",
     "doc": "visual-programming/source/widgets/visualize/scoringsheetviewer.md",
     "icon": "../Orange/widgets/visualize/icons/ScoringSheetViewer.svg",
     "background": "#FFB7B1",
     "keywords": [
-     "scoring sheet viewer"
+     "scoring",
+     "sheet",
+     "viewer"
     ]
    }
   ]
@@ -722,6 +724,16 @@
     ]
    },
    {
+    "text": "Scoring Sheet",
+    "doc": "visual-programming/source/widgets/model/scoringsheet.md",
+    "icon": "../Orange/widgets/model/icons/ScoringSheet.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "scoring",
+     "sheet"
+    ]
+   },
+   {
     "text": "AdaBoost",
     "doc": "visual-programming/source/widgets/model/adaboost.md",
     "icon": "../Orange/widgets/model/icons/AdaBoost.svg",
@@ -797,16 +809,6 @@
      "file",
      "open",
      "model"
-    ]
-   },
-   {
-    "text": "Scoring Sheet",
-    "doc": "visual-programming/source/widgets/model/scoringsheet.md",
-    "icon": "../Orange/widgets/model/icons/ScoringSheet.svg",
-    "background": "#FAC1D9",
-    "keywords": [
-     "scoring",
-     "sheet"
     ]
    }
   ]

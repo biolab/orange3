@@ -89,6 +89,7 @@ Visualize
    widgets/visualize/silhouetteplot
    widgets/visualize/treeviewer
    widgets/visualize/nomogram
+   widgets/visualize/scoringsheetviewer
    widgets/visualize/freeviz
    widgets/visualize/radviz
 
@@ -111,6 +112,7 @@ Model
    widgets/model/pls
    widgets/model/logisticregression
    widgets/model/naivebayes
+   widgets/model/scoringsheet
    widgets/model/adaboost
    widgets/model/curvefit
    widgets/model/neuralnetwork

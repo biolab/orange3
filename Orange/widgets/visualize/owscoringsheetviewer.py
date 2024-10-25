@@ -310,7 +310,8 @@ class OWScoringSheetViewer(OWWidget):
     replaces = [
         "orangecontrib.prototypes.widgets.owscoringsheetviewer.OWScoringSheetViewer"
     ]
-    # priority = 90
+    priority = 2010
+    keywords = "scoring sheet viewer"
 
     class Inputs:
         classifier = Input("Classifier", Model)
