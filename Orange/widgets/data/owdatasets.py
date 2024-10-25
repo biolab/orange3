@@ -35,6 +35,12 @@ from Orange.widgets.widget import OWWidget, Msg
 
 log = logging.getLogger(__name__)
 
+# These two constants are used in settings (and in the proxy filter model).
+# The corresponding options in the combo box are translatable, therefore
+# the settings must be stored in language-independent form.
+GENERAL_DOMAIN = None
+ALL_DOMAINS = ""  # The setting is Optional[str], so don't use other types here
+
 
 def ensure_local(index_url, file_path, local_cache_path,
                  force=False, progress_advance=None):
@@ -124,7 +130,7 @@ class Namespace(SimpleNamespace):
         self.seealso = []
         self.tags = []
         self.language = "English"
-        self.domain = "core"
+        self.domain = None
         self.publication_status = self.PUBLISHED
 
         super(Namespace, self).__init__(**kwargs)
@@ -174,7 +180,7 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
         data = source.index(row, 0).data(Qt.UserRole)
         return (super().filterAcceptsRow(row, parent)
             and (self.__language is None or data.language == self.__language)
-            and (self.__domain is None or data.domain == self.__domain)
+            and (self.__domain == ALL_DOMAINS or data.domain == self.__domain)
             and (data.publication_status == Namespace.PUBLISHED or (
                  self.__filter is not None
                  and len(self.__filter) >= 5
@@ -200,7 +206,10 @@ class OWDataSets(OWWidget):
     DATASET_DIR = "datasets"
     DEFAULT_LANG = "English"
     ALL_LANGUAGES = "All Languages"
-    ALL_DOMAINS = "(general)"
+
+    # These two combo options are translatable; others (domain names) are not
+    GENERAL_DOMAIN_LABEL = "(General)"
+    ALL_DOMAINS_LABEL = "(Show all)"
 
     # override HEADER_SCHEMA to define new columns
     # if schema is changed override methods: self.assign_delegates and
@@ -230,6 +239,8 @@ class OWDataSets(OWWidget):
     #: Selected dataset id
     selected_id = Setting(None)   # type: Optional[str]
     language = Setting(DEFAULT_LANG)
+    domain = Setting(GENERAL_DOMAIN)
+    settings_version = 2
 
     #: main area splitter state
     splitter_state = Setting(b'')  # type: bytes
@@ -272,9 +283,9 @@ class OWDataSets(OWWidget):
         layout.addWidget(lang_combo)
 
         layout.addSpacing(20)
-        layout.addWidget(QLabel("Domain: "))
+        layout.addWidget(QLabel("Domain:"))
         domain_combo = self.domain_combo = QComboBox()
-        domain_combo.addItem(self.ALL_DOMAINS)
+        domain_combo.addItem(self.GENERAL_DOMAIN_LABEL)
         domain_combo.activated.connect(self._on_domain_changed)
         layout.addWidget(domain_combo)
 
@@ -410,15 +421,12 @@ class OWDataSets(OWWidget):
 
     def update_domain_combo(self):
         combo = self.domain_combo
-        current_domain = combo.currentText()
         allkeys = set(self.allinfo_local) | set(self.allinfo_remote)
         domains = {self._parse_info(key).domain for key in allkeys}
-        domains.discard("core")
-        domains = sorted(domains)
-        combo.clear()
-        combo.addItem(self.ALL_DOMAINS)
-        combo.addItems(domains)
-        combo.setCurrentText(current_domain)
+        domains -= {None, "sc"}
+        if domains:
+            combo.addItems(sorted(domains))
+            combo.addItem(self.ALL_DOMAINS_LABEL)
 
     def update_model(self):
         allkeys = set(self.allinfo_local) | set(self.allinfo_remote)
@@ -456,8 +464,17 @@ class OWDataSets(OWWidget):
             model.appendRow(row)
 
             # for settings do not use os.path.join (Windows separator is different)
-            if "/".join(file_path) == self.selected_id:
+            if file_path[-1] == self.selected_id:
                 current_index = i
+                self.domain = datainfo.domain
+                combo = self.domain_combo
+                if self.domain == GENERAL_DOMAIN:
+                    combo.setCurrentIndex(0)
+                elif self.domain == ALL_DOMAINS:
+                    combo.setCurrentIndex(combo.count() - 1)
+                else:
+                    combo.setCurrentText(self.domain)
+                self._on_domain_changed()
 
         return model, current_index
 
@@ -471,8 +488,13 @@ class OWDataSets(OWWidget):
 
     def _on_domain_changed(self):
         combo = self.domain_combo
-        domain = "core" if combo.currentIndex() == 0 else combo.currentText()
-        self.view.model().setDomain(domain)
+        if combo.currentIndex() == combo.count() - 1:
+            self.domain = ALL_DOMAINS
+        elif combo.currentIndex() == 0:
+            self.domain = GENERAL_DOMAIN
+        else:
+            self.domain = combo.currentText()
+        self.view.model().setDomain(self.domain)
 
     @Slot(object)
     def __set_index(self, f):
@@ -578,7 +600,7 @@ class OWDataSets(OWWidget):
             text = description_html(di)
             self.descriptionlabel.setText(text)
             # for settings do not use os.path.join (Windows separator is different)
-            self.selected_id = "/".join(di.file_path)
+            self.selected_id = di.file_path[-1]
         else:
             self.descriptionlabel.setText("")
             self.selected_id = None
@@ -695,10 +717,13 @@ class OWDataSets(OWWidget):
         return Orange.data.Table(path)
 
     @classmethod
-    def migrate_settings(cls, settings, _):
-        # until including 3.36.0 selected dataset was saved with \ on Windows
-        if "selected_id" in settings and isinstance(settings["selected_id"], str):
-            settings["selected_id"] = settings["selected_id"].replace("\\", "/")
+    def migrate_settings(cls, settings, version: Optional[int] = None):
+        selected_id = settings.get("selected_id")
+        if isinstance(selected_id, str):
+            # until including 3.36.0 selected dataset was saved with \ on Windows
+            selected_id = selected_id.replace("\\", "/")
+            if version is None or version < 2:
+                settings["selected_id"] = selected_id.split("/")[-1]
 
 
 class FutureWatcher(QObject):
