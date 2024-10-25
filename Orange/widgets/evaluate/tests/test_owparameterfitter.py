@@ -138,16 +138,11 @@ class TestOWParameterFitter(WidgetTest):
         self.send_signal(self.widget.Inputs.data, self._housing)
         self.send_signal(self.widget.Inputs.learner, self._pls)
         self.wait_until_finished()
-        self.assertEqual(self.widget.preview, "[1, 2]")
+        self.assertEqual(self.widget.range_preview.steps(), (1, 2))
 
         self.widget.controls.type.buttons[1].click()
         self.wait_until_finished()
-        self.assertEqual(self.widget.preview, "[]")
-
-        self.widget.controls.manual_steps.setText("10, 15, 20, 25")
-        self.widget.controls.type.buttons[1].click()
-        self.wait_until_finished()
-        self.assertEqual(self.widget.preview, "[10, 15, 20, 25]")
+        self.assertIsNone(self.widget.range_preview.steps())
 
     def test_on_parameter_changed(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
@@ -189,8 +184,12 @@ class TestOWParameterFitter(WidgetTest):
         self.assertEqual(len(self.widget.fitted_parameters), 1)
         self.wait_until_finished()
 
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertEqual(self.widget.fitted_parameters, [])
+        # TODO: I would remove this test
+        # We may someday want to output a Learner from the widget
+        # I changed the widget so that it doesn't necessarily require data,
+        # so this test fails
+        # self.send_signal(self.widget.Inputs.data, None)
+        # self.assertEqual(self.widget.fitted_parameters, [])
 
     def test_initial_parameters(self):
         self.assertEqual(self.widget.initial_parameters, {})
@@ -297,6 +296,97 @@ class TestOWParameterFitter(WidgetTest):
         self.send_signal(self.widget.Inputs.learner, self._naive_bayes)
         self.wait_until_finished()
         self.widget.send_report()
+
+    def test_steps_from_range_error(self):
+        w: OWParameterFitter = self.widget
+        self.send_signal(w.Inputs.data, self._heart)
+        self.send_signal(w.Inputs.learner, self._dummy)
+        w.type = w.FROM_RANGE
+
+        w.minimum = 10
+        w.maximum = 5
+        self.assertEqual(w.steps, ())
+        self.assertTrue(w.Error.min_max_error.is_shown())
+
+        w.maximum = 15
+        self.assertNotEqual(w.steps, ())
+        self.assertFalse(w.Error.min_max_error.is_shown())
+
+        w.minimum = 10
+        w.maximum = 5
+        w.steps
+        self.assertTrue(w.Error.min_max_error.is_shown())
+
+        self.send_signal(w.Inputs.learner, None)
+        self.assertFalse(w.Error.min_max_error.is_shown())
+
+    def test_steps_from_range_error(self):
+        w: OWParameterFitter = self.widget
+        self.send_signal(w.Inputs.data, self._heart)
+        self.send_signal(w.Inputs.learner, self._dummy)
+        w.type = w.FROM_RANGE
+
+        for mini, maxi, exp in [
+                (1, 2, (1, 2)),
+                (1, 5, (1, 2, 3, 4, 5)),
+                (1, 10, (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)),
+                (2, 14, (2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14)),
+                (2, 20, (2, 10, 20)),
+                (2, 22, (2, 10, 20, 22)),
+                (2, 10, (2, 3, 4, 5, 6, 7, 8, 9, 10)),
+                (2, 5, (2, 3, 4, 5)),
+                (2, 4, (2, 3, 4)),
+                (1, 1, (1,)),
+                (1, 50, (1, 10, 20, 30, 40, 50)),
+                (3, 49, (3, 10, 20, 30, 40, 49)),
+                (9, 31, (9, 10, 20, 30, 31)),
+                (90, 398, (90, 100, 200, 300, 398)),
+                (90, 1010,
+                 (90, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1010)),
+                (810, 1234, (810, 900, 1000, 1100, 1200, 1234)),
+                (4980, 18030,
+                 (4980, 5000, 6000, 7000, 8000, 9000, 10000, 11000, 12000,
+                  13000, 14000, 15000, 16000, 17000, 18000, 18030))]:
+            w.minimum = mini
+            w.maximum = maxi
+            self.assertEqual(w.steps, exp, f"min={mini}, max={maxi}")
+
+    def test_steps_from_manual_error(self):
+        w: OWParameterFitter = self.widget
+        self.send_signal(w.Inputs.data, self._heart)
+        self.send_signal(w.Inputs.learner, self._dummy)
+        w.type = w.MANUAL
+
+        w.manual_steps = "1, 2, 3, asdf, 4, 5"
+        self.assertEqual(w.steps, ())
+        self.assertTrue(w.Error.manual_steps_error.is_shown())
+
+        w.manual_steps = "1, 2, 3, 4, 5"
+        self.assertNotEqual(w.steps, ())
+        self.assertFalse(w.Error.manual_steps_error.is_shown())
+
+        w.manual_steps = "1, 2, 3, asdf, 4, 5"
+        w.steps
+        self.assertTrue(w.Error.manual_steps_error.is_shown())
+
+        self.send_signal(w.Inputs.learner, None)
+        self.assertFalse(w.Error.manual_steps_error.is_shown())
+
+    def test_steps_from_manual(self):
+        w: OWParameterFitter = self.widget
+        self.send_signal(w.Inputs.data, self._heart)
+        self.send_signal(w.Inputs.learner, self._dummy)
+        w.type = w.MANUAL
+
+        w.manual_steps = "1, 2, 3, 4, 5"
+        self.assertEqual(w.steps, (1, 2, 3, 4, 5))
+
+        w.manual_steps = "1, 2, 3, 4, 5, 6"
+        self.assertEqual(w.steps, (1, 2, 3, 4, 5, 6))
+
+        # TODO: We may or may not want this.
+        w.manual_steps = "1, 2, 10,   3, 4, 123, 5, 6"
+        self.assertEqual(w.steps, (1, 2, 3, 4, 5, 6, 10, 123))
 
 
 if __name__ == "__main__":

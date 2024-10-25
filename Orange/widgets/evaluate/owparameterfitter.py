@@ -1,10 +1,11 @@
-from typing import Optional, Callable, Iterable, Sized
+from typing import Optional, Callable, Collection, Sequence, Any
 
 import numpy as np
-from AnyQt.QtCore import QPointF, Qt
-from AnyQt.QtGui import QStandardItemModel, QStandardItem
+from AnyQt.QtCore import QPointF, Qt, QSize
+from AnyQt.QtGui import QStandardItemModel, QStandardItem, \
+    QPainter, QFontMetrics
 from AnyQt.QtWidgets import QGraphicsSceneHelpEvent, QToolTip, QSpinBox, \
-    QComboBox
+    QComboBox, QGridLayout, QSizePolicy, QWidget
 
 import pyqtgraph as pg
 
@@ -54,8 +55,8 @@ def _search(
         data: Table,
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
-        initial_parameters: dict,
-        steps: Sized,
+        initial_parameters: dict[str, Any],
+        steps: Collection[Any],
         progress_callback: Callable = dummy_callback
 ) -> FitterResults:
     progress_callback(0, "Calculating...")
@@ -68,15 +69,15 @@ def _search(
         params[name] = value
         result = _validate(data, type(learner)(**params), scorer)
         scores.append((value, result))
-    return scores, scorer.name, fitted_parameter_props.tick_label
+    return scores, scorer.name, fitted_parameter_props.label
 
 
 def run(
         data: Table,
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
-        initial_parameters: dict,
-        steps: Sized,
+        initial_parameters: dict[str, Any],
+        steps: Collection[Any],
         state: TaskState
 ) -> FitterResults:
     def callback(i: float, status: str = ""):
@@ -96,7 +97,7 @@ class ParameterSetter(CommonParameterSetter):
     DEFAULT_ALPHA_GRID, DEFAULT_SHOW_GRID = 80, True
 
     def __init__(self, master):
-        self.grid_settings: dict = None
+        self.grid_settings: Optional[dict] = None
         self.master: FitterPlot = master
         super().__init__()
 
@@ -145,9 +146,9 @@ class FitterPlot(PlotWidget):
 
     def __init__(self):
         super().__init__(enableMenu=False)
-        self.__bar_item_tr: pg.BarGraphItem = None
-        self.__bar_item_cv: pg.BarGraphItem = None
-        self.__data: list[ScoreType] = None
+        self.__bar_item_tr: Optional[pg.BarGraphItem] = None
+        self.__bar_item_cv: Optional[pg.BarGraphItem] = None
+        self.__data: Optional[list[ScoreType]] = None
         self.legend = self._create_legend()
         self.parameter_setter = ParameterSetter(self)
         self.setMouseEnabled(False, False)
@@ -178,14 +179,14 @@ class FitterPlot(PlotWidget):
             self,
             scores: list[ScoreType],
             score_name: str,
-            tick_name: str
+            parameter_name: str
     ):
         self.__data = scores
         self.clear()
-        self.setLabel(axis="bottom", text=" ")
+        self.setLabel(axis="bottom", text=parameter_name)
         self.setLabel(axis="left", text=score_name)
 
-        ticks = [[(i, f"{tick_name}[{val}]") for i, (val, _)
+        ticks = [[(i, str(val)) for i, (val, _)
                   in enumerate(scores)]]
         self.getAxis("bottom").setTicks(ticks)
 
@@ -223,15 +224,15 @@ class FitterPlot(PlotWidget):
         text = ""
         if index is not None:
             _, scores = self.__data[index]
-            text = f"<table align=left>" \
-                   f"<tr>" \
-                   f"<td><b>Train:</b></td>" \
+            text = "<table align=left>" \
+                   "<tr>" \
+                   "<td><b>Train:</b></td>" \
                    f"<td>{round(scores[0], 3)}</td>" \
-                   f"</tr><tr>" \
-                   f"<td><b>CV:</b></td>" \
+                   "</tr><tr>" \
+                   "<td><b>CV:</b></td>" \
                    f"<td>{round(scores[1], 3)}</td>" \
-                   f"</tr>" \
-                   f"</table>"
+                   "</tr>" \
+                   "</table>"
         if text:
             QToolTip.showText(ev.screenPos(), text, widget=self)
             return True
@@ -252,6 +253,54 @@ class FitterPlot(PlotWidget):
         return None
 
 
+class RangePreview(QWidget):
+    def __init__(self):
+        super().__init__()
+        font = self.font()
+        font.setPointSize(font.pointSize() - 3)
+        self.setFont(font)
+
+        self.__steps: Optional[Sequence[int]] = None
+        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
+
+    def minimumSizeHint(self):
+        return QSize(1, 20)
+
+    def set_steps(self, steps: Optional[Sequence[int]]):
+        self.__steps = steps
+        self.update()
+
+    def steps(self):
+        return self.__steps
+
+    def paintEvent(self, event):
+        if not self.__steps:
+            return
+        painter = QPainter(self)
+        metrics = QFontMetrics(self.font())
+        style = self.style()
+        rect = self.rect()
+
+        # Indent by the width of the radio button indicator
+        rect.adjust(style.pixelMetric(style.PM_IndicatorWidth)
+                    + style.pixelMetric(style.PM_CheckBoxLabelSpacing), 0, 0, 0)
+
+        last_text = f", {self.__steps[-1]}"
+        last_width = metrics.horizontalAdvance(last_text)
+
+        elided_text = metrics.elidedText(
+            "Steps: " + ", ".join(map(str, self.__steps[:-1])),
+            Qt.ElideRight, rect.width() - last_width)
+        elided_width = metrics.horizontalAdvance(elided_text)
+
+        # Right-align by indenting by the underflow width
+        rect.adjust(rect.width() - elided_width - last_width, 0, 0, 0)
+
+        painter.drawText(rect, Qt.AlignLeft, elided_text)
+        rect.adjust(elided_width, 0, 0, 0)
+        painter.drawText(rect, Qt.AlignLeft, last_text)
+
+
 class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     name = "Parameter Fitter"
     description = "Fit learner for various values of fitting parameter."
@@ -270,16 +319,18 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     DEFAULT_MAXIMUM = 9
     parameter_index = Setting(DEFAULT_PARAMETER_INDEX, schema_only=True)
     FROM_RANGE, MANUAL = range(2)
-    type = Setting(FROM_RANGE)
-    minimum = Setting(DEFAULT_MINIMUM, schema_only=True)
-    maximum = Setting(DEFAULT_MAXIMUM, schema_only=True)
-    manual_steps = Setting("", schema_only=True)
+    type: int = Setting(FROM_RANGE)
+    minimum: int = Setting(DEFAULT_MINIMUM, schema_only=True)
+    maximum: int = Setting(DEFAULT_MAXIMUM, schema_only=True)
+    manual_steps: str = Setting("", schema_only=True)
     auto_commit = Setting(True)
 
     class Error(OWWidget.Error):
         unknown_err = Msg("{}")
         not_enough_data = Msg(f"At least {N_FOLD} instances are needed.")
         incompatible_learner = Msg("{}")
+        manual_steps_error = Msg("Invalid list of steps for {}:\n{}")
+        min_max_error = Msg("Minimum must be less than maximum.")
 
     class Warning(OWWidget.Warning):
         no_parameters = Msg("{} has no parameters to fit.")
@@ -289,12 +340,11 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         ConcurrentWidgetMixin.__init__(self)
         self._data: Optional[Table] = None
         self._learner: Optional[Learner] = None
-        self.graph: FitterPlot = None
+        self.graph: Optional[FitterPlot] = None
         self.__parameters_model = QStandardItemModel()
-        self.__combo: QComboBox = None
-        self.__spin_min: QSpinBox = None
-        self.__spin_max: QSpinBox = None
-        self.preview: str = ""
+        self.__combo: Optional[QComboBox] = None
+        self.__spin_min: Optional[QSpinBox] = None
+        self.__spin_max: Optional[QSpinBox] = None
 
         self.__pending_parameter_index = self.parameter_index \
             if self.parameter_index != self.DEFAULT_PARAMETER_INDEX else None
@@ -318,91 +368,150 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         box.layout().addWidget(self.graph)
 
     def _add_controls(self):
-        box = gui.vBox(self.controlArea, "Settings")
-        self.__combo = gui.comboBox(box, self, "parameter_index",
+        layout = QGridLayout()
+        gui.widgetBox(self.controlArea, "Settings", orientation=layout)
+        self.__combo = gui.comboBox(None, self, "parameter_index",
                                     model=self.__parameters_model,
                                     callback=self.__on_parameter_changed)
+        layout.addWidget(self.__combo, 0, 0, 1, 2)
 
-        buttons = gui.radioButtons(box, self, "type",
-                                   callback=self.__on_setting_changed)
+        buttons = gui.radioButtons(None, self, "type",
+                                   callback=self.__on_type_changed)
+        button = gui.appendRadioButton(buttons, "Range:")
+        layout.addWidget(button, 1, 0)
 
-        gui.appendRadioButton(buttons, "Range")
-        hbox = gui.indentedBox(buttons, 20, orientation=Qt.Horizontal)
-        kw = {"minv": -MIN_MAX_SPIN, "maxv": MIN_MAX_SPIN,
-              "callback": self.__on_setting_changed}
-        self.__spin_min = gui.spin(hbox, self, "minimum", label="Min:", **kw)
-        self.__spin_max = gui.spin(hbox, self, "maximum", label="Max:", **kw)
+        kw = dict(minv=-MIN_MAX_SPIN, maxv=MIN_MAX_SPIN,
+                  alignment=Qt.AlignRight,
+                  callback=self.__on_min_max_changed)
+        box = gui.hBox(None)
+        self.__spin_min = gui.spin(box, self, "minimum", label="From:", **kw)
+        layout.addWidget(box, 1, 1)
 
-        gui.appendRadioButton(buttons, "Manual")
-        hbox = gui.indentedBox(box, 20, orientation=Qt.Horizontal)
-        gui.lineEdit(hbox, self, "manual_steps", placeholderText="10, 20, 30",
-                     callback=self.__on_setting_changed)
+        box = gui.hBox(None)
+        self.__spin_max = gui.spin(box, self, "maximum", label="To:", **kw)
+        layout.addWidget(box, 2, 1)
 
-        box = gui.vBox(self.controlArea, "Steps preview")
-        self.preview = ""
-        gui.label(box, self, "%(preview)s", wordWrap=True)
+        self.range_preview = RangePreview()
+        layout.addWidget(self.range_preview, 3, 0, 1, 2)
+
+        gui.appendRadioButton(buttons, "Manual:")
+        layout.addWidget(buttons, 4, 0)
+        edit = gui.lineEdit(None, self, "manual_steps",
+                            placeholderText="10, 20, 30",
+                            callback=self.__on_manual_changed)
+        layout.addWidget(edit, 4, 1)
+
+        # gui.lineEdit's connect does not call the callback on return pressed
+        # if the line hasn't changed.
+        @edit.returnPressed.connect
+        def _():
+            if self.type != self.MANUAL:
+                self.type = self.MANUAL
+                self.__on_type_changed()
 
         gui.rubber(self.controlArea)
 
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
+    def __on_type_changed(self):
+        self._settings_changed()
+
     def __on_parameter_changed(self):
         self._set_range_controls()
-        self.__on_setting_changed()
+        self._settings_changed()
 
-    def __on_setting_changed(self):
+    def __on_min_max_changed(self):
+        self.type = self.FROM_RANGE
+        self._settings_changed()
+
+    def __on_manual_changed(self):
+        self.type = self.MANUAL
+        self._settings_changed()
+
+    def _settings_changed(self):
         self._update_preview()
         self.commit.deferred()
 
     @property
     def fitted_parameters(self) -> list:
-        if not self._learner or not self._data:
+        if not self._learner:
             return []
-        return self._learner.fitted_parameters(self._data) \
-            if isinstance(self._learner, Fitter) \
-            else self._learner.fitted_parameters()
+        if isinstance(self._learner, Fitter):
+            if not self._data:
+                return []
+            return self._learner.fitted_parameters(self._data)
+        else:
+            return self._learner.fitted_parameters()
 
     @property
     def initial_parameters(self) -> dict:
-        if not self._learner or not self._data:
+        if not self._learner:
             return {}
-        return self._learner.get_params(self._data) \
-            if isinstance(self._learner, Fitter) else self._learner.params
+        if isinstance(self._learner, Fitter):
+            if not self._data:
+                return {}
+            return self._learner.get_params(self._data)
+        return self._learner.params
 
     @property
-    def steps(self) -> Iterable[int]:
+    def steps(self) -> tuple[int]:
+        self.Error.min_max_error.clear()
+        self.Error.manual_steps_error.clear()
         if self.type == self.FROM_RANGE:
-            step = 1
-            diff = self.maximum - self.minimum
-            if diff > 0:
-                exp = int(np.ceil(np.log10(diff + 1))) - 1
-                step = int(10 ** exp)
-            return range(self.minimum, self.maximum + step, step)
+            return self._steps_from_range()
         else:
-            try:
-                return [int(s) for s in self.manual_steps.split(",")]
-            except ValueError:
-                return []
+            return self._steps_from_manual()
+
+    def _steps_from_range(self) -> tuple[int]:
+        if self.maximum < self.minimum:
+            self.Error.min_max_error()
+            return ()
+
+        if self.minimum == self.maximum:
+            return (self.minimum, )
+
+        diff = self.maximum - self.minimum
+        # This should give between 10 and 15 steps
+        exp = max(0, int(np.ceil(np.log10(diff / 1.5))) - 1)
+        step = int(10 ** exp)
+        return (self.minimum,
+                *range((self.minimum // step + 1) * step, self.maximum, step),
+                self.maximum)
+
+    def _steps_from_manual(self) -> tuple[int]:
+        steps = self.manual_steps
+        if not steps:
+            return ()
+        try:
+            steps = tuple(sorted(map(int, steps.split(","))))
+            self.manual_steps = ", ".join(map(str, steps))
+            return steps
+        except ValueError as exc:
+            self.Error.manual_steps_error(
+                self.fitted_parameters[self.parameter_index].label,
+                exc)
+            return ()
 
     @Inputs.data
     @check_multiple_targets_input
     def set_data(self, data: Optional[Table]):
-        self.Error.not_enough_data.clear()
         self._data = data
-        if self._data and len(self._data) < N_FOLD:
-            self.Error.not_enough_data()
-            self._data = None
 
     @Inputs.learner
     def set_learner(self, learner: Optional[Learner]):
         self._learner = learner
 
     def handleNewSignals(self):
-        self.Warning.no_parameters.clear()
-        self.Error.incompatible_learner.clear()
-        self.Error.unknown_err.clear()
+        self.Warning.clear()
+        self.Error.clear()
         self.clear()
+
         if self._data is None or self._learner is None:
+            return
+
+        if self._data and len(self._data) < N_FOLD:
+            self.Error.not_enough_data()
+            self._data = None
             return
 
         reason = self._learner.incompatibility_reason(self._data.domain)
@@ -434,7 +543,8 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     def _set_range_controls(self):
         param = self.fitted_parameters[self.parameter_index]
 
-        assert param.type == int
+        assert param.type == int, \
+            "The widget currently supports only int parameters"
 
         if param.min is not None:
             self.__spin_min.setMinimum(param.min)
@@ -454,7 +564,10 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
             self.maximum = self.initial_parameters[param.name]
 
     def _update_preview(self):
-        self.preview = str(list(self.steps))
+        if self.type == self.FROM_RANGE:
+            self.range_preview.set_steps(self.steps)
+        else:
+            self.range_preview.set_steps(None)
 
     def clear(self):
         self.cancel()
@@ -463,8 +576,8 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
     @gui.deferred
     def commit(self):
-        if self._data is None or self._learner is None or not \
-                self.fitted_parameters:
+        if self._data is None or self._learner is None or \
+                not self.fitted_parameters or not self.steps:
             return
         self.graph.clear_all()
         self.start(run, self._data, self._learner,
@@ -491,7 +604,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         parameter = self.fitted_parameters[self.parameter_index].label
         self.report_items("Settings",
                           [("Parameter", parameter),
-                           ("Range", self.preview)])
+                           ("Range", ", ".join(map(str, self.steps)))])
         self.report_name("Plot")
         self.report_plot()
 
