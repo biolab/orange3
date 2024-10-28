@@ -581,6 +581,17 @@
     "keywords": [
      "nomogram"
     ]
+   },
+   {
+    "text": "Scoring Sheet Viewer",
+    "doc": "visual-programming/source/widgets/visualize/scoringsheetviewer.md",
+    "icon": "../Orange/widgets/visualize/icons/ScoringSheetViewer.svg",
+    "background": "#FFB7B1",
+    "keywords": [
+     "scoring",
+     "sheet",
+     "viewer"
+    ]
    }
   ]
  ],
@@ -710,6 +721,16 @@
     "keywords": [
      "naive",
      "bayes"
+    ]
+   },
+   {
+    "text": "Scoring Sheet",
+    "doc": "visual-programming/source/widgets/model/scoringsheet.md",
+    "icon": "../Orange/widgets/model/icons/ScoringSheet.svg",
+    "background": "#FAC1D9",
+    "keywords": [
+     "scoring",
+     "sheet"
     ]
    },
    {
