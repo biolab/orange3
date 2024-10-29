@@ -599,7 +599,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
     def send_report(self):
         if self._data is None or self._learner is None \
-                or not self._learner.fitted_parameters():
+                or not self.fitted_parameters:
             return
         parameter = self.fitted_parameters[self.parameter_index].label
         self.report_items("Settings",
