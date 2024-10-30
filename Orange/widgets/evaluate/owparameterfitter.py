@@ -1,4 +1,4 @@
-from typing import Optional, Callable, Collection, Sequence, Any
+from typing import Optional, Callable, Collection, Sequence
 
 import numpy as np
 from AnyQt.QtCore import QPointF, Qt, QSize
@@ -55,8 +55,8 @@ def _search(
         data: Table,
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
-        initial_parameters: dict[str, Any],
-        steps: Collection[Any],
+        initial_parameters: dict[str, int],
+        steps: Collection[int],
         progress_callback: Callable = dummy_callback
 ) -> FitterResults:
     progress_callback(0, "Calculating...")
@@ -76,8 +76,8 @@ def run(
         data: Table,
         learner: Learner,
         fitted_parameter_props: Learner.FittedParameter,
-        initial_parameters: dict[str, Any],
-        steps: Collection[Any],
+        initial_parameters: dict[str, int],
+        steps: Collection[int],
         state: TaskState
 ) -> FitterResults:
     def callback(i: float, status: str = ""):
@@ -285,7 +285,9 @@ class RangePreview(QWidget):
         rect.adjust(style.pixelMetric(style.PM_IndicatorWidth)
                     + style.pixelMetric(style.PM_CheckBoxLabelSpacing), 0, 0, 0)
 
-        last_text = f", {self.__steps[-1]}"
+        last_text = f"{self.__steps[-1]}"
+        if len(self.__steps) > 1:
+            last_text = ", " + last_text
         last_width = metrics.horizontalAdvance(last_text)
 
         elided_text = metrics.elidedText(
@@ -576,10 +578,10 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
     @gui.deferred
     def commit(self):
+        self.graph.clear_all()
         if self._data is None or self._learner is None or \
                 not self.fitted_parameters or not self.steps:
             return
-        self.graph.clear_all()
         self.start(run, self._data, self._learner,
                    self.fitted_parameters[self.parameter_index],
                    self.initial_parameters, self.steps)
