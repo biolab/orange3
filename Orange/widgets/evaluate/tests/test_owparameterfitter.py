@@ -21,8 +21,8 @@ from Orange.widgets.tests.utils import simulate
 class DummyLearner(PLSRegressionLearner):
     def fitted_parameters(self):
         return [
-            self.FittedParameter("n_components", "Foo", "foo", int, 1, None),
-            self.FittedParameter("n_components", "Bar", "bar", int, 1, 10),
+            self.FittedParameter("n_components", "Foo", "foo", int, 5, None),
+            self.FittedParameter("n_components", "Bar", "bar", int, 5, 10),
             self.FittedParameter("n_components", "Baz", "baz", int, None, 10),
             self.FittedParameter("n_components", "Qux", "qux", int, None, None)
         ]
@@ -133,6 +133,82 @@ class TestOWParameterFitter(WidgetTest):
         self.assertEqual(list(x), [-0.2, 0.8, 1.8])
         x = self.widget.graph._FitterPlot__bar_item_cv.opts["x"]
         self.assertEqual(list(x), [0.2, 1.2, 2.2])
+
+    def test_manual_steps_limits(self):
+        w = self.widget
+
+        def test_errors(act):
+            err = w.Error
+            for error in (err.manual_steps_error, err.manual_invalid_minmax,
+                          err.manual_invalid_minimum, err.manual_invalid_maximum):
+                self.assertIs(error.is_shown(), error is act)
+
+        def enter(text):
+            w.controls.manual_steps.setText(text)
+            w.controls.manual_steps.returnPressed.emit()
+
+        self.send_signal(w.Inputs.data, self._housing)
+        self.send_signal(w.Inputs.learner, self._dummy)
+        self.wait_until_finished()
+
+        # 5 to None
+        simulate.combobox_activate_index(w.controls.parameter_index, 0)
+        self.wait_until_finished()
+
+        enter("6, 9, 7")
+        self.assertEqual(w.steps, (6, 7, 9))
+        test_errors(None)
+
+        enter("6, 9, 7, 3")
+        self.assertEqual(w.steps, ())
+        test_errors(w.Error.manual_invalid_minimum)
+
+        enter("6, 9, 7")
+        self.assertEqual(w.steps, (6, 7, 9))
+        test_errors(None)
+
+        enter("6, 9, 7, 3")
+
+        # None to 10
+        simulate.combobox_activate_index(w.controls.parameter_index, 2)
+        self.wait_until_finished()
+
+        test_errors(None)
+
+        enter("12, 1, 3, -5")
+        self.assertEqual(w.steps, ())
+        test_errors(w.Error.manual_invalid_maximum)
+
+        enter("1, 3, -5")
+        self.assertEqual(w.steps, (-5, 1, 3))
+        test_errors(None)
+
+        enter("12, 1, 3, -5")
+
+        # No limits
+        simulate.combobox_activate_index(w.controls.parameter_index, 3)
+        self.wait_until_finished()
+        self.assertEqual(w.steps, (-5, 1, 3, 12))
+        test_errors(None)
+
+        # 5 to 10
+        simulate.combobox_activate_index(w.controls.parameter_index, 1)
+        self.wait_until_finished()
+
+        self.assertEqual(w.steps, ())
+        test_errors(w.Error.manual_invalid_minmax)
+
+        enter("12, 8, 7, 5")
+        self.assertEqual(w.steps, ())
+        test_errors(w.Error.manual_invalid_maximum)
+
+        enter("8, 7, -5")
+        self.assertEqual(w.steps, ())
+        test_errors(w.Error.manual_invalid_minimum)
+
+        enter("8, 7, 5")
+        self.assertEqual(w.steps, (5, 7, 8))
+        test_errors(None)
 
     def test_steps_preview(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
@@ -353,8 +429,10 @@ class TestOWParameterFitter(WidgetTest):
 
     def test_steps_from_manual_error(self):
         w: OWParameterFitter = self.widget
-        self.send_signal(w.Inputs.data, self._heart)
+        self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
+        self.wait_until_finished()
+        simulate.combobox_activate_index(w.controls.parameter_index, 3)
         w.type = w.MANUAL
 
         w.manual_steps = "1, 2, 3, asdf, 4, 5"
@@ -374,8 +452,10 @@ class TestOWParameterFitter(WidgetTest):
 
     def test_steps_from_manual(self):
         w: OWParameterFitter = self.widget
-        self.send_signal(w.Inputs.data, self._heart)
+        self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
+        self.wait_until_finished()
+        simulate.combobox_activate_index(w.controls.parameter_index, 3)
         w.type = w.MANUAL
 
         w.manual_steps = "1, 2, 3, 4, 5"
@@ -384,10 +464,26 @@ class TestOWParameterFitter(WidgetTest):
         w.manual_steps = "1, 2, 3, 4, 5, 6"
         self.assertEqual(w.steps, (1, 2, 3, 4, 5, 6))
 
-        # TODO: We may or may not want this.
         w.manual_steps = "1, 2, 10,   3, 4, 123, 5, 6"
         self.assertEqual(w.steps, (1, 2, 3, 4, 5, 6, 10, 123))
 
+    def test_manual_tooltip(self):
+        w: OWParameterFitter = self.widget
+        self.send_signal(w.Inputs.data, self._housing)
+        self.send_signal(w.Inputs.learner, self._dummy)
+        self.wait_until_finished()
+
+        simulate.combobox_activate_index(w.controls.parameter_index, 0)
+        self.assertIn("greater or equal to 5", w.edit.toolTip())
+
+        simulate.combobox_activate_index(w.controls.parameter_index, 1)
+        self.assertIn("between 5 and 10", w.edit.toolTip())
+
+        simulate.combobox_activate_index(w.controls.parameter_index, 2)
+        self.assertIn("smaller or equal to 10", w.edit.toolTip())
+
+        simulate.combobox_activate_index(w.controls.parameter_index, 3)
+        self.assertEqual("", w.edit.toolTip())
 
 if __name__ == "__main__":
     unittest.main()

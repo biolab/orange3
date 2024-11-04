@@ -9,6 +9,7 @@ from AnyQt.QtWidgets import QGraphicsSceneHelpEvent, QToolTip, QSpinBox, \
 
 import pyqtgraph as pg
 
+from orangewidget.utils.itemmodels import signal_blocking
 from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog, \
     KeyType, ValueType
 
@@ -331,7 +332,10 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         unknown_err = Msg("{}")
         not_enough_data = Msg(f"At least {N_FOLD} instances are needed.")
         incompatible_learner = Msg("{}")
-        manual_steps_error = Msg("Invalid list of steps for {}:\n{}")
+        manual_steps_error = Msg("Invalid list of values for {}:\n{}")
+        manual_invalid_minmax = Msg("Value for {} must be between {} and {}")
+        manual_invalid_minimum = Msg("Value for {} must be at least {}")
+        manual_invalid_maximum = Msg("Value for {} must be at most {}")
         min_max_error = Msg("Minimum must be less than maximum.")
 
     class Warning(OWWidget.Warning):
@@ -398,14 +402,14 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
         gui.appendRadioButton(buttons, "Manual:")
         layout.addWidget(buttons, 4, 0)
-        edit = gui.lineEdit(None, self, "manual_steps",
+        self.edit = gui.lineEdit(None, self, "manual_steps",
                             placeholderText="10, 20, 30",
                             callback=self.__on_manual_changed)
-        layout.addWidget(edit, 4, 1)
+        layout.addWidget(self.edit, 4, 1)
 
         # gui.lineEdit's connect does not call the callback on return pressed
         # if the line hasn't changed.
-        @edit.returnPressed.connect
+        @self.edit.returnPressed.connect
         def _():
             if self.type != self.MANUAL:
                 self.type = self.MANUAL
@@ -459,6 +463,10 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     def steps(self) -> tuple[int]:
         self.Error.min_max_error.clear()
         self.Error.manual_steps_error.clear()
+        self.Error.manual_invalid_minimum.clear()
+        self.Error.manual_invalid_maximum.clear()
+        self.Error.manual_invalid_minmax.clear()
+
         if self.type == self.FROM_RANGE:
             return self._steps_from_range()
         else:
@@ -480,19 +488,32 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
                 *range((self.minimum // step + 1) * step, self.maximum, step),
                 self.maximum)
 
-    def _steps_from_manual(self) -> tuple[int]:
+    def _steps_from_manual(self) -> tuple[int, ...]:
+        param = self.fitted_parameters[self.parameter_index]
         steps = self.manual_steps
         if not steps:
             return ()
         try:
-            steps = tuple(sorted(map(int, steps.split(","))))
-            self.manual_steps = ", ".join(map(str, steps))
-            return steps
+            steps = tuple(sorted(set(map(int, steps.split(",")))))
         except ValueError as exc:
-            self.Error.manual_steps_error(
-                self.fitted_parameters[self.parameter_index].label,
-                exc)
+            self.Error.manual_steps_error(param.name, exc)
             return ()
+
+        self.manual_steps = ", ".join(map(str, steps))
+
+        under = param.min is not None and steps[0] < param.min
+        over = param.max is not None and steps[-1] > param.max
+        if under or over:
+            if under and over:
+                self.Error.manual_invalid_minmax(param.name, param.min, param.max)
+            elif under:
+                self.Error.manual_invalid_minimum(param.name, param.min)
+            else:
+                assert over
+                self.Error.manual_invalid_maximum(param.name, param.max)
+            return ()
+
+        return steps
 
     @Inputs.data
     @check_multiple_targets_input
@@ -548,22 +569,35 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         assert param.type == int, \
             "The widget currently supports only int parameters"
 
+        # Block signals to avoid changing `self.type`
+        with signal_blocking(self.__spin_min), signal_blocking(self.__spin_max):
+            if param.min is not None:
+                self.__spin_min.setMinimum(param.min)
+                self.__spin_max.setMinimum(param.min)
+                self.minimum = param.min
+            else:
+                self.__spin_min.setMinimum(-MIN_MAX_SPIN)
+                self.__spin_max.setMinimum(-MIN_MAX_SPIN)
+                self.minimum = self.initial_parameters[param.name]
+            if param.max is not None:
+                self.__spin_min.setMaximum(param.max)
+                self.__spin_max.setMaximum(param.max)
+                self.maximum = param.max
+            else:
+                self.__spin_min.setMaximum(MIN_MAX_SPIN)
+                self.__spin_max.setMaximum(MIN_MAX_SPIN)
+                self.maximum = self.initial_parameters[param.name]
+
+        tip = f"Enter a list of comma-separated values"
         if param.min is not None:
-            self.__spin_min.setMinimum(param.min)
-            self.__spin_max.setMinimum(param.min)
-            self.minimum = param.min
+            if param.max is not None:
+                self.edit.setToolTip(f"{tip} between {param.min} and {param.max}.")
+            else:
+                self.edit.setToolTip(f"{tip} greater or equal to {param.min}.")
+        elif param.max is not None:
+            self.edit.setToolTip(f"{tip} smaller or equal to {param.max}.")
         else:
-            self.__spin_min.setMinimum(-MIN_MAX_SPIN)
-            self.__spin_max.setMinimum(-MIN_MAX_SPIN)
-            self.minimum = self.initial_parameters[param.name]
-        if param.max is not None:
-            self.__spin_min.setMaximum(param.max)
-            self.__spin_max.setMaximum(param.max)
-            self.maximum = param.max
-        else:
-            self.__spin_min.setMaximum(MIN_MAX_SPIN)
-            self.__spin_max.setMaximum(MIN_MAX_SPIN)
-            self.maximum = self.initial_parameters[param.name]
+            self.edit.setToolTip("")
 
     def _update_preview(self):
         if self.type == self.FROM_RANGE:
