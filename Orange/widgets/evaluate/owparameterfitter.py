@@ -4,8 +4,8 @@ import numpy as np
 from AnyQt.QtCore import QPointF, Qt, QSize
 from AnyQt.QtGui import QStandardItemModel, QStandardItem, \
     QPainter, QFontMetrics
-from AnyQt.QtWidgets import QGraphicsSceneHelpEvent, QToolTip, QSpinBox, \
-    QComboBox, QGridLayout, QSizePolicy, QWidget
+from AnyQt.QtWidgets import QGraphicsSceneHelpEvent, QToolTip, \
+    QGridLayout, QSizePolicy, QWidget
 
 import pyqtgraph as pg
 
@@ -274,7 +274,7 @@ class RangePreview(QWidget):
     def steps(self):
         return self.__steps
 
-    def paintEvent(self, event):
+    def paintEvent(self, _):
         if not self.__steps:
             return
         painter = QPainter(self)
@@ -346,11 +346,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         ConcurrentWidgetMixin.__init__(self)
         self._data: Optional[Table] = None
         self._learner: Optional[Learner] = None
-        self.graph: Optional[FitterPlot] = None
         self.__parameters_model = QStandardItemModel()
-        self.__combo: Optional[QComboBox] = None
-        self.__spin_min: Optional[QSpinBox] = None
-        self.__spin_max: Optional[QSpinBox] = None
 
         self.__pending_parameter_index = self.parameter_index \
             if self.parameter_index != self.DEFAULT_PARAMETER_INDEX else None
@@ -369,11 +365,15 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         self._add_controls()
 
     def _add_plot(self):
+        # This is a part of __init__
+        # pylint: disable=attribute-defined-outside-init
         box = gui.vBox(self.mainArea)
         self.graph = FitterPlot()
         box.layout().addWidget(self.graph)
 
     def _add_controls(self):
+        # This is a part of __init__
+        # pylint: disable=attribute-defined-outside-init
         layout = QGridLayout()
         gui.widgetBox(self.controlArea, "Settings", orientation=layout)
         self.__combo = gui.comboBox(None, self, "parameter_index",
@@ -386,6 +386,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         button = gui.appendRadioButton(buttons, "Range:")
         layout.addWidget(button, 1, 0)
 
+        # pylint: disable=use-dict-literal
         kw = dict(minv=-MIN_MAX_SPIN, maxv=MIN_MAX_SPIN,
                   alignment=Qt.AlignRight,
                   callback=self.__on_min_max_changed)
@@ -588,7 +589,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
                 self.__spin_max.setMaximum(MIN_MAX_SPIN)
                 self.maximum = self.initial_parameters[param.name]
 
-        tip = f"Enter a list of comma-separated values"
+        tip = "Enter a list of comma-separated values"
         if param.min is not None:
             if param.max is not None:
                 self.edit.setToolTip(f"{tip} between {param.min} and {param.max}.")

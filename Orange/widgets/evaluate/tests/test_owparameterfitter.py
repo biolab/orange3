@@ -260,13 +260,6 @@ class TestOWParameterFitter(WidgetTest):
         self.assertEqual(len(self.widget.fitted_parameters), 1)
         self.wait_until_finished()
 
-        # TODO: I would remove this test
-        # We may someday want to output a Learner from the widget
-        # I changed the widget so that it doesn't necessarily require data,
-        # so this test fails
-        # self.send_signal(self.widget.Inputs.data, None)
-        # self.assertEqual(self.widget.fitted_parameters, [])
-
     def test_initial_parameters(self):
         self.assertEqual(self.widget.initial_parameters, {})
 
@@ -390,13 +383,13 @@ class TestOWParameterFitter(WidgetTest):
 
         w.minimum = 10
         w.maximum = 5
-        w.steps
+        w.steps  # pylint: disable=pointless-statement
         self.assertTrue(w.Error.min_max_error.is_shown())
 
         self.send_signal(w.Inputs.learner, None)
         self.assertFalse(w.Error.min_max_error.is_shown())
 
-    def test_steps_from_range_error(self):
+    def test_steps_from_ranges_steps(self):
         w: OWParameterFitter = self.widget
         self.send_signal(w.Inputs.data, self._heart)
         self.send_signal(w.Inputs.learner, self._dummy)
@@ -444,7 +437,7 @@ class TestOWParameterFitter(WidgetTest):
         self.assertFalse(w.Error.manual_steps_error.is_shown())
 
         w.manual_steps = "1, 2, 3, asdf, 4, 5"
-        w.steps
+        w.steps  # pylint: disable=pointless-statement
         self.assertTrue(w.Error.manual_steps_error.is_shown())
 
         self.send_signal(w.Inputs.learner, None)
