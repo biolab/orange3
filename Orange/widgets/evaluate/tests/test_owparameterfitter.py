@@ -137,15 +137,13 @@ class TestOWParameterFitter(WidgetTest):
     def test_manual_steps_limits(self):
         w = self.widget
 
-        def test_errors(act):
-            err = w.Error
-            for error in (err.manual_steps_error, err.manual_invalid_minmax,
-                          err.manual_invalid_minimum, err.manual_invalid_maximum):
-                self.assertIs(error.is_shown(), error is act)
-
-        def enter(text):
-            w.controls.manual_steps.setText(text)
-            w.controls.manual_steps.returnPressed.emit()
+        def check(cases):
+            for setting, steps in cases:
+                w.controls.manual_steps.setText(setting)
+                w.controls.manual_steps.returnPressed.emit()
+                self.assertEqual(w.steps, steps, f"setting: {setting}")
+                self.assertIs(w.Error.manual_steps_error.is_shown(), not steps,
+                              f"setting: {setting}")
 
         self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
@@ -154,61 +152,37 @@ class TestOWParameterFitter(WidgetTest):
         # 5 to None
         simulate.combobox_activate_index(w.controls.parameter_index, 0)
         self.wait_until_finished()
-
-        enter("6, 9, 7")
-        self.assertEqual(w.steps, (6, 7, 9))
-        test_errors(None)
-
-        enter("6, 9, 7, 3")
-        self.assertEqual(w.steps, ())
-        test_errors(w.Error.manual_invalid_minimum)
-
-        enter("6, 9, 7")
-        self.assertEqual(w.steps, (6, 7, 9))
-        test_errors(None)
-
-        enter("6, 9, 7, 3")
+        check([("6, 9, 7", (6, 7, 9)),
+               ("6, 9, 7, 3", ()),
+               ("6, 9, 7", (6, 7, 9)),
+               ("6, 9, 7, 3", ())])
 
         # None to 10
         simulate.combobox_activate_index(w.controls.parameter_index, 2)
         self.wait_until_finished()
+        self.assertFalse(w.Error.manual_steps_error.is_shown())
 
-        test_errors(None)
-
-        enter("12, 1, 3, -5")
-        self.assertEqual(w.steps, ())
-        test_errors(w.Error.manual_invalid_maximum)
-
-        enter("1, 3, -5")
-        self.assertEqual(w.steps, (-5, 1, 3))
-        test_errors(None)
-
-        enter("12, 1, 3, -5")
+        check([("12, 1, 3, -5", ()),
+               ("1, 3, -5", (-5, 1, 3)),
+               ("12, 1, 3, -5", ())])
 
         # No limits
         simulate.combobox_activate_index(w.controls.parameter_index, 3)
         self.wait_until_finished()
+
         self.assertEqual(w.steps, (-5, 1, 3, 12))
-        test_errors(None)
+        self.assertFalse(w.Error.manual_steps_error.is_shown())
 
         # 5 to 10
         simulate.combobox_activate_index(w.controls.parameter_index, 1)
         self.wait_until_finished()
 
         self.assertEqual(w.steps, ())
-        test_errors(w.Error.manual_invalid_minmax)
+        self.assertTrue(w.Error.manual_steps_error.is_shown())
 
-        enter("12, 8, 7, 5")
-        self.assertEqual(w.steps, ())
-        test_errors(w.Error.manual_invalid_maximum)
-
-        enter("8, 7, -5")
-        self.assertEqual(w.steps, ())
-        test_errors(w.Error.manual_invalid_minimum)
-
-        enter("8, 7, 5")
-        self.assertEqual(w.steps, (5, 7, 8))
-        test_errors(None)
+        check([("12, 8, 7, 5", ()),
+               ("8, 7, -5", ()),
+                ("8, 7, 5", (5, 7, 8))])
 
     def test_steps_preview(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
@@ -443,7 +417,7 @@ class TestOWParameterFitter(WidgetTest):
         self.send_signal(w.Inputs.learner, None)
         self.assertFalse(w.Error.manual_steps_error.is_shown())
 
-    def test_steps_from_manual(self):
+    def test_steps_from_manual_no_dots(self):
         w: OWParameterFitter = self.widget
         self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
@@ -459,6 +433,104 @@ class TestOWParameterFitter(WidgetTest):
 
         w.manual_steps = "1, 2, 10,   3, 4, 123, 5, 6"
         self.assertEqual(w.steps, (1, 2, 3, 4, 5, 6, 10, 123))
+
+    def test_steps_from_manual_dots(self):
+        def check(cases):
+            for settings, steps in cases:
+                w.manual_steps = settings
+                self.assertEqual(w.steps, steps, f"setting: {settings}")
+                self.assertIs(w.Error.manual_steps_error.is_shown(), not steps,
+                              f"setting: {settings}")
+
+        w: OWParameterFitter = self.widget
+        self.send_signal(w.Inputs.data, self._housing)
+        self.send_signal(w.Inputs.learner, self._dummy)
+        self.wait_until_finished()
+        w.type = w.MANUAL
+
+        # No limits
+        simulate.combobox_activate_index(w.controls.parameter_index, 3)
+        self.wait_until_finished()
+        check([("1, 2, ..., 5", (1, 2, 3, 4, 5)),
+               ("1, 2, 3, ..., 5, 6, 7", (1, 2, 3, 4, 5, 6, 7)),
+               ("3, ..., 5, 6", (3, 4, 5, 6)),
+               ("..., 5, 6", ()),
+               ("5, 6, ...", ()),
+               ("1, 2, 3, 4, 5, ...", ()),
+               ("1, ..., 5", ()),
+               ("1, 2, ..., 5, 6, ..., 8", ())])
+
+        # 5 to 10
+        simulate.combobox_activate_index(w.controls.parameter_index, 1)
+        self.wait_until_finished()
+        check([("4, 5, ..., 8", ()),
+               ("5, 6, ..., 12", ()),
+               ("5, 6, ..., 9", (5, 6, 7, 8, 9)),
+               ("6, 7, ..., 9", (6, 7, 8, 9)),
+               ("6, 7, ..., 8, 9", (6, 7, 8, 9)),
+               ("..., 8, 9", (5, 6, 7, 8, 9)),
+               ("6, 7, ...", (6, 7, 8, 9, 10)),
+               ("6, 7, 8, 9, ...", (6, 7, 8, 9, 10)),
+               ("..., 8, 9", (5, 6, 7, 8, 9)),
+               ])
+
+        # 5 to None
+        simulate.combobox_activate_index(w.controls.parameter_index, 0)
+        self.wait_until_finished()
+        check([("4, 5, ..., 8", ()),
+               ("5, 6, ..., 12", (5, 6, 7, 8, 9, 10, 11, 12)),
+               ("6, 7, ..., 9", (6, 7, 8, 9)),
+               ("6, 7, ..., 8, 9", (6, 7, 8, 9)),
+               ("..., 8, 9", (5, 6, 7, 8, 9)),
+               ("6, 7, ...", ())
+               ])
+
+        # None to 10
+        simulate.combobox_activate_index(w.controls.parameter_index, 2)
+        self.wait_until_finished()
+        check([("4, 5, ..., 8", (4, 5, 6, 7, 8)),
+               ("5, 6, ..., 12", ()),
+               ("5, 6, ..., 9", (5, 6, 7, 8, 9)),
+               ("6, 7, ..., 9", (6, 7, 8, 9)),
+               ("..., 8, 9", ()),
+               ("6, 7, ...", (6, 7, 8, 9, 10)),
+               ("6, 7, 8, 9, ...", (6, 7, 8, 9, 10)),
+               ("..., 8, 9", ()),
+               ])
+
+    def test_steps_from_manual_dots_corrections(self):
+        w: OWParameterFitter = self.widget
+        self.send_signal(w.Inputs.data, self._housing)
+        self.send_signal(w.Inputs.learner, self._dummy)
+        self.wait_until_finished()
+        w.type = w.MANUAL
+
+        # 5 to 10
+        simulate.combobox_activate_index(w.controls.parameter_index, 1)
+        self.wait_until_finished()
+
+        for settings, steps in [
+            ("5, 6..., 8", (5,6,7,8)),
+            ("5,6...,8", (5,6,7,8)),
+            ("5,6...8", (5,6,7,8)),
+            ("5,   6  ...  8", (5,6,7,8)),
+            ("5,   6  ...  8", (5,6,7,8)),
+            ("5,   6  ...  ", (5,6,7,8,9,10)),
+            ("..., 7, 8", (5,6,7,8)),
+            ("..., 7, 8, ...", ()),
+            ("5, 6, ..., 7, 8, ...", ()),
+            ("5, 6, 8, ...", ()),
+            ("5, 6, 8, ...", ()),
+            ("5, 6, ..., 8, 10", ()),
+            ("5, 7, ..., 8, 10", ()),
+            ("8, 7, 6, ...", ()),
+            ("5, 6, 7, ..., 7, 8", ()),
+        ]:
+            w.manual_steps = settings
+            self.assertEqual(w.steps, steps, f"setting: {settings}")
+            self.assertIs(w.Error.manual_steps_error.is_shown(), not steps,
+                           f"setting: {settings}")
+
 
     def test_manual_tooltip(self):
         w: OWParameterFitter = self.widget
@@ -477,6 +549,7 @@ class TestOWParameterFitter(WidgetTest):
 
         simulate.combobox_activate_index(w.controls.parameter_index, 3)
         self.assertEqual("", w.edit.toolTip())
+
 
 if __name__ == "__main__":
     unittest.main()

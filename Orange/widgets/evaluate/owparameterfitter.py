@@ -21,6 +21,7 @@ from Orange.modelling import Fitter
 from Orange.util import dummy_callback
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
+from Orange.widgets.utils import userinput
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
 from Orange.widgets.utils.multi_target import check_multiple_targets_input
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -332,10 +333,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         unknown_err = Msg("{}")
         not_enough_data = Msg(f"At least {N_FOLD} instances are needed.")
         incompatible_learner = Msg("{}")
-        manual_steps_error = Msg("Invalid list of values for {}:\n{}")
-        manual_invalid_minmax = Msg("Value for {} must be between {} and {}")
-        manual_invalid_minimum = Msg("Value for {} must be at least {}")
-        manual_invalid_maximum = Msg("Value for {} must be at most {}")
+        manual_steps_error = Msg("Invalid values for '{}': {}")
         min_max_error = Msg("Minimum must be less than maximum.")
 
     class Warning(OWWidget.Warning):
@@ -404,7 +402,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         gui.appendRadioButton(buttons, "Manual:")
         layout.addWidget(buttons, 4, 0)
         self.edit = gui.lineEdit(None, self, "manual_steps",
-                            placeholderText="10, 20, 30",
+                            placeholderText="e.g. 10, 20, ..., 50",
                             callback=self.__on_manual_changed)
         layout.addWidget(self.edit, 4, 1)
 
@@ -461,19 +459,16 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         return self._learner.params
 
     @property
-    def steps(self) -> tuple[int]:
+    def steps(self) -> tuple[int, ...]:
         self.Error.min_max_error.clear()
         self.Error.manual_steps_error.clear()
-        self.Error.manual_invalid_minimum.clear()
-        self.Error.manual_invalid_maximum.clear()
-        self.Error.manual_invalid_minmax.clear()
 
         if self.type == self.FROM_RANGE:
             return self._steps_from_range()
         else:
             return self._steps_from_manual()
 
-    def _steps_from_range(self) -> tuple[int]:
+    def _steps_from_range(self) -> tuple[int, ...]:
         if self.maximum < self.minimum:
             self.Error.min_max_error()
             return ()
@@ -491,29 +486,14 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
     def _steps_from_manual(self) -> tuple[int, ...]:
         param = self.fitted_parameters[self.parameter_index]
-        steps = self.manual_steps
-        if not steps:
-            return ()
         try:
-            steps = tuple(sorted(set(map(int, steps.split(",")))))
-        except ValueError as exc:
-            self.Error.manual_steps_error(param.name, exc)
+            steps = userinput.numbers_from_list(
+                self.manual_steps, int, param.min, param.max)
+        except ValueError as ex:
+            self.Error.manual_steps_error(param.label, ex)
             return ()
-
-        self.manual_steps = ", ".join(map(str, steps))
-
-        under = param.min is not None and steps[0] < param.min
-        over = param.max is not None and steps[-1] > param.max
-        if under or over:
-            if under and over:
-                self.Error.manual_invalid_minmax(param.name, param.min, param.max)
-            elif under:
-                self.Error.manual_invalid_minimum(param.name, param.min)
-            else:
-                assert over
-                self.Error.manual_invalid_maximum(param.name, param.max)
-            return ()
-
+        if steps and "..." not in self.manual_steps:
+            self.manual_steps = ", ".join(map(str, steps))
         return steps
 
     @Inputs.data
@@ -589,7 +569,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
                 self.__spin_max.setMaximum(MIN_MAX_SPIN)
                 self.maximum = self.initial_parameters[param.name]
 
-        tip = "Enter a list of comma-separated values"
+        tip = "Enter a list of values"
         if param.min is not None:
             if param.max is not None:
                 self.edit.setToolTip(f"{tip} between {param.min} and {param.max}.")
