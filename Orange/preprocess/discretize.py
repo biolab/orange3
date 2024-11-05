@@ -97,7 +97,7 @@ class Discretizer(Transformation):
         if ndigits is None or len(points) == 1:
             try:
                 values = cls._get_labels(var.str_val, points)
-            except ValueError:
+            except ValueError:  # points would create identical formatted thresholds
                 pass
             else:
                 if len(values) == len(set(values)):
@@ -108,7 +108,9 @@ class Discretizer(Transformation):
                         int(-np.log10(mindiff)))
         maxdigits = np.finfo(npoints.dtype).precision + 2
         for digits in range(mindigits, maxdigits + 1):
-            npoints = np.round(points, digits)
+            # ensure that builtin round is used for compatibility with float formatting
+            # de-numpyize points p (otherwise np.floats use numpy's round)
+            npoints = [round(float(p), digits) for p in points]
             if len(npoints) == len(set(npoints)):
                 def fmt_fixed(val):
                     # We break the loop, pylint: disable=cell-var-from-loop

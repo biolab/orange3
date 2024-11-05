@@ -1233,6 +1233,28 @@ class TestDiscretizer(unittest.TestCase):
                                   '≥ 2.1000000003'])
         self.assertIsInstance(to_sql, BinSql)
 
+    def test_get_discretized_values_round_builtin_vs_numpy(self):
+        x = ContinuousVariable("x", number_of_decimals=0)
+        points, values, _ \
+            = Discretizer._get_discretized_values(x,
+                                                  np.array([2.3455,
+                                                            2.346]))
+        np.testing.assert_equal(points,
+                                [2.345, 2.346])
+        self.assertEqual(values, ['< 2.345',
+                                  '2.345 - 2.346',
+                                  '≥ 2.346'])
+
+        points, values, _ \
+            = Discretizer._get_discretized_values(x,
+                                                  np.array([2.1345,
+                                                            2.135]))
+        np.testing.assert_equal(points,
+                                [2.1345, 2.135])
+        self.assertEqual(values, ['< 2.1345',
+                                  '2.1345 - 2.135',
+                                  '≥ 2.135'])
+
     def test_get_discretized_values_with_ndigits(self):
         x = ContinuousVariable("x")
         apoints = [1, 2, 3, 4]
