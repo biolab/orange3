@@ -3,7 +3,6 @@ import itertools
 from collections.abc import Iterable
 import re
 import warnings
-from types import NoneType
 from typing import Callable, Optional, NamedTuple, Union, Type
 
 import numpy as np
@@ -88,16 +87,14 @@ class Learner(ReprableWithPreprocessors):
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
     preprocessors = ()
-    FittedParameter = NamedTuple(
-        "FittedParameter", [
-            ("name", str),
-            ("label", str),
-            ("tick_label", str),
-            ("type", Type),
-            ("min", Union[int, NoneType]),
-            ("max", Union[int, NoneType]),
-        ]
-    )
+
+    class FittedParameter(NamedTuple):
+        name: str
+        label: str
+        tick_label: str
+        type: Type
+        min: Optional[int] = None
+        max: Optional[int] = None
 
     # Note: Do not use this class attribute.
     #       It remains here for compatibility reasons.
