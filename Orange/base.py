@@ -190,7 +190,8 @@ class Learner(ReprableWithPreprocessors):
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
 
-    def fitted_parameters(self, *args, **kwargs) -> list:
+    # declared for derived classes, pylint: disable=unused-argument
+    def fitted_parameters(self, problem_type: Union[str, Table, Domain]) -> list:
         return []
 
     # pylint: disable=no-self-use

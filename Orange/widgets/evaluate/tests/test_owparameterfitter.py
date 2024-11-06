@@ -19,7 +19,7 @@ from Orange.widgets.tests.utils import simulate
 
 
 class DummyLearner(PLSRegressionLearner):
-    def fitted_parameters(self):
+    def fitted_parameters(self, _):
         return [
             self.FittedParameter("n_components", "Foo", "foo", int, 5, None),
             self.FittedParameter("n_components", "Bar", "bar", int, 5, 10),

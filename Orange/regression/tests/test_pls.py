@@ -22,7 +22,7 @@ def table(rows, attr, variables):
 
 class TestPLSRegressionLearner(unittest.TestCase):
     def test_fitted_parameters(self):
-        fitted_parameters = PLSRegressionLearner().fitted_parameters()
+        fitted_parameters = PLSRegressionLearner().fitted_parameters(None)
         self.assertIsInstance(fitted_parameters, list)
         self.assertEqual(len(fitted_parameters), 1)
 

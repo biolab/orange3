@@ -31,4 +31,4 @@ class RandomForestLearner(SklFitter, _FeatureScorerMixin):
             self,
             problem_type: Union[str, Table, Domain]
     ) -> list[Learner.FittedParameter]:
-        return self.get_learner(problem_type).fitted_parameters()
+        return self.get_learner(problem_type).fitted_parameters(problem_type)

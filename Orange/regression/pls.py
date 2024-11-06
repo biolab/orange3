@@ -255,7 +255,7 @@ class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):
                     reason = "Only numeric target variables expected."
         return reason
 
-    def fitted_parameters(self) -> list[Learner.FittedParameter]:
+    def fitted_parameters(self, _) -> list[Learner.FittedParameter]:
         return [self.FittedParameter("n_components", "Number of components",
                                      "Comp", int, 1, None)]
 

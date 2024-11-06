@@ -439,14 +439,10 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
     @property
     def fitted_parameters(self) -> list:
-        if not self._learner:
+        if not self._learner \
+                or isinstance(self._learner, Fitter) and not self._data:
             return []
-        if isinstance(self._learner, Fitter):
-            if not self._data:
-                return []
-            return self._learner.fitted_parameters(self._data)
-        else:
-            return self._learner.fitted_parameters()
+        return self._learner.fitted_parameters(self._data)
 
     @property
     def initial_parameters(self) -> dict:

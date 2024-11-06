@@ -59,6 +59,6 @@ class RandomForestLearner(SklLearner, _FeatureScorerMixin):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
-    def fitted_parameters(self) -> list[Learner.FittedParameter]:
+    def fitted_parameters(self, _) -> list[Learner.FittedParameter]:
         return [self.FittedParameter("n_estimators", "Number of trees",
                                      "Trees", int, 1, None)]
