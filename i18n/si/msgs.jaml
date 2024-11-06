@@ -631,6 +631,22 @@ classification/rules.py:
         titanic: false
         iris.tab: false
     __main__: false
+classification/scoringsheet.py:
+    class `ScoringSheetModel`:
+        def `predict_storage`:
+            Data is not a subclass of Orange.data.Storage.: false
+    class `ScoringSheetLearner`:
+        def `incompatibility_reason`:
+            Too many target variables.: Preveč ciljnih spremenljivk
+            Categorical class variable expected.: Pričakujem kategorično ciljno spremenljivko
+            Too many target variable values.: Ciljna spremenljivka ima preveč vrednosti
+        def `fit_storage`:
+            Data is not a subclass of Orange.data.Storage.: false
+            Class variable contains missing values.: Ciljna spremenljivka ima manjkajoče vrednosti.
+        def `_optimize_decision_params_adjustment`:
+            The number of input features is too low for the current settings.: Število vhodnih spremenljvik je prenizko za trenutne nastavitve.
+    __main__: false
+    https://datasets.biolab.si/core/heart_disease.tab: false
 classification/sgd.py:
     SGDClassificationLearner: false
     class `SGDClassificationLearner`:
@@ -749,6 +765,61 @@ classification/xgb.py:
         def `__init__`:
             binary:logistic: false
             gain: false
+classification/utils/fasterrisk/base_model.py:
+    class `logRegModel`:
+        def `warm_start_from_original_beta0_betas`:
+            warmstart solution in normalized space is {} and {}: false
+classification/utils/fasterrisk/fasterrisk.py:
+    class `RiskScoreOptimizer`:
+        def `__init__`:
+            input y must have 1-D shape!: false
+            input y must have only 2 labels: false
+            input y must be equal to only +1 or -1: false
+            input X must have 2-D shape!: false
+            number of rows from input X must be equal to the number of elements from input y!: false
+            lb: false
+            ub: false
+            group_sparsity needs to be an integer: false
+            group_sparsity needs to be > 0!: false
+            featureIndex_to_groupIndex must be provided if group_sparsity is not None: false
+            featureIndex_to_groupIndex needs to be a NumPy integer array: false
+    class `RiskScoreClassifier`:
+        def `_print_score_calculation_table`:
+            please pass the featureNames to the model by using the function .reset_featureNames(featureNames): false
+            {0}. {1:>%d}     {2:>2} point(s) | + ...: false
+            The Risk Score is:: false
+            +: false
+            ' ': false
+            'SCORE | =    ': false
+        def `_print_score_risk_row`:
+            SCORE |: false
+            RISK  |: false
+            '  {0:>4}  |': false
+            ' {0:>5}% |': false
+        def `_print_score_risk_table`:
+            There are more than 10 nonzero coefficients for the risk scoring system. The number of possible total scores is too many!\n\nPlease consider re-initialize your RiskScoreClassifier_m by providing the training dataset features X_train as follows:\n\n    RiskScoreClassifier_m = RiskScoreClassifier(multiplier, intercept, coefficients, X_train = X_train): false
+            closest_observation: false
+classification/utils/fasterrisk/rounding.py:
+    class `starRaySearchModel`:
+        def `get_multipliers_for_line_search`:
+            betas needs to have at least one nonzero entries!: false
+classification/utils/fasterrisk/utils.py:
+    def `download_file_from_google_drive`:
+        https://docs.google.com/uc?export=download: false
+        id: false
+        confirm: false
+    def `get_confirm_token`:
+        download_warning: false
+    def `save_response_content`:
+        wb: false
+    def `check_bounds`:
+        ub: false
+        {bound_name} needs to be >= 0: false
+        {bound_name} needs to be <= 0: false
+        {bound_name}s for the features need to have the same length as the number of features: false
+        all of {bound_name}s needs to be >= 0: false
+        all of {bound_name}s needs to be <= 0: false
+        {bound_name} needs to be a float, int, or list: false
 clustering/clustering.py:
     class `ClusteringModel`:
         def `__call__`:
@@ -10202,6 +10273,33 @@ widgets/model/owsavemodel.py:
         def `do_save`:
             wb: false
     __main__: false
+widgets/model/owscoringsheet.py:
+    class `ScoringSheetRunner`:
+        def `run`:
+            Learning...: Učenje...
+    class `OWScoringSheet`:
+        Scoring Sheet: Točkovalnik
+        A fast and explainable classifier.: Hitra in razložljiva klasifikacija.
+        icons/ScoringSheet.svg: false
+        orangecontrib.prototypes.widgets.owscoringsheet.OWScoringSheet: false
+        scoring sheet: true
+        class `Information`:
+            If the number of input features used is too low for the number of decision \n: Če je število uporabljenih vhodnih značilk premajhno za število odločitvenih \n
+            parameters, the number of decision parameters will be adjusted to fit the model.: parametrov, bo število odločitvenih parametrov prilagojeno modelu.
+        def `add_main_layout`:
+            Preprocessing: Predobdelava
+            num_attr_after_selection: false
+            Number of Attributes After Feature Selection:: Število spremenljivk po izboru značilk:
+            Model Parameters: Parametri modela
+            num_decision_params: false
+            Maximum Number of Decision Parameters:: Največje število odločitvenih parametrov:
+            max_points_per_param: false
+            Maximum Points per Decision Parameter:: Največje število točk na odločitveni parameter:
+            custom_features_checkbox: false
+            Custom number of input features: Ročno določeno število značilk
+            num_input_features: false
+            Number of Input Features Used:: Število uporabljenih vhodnih značilk:
+    __main__: false
 widgets/model/owsgd.py:
     class `OWSGD`:
         Stochastic Gradient Descent: Stohastični gradientni spust
@@ -14559,6 +14657,50 @@ widgets/visualize/owscatterplotgraph.py:
             impute_shapes: false
         def `_update_color_legend`:
             o: false
+widgets/visualize/owscoringsheetviewer.py:
+    class `ScoringSheetTable`:
+        def `__init__`:
+            Attribute Name: Ime spremenljivke
+            Points: Točke
+            Selected: Izbrano
+    class `RiskSlider`:
+        def `setup_labels`:
+            <b>Total:</b>: <b>Skupaj:</b>:
+            <b>Probabilities (%):</b>: <b>Verjetnosti (%):</b>:
+        def `update_label_frequency`:
+            100.0%: false
+        def `paintEvent`:
+            %: false
+        def `handle_hover_event`:
+            '<b>{self.target_class}</b>\n ': false
+            "<hr style='margin: 0px; padding: 0px; border: 0px; height: 1px; background-color: #000000'>": false
+            <b>Points:</b> {int(points)}<br>: <b>Točke:</b> {int(points)}<br>
+            <b>Probability:</b> {probability:.1f}%: <b>Verjetnost:</b> {probability:.1f}%
+    class `OWScoringSheetViewer`:
+        Scoring Sheet Viewer: Pregledovalnik točkovalnika
+        Visualize the scoring sheet model.: Prikaz točkovalnega modela.
+        icons/ScoringSheetViewer.svg: false
+        orangecontrib.prototypes.widgets.owscoringsheetviewer.OWScoringSheetViewer: false
+        scoring sheet viewer: true
+        class `Inputs`:
+            Classifier: Klasifikator
+            Data: Podatki
+        class `Outputs`:
+            Features: Spremenljivke
+        class `Error`:
+            Scoring Sheet Viewer only accepts a Scoring Sheet model.: Pregledovalnik točkovalnika sprejema le točkovalni model.
+        class `Information`:
+            The input data contains multiple instances. Only the first instance will be used.: Vhodni podatki vsebujejo več primerov. Uporabljen bo le prvi primer.
+        def `_setup_gui`:
+            horizontal: false
+            target_class_index: false
+            Target class:: Ciljni razred:
+        def `_populate_interface`:
+            {class_var_name} = {class_var_value}: false
+        def `_extract_data_from_model`:
+            closest_observation: false
+    __main__: false
+    heart_disease: false
 widgets/visualize/owsieve.py:
     class `ChiSqStats`:
         def `__init__`:
