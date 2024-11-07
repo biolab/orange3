@@ -26,13 +26,6 @@ base.py:
         def `_reprable_omit_param`:
             preprocessors: false
     class `Learner`:
-        FittedParameter: false
-        name: false
-        label: false
-        tick_label: false
-        type: false
-        min: false
-        max: false
         def `fit`:
             Descendants of Learner must overload method fit or fit_storage: false
         def `__call__`:
@@ -9059,10 +9052,7 @@ widgets/evaluate/owparameterfitter.py:
         class `Error`:
             {}: false
             At least {N_FOLD} instances are needed.: Potrebujemo vsaj {N_FOLD} primerov.
-            Invalid list of values for {}:\n{}: Neveljavna vrednost za {}: {}
-            Value for {} must be between {} and {}: Vrednost za {} mora biti med {} in {}
-            Value for {} must be at least {}: Vrednost za {} mora biti vsaj {}
-            Value for {} must be at most {}: Vrednost za {} mora biti največ {}
+            "Invalid values for '{}': {}": Neveljavne vrednosti za '{}': {}
             Minimum must be less than maximum.: Minimum mora biti manjši od maksimuma.
         class `Warning`:
             {} has no parameters to fit.: {} nima parametrov za umerjanje.
@@ -9077,14 +9067,14 @@ widgets/evaluate/owparameterfitter.py:
             To:: Do:
             Manual:: Ročno:
             manual_steps: false
-            10, 20, 30: false
+            e.g. 10, 20, ..., 50: npr. 10, 20, ..., 50
             auto_commit: false
         def `_steps_from_manual`:
-            ,: false
+            ...: false
             ', ': false
         def `_set_range_controls`:
             The widget currently supports only int parameters: false
-            Enter a list of comma-separated values: Vnesi seznam z vejico ločenih vrednosti
+            Enter a list of values: Vnesite seznam vrednosti
             {tip} between {param.min} and {param.max}.: {tip} med {param.min} in {param.max}.
             {tip} greater or equal to {param.min}.: {tip} večjih ali enakih {param.min}.
             {tip} smaller or equal to {param.max}.: {tip} manjših ali enakih {param.max}.
@@ -13159,6 +13149,35 @@ widgets/utils/textimport.py:
     def `main`:
         rb: false
     __main__: false
+widgets/utils/userinput.py:
+    T: false
+    def `numbers_from_list`:
+        (^|[^.])\.\.\.($|[^.]): false
+    def `_get_points`:
+        invalid value ({msg[msg.rindex(':') + 1:]}): nepravilna vrednost ({msg[msg.rindex(':') + 1:]})
+    def `_numbers_from_no_dots`:
+        ...: false
+        ' ... ': false
+        ', ': false
+        ' ': false
+        value must be between {minimum} and {maximum}: vrednost mora biti med {minimum} in {maximum}
+        value must be at least {minimum}: vrednost mora biti vsaj {minimum}
+        value must be at most {maximum}: vrednost mora biti največ {maximum}
+    def `_numbers_from_dots`:
+        ...: false
+        ' ... ': false
+        ,: false
+        ' ': false
+        multiple '...'.: več '...'
+        values before '...' must be smaller than values after.: vrednosti pred '...' morajo biti manjše od vrednosti za '...'
+        at least two values are required before or after '...'.: pred ali za '...' morata biti vsaj dve vrednosti
+        points must be in uniform order.: razlike med vrednostmi morajo biti enake
+        points must be in increasing order.: vrednosti morajo biti naraščajoče
+        minimum value is missing.: manjka začetna vrednost
+        maximum value is missing.: manjka končna vrednost
+        minimum value is below the minimum {minimum}.: začetna vrednost je pod minimumom ({minimum})
+        maximum value is above the maximum {maximum}.: končna vrednost je nad maksimumom ({maximum})
+        the sequence before '...' does not end with the sequence after it.: zaporedje pred '...' se ne konča z zaporedjem za '...'
 widgets/utils/webview.py:
     WebviewWidget: false
 widgets/utils/widgetpreview.py:
