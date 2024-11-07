@@ -886,6 +886,13 @@
     "icon": "../Orange/widgets/evaluate/icons/PermutationPlot.svg",
     "background": "#C3F3F3",
     "keywords": []
+   },
+   {
+    "text": "Parameter Fitter",
+    "doc": "visual-programming/source/widgets/evaluate/parameterfitter.md",
+    "icon": "../Orange/widgets/evaluate/icons/ParameterFitter.svg",
+    "background": "#C3F3F3",
+    "keywords": []
    }
   ]
  ],
