@@ -12,6 +12,13 @@ from Orange.widgets.tests.base import WidgetTest
 
 
 class TestOWDataSets(WidgetTest):
+    def setUp(self):
+        # Most tests check the iniitialization of widget under different
+        # conditions, therefore mocks are needed prior to calling createWidget.
+        # Inherited methods will set self.widget; here we set it to None to
+        # avoid lint errors.
+        self.widget = None
+
     @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(side_effect=requests.exceptions.ConnectionError))
     @patch("Orange.widgets.data.owdatasets.list_local",

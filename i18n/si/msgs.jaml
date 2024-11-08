@@ -203,8 +203,8 @@ util.py:
             unsafe: false
 version.py:
     3.38.0: false
-    3.38.0.dev0+c767157: false
-    c7671579ac399d27a1b5fb21c31f870448db9ed8: false
+    3.38.0.dev0+b3dd2eb: false
+    b3dd2eba6a3cfa73ba06460226d6e16a8e25a23a: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -5314,13 +5314,13 @@ widgets/data/owdatasets.py:
     def `make_html_list`:
         '"margin: 5px; text-indent: -40px; margin-left: 40px;"': false
         def `format_item`:
-            <p style={}><small>{}</small></p>: false
+            <p style={style}><small>{i}</small></p>: false
         \n: false
     def `description_html`:
-        ' ({})': true
-        , from {}: , z {}
-        <b>{}</b>{}{}: true
-        <p>{}</p>: true
+        ' ({datainfo.year})': true
+        , from {datainfo.source}: , z {datainfo.source}
+        <b>{escape(datainfo.title)}</b>{year}{source}: true
+        <p>{datainfo.description}</p>: true
         <small><b>See Also</b>\n: <small><b>Glej tudi</b>\n
         </small>: true
         <small><b>References</b>\n: <small><b>Viri</b>\n

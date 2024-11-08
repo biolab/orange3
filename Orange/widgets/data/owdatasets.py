@@ -133,7 +133,7 @@ class Namespace(SimpleNamespace):
         self.domain = None
         self.publication_status = self.PUBLISHED
 
-        super(Namespace, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # if title missing, use filename
         if not self.title and self.filename:
@@ -180,7 +180,7 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
         data = source.index(row, 0).data(Qt.UserRole)
         return (super().filterAcceptsRow(row, parent)
             and (self.__language is None or data.language == self.__language)
-            and (self.__domain == ALL_DOMAINS or data.domain == self.__domain)
+            and self.__domain in (ALL_DOMAINS, data.domain)
             and (data.publication_status == Namespace.PUBLISHED or (
                  self.__filter is not None
                  and len(self.__filter) >= 5
@@ -631,8 +631,7 @@ class OWDataSets(OWWidget):
                 self.__awaiting_state = None
 
             if not di.islocal:
-                pr = progress()
-                callback = lambda pr=pr: pr.advance.emit()
+                pr = Progress()
                 pr.advance.connect(self.__progress_advance, Qt.QueuedConnection)
 
                 self.progressBarInit()
@@ -642,7 +641,7 @@ class OWDataSets(OWWidget):
                 f = self._executor.submit(
                     ensure_local, self.INDEX_URL, di.file_path,
                     self.local_cache_path, force=di.outdated,
-                    progress_advance=callback)
+                    progress_advance=pr.advance.emit)
                 w = FutureWatcher(f, parent=self)
                 w.done.connect(self.__commit_complete)
                 self.__awaiting_state = _FetchState(f, w, pr)
@@ -693,8 +692,7 @@ class OWDataSets(OWWidget):
             self.__awaiting_state.pb.advance.disconnect(self.__progress_advance)
             self.__awaiting_state = None
 
-    @staticmethod
-    def sizeHint():
+    def sizeHint(self):
         return QSize(1100, 500)
 
     def closeEvent(self, event):
@@ -742,7 +740,7 @@ class FutureWatcher(QObject):
         self.done.emit(self.__future)
 
 
-class progress(QObject):
+class Progress(QObject):
     advance = Signal()
 
 
@@ -768,7 +766,7 @@ def make_html_list(items):
     style = '"margin: 5px; text-indent: -40px; margin-left: 40px;"'
 
     def format_item(i):
-        return '<p style={}><small>{}</small></p>'.format(style, i)
+        return f'<p style={style}><small>{i}</small></p>'
 
     return '\n'.join([format_item(i) for i in items])
 
@@ -779,11 +777,11 @@ def description_html(datainfo):
     Summarize a data info as a html fragment.
     """
     html = []
-    year = " ({})".format(str(datainfo.year)) if datainfo.year else ""
-    source = ", from {}".format(datainfo.source) if datainfo.source else ""
+    year = f" ({datainfo.year})" if datainfo.year else ""
+    source = f", from {datainfo.source}" if datainfo.source else ""
 
-    html.append("<b>{}</b>{}{}".format(escape(datainfo.title), year, source))
-    html.append("<p>{}</p>".format(datainfo.description))
+    html.append(f"<b>{escape(datainfo.title)}</b>{year}{source}")
+    html.append(f"<p>{datainfo.description}</p>")
     seealso = make_html_list(datainfo.seealso)
     if seealso:
         html.append("<small><b>See Also</b>\n" + seealso + "</small>")
