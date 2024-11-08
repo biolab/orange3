@@ -10,8 +10,8 @@ import numpy as np
 from Orange.data import ContinuousVariable, TimeVariable, Table, Domain
 from Orange.preprocess.discretize import \
     _time_binnings, time_binnings, BinDefinition, Discretizer, FixedWidth, \
-    FixedTimeWidth , Binning, \
-    TooManyIntervals
+    FixedTimeWidth, Binning, \
+    TooManyIntervals, SingleValueSql, BinSql
 
 
 class TestFixedWidth(unittest.TestCase):
@@ -1100,6 +1100,184 @@ class TestDiscretizer(unittest.TestCase):
         t1a = Discretizer(v2, [1, 2, 0])
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
+
+    def test_fmt_interval(self):
+        def fmt(x):
+            return f"{x:.2f}"
+
+        f = Discretizer._fmt_interval
+        self.assertEqual(f(1, 2, str), "1 - 2")
+        self.assertEqual(f(1, 2, fmt), "1 - 2")
+        self.assertEqual(f(1, 2, fmt, strip_zeros=False), "1.00 - 2.00")
+
+        self.assertEqual(f(-np.inf, 2, fmt), "< 2")
+        self.assertEqual(f(-np.inf, 2, fmt, strip_zeros=False), "< 2.00")
+        self.assertEqual(f(None, 2, fmt), "< 2")
+        self.assertEqual(f(None, 2, fmt, strip_zeros=False), "< 2.00")
+
+        self.assertEqual(f(2, np.inf, fmt), "≥ 2")
+        self.assertEqual(f(2, np.inf, fmt, strip_zeros=False), "≥ 2.00")
+        self.assertEqual(f(2, None, fmt), "≥ 2")
+        self.assertEqual(f(2, None, fmt, strip_zeros=False), "≥ 2.00")
+
+        with self.assertRaises(ValueError):
+            f(1.122, 1.123, fmt)
+
+
+    def test_get_labels(self):
+        points = [2.46, 2.68, 2.794]
+        self.assertEqual(
+            Discretizer._get_labels(lambda x: f"{x:.1f}", points),
+            ['< 2.5', '2.5 - 2.7', '2.7 - 2.8', '≥ 2.8']
+        )
+        self.assertEqual(
+            Discretizer._get_labels(lambda x: f"{x:.2f}", points),
+            ['< 2.46', '2.46 - 2.68', '2.68 - 2.79', '≥ 2.79']
+        )
+        self.assertEqual(
+            Discretizer._get_labels(lambda x: f"{x:.4f}", points),
+            ['< 2.46', '2.46 - 2.68', '2.68 - 2.794', '≥ 2.794']
+        )
+
+        self.assertEqual(
+            Discretizer._get_labels(lambda x: f"{x:.4f}", points,
+                                    strip_zeros=False),
+            ['< 2.4600', '2.4600 - 2.6800', '2.6800 - 2.7940', '≥ 2.7940']
+        )
+
+        self.assertEqual(
+            Discretizer._get_labels(lambda x: f"{x:.4f}", [100, 200]),
+            ['< 100', '100 - 200', '≥ 200']
+        )
+
+        self.assertEqual(
+            Discretizer._get_labels(lambda x: f"{x:.4f}", [0]),
+            ['< 0', '≥ 0']
+        )
+
+    def test_get_discretized_values_empty(self):
+        x = ContinuousVariable("x")
+        d = Discretizer(x, [])
+        points, values, to_sql = d._get_discretized_values(None, np.array([]))
+        self.assertEqual(len(points), 0)
+        self.assertEqual(values, ["single_value"])
+        self.assertIsInstance(to_sql, SingleValueSql)
+
+    def test_get_discretized_values_identical_points(self):
+        x = ContinuousVariable("x")
+        with self.assertRaises(ValueError):
+            Discretizer._get_discretized_values(x, np.array([0, 1, 1, 2]))
+
+    def test_get_discretized_values_no_ndigits(self):
+        x = ContinuousVariable("x", number_of_decimals=2)
+        points, values, to_sql \
+            = Discretizer._get_discretized_values(x, np.array([1, 2, 3, 4]))
+        np.testing.assert_equal(points, [1, 2, 3, 4])
+        self.assertEqual(values, ['< 1', '1 - 2', '2 - 3', '3 - 4', '≥ 4'])
+        self.assertIsInstance(to_sql, BinSql)
+
+        points, values, to_sql \
+            = Discretizer._get_discretized_values(x, np.array([1, 2.1, 3, 4]))
+        np.testing.assert_equal(points, [1, 2.1, 3, 4])
+        self.assertEqual(values, ['< 1', '1 - 2.1', '2.1 - 3', '3 - 4', '≥ 4'])
+        self.assertIsInstance(to_sql, BinSql)
+
+        points, values, to_sql \
+            = Discretizer._get_discretized_values(x,
+                                                  np.array([1, 2.1, 3.1234, 4]))
+        np.testing.assert_equal(points, [1, 2.1, 3.1234, 4])
+        self.assertEqual(values, ['< 1', '1 - 2.1', '2.1 - 3.1234', '3.1234 - 4', '≥ 4'])
+        self.assertIsInstance(to_sql, BinSql)
+
+        points, values, to_sql \
+            = Discretizer._get_discretized_values(x,
+                                                  np.array([1,
+                                                            2.1000000001,
+                                                            2.1000000002,
+                                                            4]))
+        np.testing.assert_equal(points, [1, 2.1000000001, 2.1000000002, 4])
+        self.assertEqual(values, ['< 1',
+                                  '1 - 2.1000000001',
+                                  '2.1000000001 - 2.1000000002',
+                                  '2.1000000002 - 4',
+                                  '≥ 4'])
+        self.assertIsInstance(to_sql, BinSql)
+
+        points, values, to_sql \
+            = Discretizer._get_discretized_values(x,
+                                                  np.array([1,
+                                                            2.1000000001,
+                                                            2.1000000002,
+                                                            2.1000000003]))
+        np.testing.assert_equal(points,
+                                [1, 2.1000000001, 2.1000000002, 2.1000000003])
+        self.assertEqual(values, ['< 1',
+                                  '1 - 2.1000000001',
+                                  '2.1000000001 - 2.1000000002',
+                                  '2.1000000002 - 2.1000000003',
+                                  '≥ 2.1000000003'])
+        self.assertIsInstance(to_sql, BinSql)
+
+        points, values, to_sql \
+            = Discretizer._get_discretized_values(x,
+                                                  np.array([1,
+                                                            2.1000000001,
+                                                            2.100000000211,
+                                                            2.1000000003]))
+        np.testing.assert_equal(points,
+                                [1, 2.1000000001, 2.1000000002, 2.1000000003])
+        self.assertEqual(values, ['< 1',
+                                  '1 - 2.1000000001',
+                                  '2.1000000001 - 2.1000000002',
+                                  '2.1000000002 - 2.1000000003',
+                                  '≥ 2.1000000003'])
+        self.assertIsInstance(to_sql, BinSql)
+
+    def test_get_discretized_values_round_builtin_vs_numpy(self):
+        x = ContinuousVariable("x", number_of_decimals=0)
+        points, values, _ \
+            = Discretizer._get_discretized_values(x,
+                                                  np.array([2.3455,
+                                                            2.346]))
+        np.testing.assert_equal(points,
+                                [2.345, 2.346])
+        self.assertEqual(values, ['< 2.345',
+                                  '2.345 - 2.346',
+                                  '≥ 2.346'])
+
+        points, values, _ \
+            = Discretizer._get_discretized_values(x,
+                                                  np.array([2.1345,
+                                                            2.135]))
+        np.testing.assert_equal(points,
+                                [2.1345, 2.135])
+        self.assertEqual(values, ['< 2.1345',
+                                  '2.1345 - 2.135',
+                                  '≥ 2.135'])
+
+    def test_get_discretized_values_with_ndigits(self):
+        x = ContinuousVariable("x")
+        apoints = [1, 2, 3, 4]
+        points, values, to_sql \
+            = Discretizer._get_discretized_values(x, apoints, ndigits=0)
+        np.testing.assert_array_equal(points, np.array([1, 2, 3, 4]))
+        self.assertEqual(values, ['< 1', '1 - 2', '2 - 3', '3 - 4', '≥ 4'])
+        self.assertIsInstance(to_sql, BinSql)
+
+        points, values, to_sql \
+            = Discretizer._get_discretized_values(x, apoints, ndigits=2)
+        np.testing.assert_array_equal(points, np.array([1, 2, 3, 4]))
+        self.assertEqual(values, ['< 1.00', '1.00 - 2.00', '2.00 - 3.00',
+                                  '3.00 - 4.00', '≥ 4.00'])
+        self.assertIsInstance(to_sql, BinSql)
+
+        apoints = [1, 2.1234, 2.1345, 4]
+        points, values, to_sql \
+            = Discretizer._get_discretized_values(x, apoints, ndigits=1)
+        np.testing.assert_array_equal(points, np.array([1, 2.12, 2.13, 4]))
+        self.assertEqual(values,
+                         ['< 1', '1 - 2.12', '2.12 - 2.13', '2.13 - 4', '≥ 4'])
+        self.assertIsInstance(to_sql, BinSql)
 
 
 if __name__ == '__main__':
