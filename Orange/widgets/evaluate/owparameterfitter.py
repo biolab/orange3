@@ -335,6 +335,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         incompatible_learner = Msg("{}")
         manual_steps_error = Msg("Invalid values for '{}': {}")
         min_max_error = Msg("Minimum must be less than maximum.")
+        missing_target = Msg("Data has not target.")
 
     class Warning(OWWidget.Warning):
         no_parameters = Msg("{} has no parameters to fit.")
@@ -511,6 +512,11 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
         if self._data and len(self._data) < N_FOLD:
             self.Error.not_enough_data()
+            self._data = None
+            return
+
+        if self._data and len(self._data.domain.class_vars) < 1:
+            self.Error.missing_target()
             self._data = None
             return
 

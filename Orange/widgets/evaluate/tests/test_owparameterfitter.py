@@ -9,7 +9,7 @@ from AnyQt.QtGui import QFont
 from AnyQt.QtWidgets import QToolTip
 
 from Orange.classification import NaiveBayesLearner
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.modelling import RandomForestLearner
 from Orange.regression import PLSRegressionLearner
 from Orange.widgets.evaluate.owparameterfitter import OWParameterFitter
@@ -84,6 +84,21 @@ class TestOWParameterFitter(WidgetTest):
         self.assertFalse(self.widget.Error.unknown_err.is_shown())
         self.assertFalse(self.widget.Error.not_enough_data.is_shown())
         self.assertFalse(self.widget.Error.incompatible_learner.is_shown())
+
+    def test_random_forest_classless_data(self):
+        domain = self._heart.domain
+        data = self._heart.transform(Domain(domain.attributes))
+        rf_widget = self.create_widget(OWRandomForest)
+        learner = self.get_output(rf_widget.Outputs.learner)
+
+        self.send_signal(self.widget.Inputs.learner, learner)
+        self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_finished()
+        self.assertTrue(self.widget.Error.missing_target.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, self._heart)
+        self.assertFalse(self.widget.Error.missing_target.is_shown())
+        self.wait_until_finished()
 
     def test_plot(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
