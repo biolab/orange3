@@ -5288,6 +5288,7 @@ widgets/data/owdatasets.py:
             ' ': false
             '  ': false
             ', ': false
+            sc: false
         def `__set_index`:
             Error while fetching updated index: false
         def `set_model`:
