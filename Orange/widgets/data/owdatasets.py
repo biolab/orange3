@@ -482,6 +482,8 @@ class OWDataSets(OWWidget):
             # for settings do not use os.path.join (Windows separator is different)
             if file_path[-1] == self.selected_id:
                 current_index = i
+                # for selected_id, set publication status so that unlisted data load correctly
+                datainfo.publication_status = Namespace.PUBLISHED
                 if self.core_widget:
                     self.domain = datainfo.domain
                     if self.domain == "sc":  # domain from the list of ignored domain
@@ -620,6 +622,8 @@ class OWDataSets(OWWidget):
             self.descriptionlabel.setText(text)
             # for settings do not use os.path.join (Windows separator is different)
             self.selected_id = di.file_path[-1]
+            # do not clear a dataset once you select it if it was unlisted
+            di.publication_status = Namespace.PUBLISHED
         else:
             self.descriptionlabel.setText("")
             self.selected_id = None
