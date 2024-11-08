@@ -505,10 +505,10 @@ class OWDataSets(OWWidget):
 
     def _on_domain_changed(self):
         combo = self.domain_combo
-        if combo.currentIndex() == combo.count() - 1:
-            self.domain = ALL_DOMAINS
-        elif combo.currentIndex() == 0:
+        if combo.currentIndex() == 0:
             self.domain = GENERAL_DOMAIN
+        elif combo.currentIndex() == combo.count() - 1:
+            self.domain = ALL_DOMAINS
         else:
             self.domain = combo.currentText()
         self.view.model().setDomain(self.domain)
