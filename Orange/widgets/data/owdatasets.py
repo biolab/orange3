@@ -287,7 +287,8 @@ class OWDataSets(OWWidget):
         domain_combo = self.domain_combo = QComboBox()
         domain_combo.addItem(self.GENERAL_DOMAIN_LABEL)
         domain_combo.activated.connect(self._on_domain_changed)
-        layout.addWidget(domain_combo)
+        if self.core_widget:
+            layout.addWidget(domain_combo)
 
         self.mainArea.layout().addLayout(layout)
 
@@ -334,6 +335,9 @@ class OWDataSets(OWWidget):
         proxy.setFilterKeyColumn(-1)
         proxy.setFilterCaseSensitivity(Qt.CaseInsensitive)
         self.view.setModel(proxy)
+        if not self.core_widget:
+            self.domain = ALL_DOMAINS
+            self.view.model().setDomain(self.domain)
 
         if self.splitter_state:
             self.splitter.restoreState(self.splitter_state)
@@ -349,6 +353,18 @@ class OWDataSets(OWWidget):
         w.done.connect(self.__set_index)
 
         self._on_language_changed()
+
+    # Single cell add-on has a data set widget that derives from this one
+    # although this class isn't defined as open. Adding the domain broke
+    # single-cell. A proper solution would be to split this widget into an
+    # (open) base class and a closed widget that adds the domain functionality.
+    # Yet, simply excluding three chunks of code makes this code simpler
+    # - which is better, if we assume that extending this widget is an anomaly.
+    @property
+    def core_widget(self):
+        # Compare by names; unit tests wrap widget classes in to detect
+        # missing onDeleteWidget calls
+        return type(self).__name__ == OWDataSets.__name__
 
     def assign_delegates(self):
         # NOTE: All columns must have size hinting delegates.
@@ -466,15 +482,16 @@ class OWDataSets(OWWidget):
             # for settings do not use os.path.join (Windows separator is different)
             if file_path[-1] == self.selected_id:
                 current_index = i
-                self.domain = datainfo.domain
-                combo = self.domain_combo
-                if self.domain == GENERAL_DOMAIN:
-                    combo.setCurrentIndex(0)
-                elif self.domain == ALL_DOMAINS:
-                    combo.setCurrentIndex(combo.count() - 1)
-                else:
-                    combo.setCurrentText(self.domain)
-                self._on_domain_changed()
+                if self.core_widget:
+                    self.domain = datainfo.domain
+                    combo = self.domain_combo
+                    if self.domain == GENERAL_DOMAIN:
+                        combo.setCurrentIndex(0)
+                    elif self.domain == ALL_DOMAINS:
+                        combo.setCurrentIndex(combo.count() - 1)
+                    else:
+                        combo.setCurrentText(self.domain)
+                    self._on_domain_changed()
 
         return model, current_index
 
