@@ -484,6 +484,8 @@ class OWDataSets(OWWidget):
                 current_index = i
                 if self.core_widget:
                     self.domain = datainfo.domain
+                    if self.domain == "sc":  # domain from the list of ignored domain
+                        self.domain = ALL_DOMAINS
                     combo = self.domain_combo
                     if self.domain == GENERAL_DOMAIN:
                         combo.setCurrentIndex(0)
