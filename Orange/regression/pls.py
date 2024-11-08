@@ -257,7 +257,7 @@ class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):
 
     def fitted_parameters(self, _) -> list[Learner.FittedParameter]:
         return [self.FittedParameter("n_components", "Number of components",
-                                     "Comp", int, 1, None)]
+                                     int, 1, None)]
 
 
 if __name__ == '__main__':

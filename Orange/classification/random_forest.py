@@ -61,4 +61,4 @@ class RandomForestLearner(SklLearner, _FeatureScorerMixin):
 
     def fitted_parameters(self, _) -> list[Learner.FittedParameter]:
         return [self.FittedParameter("n_estimators", "Number of trees",
-                                     "Trees", int, 1, None)]
+                                     int, 1, None)]

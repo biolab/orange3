@@ -91,7 +91,6 @@ class Learner(ReprableWithPreprocessors):
     class FittedParameter(NamedTuple):
         name: str
         label: str
-        tick_label: str
         type: Type
         min: Optional[int] = None
         max: Optional[int] = None
