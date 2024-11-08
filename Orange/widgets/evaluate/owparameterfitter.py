@@ -504,7 +504,12 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
     def handleNewSignals(self):
         self.Warning.clear()
-        self.Error.clear()
+        self.Error.unknown_err.clear()
+        self.Error.not_enough_data.clear()
+        self.Error.incompatible_learner.clear()
+        self.Error.manual_steps_error.clear()
+        self.Error.min_max_error.clear()
+        self.Error.missing_target.clear()
         self.clear()
 
         if self._data is None or self._learner is None:

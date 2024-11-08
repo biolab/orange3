@@ -97,8 +97,24 @@ class TestOWParameterFitter(WidgetTest):
         self.assertTrue(self.widget.Error.missing_target.is_shown())
 
         self.send_signal(self.widget.Inputs.data, self._heart)
-        self.assertFalse(self.widget.Error.missing_target.is_shown())
         self.wait_until_finished()
+        self.assertFalse(self.widget.Error.missing_target.is_shown())
+
+    def test_random_forest_multiclass_data(self):
+        domain = self._heart.domain
+        data = self._heart.transform(Domain(domain.attributes[2:],
+                                            domain.attributes[:2]))
+        rf_widget = self.create_widget(OWRandomForest)
+        learner = self.get_output(rf_widget.Outputs.learner)
+
+        self.send_signal(self.widget.Inputs.learner, learner)
+        self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_finished()
+        self.assertTrue(self.widget.Error.multiple_targets_data.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, self._heart)
+        self.wait_until_finished()
+        self.assertFalse(self.widget.Error.multiple_targets_data.is_shown())
 
     def test_plot(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
