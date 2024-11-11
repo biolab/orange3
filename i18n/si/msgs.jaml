@@ -203,8 +203,8 @@ util.py:
             unsafe: false
 version.py:
     3.38.0: false
-    3.38.0.dev0+c767157: false
-    c7671579ac399d27a1b5fb21c31f870448db9ed8: false
+    3.38.0.dev0+b3dd2eb: false
+    b3dd2eba6a3cfa73ba06460226d6e16a8e25a23a: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -5254,6 +5254,8 @@ widgets/data/owdatasets.py:
         datasets: false
         English: Slovenščina
         All Languages: (Vsi jeziki)
+        (General): (Splošno)
+        (Show all): (Prikaži vse)
         islocal: false
         label: false
         title: false
@@ -5280,17 +5282,20 @@ widgets/data/owdatasets.py:
             _header_index: false
             Search for data set ...: Poišči podatke ...
             'Show data sets in ': 'Prikaži zbirke podatkov v jeziku '
+            Domain:: Področje:
             Press Return or double-click to send: Pritisni Enter ali dvoklikni za izbor
             Description: Opis
             splitter_state: false
             Initializing: Zaganjam
         def `_parse_info`:
             version: false
+        def `update_domain_combo`:
+            sc: false
         def `update_model`:
             ' ': false
             '  ': false
             ', ': false
-            /: false
+            sc: false
         def `__set_index`:
             Error while fetching updated index: false
         def `set_model`:
@@ -5302,8 +5307,6 @@ widgets/data/owdatasets.py:
         def `__update_cached_state`:
             ' ': false
             '  ': false
-        def `__on_selection`:
-            /: false
         def `commit`:
             Fetching...: Pobiram...
         def `__commit_complete`:
@@ -5319,13 +5322,13 @@ widgets/data/owdatasets.py:
     def `make_html_list`:
         '"margin: 5px; text-indent: -40px; margin-left: 40px;"': false
         def `format_item`:
-            <p style={}><small>{}</small></p>: false
+            <p style={style}><small>{i}</small></p>: false
         \n: false
     def `description_html`:
-        ' ({})': true
-        , from {}: , z {}
-        <b>{}</b>{}{}: true
-        <p>{}</p>: true
+        ' ({datainfo.year})': true
+        , from {datainfo.source}: , z {datainfo.source}
+        <b>{escape(datainfo.title)}</b>{year}{source}: true
+        <p>{datainfo.description}</p>: true
         <small><b>See Also</b>\n: <small><b>Glej tudi</b>\n
         </small>: true
         <small><b>References</b>\n: <small><b>Viri</b>\n
