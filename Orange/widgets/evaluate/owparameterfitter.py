@@ -44,11 +44,10 @@ def _validate(
         learner: Learner,
         scorer: type[Score]
 ) -> tuple[float, float]:
-    # dummy call - Validation would silence the exceptions
-    learner(data)
-
-    res: Results = TestOnTrainingData()(data, [learner])
-    res_cv: Results = CrossValidation(k=N_FOLD)(data, [learner])
+    res: Results = TestOnTrainingData()(data, [learner],
+                                        suppresses_exceptions=False)
+    res_cv: Results = CrossValidation(k=N_FOLD)(data, [learner],
+                                                suppresses_exceptions=False)
     # pylint: disable=unsubscriptable-object
     return scorer(res)[0], scorer(res_cv)[0]
 
@@ -403,8 +402,8 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         gui.appendRadioButton(buttons, "Manual:")
         layout.addWidget(buttons, 4, 0)
         self.edit = gui.lineEdit(None, self, "manual_steps",
-                            placeholderText="e.g. 10, 20, ..., 50",
-                            callback=self.__on_manual_changed)
+                                 placeholderText="e.g. 10, 20, ..., 50",
+                                 callback=self.__on_manual_changed)
         layout.addWidget(self.edit, 4, 1)
 
         # gui.lineEdit's connect does not call the callback on return pressed
