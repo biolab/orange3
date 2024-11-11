@@ -98,6 +98,7 @@ class Results:
                  row_indices=None, folds=None, score_by_folds=True,
                  learners=None, models=None, failed=None,
                  actual=None, predicted=None, probabilities=None,
+                 # pylint: disable=unused-argument
                  store_data=None, store_models=None,
                  train_time=None, test_time=None):
         """

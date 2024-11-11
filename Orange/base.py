@@ -3,7 +3,7 @@ import itertools
 from collections.abc import Iterable
 import re
 import warnings
-from typing import Callable, Optional, NamedTuple, Union, Type
+from typing import Callable, Optional, NamedTuple, Type
 
 import numpy as np
 import scipy
@@ -186,8 +186,8 @@ class Learner(ReprableWithPreprocessors):
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
 
-    # declared for derived classes, pylint: disable=unused-argument
-    def fitted_parameters(self, problem_type: Union[str, Table, Domain]) -> list:
+    @property
+    def fitted_parameters(self) -> list:
         return []
 
     # pylint: disable=no-self-use

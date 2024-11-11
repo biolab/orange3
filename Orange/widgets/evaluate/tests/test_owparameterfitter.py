@@ -19,7 +19,8 @@ from Orange.widgets.tests.utils import simulate
 
 
 class DummyLearner(PLSRegressionLearner):
-    def fitted_parameters(self, _):
+    @property
+    def fitted_parameters(self):
         return [
             self.FittedParameter("n_components", "Foo", int, 5, None),
             self.FittedParameter("n_components", "Bar", int, 5, 10),
@@ -41,6 +42,20 @@ class TestOWParameterFitter(WidgetTest):
 
     def setUp(self):
         self.widget = self.create_widget(OWParameterFitter)
+
+    def test_init(self):
+        self.widget.controls.minimum.setValue(3)
+        self.widget.controls.maximum.setValue(6)
+
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.assertEqual(self.widget.controls.parameter_index.currentText(),
+                         "Components")
+        self.assertEqual(self.widget.minimum, 3)
+        self.assertEqual(self.widget.maximum, 6)
+
+        self.send_signal(self.widget.Inputs.learner, None)
+        self.assertEqual(self.widget.controls.parameter_index.currentText(),
+                         "")
 
     def test_input(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
@@ -85,34 +100,30 @@ class TestOWParameterFitter(WidgetTest):
         self.assertFalse(self.widget.Error.not_enough_data.is_shown())
         self.assertFalse(self.widget.Error.incompatible_learner.is_shown())
 
-    def test_random_forest_classless_data(self):
-        domain = self._heart.domain
-        data = self._heart.transform(Domain(domain.attributes))
-        rf_widget = self.create_widget(OWRandomForest)
-        learner = self.get_output(rf_widget.Outputs.learner)
+    def test_classless_data(self):
+        data = self._housing
+        classless_data = data.transform(Domain(data.domain.attributes))
 
-        self.send_signal(self.widget.Inputs.learner, learner)
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.send_signal(self.widget.Inputs.data, classless_data)
         self.wait_until_finished()
         self.assertTrue(self.widget.Error.missing_target.is_shown())
 
-        self.send_signal(self.widget.Inputs.data, self._heart)
+        self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_finished()
         self.assertFalse(self.widget.Error.missing_target.is_shown())
 
-    def test_random_forest_multiclass_data(self):
-        domain = self._heart.domain
-        data = self._heart.transform(Domain(domain.attributes[2:],
-                                            domain.attributes[:2]))
-        rf_widget = self.create_widget(OWRandomForest)
-        learner = self.get_output(rf_widget.Outputs.learner)
+    def test_multiclass_data(self):
+        data = self._housing
+        multiclass_data = data.transform(Domain(data.domain.attributes[2:],
+                                                data.domain.attributes[:2]))
 
-        self.send_signal(self.widget.Inputs.learner, learner)
-        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.send_signal(self.widget.Inputs.data, multiclass_data)
         self.wait_until_finished()
         self.assertTrue(self.widget.Error.multiple_targets_data.is_shown())
 
-        self.send_signal(self.widget.Inputs.data, self._heart)
+        self.send_signal(self.widget.Inputs.data, data)
         self.wait_until_finished()
         self.assertFalse(self.widget.Error.multiple_targets_data.is_shown())
 
@@ -279,7 +290,22 @@ class TestOWParameterFitter(WidgetTest):
         self.wait_until_finished()
 
         self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(len(self.widget.initial_parameters), 14)
+
+        self.send_signal(self.widget.Inputs.learner, None)
         self.assertEqual(self.widget.initial_parameters, {})
+
+    def test_bounds(self):
+        self.widget.controls.minimum.setValue(-3)
+        self.widget.controls.maximum.setValue(6)
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        self.send_signal(self.widget.Inputs.learner, None)
+        self.widget.controls.minimum.setValue(-3)
+        self.widget.controls.maximum.setValue(6)
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.wait_until_finished()
+        self.assertFalse(self.widget.Error.unknown_err.is_shown())
 
     def test_saved_workflow(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
@@ -300,6 +326,43 @@ class TestOWParameterFitter(WidgetTest):
         self.assertEqual(widget.controls.parameter_index.currentText(), "Baz")
         self.assertEqual(widget.minimum, 3)
         self.assertEqual(widget.maximum, 6)
+
+    def test_retain_settings(self):
+        self.send_signal(self.widget.Inputs.learner, self._dummy)
+
+        controls = self.widget.controls
+
+        def _test():
+            self.assertEqual(controls.parameter_index.currentText(), "Bar")
+            self.assertEqual(controls.minimum.value(), 6)
+            self.assertEqual(controls.maximum.value(), 8)
+            self.assertEqual(self.widget.parameter_index, 1)
+            self.assertEqual(self.widget.minimum, 6)
+            self.assertEqual(self.widget.maximum, 8)
+
+        simulate.combobox_activate_index(controls.parameter_index, 1)
+        controls.minimum.setValue(6)
+        controls.maximum.setValue(8)
+
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        _test()
+
+        self.send_signal(self.widget.Inputs.learner,
+                         DummyLearner(n_components=6))
+        _test()
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        _test()
+
+        self.send_signal(self.widget.Inputs.learner, self._rf)
+        self.assertEqual(controls.parameter_index.currentText(),
+                         "Number of trees")
+        self.assertEqual(controls.minimum.value(), 1)
+        self.assertEqual(controls.maximum.value(), 10)
+        self.assertEqual(self.widget.parameter_index, 0)
+        self.assertEqual(self.widget.minimum, 1)
+        self.assertEqual(self.widget.maximum, 10)
 
     def test_visual_settings(self):
         graph = self.widget.graph
