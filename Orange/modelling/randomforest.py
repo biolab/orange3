@@ -27,8 +27,7 @@ class RandomForestLearner(SklFitter, _FeatureScorerMixin):
 
     __returns__ = RandomForestModel
 
-    def fitted_parameters(
-            self,
-            problem_type: Union[str, Table, Domain]
-    ) -> list[Learner.FittedParameter]:
-        return self.get_learner(problem_type).fitted_parameters(problem_type)
+    @property
+    def fitted_parameters(self) -> list[Learner.FittedParameter]:
+        return [self.FittedParameter("n_estimators", "Number of trees",
+                                     int, 1, None)]

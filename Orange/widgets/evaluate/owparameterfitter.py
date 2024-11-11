@@ -320,12 +320,12 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     DEFAULT_PARAMETER_INDEX = 0
     DEFAULT_MINIMUM = 1
     DEFAULT_MAXIMUM = 9
-    parameter_index = Setting(DEFAULT_PARAMETER_INDEX, schema_only=True)
+    parameter_index = Setting(DEFAULT_PARAMETER_INDEX)
     FROM_RANGE, MANUAL = range(2)
     type: int = Setting(FROM_RANGE)
-    minimum: int = Setting(DEFAULT_MINIMUM, schema_only=True)
-    maximum: int = Setting(DEFAULT_MAXIMUM, schema_only=True)
-    manual_steps: str = Setting("", schema_only=True)
+    minimum: int = Setting(DEFAULT_MINIMUM)
+    maximum: int = Setting(DEFAULT_MAXIMUM)
+    manual_steps: str = Setting("")
     auto_commit = Setting(True)
 
     class Error(OWWidget.Error):
@@ -345,13 +345,10 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         self._data: Optional[Table] = None
         self._learner: Optional[Learner] = None
         self.__parameters_model = QStandardItemModel()
-
-        self.__pending_parameter_index = self.parameter_index \
-            if self.parameter_index != self.DEFAULT_PARAMETER_INDEX else None
-        self.__pending_minimum = self.minimum \
-            if self.minimum != self.DEFAULT_MINIMUM else None
-        self.__pending_maximum = self.maximum \
-            if self.maximum != self.DEFAULT_MAXIMUM else None
+        self.__initialize_settings = \
+            self.parameter_index == self.DEFAULT_PARAMETER_INDEX and \
+            self.minimum == self.DEFAULT_MINIMUM and \
+            self.maximum == self.DEFAULT_MAXIMUM
 
         self.setup_gui()
         VisualSettingsDialog(
@@ -418,10 +415,13 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
         gui.auto_apply(self.buttonsArea, self, "auto_commit")
 
+        self._update_preview()
+
     def __on_type_changed(self):
         self._settings_changed()
 
     def __on_parameter_changed(self):
+        self.__initialize_settings = True
         self._set_range_controls()
         self._settings_changed()
 
@@ -439,19 +439,16 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
 
     @property
     def fitted_parameters(self) -> list:
-        if not self._learner \
-                or isinstance(self._learner, Fitter) and not self._data:
+        if not self._learner:
             return []
-        return self._learner.fitted_parameters(self._data)
+        return self._learner.fitted_parameters
 
     @property
     def initial_parameters(self) -> dict:
         if not self._learner:
             return {}
         if isinstance(self._learner, Fitter):
-            if not self._data:
-                return {}
-            return self._learner.get_params(self._data)
+            return self._learner.get_params(self._data or "classification")
         return self._learner.params
 
     @property
@@ -495,38 +492,31 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     @Inputs.data
     @check_multiple_targets_input
     def set_data(self, data: Optional[Table]):
+        self.Error.not_enough_data.clear()
+        self.Error.missing_target.clear()
         self._data = data
+        if self._data and len(self._data) < N_FOLD:
+            self.Error.not_enough_data()
+            self._data = None
+        if self._data and len(self._data.domain.class_vars) < 1:
+            self.Error.missing_target()
+            self._data = None
 
     @Inputs.learner
     def set_learner(self, learner: Optional[Learner]):
+        if self._learner:
+            self.__initialize_settings = type(self._learner) != type(learner)
         self._learner = learner
 
     def handleNewSignals(self):
         self.Warning.clear()
         self.Error.unknown_err.clear()
-        self.Error.not_enough_data.clear()
         self.Error.incompatible_learner.clear()
         self.Error.manual_steps_error.clear()
         self.Error.min_max_error.clear()
-        self.Error.missing_target.clear()
         self.clear()
 
-        if self._data is None or self._learner is None:
-            return
-
-        if self._data and len(self._data) < N_FOLD:
-            self.Error.not_enough_data()
-            self._data = None
-            return
-
-        if self._data and len(self._data.domain.class_vars) < 1:
-            self.Error.missing_target()
-            self._data = None
-            return
-
-        reason = self._learner.incompatibility_reason(self._data.domain)
-        if reason:
-            self.Error.incompatible_learner(reason)
+        if self._learner is None:
             return
 
         for param in self.fitted_parameters:
@@ -535,19 +525,22 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
         if not self.fitted_parameters:
             self.Warning.no_parameters(self._learner.name)
         else:
-            if self.__pending_parameter_index is not None:
-                self.parameter_index = self.__pending_parameter_index
+            if self.__initialize_settings:
+                self.parameter_index = 0
+            else:
                 self.__combo.setCurrentIndex(self.parameter_index)
-                self.__pending_parameter_index = None
             self._set_range_controls()
-            if self.__pending_minimum is not None:
-                self.minimum = self.__pending_minimum
-                self.__pending_minimum = None
-            if self.__pending_maximum is not None:
-                self.maximum = self.__pending_maximum
-                self.__pending_maximum = None
 
         self._update_preview()
+
+        if self._data is None:
+            return
+
+        reason = self._learner.incompatibility_reason(self._data.domain)
+        if reason:
+            self.Error.incompatible_learner(reason)
+            return
+
         self.commit.now()
 
     def _set_range_controls(self):
@@ -561,19 +554,24 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
             if param.min is not None:
                 self.__spin_min.setMinimum(param.min)
                 self.__spin_max.setMinimum(param.min)
-                self.minimum = param.min
+                if self.__initialize_settings:
+                    self.minimum = param.min
             else:
                 self.__spin_min.setMinimum(-MIN_MAX_SPIN)
                 self.__spin_max.setMinimum(-MIN_MAX_SPIN)
-                self.minimum = self.initial_parameters[param.name]
+                if self.__initialize_settings:
+                    self.minimum = self.initial_parameters[param.name]
             if param.max is not None:
                 self.__spin_min.setMaximum(param.max)
                 self.__spin_max.setMaximum(param.max)
-                self.maximum = param.max
+                if self.__initialize_settings:
+                    self.maximum = param.max
             else:
                 self.__spin_min.setMaximum(MIN_MAX_SPIN)
                 self.__spin_max.setMaximum(MIN_MAX_SPIN)
-                self.maximum = self.initial_parameters[param.name]
+                if self.__initialize_settings:
+                    self.maximum = self.initial_parameters[param.name]
+            self.__initialize_settings = False
 
         tip = "Enter a list of values"
         if param.min is not None:

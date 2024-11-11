@@ -19,7 +19,8 @@ from Orange.widgets.tests.utils import simulate
 
 
 class DummyLearner(PLSRegressionLearner):
-    def fitted_parameters(self, _):
+    @property
+    def fitted_parameters(self):
         return [
             self.FittedParameter("n_components", "Foo", int, 5, None),
             self.FittedParameter("n_components", "Bar", int, 5, 10),
@@ -41,6 +42,15 @@ class TestOWParameterFitter(WidgetTest):
 
     def setUp(self):
         self.widget = self.create_widget(OWParameterFitter)
+
+    def test_init(self):
+        self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.assertEqual(self.widget.controls.parameter_index.currentText(),
+                         "Components")
+
+        self.send_signal(self.widget.Inputs.learner, None)
+        self.assertEqual(self.widget.controls.parameter_index.currentText(),
+                         "")
 
     def test_input(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
@@ -279,6 +289,9 @@ class TestOWParameterFitter(WidgetTest):
         self.wait_until_finished()
 
         self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(len(self.widget.initial_parameters), 14)
+
+        self.send_signal(self.widget.Inputs.learner, None)
         self.assertEqual(self.widget.initial_parameters, {})
 
     def test_saved_workflow(self):
@@ -300,6 +313,43 @@ class TestOWParameterFitter(WidgetTest):
         self.assertEqual(widget.controls.parameter_index.currentText(), "Baz")
         self.assertEqual(widget.minimum, 3)
         self.assertEqual(widget.maximum, 6)
+
+    def test_retain_settings(self):
+        self.send_signal(self.widget.Inputs.learner, self._dummy)
+
+        controls = self.widget.controls
+
+        def _test():
+            self.assertEqual(controls.parameter_index.currentText(), "Bar")
+            self.assertEqual(controls.minimum.value(), 6)
+            self.assertEqual(controls.maximum.value(), 8)
+            self.assertEqual(self.widget.parameter_index, 1)
+            self.assertEqual(self.widget.minimum, 6)
+            self.assertEqual(self.widget.maximum, 8)
+
+        simulate.combobox_activate_index(controls.parameter_index, 1)
+        controls.minimum.setValue(6)
+        controls.maximum.setValue(8)
+
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        _test()
+
+        self.send_signal(self.widget.Inputs.learner,
+                         DummyLearner(n_components=6))
+        _test()
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.send_signal(self.widget.Inputs.data, self._housing)
+        _test()
+
+        self.send_signal(self.widget.Inputs.learner, self._rf)
+        self.assertEqual(controls.parameter_index.currentText(),
+                         "Number of trees")
+        self.assertEqual(controls.minimum.value(), 1)
+        self.assertEqual(controls.maximum.value(), 10)
+        self.assertEqual(self.widget.parameter_index, 0)
+        self.assertEqual(self.widget.minimum, 1)
+        self.assertEqual(self.widget.maximum, 10)
 
     def test_visual_settings(self):
         graph = self.widget.graph
