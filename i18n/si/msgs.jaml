@@ -594,6 +594,10 @@ classification/random_forest.py:
         def `__init__`:
             gini: false
             sqrt: false
+        def `fitted_parameters`:
+            n_estimators: false
+            Number of trees: Število dreves
+            Trees: Dreves
 classification/rules.py:
     CN2Learner: false
     CN2UnorderedLearner: false
@@ -3263,6 +3267,10 @@ regression/pls.py:
         def `incompatibility_reason`:
             Numeric targets expected.: Metoda zahteva številčne ciljne spremenljivke.
             Only numeric target variables expected.: Metoda deluje le za številčne ciljne spremenljivke.
+        def `fitted_parameters`:
+            n_components: false
+            Number of components: Število komponent
+            Comp: Komp
     __main__: false
     housing: false
     'learner: {learner}\nRMSE: {ca}\n': false
@@ -3276,6 +3284,10 @@ regression/random_forest.py:
     class `RandomForestRegressionLearner`:
         def `__init__`:
             squared_error: false
+        def `fitted_parameters`:
+            n_estimators: false
+            Number of trees: Število dreves
+            Trees: Dreves
 regression/simple_random_forest.py:
     SimpleRandomForestLearner: false
     class `SimpleRandomForestLearner`:
@@ -8998,6 +9010,92 @@ widgets/evaluate/owliftcurve.py:
         array dimensions don't match: false
         mergesort: false
     __main__: false
+widgets/evaluate/owparameterfitter.py:
+    def `_search`:
+        Calculating...: Računam...
+    class `ParameterSetter`:
+        Gridlines: Mrežne črte
+        Show: Pokaži
+        def `axis_items`:
+            item: false
+    class `FitterPlot`:
+        def `clear_all`:
+            left: false
+            bottom: false
+        def `set_data`:
+            bottom: false
+            left: false
+            '#6fa255': false
+            '#3a78b6': false
+            '#333': false
+            pen: false
+            width: false
+            symbol: false
+            s: false
+            Train: Učni
+            CV: Prečno prev.
+        def `help_event`:
+            <table align=left>: false
+            <tr>: false
+            <td><b>Train:</b></td>: <td><b>Učni:</b></td>
+            <td>{round(scores[0], 3)}</td>: false
+            </tr><tr>: false
+            <td><b>CV:</b></td>: <td><b>Prečno preverjanje:</b></td>
+            <td>{round(scores[1], 3)}</td>: false
+            </tr>: false
+            </table>: false
+        def `__get_index_at`:
+            height: false
+    class `RangePreview`:
+        def `paintEvent`:
+            {self.__steps[-1]}: false
+            ', ': false
+            'Steps: ': 'Koraki: '
+    class `OWParameterFitter`:
+        Parameter Fitter: Umerjanje parametrov
+        Fit learner for various values of fitting parameter.: Umeri model za različne vrednosti parametrov.
+        icons/ParameterFitter.svg: false
+        graph.plotItem: false
+        class `Inputs`:
+            Data: Podatki
+            Learner: Učni algoritem
+        class `Error`:
+            {}: false
+            At least {N_FOLD} instances are needed.: Potrebujemo vsaj {N_FOLD} primerov.
+            "Invalid values for '{}': {}": Neveljavne vrednosti za '{}': {}
+            Minimum must be less than maximum.: Minimum mora biti manjši od maksimuma.
+        class `Warning`:
+            {} has no parameters to fit.: {} nima parametrov za umerjanje.
+        def `_add_controls`:
+            Settings: Nastavitve
+            parameter_index: false
+            type: false
+            Range:: Območje:
+            minimum: false
+            From:: Od:
+            maximum: false
+            To:: Do:
+            Manual:: Ročno:
+            manual_steps: false
+            e.g. 10, 20, ..., 50: npr. 10, 20, ..., 50
+            auto_commit: false
+        def `_steps_from_manual`:
+            ...: false
+            ', ': false
+        def `_set_range_controls`:
+            The widget currently supports only int parameters: false
+            Enter a list of values: Vnesite seznam vrednosti
+            {tip} between {param.min} and {param.max}.: {tip} med {param.min} in {param.max}.
+            {tip} greater or equal to {param.min}.: {tip} večjih ali enakih {param.min}.
+            {tip} smaller or equal to {param.max}.: {tip} manjših ali enakih {param.max}.
+        def `send_report`:
+            Settings: Nastavitve
+            Parameter: Parameter
+            Range: Območje
+            ', ': false
+            Plot: Graf
+    __main__: false
+    housing: false
 widgets/evaluate/owpermutationplot.py:
     def `permutation`:
         Calculating...: Računam...
@@ -13061,6 +13159,35 @@ widgets/utils/textimport.py:
     def `main`:
         rb: false
     __main__: false
+widgets/utils/userinput.py:
+    T: false
+    def `numbers_from_list`:
+        (^|[^.])\.\.\.($|[^.]): false
+    def `_get_points`:
+        invalid value ({msg[msg.rindex(':') + 1:]}): nepravilna vrednost ({msg[msg.rindex(':') + 1:]})
+    def `_numbers_from_no_dots`:
+        ...: false
+        ' ... ': false
+        ', ': false
+        ' ': false
+        value must be between {minimum} and {maximum}: vrednost mora biti med {minimum} in {maximum}
+        value must be at least {minimum}: vrednost mora biti vsaj {minimum}
+        value must be at most {maximum}: vrednost mora biti največ {maximum}
+    def `_numbers_from_dots`:
+        ...: false
+        ' ... ': false
+        ,: false
+        ' ': false
+        multiple '...'.: več '...'
+        values before '...' must be smaller than values after.: vrednosti pred '...' morajo biti manjše od vrednosti za '...'
+        at least two values are required before or after '...'.: pred ali za '...' morata biti vsaj dve vrednosti
+        points must be in uniform order.: razlike med vrednostmi morajo biti enake
+        points must be in increasing order.: vrednosti morajo biti naraščajoče
+        minimum value is missing.: manjka začetna vrednost
+        maximum value is missing.: manjka končna vrednost
+        minimum value is below the minimum {minimum}.: začetna vrednost je pod minimumom ({minimum})
+        maximum value is above the maximum {maximum}.: končna vrednost je nad maksimumom ({maximum})
+        the sequence before '...' does not end with the sequence after it.: zaporedje pred '...' se ne konča z zaporedjem za '...'
 widgets/utils/webview.py:
     WebviewWidget: false
 widgets/utils/widgetpreview.py:

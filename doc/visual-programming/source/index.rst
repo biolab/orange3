@@ -135,6 +135,7 @@ Evaluate
    widgets/evaluate/rocanalysis
    widgets/evaluate/testandscore
    widgets/evaluate/permutationplot
+   widgets/evaluate/parameterfitter
 
 
 .. toctree::
