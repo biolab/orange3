@@ -128,6 +128,12 @@ class TestOWDataSets(WidgetTest):
             self.assertEqual(w.selected_id, "bar.tab")
             self.assertEqual(w.domain_combo.currentText(), "edu")
 
+    def __titles(self, widget):
+        model = widget.view.model()
+        return {
+            model.index(row, 0).data(Qt.UserRole).title
+            for row in range(model.rowCount())}
+
     @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(side_effect=requests.exceptions.ConnectionError))
     @patch("Orange.widgets.data.owdatasets.list_local",
@@ -142,18 +148,16 @@ class TestOWDataSets(WidgetTest):
     @patch("Orange.widgets.data.owdatasets.log", Mock())
     def test_filtering_unlisted(self):
         def titles():
-            return {
-                model.index(row, 0).data(Qt.UserRole).title
-                for row in range(model.rowCount()) }
+            return self.__titles(w)
 
         w = self.create_widget(OWDataSets)  # type: OWDataSets
         model = w.view.model()
         self.assertEqual(titles(), {"a published data set", "an unp unp"})
 
-        model.setFilterFixedString("an u")
+        model.setFilterFixedString("unp")
         self.assertEqual(titles(), {"an unp unp"})
 
-        model.setFilterFixedString("an Un")
+        model.setFilterFixedString("an U")
         self.assertEqual(titles(), {"an unlisted data set", "an unp unp"})
 
         model.setFilterFixedString("")
@@ -161,6 +165,56 @@ class TestOWDataSets(WidgetTest):
 
         model.setFilterFixedString(None)
         self.assertEqual(titles(), {"a published data set", "an unp unp"})
+
+    @patch("Orange.widgets.data.owdatasets.list_remote",
+           Mock(return_value={('core', 'foo.tab'): {"title": "Foo data set",
+                                                    "language": "English"},
+                              ('core', 'bar.tab'): {"title": "Bar data set",
+                                                    "domain": "Testing"},
+                              ('core', 'bax.tab'): {"title": "Bax data set",
+                                                    "language": "Slovenščina"}
+                              }))
+    @patch("Orange.widgets.data.owdatasets.list_local",
+           Mock(return_value={}))
+    @patch("Orange.widgets.data.owdatasets.OWDataSets.commit", Mock())
+    def test_filter_overrides_language_and_domain(self):
+        w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
+        w.language_combo.setCurrentText("Slovenščina")
+        w.language_combo.activated.emit(w.language_combo.currentIndex())
+
+        self.assertEqual(self.__titles(w), {"Bax data set"})
+
+        w.filterLineEdit.setText("data ")
+        self.assertEqual(self.__titles(w), {"Foo data set",
+                                            "Bar data set",
+                                            "Bax data set"})
+
+        w.filterLineEdit.setText("bar d")
+        self.assertEqual(self.__titles(w), {"Bar data set"})
+
+        w.filterLineEdit.setText("bax d")
+        self.assertEqual(self.__titles(w), {"Bax data set"})
+
+        w.language_combo.setCurrentText("English")
+        w.language_combo.activated.emit(2)
+        self.assertEqual(self.__titles(w), {"Bax data set"})
+
+        settings = w.settingsHandler.pack_data(w)
+
+        w2 = self.create_widget(OWDataSets, stored_settings=settings)
+        self.wait_until_stop_blocking(w2)
+        self.assertEqual(w2.language_combo.currentText(), "English")
+        self.assertEqual(self.__titles(w2), {"Foo data set"})
+
+        w.selected_id = "bax.tab"
+        settings = w.settingsHandler.pack_data(w)
+        w2 = self.create_widget(OWDataSets, stored_settings=settings)
+        self.wait_until_stop_blocking(w2)
+        self.assertEqual(w2.language_combo.currentText(), "English")
+        self.assertEqual(w2.filterLineEdit.text(), "bax d")
+        self.assertEqual(self.__titles(w2), {"Bax data set"})
+
 
     @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(return_value={('core', 'foo.tab'): {"language": "English"},

@@ -178,15 +178,17 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
     def filterAcceptsRow(self, row, parent):
         source = self.sourceModel()
         data = source.index(row, 0).data(Qt.UserRole)
-        return (super().filterAcceptsRow(row, parent)
-            and (self.__language is None or data.language == self.__language)
-            and self.__domain in (ALL_DOMAINS, data.domain)
-            and (data.publication_status == Namespace.PUBLISHED or (
-                 self.__filter is not None
-                 and len(self.__filter) >= 5
-                 and data.title.casefold().startswith(self.__filter)
-            ))
+        in_filter = (
+            self.__filter is not None
+            and len(self.__filter) >= 4
+            and self.__filter in data.title.casefold()
         )
+        published_ok = data.publication_status == Namespace.PUBLISHED
+        domain_ok = self.__domain in (ALL_DOMAINS, data.domain)
+        language_ok = self.__language in (None, data.language)
+        return (super().filterAcceptsRow(row, parent)
+            and (published_ok and domain_ok and language_ok
+                 or in_filter))
 
 
 class OWDataSets(OWWidget):
@@ -237,9 +239,10 @@ class OWDataSets(OWWidget):
         data = Output("Data", Orange.data.Table)
 
     #: Selected dataset id
-    selected_id = Setting(None)   # type: Optional[str]
+    selected_id: Optional[str] = Setting(None)
     language = Setting(DEFAULT_LANG)
     domain = Setting(GENERAL_DOMAIN)
+    filter_hint: Optional[str] = Setting(None)
     settings_version = 2
 
     #: main area splitter state
@@ -269,6 +272,8 @@ class OWDataSets(OWWidget):
         self.filterLineEdit = QLineEdit(
             textChanged=self.filter, placeholderText="Search for data set ..."
         )
+        self.filterLineEdit.setToolTip(
+            "Typing four letters or more overrides domain and language filters")
         layout.addWidget(self.filterLineEdit)
 
         layout.addSpacing(20)
@@ -545,6 +550,16 @@ class OWDataSets(OWWidget):
 
     def set_model(self, model, current_index):
         self.view.model().setSourceModel(model)
+        if current_index != -1:
+            for hint in (
+                    self.filter_hint,
+                    model.index(current_index, 0).data(Qt.UserRole).title):
+                if self.view.model().filterAcceptsRow(current_index,
+                                                      QModelIndex()):
+                    break
+                self.filterLineEdit.setText(hint)
+                self.filter()
+
         self.view.selectionModel().selectionChanged.connect(
             self.__on_selection
         )
@@ -609,6 +624,7 @@ class OWDataSets(OWWidget):
 
     def filter(self):
         filter_string = self.filterLineEdit.text().strip()
+        self.filter_hint = filter_string
         proxyModel = self.view.model()
         if proxyModel:
             proxyModel.setFilterFixedString(filter_string)
