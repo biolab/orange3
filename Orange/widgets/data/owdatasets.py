@@ -278,7 +278,10 @@ class OWDataSets(OWWidget):
         if self.language is not None and self.language not in languages:
             languages.insert(1, self.language)
         lang_combo.addItems(languages)
-        lang_combo.setCurrentText(self.language)
+        if self.language is None:
+            lang_combo.setCurrentIndex(lang_combo.count() - 1)
+        else:
+            lang_combo.setCurrentText(self.language)
         lang_combo.activated.connect(self._on_language_changed)
         layout.addWidget(lang_combo)
 
@@ -428,7 +431,7 @@ class OWDataSets(OWWidget):
         if self.DEFAULT_LANG not in languages:
             combo.addItem(self.DEFAULT_LANG)
         combo.addItems(languages + [self.ALL_LANGUAGES])
-        if current_language in languages:
+        if current_language in languages or current_language == self.ALL_LANGUAGES:
             combo.setCurrentText(current_language)
         elif self.DEFAULT_LANG in languages:
             combo.setCurrentText(self.DEFAULT_LANG)
