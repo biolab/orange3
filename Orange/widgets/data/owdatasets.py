@@ -298,15 +298,14 @@ class OWDataSets(OWWidget):
         layout.addWidget(lang_combo)
         self.combo_elements.append(lang_combo)
 
-        layout.addSpacing(20)
-        label = QLabel("Domain:")
-        layout.addWidget(label)
-        self.combo_elements.append(label)
-
         domain_combo = self.domain_combo = QComboBox()
         domain_combo.addItem(self.GENERAL_DOMAIN_LABEL)
         domain_combo.activated.connect(self._on_domain_changed)
         if self.core_widget:
+            layout.addSpacing(20)
+            label = QLabel("Domain:")
+            layout.addWidget(label)
+            self.combo_elements.append(label)
             layout.addWidget(domain_combo)
         self.combo_elements.append(domain_combo)
 
