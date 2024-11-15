@@ -5,6 +5,29 @@ Change Log
 ------------
 
 
+[3.38.0] - 2024-11-15
+--------------------
+##### Enhancements
+* Parameter Fitter: Basic implementation ([#6921](../../pull/6921))
+* Datasets: Add domain field; respect "Unlisted" ([#6920](../../pull/6920))
+* Datasets: Let the filter override domain and language ([#6930](../../pull/6930))
+* ScoringSheet and ScoringSheetViewer widgets ([#6817](../../pull/6817))
+* Multilingual package and installation ([#6828](../../pull/6828))
+
+##### Bugfixes
+* Calibrated Learner: Prevent in place modification of base learner ([#6917](../../pull/6917))
+* ListView: Fix selection ([#6823](../../pull/6823))
+* plotutils: Fix scene layout tracking in AnchorItem ([#6859](../../pull/6859))
+* oweditdomain: Hide "categories mapping" warning on change ([#6865](../../pull/6865))
+* Logistic regression: fix penalty argument for no regularization ([#6886](../../pull/6886))
+* Avoid slowdowns by caching Domain.__eq__ ([#6764](../../pull/6764))
+* SVM: degree has to be an integer ([#6866](../../pull/6866))
+* Only deepcopy the .attributes for the outermost Table transformation ([#6849](../../pull/6849))
+* Line plot: compatibility with scipy 1.14 ([#6845](../../pull/6845))
+* PCA: ensure tests pass on sklearn 1.4 and 1.5, which can return different results ([#6821](../../pull/6821))
+* Remove Orange implementation of randomized PCA for sparse data ([#6815](../../pull/6815))
+
+
 [3.37.0] - 2024-05-27
 --------------------
 ##### Enhancements
@@ -1874,7 +1897,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.37.0..HEAD
+[next]: https://github.com/biolab/orange3/compare/3.38.0..HEAD
+[3.37.0]: https://github.com/biolab/orange3/compare/3.37.0...3.38.0
 [3.37.0]: https://github.com/biolab/orange3/compare/3.36.2...3.37.0
 [3.36.2]: https://github.com/biolab/orange3/compare/3.36.1...3.36.2
 [3.36.1]: https://github.com/biolab/orange3/compare/3.36.0...3.36.1
