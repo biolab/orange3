@@ -41,6 +41,9 @@ log = logging.getLogger(__name__)
 GENERAL_DOMAIN = None
 ALL_DOMAINS = ""  # The setting is Optional[str], so don't use other types here
 
+# The number of characters at which filter overrides the domain and language
+FILTER_OVERRIDE_LENGTH = 4
+
 
 def ensure_local(index_url, file_path, local_cache_path,
                  force=False, progress_advance=None):
@@ -180,7 +183,7 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
         data = source.index(row, 0).data(Qt.UserRole)
         in_filter = (
             self.__filter is not None
-            and len(self.__filter) >= 4
+            and len(self.__filter) >= FILTER_OVERRIDE_LENGTH
             and self.__filter in data.title.casefold()
         )
         published_ok = data.publication_status == Namespace.PUBLISHED
@@ -189,7 +192,6 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
         return (super().filterAcceptsRow(row, parent)
             and (published_ok and domain_ok and language_ok
                  or in_filter))
-
 
 class OWDataSets(OWWidget):
     name = "Datasets"
@@ -276,8 +278,13 @@ class OWDataSets(OWWidget):
             "Typing four letters or more overrides domain and language filters")
         layout.addWidget(self.filterLineEdit)
 
+        self.combo_elements = []
+
         layout.addSpacing(20)
-        layout.addWidget(QLabel("Show data sets in "))
+        label = QLabel("Show data sets in ")
+        layout.addWidget(label)
+        self.combo_elements.append(label)
+
         lang_combo = self.language_combo = QComboBox()
         languages = [self.DEFAULT_LANG, self.ALL_LANGUAGES]
         if self.language is not None and self.language not in languages:
@@ -289,14 +296,19 @@ class OWDataSets(OWWidget):
             lang_combo.setCurrentText(self.language)
         lang_combo.activated.connect(self._on_language_changed)
         layout.addWidget(lang_combo)
+        self.combo_elements.append(lang_combo)
 
         layout.addSpacing(20)
-        layout.addWidget(QLabel("Domain:"))
+        label = QLabel("Domain:")
+        layout.addWidget(label)
+        self.combo_elements.append(label)
+
         domain_combo = self.domain_combo = QComboBox()
         domain_combo.addItem(self.GENERAL_DOMAIN_LABEL)
         domain_combo.activated.connect(self._on_domain_changed)
         if self.core_widget:
             layout.addWidget(domain_combo)
+        self.combo_elements.append(domain_combo)
 
         self.mainArea.layout().addLayout(layout)
 
@@ -494,16 +506,19 @@ class OWDataSets(OWWidget):
                     self.domain = datainfo.domain
                     if self.domain == "sc":  # domain from the list of ignored domain
                         self.domain = ALL_DOMAINS
-                    combo = self.domain_combo
-                    if self.domain == GENERAL_DOMAIN:
-                        combo.setCurrentIndex(0)
-                    elif self.domain == ALL_DOMAINS:
-                        combo.setCurrentIndex(combo.count() - 1)
-                    else:
-                        combo.setCurrentText(self.domain)
+                    self.__update_domain_combo()
                     self._on_domain_changed()
 
         return model, current_index
+
+    def __update_domain_combo(self):
+        combo = self.domain_combo
+        if self.domain == GENERAL_DOMAIN:
+            combo.setCurrentIndex(0)
+        elif self.domain == ALL_DOMAINS:
+            combo.setCurrentIndex(combo.count() - 1)
+        else:
+            combo.setCurrentText(self.domain)
 
     def _on_language_changed(self):
         combo = self.language_combo
@@ -622,6 +637,17 @@ class OWDataSets(OWWidget):
 
     def filter(self):
         filter_string = self.filterLineEdit.text().strip()
+        enable_combos = len(filter_string) < FILTER_OVERRIDE_LENGTH
+        if enable_combos is not self.domain_combo.isEnabled():
+            for element in self.combo_elements:
+                element.setEnabled(enable_combos)
+            if enable_combos:
+                self.__update_domain_combo()
+                self.language_combo.setCurrentText(self.language)
+            else:
+                self.domain_combo.setCurrentText(self.ALL_DOMAINS_LABEL)
+                self.language_combo.setCurrentText(self.ALL_LANGUAGES)
+
         self.filter_hint = filter_string
         proxyModel = self.view.model()
         if proxyModel:

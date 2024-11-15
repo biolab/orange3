@@ -182,6 +182,8 @@ class TestOWDataSets(WidgetTest):
         self.wait_until_stop_blocking(w)
         w.language_combo.setCurrentText("Slovenščina")
         w.language_combo.activated.emit(w.language_combo.currentIndex())
+        w.domain_combo.setCurrentText(w.GENERAL_DOMAIN_LABEL)
+        w.domain_combo.activated.emit(w.domain_combo.currentIndex())
 
         self.assertEqual(self.__titles(w), {"Bax data set"})
 
@@ -189,6 +191,18 @@ class TestOWDataSets(WidgetTest):
         self.assertEqual(self.__titles(w), {"Foo data set",
                                             "Bar data set",
                                             "Bax data set"})
+        self.assertEqual(w.language_combo.currentText(), w.ALL_LANGUAGES)
+        self.assertFalse(w.language_combo.isEnabled())
+        self.assertEqual(w.domain_combo.currentText(), w.ALL_DOMAINS_LABEL)
+        self.assertFalse(w.domain_combo.isEnabled())
+
+        w.filterLineEdit.setText("da")
+        self.assertEqual(self.__titles(w), {"Bax data set"})
+        self.assertEqual(w.language_combo.currentText(), "Slovenščina")
+        self.assertTrue(w.language_combo.isEnabled())
+        self.assertEqual(w.domain_combo.currentText(), w.GENERAL_DOMAIN_LABEL)
+        self.assertTrue(w.domain_combo.isEnabled())
+
 
         w.filterLineEdit.setText("bar d")
         self.assertEqual(self.__titles(w), {"Bar data set"})
@@ -211,7 +225,8 @@ class TestOWDataSets(WidgetTest):
         settings = w.settingsHandler.pack_data(w)
         w2 = self.create_widget(OWDataSets, stored_settings=settings)
         self.wait_until_stop_blocking(w2)
-        self.assertEqual(w2.language_combo.currentText(), "English")
+        self.assertEqual(w2.language_combo.currentText(), w2.ALL_LANGUAGES)
+        self.assertFalse(w2.language_combo.isEnabled())
         self.assertEqual(w2.filterLineEdit.text(), "bax d")
         self.assertEqual(self.__titles(w2), {"Bax data set"})
 
@@ -266,8 +281,8 @@ class TestOWDataSets(WidgetTest):
         # select the only dataset
         sel_type = QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
         w.view.selectionModel().select(w.view.model().index(0, 0), sel_type)
-        self.assertEqual(w.selected_id, "iris.tab")
         w.commit()
+        self.assertEqual(w.selected_id, "iris.tab")
         iris = self.get_output(w.Outputs.data, w)
         self.assertEqual(len(iris), 150)
 
