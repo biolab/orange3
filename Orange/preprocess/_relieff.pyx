@@ -26,7 +26,7 @@ from libcpp.algorithm cimport make_heap, pop_heap
 # Import C99 features from numpy's npy_math (MSVC 2010)
 # Note we cannot import isnan due to mixing C++ and C
 # (at least on OSX the <cmath> undefines the isnan macro)
-from numpy.math cimport INFINITY, NAN
+from libc.math cimport INFINITY, NAN
 
 ctypedef np.float64_t   double
 ctypedef np.int8_t[:]   arr_i1_t

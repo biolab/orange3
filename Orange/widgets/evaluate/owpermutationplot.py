@@ -50,11 +50,10 @@ def _validate(
         learner: Learner,
         scorer: Score
 ) -> Tuple[float, float]:
-    # dummy call - Validation would silence the exceptions
-    learner(data)
-
-    res: Results = TestOnTrainingData()(data, [learner])
-    res_cv: Results = CrossValidation(k=N_FOLD)(data, [learner])
+    res: Results = TestOnTrainingData()(data, [learner],
+                                        suppresses_exceptions=False)
+    res_cv: Results = CrossValidation(k=N_FOLD)(data, [learner],
+                                                suppresses_exceptions=False)
     # pylint: disable=unsubscriptable-object
     return scorer(res)[0], scorer(res_cv)[0]
 

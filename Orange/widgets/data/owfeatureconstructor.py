@@ -11,7 +11,6 @@ import functools
 import builtins
 import math
 import random
-import logging
 import ast
 import types
 import unicodedata
@@ -40,7 +39,7 @@ from Orange.preprocess.transformation import MappingTransform
 from Orange.util import frompyfunc
 from Orange.data import Variable, Table, Value, Instance
 from Orange.widgets import gui
-from Orange.widgets.settings import ContextSetting, DomainContextHandler
+from Orange.widgets.settings import Setting, DomainContextHandler
 from Orange.widgets.utils import (
     itemmodels, vartype, ftry, unique_everseen as unique
 )
@@ -448,8 +447,6 @@ def freevars(exp: ast.AST, env: List[str]):
     elif etype == ast.Starred:
         # a 'starred' call parameter (e.g. a and b in `f(x, *a, *b)`
         return freevars(exp.value, env)
-    elif etype in [ast.Num, ast.Str, ast.Ellipsis, ast.Bytes, ast.NameConstant]:
-        return []
     elif etype == ast.Constant:
         return []
     elif etype == ast.Attribute:
@@ -466,45 +463,35 @@ def freevars(exp: ast.AST, env: List[str]):
         return sum((freevars(e, env)
                     for e in filter(None, [exp.lower, exp.upper, exp.step])),
                    [])
-    elif etype == ast.ExtSlice:
-        return sum((freevars(e, env) for e in exp.dims), [])
-    elif etype == ast.Index:
-        return freevars(exp.value, env)
     elif etype == ast.keyword:
         return freevars(exp.value, env)
     else:
         raise ValueError(exp)
 
 
-class FeatureConstructorHandler(DomainContextHandler):
-    """Context handler that filters descriptors"""
+class _FeatureConstructorHandler(DomainContextHandler):
+    """ContextHandler for backwards compatibility only.
+    This widget used to have context dependent settings. This ensures the
+    last stored context is propagated to regular settings instead.
+    """
+    MAX_SAVED_CONTEXTS = 1
 
-    def is_valid_item(self, setting, item, attrs, metas):
-        """Check if descriptor `item` can be used with given domain.
-
-        Return True if descriptor's expression contains only
-        available variables and descriptors name does not clash with
-        existing variables.
-        """
-        if item.name in attrs or item.name in metas:
-            return False
-
-        try:
-            exp_ast = ast.parse(item.expression, mode="eval")
-        # ast.parse can return arbitrary errors, not only SyntaxError
-        # pylint: disable=broad-except
-        except Exception:
-            return False
-
-        available = dict(globals()["__GLOBALS"])
-        for var in attrs:
-            available[sanitized_name(var)] = None
-        for var in metas:
-            available[sanitized_name(var)] = None
-
-        if freevars(exp_ast, list(available)):
-            return False
-        return True
+    def initialize(self, instance, data=None):
+        super().initialize(instance, data)
+        if instance.context_settings:
+            # Use the very last context
+            ctx = instance.context_settings[0]
+            def pick_first(item):
+                # Return first element of item if item is a tuple
+                if isinstance(item, tuple):
+                    return item[0]
+                else:
+                    return item
+            instance.descriptors = ctx.values.get("descriptors", [])
+            instance.expressions_with_values = pick_first(
+                ctx.values.get("expressions_with_values", False)
+            )
+            instance.currentIndex = pick_first(ctx.values.get("currentIndex", -1))
 
 
 class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
@@ -524,11 +511,13 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
 
     want_main_area = False
 
-    settingsHandler = FeatureConstructorHandler()
-    descriptors = ContextSetting([])
-    currentIndex = ContextSetting(-1)
-    expressions_with_values = ContextSetting(False)
-    settings_version = 3
+    # NOTE: The context handler is here for settings migration only.
+    settingsHandler = _FeatureConstructorHandler()
+    descriptors = Setting([], schema_only=True)
+    expressions_with_values = Setting(False, schema_only=True)
+    currentIndex = Setting(-1, schema_only=True)
+
+    settings_version = 4
 
     EDITORS = [
         (ContinuousDescriptor, ContinuousFeatureEditor),
@@ -660,6 +649,9 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
         self.fix_button.setHidden(True)
         gui.button(self.buttonsArea, self, "Send", callback=self.apply, default=True)
 
+        if self.descriptors:
+            self.featuremodel[:] = list(self.descriptors)
+
     def setCurrentIndex(self, index):
         index = min(index, len(self.featuremodel) - 1)
         self.currentIndex = index
@@ -705,24 +697,9 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
     @check_sql_input
     def setData(self, data=None):
         """Set the input dataset."""
-        self.closeContext()
-
         self.data = data
-        self.expressions_with_values = False
+        self.setCurrentIndex(self.currentIndex) # Update editor
 
-        self.descriptors = []
-        self.currentIndex = -1
-        if self.data is not None:
-            self.openContext(data)
-
-        # disconnect from the selection model while reseting the model
-        selmodel = self.featureview.selectionModel()
-        selmodel.selectionChanged.disconnect(self._on_selectedVariableChanged)
-
-        self.featuremodel[:] = list(self.descriptors)
-        self.setCurrentIndex(self.currentIndex)
-
-        selmodel.selectionChanged.connect(self._on_selectedVariableChanged)
         self.fix_button.setHidden(not self.expressions_with_values)
         self.editorstack.setEnabled(self.currentIndex >= 0)
 
@@ -819,12 +796,11 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
         self.Outputs.data.send(data)
 
     def on_exception(self, ex: Exception):
-        log = logging.getLogger(__name__)
-        log.error("", exc_info=ex)
         self.Error.transform_error(
             "".join(format_exception_only(type(ex), ex)).rstrip(),
             exc_info=ex
         )
+        self.Outputs.data.send(None)
 
     def on_partial_result(self, _):
         pass
@@ -1014,8 +990,6 @@ def validate_exp(exp):
         return all(map(validate_exp, subexp))
     elif etype == ast.Starred:
         return validate_exp(exp.value)
-    elif etype in [ast.Num, ast.Str, ast.Bytes, ast.Ellipsis, ast.NameConstant]:
-        return True
     elif etype == ast.Constant:
         return True
     elif etype == ast.Attribute:

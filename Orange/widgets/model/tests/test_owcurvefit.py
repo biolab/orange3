@@ -365,6 +365,15 @@ class TestOWCurveFit(WidgetTest, WidgetLearnerTestMixin):
             self.assertFalse(self.widget.Error.invalid_exp.is_shown())
             model = self.get_output(self.widget.Outputs.model)
             coefficients = self.get_output(self.widget.Outputs.coefficients)
+            if f in ["inf", "nan", "arccos", "arccosh", "arcsin", "arctanh"]:
+                # These functions produce objective function values with NaN.
+                # Different implementations of optimization that scipy uses get
+                # different results: one stops optimization immediately with some
+                # results, the other stops when maximum number of iterations
+                # (and errors with fitting_failed). The optimization implementation
+                # can be different even with same scipy version (in my case, between
+                # pypi and conda-forge package). Thus, we skip these.
+                continue
             if f == "gcd":
                 self.assertTrue(self.widget.Error.fitting_failed.is_shown())
                 self.assertIsNone(model)

@@ -738,9 +738,12 @@ class RandomFeatureSelectEditor(BaseEditor):
 
     def __repr__(self):
         if self.__strategy == self.Fixed:
-            return f"select {self.__k} {pl(self.__k,'feature')}"
+            # private attributes may not appear translated strings
+            num = self.__k
+            return f"select {num} {pl(num,'feature')}"
         else:
-            return f"select {self.__p} % features"
+            perc = self.__p
+            return f"select {perc} % features"
 
 
 def index_to_enum(enum, i):

@@ -16,9 +16,10 @@ import scipy.stats as ss
 import scipy.sparse as sp
 from AnyQt.QtCore import Qt, QSize, QRectF, QModelIndex, pyqtSlot, \
     QItemSelection, QItemSelectionRange, QItemSelectionModel
-from AnyQt.QtGui import QPainter, QColor, QPalette
+from AnyQt.QtGui import QPainter, QColor, QPalette, QFontMetrics
 from AnyQt.QtWidgets import QStyledItemDelegate, QGraphicsScene, QTableView, \
-    QHeaderView, QStyle, QStyleOptionViewItem
+    QHeaderView, QStyle, QStyleOptionViewItem, \
+    QGraphicsView, QGraphicsItemGroup
 
 import Orange.statistics.util as ut
 from Orange.data import Table, StringVariable, DiscreteVariable, \
@@ -31,6 +32,8 @@ from Orange.widgets.settings import Setting, ContextSetting, \
 from Orange.widgets.utils.itemmodels import DomainModel, AbstractSortTableModel
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
+from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
 
 
 def _categorical_entropy(x):
@@ -773,6 +776,15 @@ class OWFeatureStatistics(widget.OWWidget):
 
         box.layout().addWidget(self.table_view)
 
+        self.legend_items = []
+        self.legend = QGraphicsScene()
+        self.legend_view = u = QGraphicsView(self.legend)
+        u.setRenderHints(QPainter.Antialiasing | QPainter.TextAntialiasing)
+        u.setFrameStyle(QGraphicsView.NoFrame)
+        u.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        u.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        box.layout().addWidget(u)
+
         self.color_var_model = DomainModel(
             valid_types=(ContinuousVariable, DiscreteVariable),
             placeholder='None',
@@ -790,6 +802,10 @@ class OWFeatureStatistics(widget.OWWidget):
     @staticmethod
     def sizeHint():  # pylint: disable=arguments-differ
         return QSize(1050, 500)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.update_legend()
 
     @Inputs.data
     def set_data(self, data):
@@ -853,6 +869,41 @@ class OWFeatureStatistics(widget.OWWidget):
     def __color_var_changed(self, *_):
         if self.model is not None:
             self.model.set_target_var(self.color_var)
+            self.update_legend_items()
+            self.update_legend()
+
+    def update_legend_items(self):
+        self.legend.clear()
+        if self.color_var is None or not self.color_var.is_discrete:
+            self.legend_items = []
+            return
+        self.legend_items = []
+        size = QFontMetrics(self.font()).height()
+        for name, color in zip(self.color_var.values, self.color_var.palette.qcolors):
+            item = QGraphicsItemGroup()
+            item.addToGroup(
+                CanvasRectangle(None, -size / 2, -size / 2, size, size,
+                                Qt.gray, color))
+            item.addToGroup(
+                CanvasText(None, name, size, 0, Qt.AlignVCenter))
+            self.legend_items.append(item)
+
+    def update_legend(self):
+        view = self.legend_view
+
+        if not self.legend_items:
+            self.legend.clear()
+            view.hide()
+            return
+
+        size = QFontMetrics(self.font()).height()
+        legend = wrap_legend_items(
+            self.legend_items,
+            self.width() - 30, size, size * 1.75)
+        self.legend.addItem(legend)
+        legend.setPos(15, 0)
+        view.setFixedHeight(int(legend.boundingRect().height()) + size)
+        view.show()
 
     def on_select(self):
         selection_indices = list(self.model.mapToSourceRows([

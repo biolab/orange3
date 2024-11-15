@@ -677,8 +677,8 @@ class ProfileGroup:
     def __get_disconnected_curve_data(y_data):
         m, n = y_data.shape
         x = np.arange(m * n) % n + 1
-        y = y_data.A.flatten() if sp.issparse(y_data) else y_data.flatten()
-        connect = ~np.isnan(y_data.A if sp.issparse(y_data) else y_data)
+        y = y_data.toarray().flatten() if sp.issparse(y_data) else y_data.flatten()
+        connect = ~np.isnan(y_data.toarray() if sp.issparse(y_data) else y_data)
         connect[:, -1] = False
         connect = connect.flatten()
         return x, y, connect
@@ -687,8 +687,8 @@ class ProfileGroup:
     def __get_disconnected_curve_missing_data(y_data):
         m, n = y_data.shape
         x = np.arange(m * n) % n + 1
-        y = y_data.A.flatten() if sp.issparse(y_data) else y_data.flatten()
-        connect = np.isnan(y_data.A if sp.issparse(y_data) else y_data)
+        y = y_data.toarray().flatten() if sp.issparse(y_data) else y_data.flatten()
+        connect = np.isnan(y_data.toarray() if sp.issparse(y_data) else y_data)
         # disconnect until the first non nan
         first_non_nan = np.argmin(connect, axis=1)
         for row in np.flatnonzero(first_non_nan):

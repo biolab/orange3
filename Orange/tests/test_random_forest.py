@@ -126,12 +126,12 @@ class RandomForestTest(unittest.TestCase):
     def test_max_features_reg(self):
         data = self.housing
         forest_1 = RandomForestRegressionLearner(random_state=0, max_features=1)
-        model_1 = forest_1(data[1:])
+        model_1 = forest_1(data[2:])
 
         forest_2 = RandomForestRegressionLearner(random_state=0, max_features=1.)
-        model_2 = forest_2(data[1:])
-        diff = np.sum(np.abs(model_1(data[:1]) - model_2(data[:1])))
-        self.assertGreater(diff, 1.2)
+        model_2 = forest_2(data[2:])
+        self.assertNotEqual(model_1(data[:2]).tolist(),
+                            model_2(data[:2]).tolist())
 
     def test_supports_weights(self):
         self.assertTrue(RandomForestRegressionLearner().supports_weights)

@@ -1,0 +1,7 @@
+Notice for Use of FasterRisk Code in Orange3
+
+This directory ('Orange/classification/fasterrisk') contains code from the "FasterRisk" project by Jiachang Liu. This code is used under the BSD 3-Clause License. The source of this code can be found at https://github.com/jiachangliu/FasterRisk.
+
+The inclusion of the FasterRisk code in this project serves as a temporary solution to address compatibility and functionality issues arising from the strict requirements of the original package. This measure will remain in place until such time as the original maintainer updates the package to address these issues.
+
+A copy of the BSD 3-Clause License under which the FasterRisk code is licensed is included in this directory.

@@ -15,13 +15,12 @@ from orangewidget.settings import Context
 from Orange.data import (Table, Domain, StringVariable,
                          ContinuousVariable, DiscreteVariable, TimeVariable)
 from Orange.widgets.tests.base import WidgetTest
-from Orange.widgets.utils import vartype
 from Orange.widgets.utils.itemmodels import PyListModel
 from Orange.widgets.utils.concurrent import TaskState
 from Orange.widgets.data.owfeatureconstructor import (
     DiscreteDescriptor, ContinuousDescriptor, StringDescriptor,
     construct_variables, OWFeatureConstructor,
-    FeatureEditor, DiscreteFeatureEditor, FeatureConstructorHandler,
+    FeatureEditor, DiscreteFeatureEditor,
     DateTimeDescriptor, StringFeatureEditor, freevars, validate_exp,
     FeatureFunc, run
 )
@@ -204,13 +203,15 @@ class TestTools(unittest.TestCase):
         self.assertEqual(freevars_("a + b", ["a", "b"]), [])
         self.assertEqual(freevars_("a[b]"), ["a", "b"])
         self.assertEqual(freevars_("a[b]", ["a", "b"]), [])
+        self.assertEqual(freevars_("a[b:3]", ["a", "b"]), [])
+        self.assertEqual(freevars_("a[b:c:d]", ["a", "b", "c", "d"]), [])
+
         self.assertEqual(freevars_("f(x, *a)", ["f"]), ["x", "a"])
         self.assertEqual(freevars_("f(x, *a, y=1)", ["f"]), ["x", "a"])
         self.assertEqual(freevars_("f(x, *a, y=1, **k)", ["f"]),
                          ["x", "a", "k"])
-        if sys.version_info >= (3, 5):
-            self.assertEqual(freevars_("f(*a, *b, k=c, **d, **e)", ["f"]),
-                             ["a", "b", "c", "d", "e"])
+        self.assertEqual(freevars_("f(*a, *b, k=c, **d, **e)", ["f"]),
+                         ["a", "b", "c", "d", "e"])
 
         self.assertEqual(freevars_("True"), [])
         self.assertEqual(freevars_("'True'"), [])
@@ -548,26 +549,41 @@ class OWFeatureConstructorTests(WidgetTest):
         self.assertTrue(widget.expressions_with_values)
         self.assertFalse(widget.fix_button.isHidden())
         self.send_signal(widget.Inputs.data, None)
-        self.assertFalse(widget.expressions_with_values)
         self.assertTrue(widget.fix_button.isHidden())
+        self.send_signal(widget.Inputs.data, data)
+        self.assertFalse(widget.fix_button.isHidden())
 
-    def test_report(self):
+    def test_migration_no_context(self):
+        descriptors = [
+            ContinuousDescriptor("y", "A + B", 1),
+            StringDescriptor("u", "str(A) + 'X'")
+        ]
         settings = {
             "context_settings":
                 [Context(
-                    attributes=dict(x=2, y=2, z=2), metas={},
+                    attributes=dict(A=1, B=2), metas={},
                     values=dict(
-                        descriptors=[
-                            ContinuousDescriptor("a", "x + 2", 1),
-                            DiscreteDescriptor("b", "x < 3", (), False),
-                            DiscreteDescriptor("c", "x > 15", (), True),
-                            DiscreteDescriptor("d", "y > x", ("foo", "bar"), False),
-                            DiscreteDescriptor("e", "x ** 2 + y == 5", ("foo", "bar"), True),
-                            StringDescriptor("f", "str(x)"),
-                            DateTimeDescriptor("g", "z")
-                        ],
-                        currentIndex=0)
+                        descriptors=descriptors,
+                        currentIndex=1)
                 )]
+        }
+        w = self.create_widget(OWFeatureConstructor, settings)
+        self.assertEqual(w.descriptors, descriptors)
+        self.assertEqual(w.currentIndex, 1)
+        self.assertEqual(w.expressions_with_values, True)
+
+    def test_report(self):
+        settings = {
+            "descriptors": [
+                ContinuousDescriptor("a", "x + 2", 1),
+                DiscreteDescriptor("b", "x < 3", (), False),
+                DiscreteDescriptor("c", "x > 15", (), True),
+                DiscreteDescriptor("d", "y > x", ("foo", "bar"), False),
+                DiscreteDescriptor("e", "x ** 2 + y == 5", ("foo", "bar"), True),
+                StringDescriptor("f", "str(x)"),
+                DateTimeDescriptor("g", "z")
+            ],
+            "currentIndex": 0
         }
 
         w = self.create_widget(OWFeatureConstructor, settings)
@@ -609,47 +625,6 @@ class TestFeatureEditor(unittest.TestCase):
         self.assertIs(FeatureEditor.FUNCTIONS["abs"], abs)
         self.assertIs(FeatureEditor.FUNCTIONS["sqrt"], math.sqrt)
 
-
-class FeatureConstructorHandlerTests(unittest.TestCase):
-    def test_handles_builtins_in_expression(self):
-        self.assertTrue(
-            FeatureConstructorHandler().is_valid_item(
-                OWFeatureConstructor.descriptors,
-                StringDescriptor("X", "str(A) + str(B)"),
-                {"A": vartype(DiscreteVariable)},
-                {"B": vartype(DiscreteVariable)}
-            )
-        )
-
-        # no variables is also ok
-        self.assertTrue(
-            FeatureConstructorHandler().is_valid_item(
-                OWFeatureConstructor.descriptors,
-                StringDescriptor("X", "str('foo')"),
-                {},
-                {}
-            )
-        )
-
-        # should fail on unknown variables
-        self.assertFalse(
-            FeatureConstructorHandler().is_valid_item(
-                OWFeatureConstructor.descriptors,
-                StringDescriptor("X", "str(X)"),
-                {},
-                {}
-            )
-        )
-
-    def test_handles_special_characters_in_var_names(self):
-        self.assertTrue(
-            FeatureConstructorHandler().is_valid_item(
-                OWFeatureConstructor.descriptors,
-                StringDescriptor("X", "A_2_f"),
-                {"A.2 f": vartype(DiscreteVariable)},
-                {}
-            )
-        )
 
 
 if __name__ == "__main__":

@@ -21,6 +21,11 @@ def table(rows, attr, variables):
 
 
 class TestPLSRegressionLearner(unittest.TestCase):
+    def test_fitted_parameters(self):
+        fitted_parameters = PLSRegressionLearner().fitted_parameters
+        self.assertIsInstance(fitted_parameters, list)
+        self.assertEqual(len(fitted_parameters), 1)
+
     def test_allow_y_dim(self):
         """ The current PLS version allows only a single Y dimension. """
         learner = PLSRegressionLearner(n_components=2)
@@ -123,6 +128,14 @@ class TestPLSRegressionLearner(unittest.TestCase):
         self.assertNotEqual(proj1.domain, proj2.domain)
         self.assertNotEqual(hash(proj1), hash(proj2))
         self.assertNotEqual(hash(proj1.domain), hash(proj2.domain))
+
+    def test_eq_hash_fake_same_model(self):
+        data = Table("housing")
+        pls1 = PLSRegressionLearner()(data)
+        pls2 = PLSRegressionLearner()(data)
+
+        proj1 = pls1.project(data)
+        proj2 = pls2.project(data)
 
         proj2.domain[0].compute_value.compute_shared.pls_model = \
             proj1.domain[0].compute_value.compute_shared.pls_model

@@ -1,4 +1,4 @@
-from Orange.base import RandomForestModel
+from Orange.base import RandomForestModel, Learner
 from Orange.classification import RandomForestLearner as RFClassification
 from Orange.data import Variable
 from Orange.modelling import SklFitter
@@ -24,3 +24,8 @@ class RandomForestLearner(SklFitter, _FeatureScorerMixin):
                 'regression': RFRegression}
 
     __returns__ = RandomForestModel
+
+    @property
+    def fitted_parameters(self) -> list[Learner.FittedParameter]:
+        return [self.FittedParameter("n_estimators", "Number of trees",
+                                     int, 1, None)]

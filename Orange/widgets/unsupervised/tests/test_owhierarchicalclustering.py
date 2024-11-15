@@ -207,3 +207,22 @@ class TestOWHierarchicalClustering(WidgetTest, WidgetOutputsTestMixin):
         annotated = [(a.name, a.attributes['cluster']) for a in o.domain.attributes]
         self.assertEqual(annotated, [('sepal length', 1), ('petal width', 2),
                                      ('sepal width', 3), ('petal length', 3)])
+
+    def test_many_values_warning(self):
+        w = self.widget
+
+        self.send_signal(self.widget.Inputs.distances, self.distances)
+        w.top_n = 21
+        w.selection_box.buttons[2].click()
+        self.assertTrue(w.Warning.many_clusters.is_shown())
+
+        w.top_n = 20
+        w.selection_box.buttons[2].click()
+        self.assertFalse(w.Warning.many_clusters.is_shown())
+
+        w.top_n = 21
+        w.selection_box.buttons[2].click()
+        self.assertTrue(w.Warning.many_clusters.is_shown())
+
+        self.send_signal(self.widget.Inputs.distances, None)
+        self.assertFalse(w.Warning.many_clusters.is_shown())

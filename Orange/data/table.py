@@ -29,6 +29,7 @@ from Orange.data import (
 from Orange.data.util import SharedComputeValue, \
     assure_array_dense, assure_array_sparse, \
     assure_column_dense, assure_column_sparse, get_unique_names_duplicates
+from Orange.misc.cache import IDWeakrefCache
 from Orange.misc.collections import frozendict
 from Orange.statistics.util import bincount, countnans, contingency, \
     stats as fast_stats, sparse_has_implicit_zeros, sparse_count_implicit_zeros, \
@@ -305,10 +306,11 @@ class _ArrayConversion:
                 )
             elif not isinstance(col, Integral):
                 if isinstance(col, SharedComputeValue):
-                    shared = _idcache_restore(shared_cache, (col.compute_shared, source))
-                    if shared is None:
+                    try:
+                        shared = shared_cache[(col.compute_shared, source)]
+                    except KeyError:
                         shared = col.compute_shared(sourceri)
-                        _idcache_save(shared_cache, (col.compute_shared, source), shared)
+                        shared_cache[col.compute_shared, source] = shared
                     col_array = match_density(
                         _compute_column(col, sourceri, shared_data=shared))
                 else:
@@ -439,7 +441,7 @@ class _FromTableConversion:
 
                 # clear cache after a part is done
                 if clear_cache_after_part:
-                    _thread_local.conversion_cache = {}
+                    _thread_local.conversion_cache.clear()
 
             for array_conv in self.columnwise:
                 res[array_conv.target] = \
@@ -792,24 +794,26 @@ class Table(Sequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
+        if domain is source.domain:
+            table = cls.from_table_rows(source, row_indices)
+            # assure resulting domain is the instance passed on input
+            table.domain = domain
+            # since sparse flags are not considered when checking for
+            # domain equality, fix manually.
+            with table.unlocked_reference():
+                table = assure_domain_conversion_sparsity(table, source)
+            return table
+
         new_cache = _thread_local.conversion_cache is None
         try:
             if new_cache:
-                _thread_local.conversion_cache = {}
-                _thread_local.domain_cache = {}
+                _thread_local.conversion_cache = IDWeakrefCache({})
+                _thread_local.domain_cache = IDWeakrefCache({})
             else:
-                cached = _idcache_restore(_thread_local.conversion_cache, (domain, source))
-                if cached is not None:
-                    return cached
-            if domain is source.domain:
-                table = cls.from_table_rows(source, row_indices)
-                # assure resulting domain is the instance passed on input
-                table.domain = domain
-                # since sparse flags are not considered when checking for
-                # domain equality, fix manually.
-                with table.unlocked_reference():
-                    table = assure_domain_conversion_sparsity(table, source)
-                return table
+                try:
+                    return _thread_local.conversion_cache[(domain, source)]
+                except KeyError:
+                    pass
 
             # avoid boolean indices; also convert to slices if possible
             row_indices = _optimize_indices(row_indices, len(source))
@@ -817,12 +821,12 @@ class Table(Sequence, Storage):
             self = cls()
             self.domain = domain
 
-            table_conversion = \
-                _idcache_restore(_thread_local.domain_cache, (domain, source.domain))
-            if table_conversion is None:
+            try:
+                table_conversion = \
+                    _thread_local.domain_cache[(domain, source.domain)]
+            except KeyError:
                 table_conversion = _FromTableConversion(source.domain, domain)
-                _idcache_save(_thread_local.domain_cache, (domain, source.domain),
-                              table_conversion)
+                _thread_local.domain_cache[(domain, source.domain)] = table_conversion
 
             # if an array can be a subarray of the input table, this needs to be done
             # on the whole table, because this avoids needless copies of contents
@@ -834,8 +838,10 @@ class Table(Sequence, Storage):
                 self.W = source.W[row_indices]
                 self.name = getattr(source, 'name', '')
                 self.ids = source.ids[row_indices]
-                self.attributes = deepcopy(getattr(source, 'attributes', {}))
-                _idcache_save(_thread_local.conversion_cache, (domain, source), self)
+                self.attributes = getattr(source, 'attributes', {})
+                if new_cache:  # only deepcopy attributes for the outermost transformation
+                    self.attributes = deepcopy(self.attributes)
+                _thread_local.conversion_cache[(domain, source)] = self
             return self
         finally:
             if new_cache:
@@ -879,6 +885,7 @@ class Table(Sequence, Storage):
         :return: a new table
         :rtype: Orange.data.Table
         """
+        is_outermost_transformation = _thread_local.conversion_cache is None
         self = cls()
         self.domain = source.domain
         with self.unlocked_reference():
@@ -892,7 +899,9 @@ class Table(Sequence, Storage):
             self.W = source.W[row_indices]
             self.name = getattr(source, 'name', '')
             self.ids = source.ids[row_indices]
-            self.attributes = deepcopy(getattr(source, 'attributes', {}))
+            self.attributes = getattr(source, 'attributes', {})
+            if is_outermost_transformation:
+                self.attributes = deepcopy(self.attributes)
         return self
 
     @classmethod

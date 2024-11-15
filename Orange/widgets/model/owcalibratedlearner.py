@@ -1,3 +1,5 @@
+import copy
+
 from Orange.classification import CalibratedLearner, ThresholdLearner, \
     NaiveBayesLearner
 from Orange.data import Table
@@ -65,7 +67,6 @@ class OWCalibratedLearner(OWBaseLearner):
         self.learner = self.model = None
 
     def _set_default_name(self):
-
         if self.base_learner is None:
             self.set_default_learner_name("")
         else:
@@ -80,10 +81,6 @@ class OWCalibratedLearner(OWBaseLearner):
         self.apply()
 
     def create_learner(self):
-        class IdentityWrapper(Learner):
-            def fit_storage(self, data):
-                return self.base_learner.fit_storage(data)
-
         if self.base_learner is None:
             return None
         learner = self.base_learner
@@ -93,10 +90,11 @@ class OWCalibratedLearner(OWBaseLearner):
         if self.threshold != self.NoThresholdOptimization:
             learner = ThresholdLearner(learner,
                                        self.ThresholdMap[self.threshold])
+        if learner is self.base_learner:
+            learner = copy.deepcopy(learner)
         if self.preprocessors:
-            if learner is self.base_learner:
-                learner = IdentityWrapper()
             learner.preprocessors = (self.preprocessors, )
+        assert learner is not self.base_learner
         return learner
 
     def get_learner_parameters(self):

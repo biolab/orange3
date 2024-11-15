@@ -690,6 +690,8 @@ class DiscreteVariable(Variable):
         values = tuple(values)  # some people (including me) pass a generator
         if not all(isinstance(value, str) for value in values):
             raise TypeError("values of DiscreteVariables must be strings")
+        if len(set(values)) < len(values):
+            raise ValueError("Duplicate values in DiscreteVariable")
 
         super().__init__(name, compute_value, sparse=sparse)
         self._values = values

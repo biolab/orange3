@@ -4,14 +4,14 @@ import os
 import sys
 import subprocess
 from setuptools import setup, find_packages, Command
+from setuptools.command.install import install
 
 from distutils.command import install_data, sdist
 from distutils.command.build_ext import build_ext
 from distutils.command import config, build
 from distutils.core import Extension
 
-if sys.version_info < (3, 4):
-    sys.exit('Orange requires Python >= 3.4')
+from trubar import translate
 
 try:
     import numpy
@@ -36,7 +36,7 @@ except ImportError:
 
 NAME = 'Orange3'
 
-VERSION = '3.37.0'
+VERSION = '3.38.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -80,6 +80,9 @@ CLASSIFIERS = [
     'Intended Audience :: Science/Research',
     'Intended Audience :: Developers',
 ]
+
+PYTHON_REQUIRES = ">=3.9"
+
 
 requirements = ['requirements-core.txt', 'requirements-gui.txt']
 
@@ -472,9 +475,23 @@ def ext_modules():
     return modules
 
 
+class InstallMultilingualCommand(install):
+    def run(self):
+        super().run()
+        self.compile_to_multilingual()
+
+    def compile_to_multilingual(self):
+        package_dir = os.path.dirname(os.path.abspath(__file__))
+        translate(
+            "msgs.jaml",
+            source_dir=os.path.join(self.install_lib, "Orange"),
+            config_file=os.path.join(package_dir, "i18n", "trubar-config.yaml"))
+
+
 def setup_package():
     write_version_py()
     cmdclass = {
+        'install': InstallMultilingualCommand,
         'lint': LintCommand,
         'coverage': CoverageCommand,
         'config': config,
@@ -512,6 +529,7 @@ def setup_package():
         data_files=DATA_FILES,
         install_requires=INSTALL_REQUIRES,
         extras_require=EXTRAS_REQUIRE,
+        python_requires=PYTHON_REQUIRES,
         entry_points=ENTRY_POINTS,
         zip_safe=False,
         test_suite='Orange.tests.suite',

@@ -11,6 +11,7 @@ import numpy as np
 from Orange.data import (
     Unknown, Variable, ContinuousVariable, DiscreteVariable, StringVariable
 )
+from Orange.misc.cache import IDWeakrefCache
 from Orange.util import deprecated, OrangeDeprecationWarning
 
 __all__ = ["DomainConversion", "Domain"]
@@ -169,6 +170,7 @@ class Domain:
         self.anonymous = False
 
         self._hash = None  # cache for __hash__()
+        self._eq_cache = IDWeakrefCache(_LRS10Dict())  # cache for __eq__()
 
     def _ensure_indices(self):
         if self._indices is None:
@@ -185,6 +187,7 @@ class Domain:
         self._variables = self.attributes + self.class_vars
         self._indices = None
         self._hash = None
+        self._eq_cache = {}
 
     def __getstate__(self):
         # Do not pickle dictionaries because unpickling dictionaries that
@@ -195,6 +198,7 @@ class Domain:
         del state["_variables"]
         del state["_indices"]
         del state["_hash"]
+        del state["_eq_cache"]
         return state
 
     # noinspection PyPep8Naming
@@ -518,11 +522,26 @@ class Domain:
         if not isinstance(other, Domain):
             return False
 
-        return (self.attributes == other.attributes and
-                self.class_vars == other.class_vars and
-                self.metas == other.metas)
+        try:
+            eq = self._eq_cache[(other,)]
+        except KeyError:
+            eq = (self.attributes == other.attributes and
+                  self.class_vars == other.class_vars and
+                  self.metas == other.metas)
+            self._eq_cache[(other,)] = eq
+
+        return eq
 
     def __hash__(self):
         if self._hash is None:
             self._hash = hash(self.attributes) ^ hash(self.class_vars) ^ hash(self.metas)
         return self._hash
+
+
+class _LRS10Dict(dict):
+    """ A small "least recently stored" (not LRU) dict """
+
+    def __setitem__(self, key, value):
+        if len(self) >= 10:
+            del self[next(iter(self))]
+        super().__setitem__(key, value)
