@@ -639,13 +639,10 @@ class OWDataSets(OWWidget):
             di = current.data(Qt.UserRole)
             text = description_html(di)
             self.descriptionlabel.setText(text)
-            # for settings do not use os.path.join (Windows separator is different)
-            self.selected_id = di.file_path[-1]
             # do not clear a dataset once you select it if it was unlisted
             di.publication_status = Namespace.PUBLISHED
         else:
             self.descriptionlabel.setText("")
-            self.selected_id = None
 
     def commit(self):
         """
@@ -658,6 +655,7 @@ class OWDataSets(OWWidget):
         di = self.selected_dataset()
         if di is not None:
             self.Error.clear()
+            self.selected_id = di.file_path[-1]
 
             if self.__awaiting_state is not None:
                 # disconnect from the __commit_complete
@@ -692,6 +690,7 @@ class OWDataSets(OWWidget):
                 self.setBlocking(False)
                 self.commit_cached(di.file_path)
         else:
+            self.selected_id = None
             self.load_and_output(None)
 
     @Slot(object)
