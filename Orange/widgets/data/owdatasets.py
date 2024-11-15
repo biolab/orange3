@@ -490,8 +490,6 @@ class OWDataSets(OWWidget):
             # for settings do not use os.path.join (Windows separator is different)
             if file_path[-1] == self.selected_id:
                 current_index = i
-                # for selected_id, set publication status so that unlisted data load correctly
-                datainfo.publication_status = Namespace.PUBLISHED
                 if self.core_widget:
                     self.domain = datainfo.domain
                     if self.domain == "sc":  # domain from the list of ignored domain
@@ -639,8 +637,6 @@ class OWDataSets(OWWidget):
             di = current.data(Qt.UserRole)
             text = description_html(di)
             self.descriptionlabel.setText(text)
-            # do not clear a dataset once you select it if it was unlisted
-            di.publication_status = Namespace.PUBLISHED
         else:
             self.descriptionlabel.setText("")
 
