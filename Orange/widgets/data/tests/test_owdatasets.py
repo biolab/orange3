@@ -128,6 +128,12 @@ class TestOWDataSets(WidgetTest):
             self.assertEqual(w.selected_id, "bar.tab")
             self.assertEqual(w.domain_combo.currentText(), "edu")
 
+    def __titles(self, widget):
+        model = widget.view.model()
+        return {
+            model.index(row, 0).data(Qt.UserRole).title
+            for row in range(model.rowCount())}
+
     @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(side_effect=requests.exceptions.ConnectionError))
     @patch("Orange.widgets.data.owdatasets.list_local",
@@ -142,18 +148,16 @@ class TestOWDataSets(WidgetTest):
     @patch("Orange.widgets.data.owdatasets.log", Mock())
     def test_filtering_unlisted(self):
         def titles():
-            return {
-                model.index(row, 0).data(Qt.UserRole).title
-                for row in range(model.rowCount()) }
+            return self.__titles(w)
 
         w = self.create_widget(OWDataSets)  # type: OWDataSets
         model = w.view.model()
         self.assertEqual(titles(), {"a published data set", "an unp unp"})
 
-        model.setFilterFixedString("an u")
+        model.setFilterFixedString("unp")
         self.assertEqual(titles(), {"an unp unp"})
 
-        model.setFilterFixedString("an Un")
+        model.setFilterFixedString("an U")
         self.assertEqual(titles(), {"an unlisted data set", "an unp unp"})
 
         model.setFilterFixedString("")
@@ -161,6 +165,71 @@ class TestOWDataSets(WidgetTest):
 
         model.setFilterFixedString(None)
         self.assertEqual(titles(), {"a published data set", "an unp unp"})
+
+    @patch("Orange.widgets.data.owdatasets.list_remote",
+           Mock(return_value={('core', 'foo.tab'): {"title": "Foo data set",
+                                                    "language": "English"},
+                              ('core', 'bar.tab'): {"title": "Bar data set",
+                                                    "domain": "Testing"},
+                              ('core', 'bax.tab'): {"title": "Bax data set",
+                                                    "language": "Slovenščina"}
+                              }))
+    @patch("Orange.widgets.data.owdatasets.list_local",
+           Mock(return_value={}))
+    @patch("Orange.widgets.data.owdatasets.OWDataSets.commit", Mock())
+    def test_filter_overrides_language_and_domain(self):
+        w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
+        w.language_combo.setCurrentText("Slovenščina")
+        w.language_combo.activated.emit(w.language_combo.currentIndex())
+        w.domain_combo.setCurrentText(w.GENERAL_DOMAIN_LABEL)
+        w.domain_combo.activated.emit(w.domain_combo.currentIndex())
+
+        self.assertEqual(self.__titles(w), {"Bax data set"})
+
+        w.filterLineEdit.setText("data ")
+        self.assertEqual(self.__titles(w), {"Foo data set",
+                                            "Bar data set",
+                                            "Bax data set"})
+        self.assertEqual(w.language_combo.currentText(), w.ALL_LANGUAGES)
+        self.assertFalse(w.language_combo.isEnabled())
+        self.assertEqual(w.domain_combo.currentText(), w.ALL_DOMAINS_LABEL)
+        self.assertFalse(w.domain_combo.isEnabled())
+
+        w.filterLineEdit.setText("da")
+        self.assertEqual(self.__titles(w), {"Bax data set"})
+        self.assertEqual(w.language_combo.currentText(), "Slovenščina")
+        self.assertTrue(w.language_combo.isEnabled())
+        self.assertEqual(w.domain_combo.currentText(), w.GENERAL_DOMAIN_LABEL)
+        self.assertTrue(w.domain_combo.isEnabled())
+
+
+        w.filterLineEdit.setText("bar d")
+        self.assertEqual(self.__titles(w), {"Bar data set"})
+
+        w.filterLineEdit.setText("bax d")
+        self.assertEqual(self.__titles(w), {"Bax data set"})
+
+        w.language_combo.setCurrentText("English")
+        w.language_combo.activated.emit(2)
+        self.assertEqual(self.__titles(w), {"Bax data set"})
+
+        settings = w.settingsHandler.pack_data(w)
+
+        w2 = self.create_widget(OWDataSets, stored_settings=settings)
+        self.wait_until_stop_blocking(w2)
+        self.assertEqual(w2.language_combo.currentText(), "English")
+        self.assertEqual(self.__titles(w2), {"Foo data set"})
+
+        w.selected_id = "bax.tab"
+        settings = w.settingsHandler.pack_data(w)
+        w2 = self.create_widget(OWDataSets, stored_settings=settings)
+        self.wait_until_stop_blocking(w2)
+        self.assertEqual(w2.language_combo.currentText(), w2.ALL_LANGUAGES)
+        self.assertFalse(w2.language_combo.isEnabled())
+        self.assertEqual(w2.filterLineEdit.text(), "bax d")
+        self.assertEqual(self.__titles(w2), {"Bax data set"})
+
 
     @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(return_value={('core', 'foo.tab'): {"language": "English"},
@@ -184,6 +253,22 @@ class TestOWDataSets(WidgetTest):
         self.assertEqual(w2.language_combo.currentText(), "Klingon")
 
     @patch("Orange.widgets.data.owdatasets.list_remote",
+           Mock(return_value={('core', 'foo.tab'): {"language": "English"},
+                              ('core', 'bar.tab'): {"language": "Slovenščina"}}))
+    @patch("Orange.widgets.data.owdatasets.list_local",
+           Mock(return_value={}))
+    def test_remember_all_languages(self):
+        w = self.create_widget(OWDataSets)  # type: OWDataSets
+        self.wait_until_stop_blocking(w)
+        w.language_combo.setCurrentText(w.ALL_LANGUAGES)
+        w.language_combo.activated.emit(w.language_combo.currentIndex())
+        settings = w.settingsHandler.pack_data(w)
+
+        w2 = self.create_widget(OWDataSets, stored_settings=settings)
+        self.wait_until_stop_blocking(w2)
+        self.assertEqual(w2.language_combo.currentText(), w2.ALL_LANGUAGES)
+
+    @patch("Orange.widgets.data.owdatasets.list_remote",
            Mock(return_value={('core', 'iris.tab'): {}}))
     @patch("Orange.widgets.data.owdatasets.list_local",
            Mock(return_value={}))
@@ -196,8 +281,8 @@ class TestOWDataSets(WidgetTest):
         # select the only dataset
         sel_type = QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
         w.view.selectionModel().select(w.view.model().index(0, 0), sel_type)
-        self.assertEqual(w.selected_id, "iris.tab")
         w.commit()
+        self.assertEqual(w.selected_id, "iris.tab")
         iris = self.get_output(w.Outputs.data, w)
         self.assertEqual(len(iris), 150)
 

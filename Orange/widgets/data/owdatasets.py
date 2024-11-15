@@ -41,6 +41,9 @@ log = logging.getLogger(__name__)
 GENERAL_DOMAIN = None
 ALL_DOMAINS = ""  # The setting is Optional[str], so don't use other types here
 
+# The number of characters at which filter overrides the domain and language
+FILTER_OVERRIDE_LENGTH = 4
+
 
 def ensure_local(index_url, file_path, local_cache_path,
                  force=False, progress_advance=None):
@@ -178,16 +181,17 @@ class SortFilterProxyWithLanguage(QSortFilterProxyModel):
     def filterAcceptsRow(self, row, parent):
         source = self.sourceModel()
         data = source.index(row, 0).data(Qt.UserRole)
-        return (super().filterAcceptsRow(row, parent)
-            and (self.__language is None or data.language == self.__language)
-            and self.__domain in (ALL_DOMAINS, data.domain)
-            and (data.publication_status == Namespace.PUBLISHED or (
-                 self.__filter is not None
-                 and len(self.__filter) >= 5
-                 and data.title.casefold().startswith(self.__filter)
-            ))
+        in_filter = (
+            self.__filter is not None
+            and len(self.__filter) >= FILTER_OVERRIDE_LENGTH
+            and self.__filter in data.title.casefold()
         )
-
+        published_ok = data.publication_status == Namespace.PUBLISHED
+        domain_ok = self.__domain in (ALL_DOMAINS, data.domain)
+        language_ok = self.__language in (None, data.language)
+        return (super().filterAcceptsRow(row, parent)
+            and (published_ok and domain_ok and language_ok
+                 or in_filter))
 
 class OWDataSets(OWWidget):
     name = "Datasets"
@@ -237,9 +241,10 @@ class OWDataSets(OWWidget):
         data = Output("Data", Orange.data.Table)
 
     #: Selected dataset id
-    selected_id = Setting(None)   # type: Optional[str]
+    selected_id: Optional[str] = Setting(None)
     language = Setting(DEFAULT_LANG)
     domain = Setting(GENERAL_DOMAIN)
+    filter_hint: Optional[str] = Setting(None)
     settings_version = 2
 
     #: main area splitter state
@@ -269,26 +274,40 @@ class OWDataSets(OWWidget):
         self.filterLineEdit = QLineEdit(
             textChanged=self.filter, placeholderText="Search for data set ..."
         )
+        self.filterLineEdit.setToolTip(
+            "Typing four letters or more overrides domain and language filters")
         layout.addWidget(self.filterLineEdit)
 
+        self.combo_elements = []
+
         layout.addSpacing(20)
-        layout.addWidget(QLabel("Show data sets in "))
+        label = QLabel("Show data sets in ")
+        layout.addWidget(label)
+        self.combo_elements.append(label)
+
         lang_combo = self.language_combo = QComboBox()
         languages = [self.DEFAULT_LANG, self.ALL_LANGUAGES]
         if self.language is not None and self.language not in languages:
             languages.insert(1, self.language)
         lang_combo.addItems(languages)
-        lang_combo.setCurrentText(self.language)
+        if self.language is None:
+            lang_combo.setCurrentIndex(lang_combo.count() - 1)
+        else:
+            lang_combo.setCurrentText(self.language)
         lang_combo.activated.connect(self._on_language_changed)
         layout.addWidget(lang_combo)
+        self.combo_elements.append(lang_combo)
 
-        layout.addSpacing(20)
-        layout.addWidget(QLabel("Domain:"))
         domain_combo = self.domain_combo = QComboBox()
         domain_combo.addItem(self.GENERAL_DOMAIN_LABEL)
         domain_combo.activated.connect(self._on_domain_changed)
         if self.core_widget:
+            layout.addSpacing(20)
+            label = QLabel("Domain:")
+            layout.addWidget(label)
+            self.combo_elements.append(label)
             layout.addWidget(domain_combo)
+        self.combo_elements.append(domain_combo)
 
         self.mainArea.layout().addLayout(layout)
 
@@ -428,7 +447,7 @@ class OWDataSets(OWWidget):
         if self.DEFAULT_LANG not in languages:
             combo.addItem(self.DEFAULT_LANG)
         combo.addItems(languages + [self.ALL_LANGUAGES])
-        if current_language in languages:
+        if current_language in languages or current_language == self.ALL_LANGUAGES:
             combo.setCurrentText(current_language)
         elif self.DEFAULT_LANG in languages:
             combo.setCurrentText(self.DEFAULT_LANG)
@@ -482,22 +501,23 @@ class OWDataSets(OWWidget):
             # for settings do not use os.path.join (Windows separator is different)
             if file_path[-1] == self.selected_id:
                 current_index = i
-                # for selected_id, set publication status so that unlisted data load correctly
-                datainfo.publication_status = Namespace.PUBLISHED
                 if self.core_widget:
                     self.domain = datainfo.domain
                     if self.domain == "sc":  # domain from the list of ignored domain
                         self.domain = ALL_DOMAINS
-                    combo = self.domain_combo
-                    if self.domain == GENERAL_DOMAIN:
-                        combo.setCurrentIndex(0)
-                    elif self.domain == ALL_DOMAINS:
-                        combo.setCurrentIndex(combo.count() - 1)
-                    else:
-                        combo.setCurrentText(self.domain)
+                    self.__update_domain_combo()
                     self._on_domain_changed()
 
         return model, current_index
+
+    def __update_domain_combo(self):
+        combo = self.domain_combo
+        if self.domain == GENERAL_DOMAIN:
+            combo.setCurrentIndex(0)
+        elif self.domain == ALL_DOMAINS:
+            combo.setCurrentIndex(combo.count() - 1)
+        else:
+            combo.setCurrentText(self.domain)
 
     def _on_language_changed(self):
         combo = self.language_combo
@@ -542,6 +562,16 @@ class OWDataSets(OWWidget):
 
     def set_model(self, model, current_index):
         self.view.model().setSourceModel(model)
+        if current_index != -1:
+            for hint in (
+                    self.filter_hint,
+                    model.index(current_index, 0).data(Qt.UserRole).title):
+                if self.view.model().filterAcceptsRow(current_index,
+                                                      QModelIndex()):
+                    break
+                self.filterLineEdit.setText(hint)
+                self.filter()
+
         self.view.selectionModel().selectionChanged.connect(
             self.__on_selection
         )
@@ -606,6 +636,18 @@ class OWDataSets(OWWidget):
 
     def filter(self):
         filter_string = self.filterLineEdit.text().strip()
+        enable_combos = len(filter_string) < FILTER_OVERRIDE_LENGTH
+        if enable_combos is not self.domain_combo.isEnabled():
+            for element in self.combo_elements:
+                element.setEnabled(enable_combos)
+            if enable_combos:
+                self.__update_domain_combo()
+                self.language_combo.setCurrentText(self.language)
+            else:
+                self.domain_combo.setCurrentText(self.ALL_DOMAINS_LABEL)
+                self.language_combo.setCurrentText(self.ALL_LANGUAGES)
+
+        self.filter_hint = filter_string
         proxyModel = self.view.model()
         if proxyModel:
             proxyModel.setFilterFixedString(filter_string)
@@ -620,13 +662,8 @@ class OWDataSets(OWWidget):
             di = current.data(Qt.UserRole)
             text = description_html(di)
             self.descriptionlabel.setText(text)
-            # for settings do not use os.path.join (Windows separator is different)
-            self.selected_id = di.file_path[-1]
-            # do not clear a dataset once you select it if it was unlisted
-            di.publication_status = Namespace.PUBLISHED
         else:
             self.descriptionlabel.setText("")
-            self.selected_id = None
 
     def commit(self):
         """
@@ -639,6 +676,7 @@ class OWDataSets(OWWidget):
         di = self.selected_dataset()
         if di is not None:
             self.Error.clear()
+            self.selected_id = di.file_path[-1]
 
             if self.__awaiting_state is not None:
                 # disconnect from the __commit_complete
@@ -673,6 +711,7 @@ class OWDataSets(OWWidget):
                 self.setBlocking(False)
                 self.commit_cached(di.file_path)
         else:
+            self.selected_id = None
             self.load_and_output(None)
 
     @Slot(object)

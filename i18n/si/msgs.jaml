@@ -594,10 +594,6 @@ classification/random_forest.py:
         def `__init__`:
             gini: false
             sqrt: false
-        def `fitted_parameters`:
-            n_estimators: false
-            Number of trees: Število dreves
-            Trees: Dreves
 classification/rules.py:
     CN2Learner: false
     CN2UnorderedLearner: false
@@ -2562,6 +2558,9 @@ modelling/randomforest.py:
         random forest: false
         classification: false
         regression: false
+        def `fitted_parameters`:
+            n_estimators: false
+            Number of trees: Število dreves
 modelling/svm.py:
     SVMLearner: false
     LinearSVMLearner: false
@@ -3269,8 +3268,7 @@ regression/pls.py:
             Only numeric target variables expected.: Metoda deluje le za številčne ciljne spremenljivke.
         def `fitted_parameters`:
             n_components: false
-            Number of components: Število komponent
-            Comp: Komp
+            Components: Komponent
     __main__: false
     housing: false
     'learner: {learner}\nRMSE: {ca}\n': false
@@ -3284,10 +3282,6 @@ regression/random_forest.py:
     class `RandomForestRegressionLearner`:
         def `__init__`:
             squared_error: false
-        def `fitted_parameters`:
-            n_estimators: false
-            Number of trees: Število dreves
-            Trees: Dreves
 regression/simple_random_forest.py:
     SimpleRandomForestLearner: false
     class `SimpleRandomForestLearner`:
@@ -5293,6 +5287,7 @@ widgets/data/owdatasets.py:
             label: false
             _header_index: false
             Search for data set ...: Poišči podatke ...
+            Typing four letters or more overrides domain and language filters: Vpišite vsaj štiri črke, da prekličete filtre po področju in jeziku
             'Show data sets in ': 'Prikaži zbirke podatkov v jeziku '
             Domain:: Področje:
             Press Return or double-click to send: Pritisni Enter ali dvoklikni za izbor
@@ -9020,8 +9015,8 @@ widgets/evaluate/owparameterfitter.py:
             item: false
     class `FitterPlot`:
         def `clear_all`:
-            left: false
             bottom: false
+            left: false
         def `set_data`:
             bottom: false
             left: false
@@ -9064,6 +9059,7 @@ widgets/evaluate/owparameterfitter.py:
             At least {N_FOLD} instances are needed.: Potrebujemo vsaj {N_FOLD} primerov.
             "Invalid values for '{}': {}": Neveljavne vrednosti za '{}': {}
             Minimum must be less than maximum.: Minimum mora biti manjši od maksimuma.
+            Data has no target.: Podatki nimajo ciljne spremenljivke.
         class `Warning`:
             {} has no parameters to fit.: {} nima parametrov za umerjanje.
         def `_add_controls`:
@@ -9079,6 +9075,8 @@ widgets/evaluate/owparameterfitter.py:
             manual_steps: false
             e.g. 10, 20, ..., 50: npr. 10, 20, ..., 50
             auto_commit: false
+        def `initial_parameters`:
+            classification: false
         def `_steps_from_manual`:
             ...: false
             ', ': false
