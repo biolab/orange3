@@ -14661,6 +14661,8 @@ widgets/visualize/owscatterplot.py:
             label: false
         def `_update_curve`:
             '#505050': true
+        def `update_error_bars`:
+            '#505050': true
     class `OWScatterPlot`:
         Scatter Plot: Razsevni diagram
         'Interactive scatter plot visualization with ': Interaktivni prikaz podatkov z razsevnim diagramom.
@@ -14689,9 +14691,12 @@ widgets/visualize/owscatterplot.py:
             Axes: Osi
             attr_x: false
             Axis x:: Os x:
+            ϵ: false
             attr_y: false
             Axis y:: Os y:
             Find Informative Projections: Poišči informativne projekcije
+            Axis x Error Bars: Napaka Osi x
+            Axis y Error Bars: Napaka Osi y
         def `_add_controls_sampling`:
             auto_sample: false
             Sample: Vzorec
@@ -15412,6 +15417,18 @@ widgets/visualize/utils/customizableplot.py:
         def `__init__`:
             bottom: false
             left: false
+widgets/visualize/utils/error_bars_dialog.py:
+    class `ErrorBarsDialog`:
+        def `__init__`:
+            (None): (Brez)
+            Difference: Razlika
+            Absolute: Absolutno
+            Upper:: Zgornje:
+            Lower:: Spodnje:
+    __main__: false
+    Error Bars: false
+    Open: false
+    iris: false
 widgets/visualize/utils/heatmap.py:
     class `ColorMap`:
         def `replace`:

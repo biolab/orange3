@@ -1257,6 +1257,230 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         for item in graph.ellipse_items:
             self.assertEqual(item.opts["pen"].width(), 10)
 
+    def test_error_bars_enabled(self):
+        self.assertFalse(self.widget.button_attr_x.isEnabled())
+        self.assertFalse(self.widget.button_attr_y.isEnabled())
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertTrue(self.widget.button_attr_x.isEnabled())
+        self.assertTrue(self.widget.button_attr_y.isEnabled())
+        self.send_signal(self.widget.Inputs.data, Table("zoo"))
+        self.assertFalse(self.widget.button_attr_x.isEnabled())
+        self.assertFalse(self.widget.button_attr_y.isEnabled())
+
+    def test_error_bars(self):
+        data = Table("iris")
+        var = ContinuousVariable("ϵ")
+        data = data.add_column(var, np.full(150, 0.1))
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.attr_x_upper = var
+        self.widget.attr_x_lower = var
+        self.widget.attr_y_upper = var
+        self.widget.attr_y_lower = var
+
+        graph = self.widget.graph
+        graph.reset_graph()
+        self.assertEqual(len(graph.error_bars_items), 2)
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(len(graph.error_bars_items), 0)
+
+    def test_error_bars_missing_values(self):
+        data = Table("iris")
+        with data.unlocked():
+            data.X[0, 0] = np.nan
+            data.X[1, 0] = np.nan
+        data = data[:4]
+        var = ContinuousVariable("ϵ")
+        data = data.add_column(var, np.array([0.1, np.nan, 0.1, np.nan]))
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.attr_x_upper = var
+        self.widget.attr_x_lower = var
+        self.widget.attr_y_upper = var
+        self.widget.attr_y_lower = var
+
+        graph = self.widget.graph
+        graph.reset_graph()
+        self.assertEqual(len(graph.error_bars_items), 2)
+        self.assertEqual(len(graph.scatterplot_item.data), 2)
+        self.assertEqual(len(graph.error_bars_items[0].opts["left"]), 2)
+
+    def test_error_bars_jitter(self):
+        data = Table("iris")
+        var = ContinuousVariable("ϵ")
+        data = data.add_column(var, np.full(150, 0.1))
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.attr_x_upper = var
+        self.widget.attr_x_lower = var
+
+        self.widget.graph.reset_graph()
+        error_bar_item = self.widget.graph.error_bars_items[0]
+        self.assertEqual(list(error_bar_item.opts["x"][:3]),
+                         list(data.X[:3, 0]))
+        self.assertEqual(list(error_bar_item.opts["y"][:3]),
+                         list(data.X[:3, 1]))
+        self.assertEqual(list(error_bar_item.opts["left"][:3]), [0.1] * 3)
+        self.assertEqual(list(error_bar_item.opts["right"][:3]), [0.1] * 3)
+
+
+        self.widget.graph.controls.jitter_continuous.setChecked(True)
+        self.widget.graph.controls.jitter_size.setValue(10)
+        self.widget.graph.reset_graph()
+
+        error_bar_item = self.widget.graph.error_bars_items[0]
+        self.assertEqual(list(error_bar_item.opts["x"][:3].round(1)),
+                         [5.2, 5.1, 4.8])
+        self.assertEqual(list(error_bar_item.opts["y"][:3].round(1)),
+                         [3.6, 2.9, 3.3])
+        self.assertEqual(list(error_bar_item.opts["left"][:3]), [0.1] * 3)
+        self.assertEqual(list(error_bar_item.opts["right"][:3]), [0.1] * 3)
+
+    def test_error_bars_abs_values(self):
+        data = Table("iris")
+        var_upper = ContinuousVariable("ϵ_upper")
+        var_lower = ContinuousVariable("ϵ_lower")
+        data = data.add_column(var_upper, data.X[:, 0] + 0.1)
+        data = data.add_column(var_lower, data.X[:, 0] - 0.1)
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.attr_x_upper = var_upper
+        self.widget.attr_x_lower = var_lower
+        self.widget.attr_x_is_abs = True
+
+        self.widget.graph.reset_graph()
+        error_bar_item = self.widget.graph.error_bars_items[0]
+        self.assertEqual(list(error_bar_item.opts["x"][:3]),
+                         list(data.X[:3, 0]))
+        self.assertEqual(list(error_bar_item.opts["y"][:3]),
+                         list(data.X[:3, 1]))
+        self.assertEqual(list(error_bar_item.opts["left"][:3].round(1)),
+                         [0.1] * 3)
+        self.assertEqual(list(error_bar_item.opts["right"][:3].round(1)),
+                         [0.1] * 3)
+
+    def test_error_bars_button_clicked(self):
+        data = Table("iris")
+        var1 = ContinuousVariable("ϵ1")
+        var2 = ContinuousVariable("ϵ2")
+        var3 = ContinuousVariable("ϵ3")
+        var4 = ContinuousVariable("ϵ4")
+        data = data.add_column(var1, np.full(150, 0.1))
+        data = data.add_column(var2, np.full(150, 0.1))
+        data = data.add_column(var3, np.full(150, 0.1))
+        data = data.add_column(var4, np.full(150, 0.1))
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.attr_x_upper = var1
+        self.widget.attr_x_lower = var2
+        self.widget.attr_y_upper = var3
+        self.widget.attr_y_lower = var4
+
+        x_dlg = self.widget._OWScatterPlot__x_axis_dlg
+        x_dlg._set_data = Mock()
+        x_dlg.show = Mock()
+        x_dlg.raise_ = Mock()
+        x_dlg.activateWindow = Mock()
+        self.widget.button_attr_x.click()
+        x_dlg._set_data.assert_called_with(data.domain, var1, var2, False)
+
+        y_dlg = self.widget._OWScatterPlot__y_axis_dlg
+        y_dlg._set_data = Mock()
+        y_dlg.show = Mock()
+        y_dlg.raise_ = Mock()
+        y_dlg.activateWindow = Mock()
+        self.widget.button_attr_y.click()
+        y_dlg._set_data.assert_called_with(data.domain, var3, var4, False)
+
+    def test_error_bars_dlg_changed(self):
+        data = Table("iris")
+        var_upper = ContinuousVariable("ϵ_upper")
+        var_lower = ContinuousVariable("ϵ_lower")
+        data = data.add_column(var_upper, data.X[:, 1] + 0.2)
+        data = data.add_column(var_lower, data.X[:, 1] - 0.1)
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.attr_y_upper = var_upper
+        self.widget.attr_y_lower = var_lower
+
+        y_dlg = self.widget._OWScatterPlot__y_axis_dlg
+        y_dlg.show = Mock()
+        y_dlg.raise_ = Mock()
+        y_dlg.activateWindow = Mock()
+        self.widget.button_attr_y.click()
+        y_dlg._ErrorBarsDialog__radio_buttons.buttons()[1].click()
+
+        self.widget.graph.reset_graph()
+        error_bar_item = self.widget.graph.error_bars_items[1]
+        self.assertEqual(list(error_bar_item.opts["x"][:3]),
+                         list(data.X[:3, 0]))
+        self.assertEqual(list(error_bar_item.opts["y"][:3]),
+                         list(data.X[:3, 1]))
+        self.assertEqual(list(error_bar_item.opts["top"][:3].round(1)),
+                         [0.2] * 3)
+        self.assertEqual(list(error_bar_item.opts["bottom"][:3].round(1)),
+                         [0.1] * 3)
+
+    def test_error_bars_saved_settings(self):
+        data = Table("iris")
+        var_upper = ContinuousVariable("ϵ_upper")
+        var_lower = ContinuousVariable("ϵ_lower")
+        data = data.add_column(var_upper, data.X[:, 0] + 0.2)
+        data = data.add_column(var_lower, data.X[:, 0] - 0.1)
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.attr_x_upper = var_upper
+        self.widget.attr_x_lower = var_lower
+        self.widget.attr_x_is_abs = True
+
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        widget = self.create_widget(OWScatterPlot, stored_settings=settings)
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+
+        widget.graph.reset_graph()
+        error_bar_item = widget.graph.error_bars_items[0]
+        self.assertEqual(list(error_bar_item.opts["x"][:3]),
+                         list(data.X[:3, 0]))
+        self.assertEqual(list(error_bar_item.opts["y"][:3]),
+                         list(data.X[:3, 1]))
+        self.assertEqual(list(error_bar_item.opts["right"][:3].round(1)),
+                         [0.2] * 3)
+        self.assertEqual(list(error_bar_item.opts["left"][:3].round(1)),
+                         [0.1] * 3)
+
+    def test_error_bars_change_domain(self):
+        data = Table("iris")
+        var_upper = ContinuousVariable("ϵ_upper")
+        var_lower = ContinuousVariable("ϵ_lower")
+        data = data.add_column(var_upper, data.X[:, 0] + 0.1)
+        data = data.add_column(var_lower, data.X[:, 0] - 0.1)
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.attr_x_upper = var_upper
+        self.widget.attr_x_lower = var_lower
+        self.widget.attr_x_is_abs = True
+
+        _data = Table("iris")
+        var_upper = ContinuousVariable("ϵ_upper_")
+        var_lower = ContinuousVariable("ϵ_lower_")
+        _data = _data.add_column(var_upper, _data.X[:, 0] + 0.1)
+        _data = _data.add_column(var_lower, _data.X[:, 0] - 0.1)
+        self.send_signal(self.widget.Inputs.data, _data)
+        self.assertEqual(self.widget.graph.error_bars_items, [])
+
+        self.send_signal(self.widget.Inputs.data, data)
+        self.widget.graph.reset_graph()
+        error_bar_item = self.widget.graph.error_bars_items[0]
+        self.assertEqual(list(error_bar_item.opts["x"][:3]),
+                         list(data.X[:3, 0]))
+        self.assertEqual(list(error_bar_item.opts["y"][:3]),
+                         list(data.X[:3, 1]))
+        self.assertEqual(list(error_bar_item.opts["right"][:3].round(1)),
+                         [0.1] * 3)
+        self.assertEqual(list(error_bar_item.opts["left"][:3].round(1)),
+                         [0.1] * 3)
+
 
 if __name__ == "__main__":
     import unittest
