@@ -915,7 +915,6 @@ class OWPredictions(OWWidget):
             name = f"{slot.predictor.name} (error)"
             newmetas.append(ContinuousVariable(name=name))
             err = self.predictionsview.model().errorColumn(index)
-            err[err == 2] = numpy.nan
             newcolumns.append(err)
 
     def send_report(self):
@@ -1383,8 +1382,7 @@ class PredictionsModel(AbstractSortTableModel):
             nans = numpy.isnan(actuals)
             actuals[nans] = 0
             errors = 1 - numpy.choose(actuals.astype(int), self._probs[column].T)
-            errors[nans] = 2
-            errors[numpy.isnan(errors)] = 2
+            errors[nans] = numpy.nan
             return errors
         else:
             actual = self._actual
