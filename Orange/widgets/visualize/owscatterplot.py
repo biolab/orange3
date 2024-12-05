@@ -9,11 +9,12 @@ from sklearn.neighbors import NearestNeighbors
 from sklearn.metrics import r2_score
 
 from AnyQt.QtCore import Qt, QTimer, QPointF
-from AnyQt.QtGui import QColor, QFont
+from AnyQt.QtGui import QColor, QFont, QFontMetrics
 from AnyQt.QtWidgets import QGroupBox, QSizePolicy, QPushButton
 
 import pyqtgraph as pg
 
+from orangewidget.utils import load_styled_icon
 from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.data import Table, Domain, DiscreteVariable, Variable
@@ -481,29 +482,33 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
         dmod = DomainModel
         self.xy_model = DomainModel(dmod.MIXED, valid_types=dmod.PRIMITIVE)
 
-        hbox = gui.hBox(self.attr_box, spacing=2)
+        hor_icon, ver_icon = self.__get_bar_icons()
+        width = 3 * QFontMetrics(self.font()).horizontalAdvance("m")
+        hbox = gui.hBox(self.attr_box, spacing=0)
         self.cb_attr_x = gui.comboBox(
             hbox, self, "attr_x", label="Axis x:",
             callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options,
         )
         self.button_attr_x = gui.button(
-            hbox, self, "ϵ", callback=self.__on_x_button_clicked,
-            autoDefault=False, width=20, enabled=False,
-            sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Maximum)
+            hbox, self, "", callback=self.__on_x_button_clicked,
+            autoDefault=False, width=width, enabled=False,
+            sizePolicy=(QSizePolicy.Fixed, QSizePolicy.Fixed)
         )
+        self.button_attr_x.setIcon(hor_icon)
 
-        hbox = gui.hBox(self.attr_box, spacing=2)
+        hbox = gui.hBox(self.attr_box, spacing=0)
         self.cb_attr_y = gui.comboBox(
             hbox, self, "attr_y", label="Axis y:",
             callback=self.set_attr_from_combo,
             model=self.xy_model, **common_options,
         )
         self.button_attr_y = gui.button(
-            hbox, self, "ϵ", callback=self.__on_y_button_clicked,
-            autoDefault=False, width=20, enabled=False,
-            sizePolicy=(QSizePolicy.Maximum, QSizePolicy.Maximum)
+            hbox, self, "", callback=self.__on_y_button_clicked,
+            autoDefault=False, width=width, enabled=False,
+            sizePolicy=(QSizePolicy.Fixed, QSizePolicy.Fixed)
         )
+        self.button_attr_y.setIcon(ver_icon)
 
         vizrank_box = gui.hBox(self.attr_box)
         button = self.vizrank_button("Find Informative Projections")
@@ -845,6 +850,18 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
         if version < 4:
             if values["attr_x"][1] % 100 == 1 or values["attr_y"][1] % 100 == 1:
                 raise IncompatibleContext()
+
+    __HorizontalBarIcon = None
+    __VerticalBarIcon = None
+
+    @classmethod
+    def __get_bar_icons(cls):
+        if cls.__HorizontalBarIcon is None:
+            cls.__HorizontalBarIcon = load_styled_icon(
+                "Orange.widgets.visualize", "icons/interval-horizontal.svg")
+            cls.__VerticalBarIcon = load_styled_icon(
+                "Orange.widgets.visualize", "icons/interval-vertical.svg")
+        return cls.__HorizontalBarIcon, cls.__VerticalBarIcon
 
 
 if __name__ == "__main__":  # pragma: no cover
