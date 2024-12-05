@@ -21,10 +21,12 @@ class TestErrorBarsDialog(GuiTest):
         self.assertEqual(form.itemAt(2).widget().text(), "Lower:")
         self.assertEqual(form.itemAt(3).widget().currentText(), "(None)")
 
-        self.assertEqual(form.itemAt(4).widget().text(), "Difference")
+        self.assertEqual(form.itemAt(4).widget().text(),
+                         "Difference from plotted value")
         self.assertTrue(form.itemAt(4).widget().isChecked())
 
-        self.assertEqual(form.itemAt(5).widget().text(), "Absolute")
+        self.assertEqual(form.itemAt(5).widget().text(),
+                         "Absolute position on the plot")
         self.assertFalse(form.itemAt(5).widget().isChecked())
 
     def test_get_data(self):

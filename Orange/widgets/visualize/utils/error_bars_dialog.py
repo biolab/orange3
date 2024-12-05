@@ -36,8 +36,9 @@ class ErrorBarsDialog(QDialog):
         lower_combo.setModel(self.__model)
         lower_combo.currentIndexChanged.connect(self.changed)
 
-        button_diff = QRadioButton("Difference", checked=True)
-        button_abs = QRadioButton("Absolute")
+        button_diff = QRadioButton("Difference from plotted value",
+                                   checked=True)
+        button_abs = QRadioButton("Absolute position on the plot")
         self.__radio_buttons = QButtonGroup()
         self.__radio_buttons.addButton(button_diff, 0)
         self.__radio_buttons.addButton(button_abs, 1)
@@ -46,6 +47,7 @@ class ErrorBarsDialog(QDialog):
         form = QFormLayout()
         form.addRow(QLabel("Upper:"), upper_combo)
         form.addRow(QLabel("Lower:"), lower_combo)
+        form.setVerticalSpacing(10)
         form.addRow(button_diff)
         form.addRow(button_abs)
 
