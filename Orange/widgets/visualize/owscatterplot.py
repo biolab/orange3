@@ -515,18 +515,26 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
         vizrank_box.layout().addWidget(button)
         self.vizrankSelectionChanged.connect(self.set_attr)
 
-        self.__x_axis_dlg = ErrorBarsDialog(self, "Axis x Error Bars")
+        self.__x_axis_dlg = ErrorBarsDialog(self)
         self.__x_axis_dlg.changed.connect(self.__on_x_dlg_changed)
-        self.__y_axis_dlg = ErrorBarsDialog(self, "Axis y Error Bars")
+        self.__y_axis_dlg = ErrorBarsDialog(self)
         self.__y_axis_dlg.changed.connect(self.__on_y_dlg_changed)
 
     def __on_x_button_clicked(self):
-        self.__x_axis_dlg.show_dlg(self.data.domain, self.attr_x_upper,
-                                   self.attr_x_lower, self.attr_x_is_abs)
+        self.__show_bars_dlg(
+            self.__x_axis_dlg, self.button_attr_x,
+            self.attr_x_upper, self.attr_x_lower, self.attr_x_is_abs)
 
     def __on_y_button_clicked(self):
-        self.__y_axis_dlg.show_dlg(self.data.domain, self.attr_y_upper,
-                                   self.attr_y_lower, self.attr_y_is_abs)
+        self.__show_bars_dlg(
+            self.__y_axis_dlg, self.button_attr_y,
+            self.attr_y_upper, self.attr_y_lower, self.attr_y_is_abs)
+
+    def __show_bars_dlg(self, dlg, button, upper, lower, is_abs):
+        pos = button.mapToGlobal(button.rect().bottomLeft())
+        dlg.show_dlg(self.data.domain,
+                     pos.x(), pos.y(),
+                     upper, lower, is_abs)
 
     def __on_x_dlg_changed(self):
         self.attr_x_upper, self.attr_x_lower, self.attr_x_is_abs = \

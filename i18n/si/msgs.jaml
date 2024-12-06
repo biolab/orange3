@@ -202,9 +202,9 @@ util.py:
         def `funcv`:
             unsafe: false
 version.py:
-    3.38.0: false
-    3.38.0.dev0+b3dd2eb: false
-    b3dd2eba6a3cfa73ba06460226d6e16a8e25a23a: false
+    3.39.0: false
+    3.39.0.dev0+c2c1648: false
+    c2c16487816d19a63177fae0b9febf1f0220f982: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -14695,8 +14695,6 @@ widgets/visualize/owscatterplot.py:
             attr_y: false
             Axis y:: Os y:
             Find Informative Projections: Poišči informativne projekcije
-            Axis x Error Bars: Napaka Osi x
-            Axis y Error Bars: Napaka Osi y
         def `_add_controls_sampling`:
             auto_sample: false
             Sample: Vzorec

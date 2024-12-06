@@ -1,8 +1,8 @@
 import sys
 from typing import Optional
 
-from AnyQt.QtCore import Signal
-from AnyQt.QtWidgets import QDialog, QVBoxLayout, QWidget, QComboBox, \
+from AnyQt.QtCore import Signal, Qt
+from AnyQt.QtWidgets import QVBoxLayout, QWidget, QComboBox, \
     QFormLayout, QLabel, QButtonGroup, QRadioButton, QLayout
 
 from Orange.data import ContinuousVariable, Domain
@@ -10,16 +10,16 @@ from Orange.widgets.utils import disconnected
 from Orange.widgets.utils.itemmodels import DomainModel
 
 
-class ErrorBarsDialog(QDialog):
+class ErrorBarsDialog(QWidget):
     changed = Signal()
 
     def __init__(
             self,
             parent: QWidget,
-            title: str,
     ):
-        super().__init__(parent, windowTitle=title)
-        self.setModal(True)
+        super().__init__(parent)
+        self.setWindowFlags(self.windowFlags() | Qt.Popup)
+        self.hide()
         self.__model = DomainModel(
             separators=False,
             valid_types=(ContinuousVariable,),
@@ -68,6 +68,7 @@ class ErrorBarsDialog(QDialog):
     def show_dlg(
             self,
             domain: Domain,
+            x: int, y: int,
             attr_upper: Optional[ContinuousVariable] = None,
             attr_lower: Optional[ContinuousVariable] = None,
             is_abs: bool = True
@@ -75,6 +76,7 @@ class ErrorBarsDialog(QDialog):
         self._set_data(domain, attr_upper, attr_lower, is_abs)
         self.show()
         self.raise_()
+        self.move(x, y)
         self.activateWindow()
 
     def _set_data(
@@ -103,7 +105,7 @@ if __name__ == "__main__":
     w = QWidget()
     w.setFixedSize(400, 200)
 
-    dlg = ErrorBarsDialog(w, "Error Bars")
+    dlg = ErrorBarsDialog(w)
     dlg.changed.connect(lambda: print(dlg.get_data()))
 
     btn = QPushButton(w)
@@ -113,7 +115,7 @@ if __name__ == "__main__":
 
 
     def _on_click():
-        dlg.show_dlg(_domain, _domain.attributes[2],
+        dlg.show_dlg(_domain, 500, 500, _domain.attributes[2],
                      _domain.attributes[3], is_abs=False)
 
 

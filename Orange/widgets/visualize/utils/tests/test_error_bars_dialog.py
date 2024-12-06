@@ -10,7 +10,7 @@ from Orange.widgets.visualize.utils.error_bars_dialog import ErrorBarsDialog
 
 class TestErrorBarsDialog(GuiTest):
     def setUp(self) -> None:
-        self._dlg = ErrorBarsDialog(None, "Error Bars")
+        self._dlg = ErrorBarsDialog(None)
 
     def test_init(self):
         form = self._dlg.layout().itemAt(0)
