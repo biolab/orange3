@@ -18,6 +18,8 @@ include requirements*.txt
 
 recursive-include i18n *.jaml *.yaml
 
+recursive-include doc/visual-programming/build/htmlhelp *
+
 include README.md
 include README.pypi
 include CONTRIBUTING.md
