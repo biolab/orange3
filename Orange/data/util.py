@@ -50,7 +50,7 @@ def scale(values, min=0, max=1):
     """Return values scaled to [min, max]"""
     if len(values) == 0:
         return np.array([])
-    minval = np.float_(bn.nanmin(values))
+    minval = np.float64(bn.nanmin(values))
     ptp = bn.nanmax(values) - minval
     if ptp == 0:
         return np.clip(values, min, max)

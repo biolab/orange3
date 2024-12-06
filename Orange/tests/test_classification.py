@@ -347,7 +347,7 @@ class SklTest(unittest.TestCase):
     def test_nan_columns(self):
         data = Orange.data.Table("iris")
         with data.unlocked():
-            data.X[:, (1, 3)] = np.NaN
+            data.X[:, (1, 3)] = np.nan
         lr = LogisticRegressionLearner()
         cv = CrossValidation(k=2, store_models=True)
         res = cv(data, [lr])

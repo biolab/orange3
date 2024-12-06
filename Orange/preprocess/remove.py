@@ -233,7 +233,7 @@ def remove_unused_values(var, data):
     if len(unique) == len(var.values):
         return var
     used_values = [var.values[i] for i in unique]
-    translation_table = np.array([np.NaN] * len(var.values))
+    translation_table = np.array([np.nan] * len(var.values))
     translation_table[unique] = range(len(used_values))
     return DiscreteVariable(var.name, values=used_values, sparse=var.sparse,
                             compute_value=Lookup(var, translation_table))
