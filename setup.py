@@ -405,7 +405,7 @@ if have_sphinx and HAVE_SPHINX_SOURCE:
         def run(self):
             subprocess.check_call([
                 "sphinx-build", "-b", "htmlhelp", "-d", "build/doctrees",
-                "--define", f"version={VERSION}",
+                "-D", f"version={VERSION}",
                 "source", "build"
                 ],
                 cwd="doc/visual-programming"
