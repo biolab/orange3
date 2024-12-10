@@ -22,14 +22,17 @@ The **Violin Plot** widget plays a similar role as a [Box Plot](boxplot.md). It 
 3.  *Box plot*: Tick to show the underlying box plot.
     ![](images/ViolinPlot-boxplot.png)
 
-    *Strip plot*: Tick to show the underlying data represented by points.
+    *Density dots*: Tick to show the underlying data represented by points.
     
-    *Rug plot*: Tick to show the underlying data represented by lines.
+    *Density lines*: Tick to show the underlying data represented by lines.
     
     *Order subgroups*: Tick to order violins by *median* (ascending).
     
+    *Show grid*: Tick to show a horizontal grid on the graph.
+    
     *Orientation*: Determine violin orientation.
-4.  *Kernel*: Select the kernel used to estimate the density. Possible kernels are: *Normal*, *Epanechnikov* and *Linear*.
+
+4.  *Kernel*: Select the [kernel](https://en.wikipedia.org/wiki/Kernel_(statistics)) used to estimate the density. Possible kernels are: [*Normal*](https://en.wikipedia.org/wiki/Normal_distribution), [*Epanechnikov*](https://en.wikipedia.org/wiki/Epanechnikov_distribution) and *Linear*.
 
     *Scale*: Select the method used to scale the width of each violin. If *area* is selected, each violin will have the same area. If *count* is selected, the width of the violins will be scaled by the number of observations in that bin. If *width* is selected, each violin will have the same width.
 
