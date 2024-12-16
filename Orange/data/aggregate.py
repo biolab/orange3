@@ -107,6 +107,9 @@ class OrangeTableGroupBy:
             var_type = None
         col_name = f"{col.name} - {name}"
         agg_col = self.group_by[col.name].agg(**{col_name: agg})
+        if col.is_discrete and var_type is True:
+            dtype = pd.CategoricalDtype(categories=col.values, ordered=True)
+            agg_col = agg_col.astype(dtype)
         if var_type is True:
             var = col.copy(name=col_name)
         elif var_type is False:

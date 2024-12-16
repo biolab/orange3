@@ -1,5 +1,6 @@
 import os
 import unittest
+from collections import Counter
 from typing import List
 from unittest.mock import Mock, patch
 
@@ -939,6 +940,25 @@ class TestOWGroupBy(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         # sepal length is hidden - only sepal width remain selected
         self.assertListEqual([data.domain["sepal width"]], self.widget.gb_attrs)
+
+    def test_aggregate_discrete(self):
+        values = ["HCD", "DOS", "SDE"]
+        domain = Domain([DiscreteVariable("Cluster", ["C1", "C2"]),
+                         DiscreteVariable("group", values)])
+        l = [[1, 1], [1, 1], [1, 1], [0, 2], [1, 1], [0, 2], [0, 0], [0, 2],
+             [1, 1], [1, 1], [0, 2], [0, 2], [1, 2], [1, 1], [0, 2], [0, 1]]
+        array = np.array(l)
+        data = Table.from_list(domain, array)
+
+        mask0 = array[:, 0] == 0
+        mask1 = array[:, 0] == 1
+        most_common0 = Counter(array[mask0, 1]).most_common(1)[0][0]
+        most_common1 = Counter(array[mask1, 1]).most_common(1)[0][0]
+
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output[0, 1], values[most_common0])  # 2 - SDE
+        self.assertEqual(output[1, 1], values[most_common1])  # 1 - DOS
 
 
 if __name__ == "__main__":
