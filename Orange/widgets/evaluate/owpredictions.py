@@ -16,7 +16,6 @@ from AnyQt.QtCore import (
     QModelIndex, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
-from orangecanvas.utils.localization import pl
 from orangewidget.utils.itemmodels import AbstractSortTableModel
 from orangewidget.utils.signals import LazyValue
 
@@ -39,6 +38,7 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 from Orange.widgets.utils.itemdelegates import TableDataDelegate
+from Orange.widgets.utils.localization import pl
 
 # Input slot for the Predictors channel
 PredictorSlot = NamedTuple(
