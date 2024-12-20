@@ -169,17 +169,27 @@ class _TableHeader:
              e.g. d#sex,c#age,cC#IQ
         """
 
-        def is_flag(x):
-            return bool(cls._type_from_flag([x])[0] and
-                        _RE_TYPES.match(cls._type_from_flag([x])[0]) or
-                        Flags.RE_ALL.match(cls._flag_from_flag([x])[0]))
+        roles = "".join([f for f in Flags.ALL.values() if len(f) == 1])  # cimw
+        types = "".join([t for t in flatten(getattr(vartype, 'TYPE_HEADERS')
+                                            for vartype in Variable.registry.values())
+                         if len(t) == 1]).upper()  # CNDST
 
-        flags, names = zip(*[i.split(cls.HEADER1_FLAG_SEP, 1)
-                             if cls.HEADER1_FLAG_SEP in i and
-                             is_flag(i.split(cls.HEADER1_FLAG_SEP)[0])
-                             else ('', i)
-                             for i in headers[0]])
-        names = list(names)
+        res = ('^(?:('
+               f'[{roles}{types}]|'
+               f'(?:[{roles}][{types}])|'
+               f'(?:[{types}][{roles}])'
+               ')#)?(.*)')
+
+        header1_re = re.compile(res)
+
+        flags = []
+        names = []
+        for i in headers[0]:
+            m = header1_re.match(i)
+            f, n = m.group(1), m.group(2)
+            flags.append('' if f is None else f)
+            names.append(n)
+
         return names, cls._type_from_flag(flags), cls._flag_from_flag(flags)
 
     @classmethod
