@@ -174,11 +174,11 @@ class _TableHeader:
                                             for vartype in Variable.registry.values())
                          if len(t) == 1]).upper()  # CNDST
 
-        res = ('^(?:('
+        res = ('^((?P<flags>'
                f'[{roles}{types}]|'
-               f'(?:[{roles}][{types}])|'
-               f'(?:[{types}][{roles}])'
-               ')#)?(.*)')
+               f'([{roles}][{types}])|'
+               f'([{types}][{roles}])'
+               ')#)?(?P<name>.*)')
 
         header1_re = re.compile(res)
 
@@ -186,7 +186,7 @@ class _TableHeader:
         names = []
         for i in headers[0]:
             m = header1_re.match(i)
-            f, n = m.group(1), m.group(2)
+            f, n = m.group("flags", "name")
             flags.append('' if f is None else f)
             names.append(n)
 
