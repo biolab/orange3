@@ -361,13 +361,13 @@ a
         outdata = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(outdata), 150)  # loaded iris
 
-    def test_no_reader_extension(self):
+    def test_unknown_extension(self):
         with named_file("", suffix=".xyz_unknown") as fn:
             no_reader = RecentPath(fn, None, None)
             self.widget = self.create_widget(OWFile,
                                              stored_settings={"recent_paths": [no_reader]})
             self.widget.load_data()
-        self.assertTrue(self.widget.Error.missing_reader.is_shown())
+        self.assertTrue(self.widget.Error.select_file_type.is_shown())
 
     def test_fail_sheets(self):
         with named_file("", suffix=".failed_sheet") as fn:
