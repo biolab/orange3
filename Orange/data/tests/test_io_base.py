@@ -70,6 +70,16 @@ class TestTableHeader(InitTestData):
         self.assertListEqual(types, types_)
         self.assertListEqual(flags, flags_)
 
+    def test_get_header_data_1_hashes(self):
+        names, types, flags = _TableHeader.create_header_data(
+            [["Some long text#and here", "vd#Invalid spec", "C#Valid spec"]])
+        names_ = ["Some long text#and here", "vd#Invalid spec", "Valid spec"]
+        types_ = ["", "", "c"]
+        flags_ = ["", "", ""]
+        self.assertListEqual(names, names_)
+        self.assertListEqual(types, types_)
+        self.assertListEqual(flags, flags_)
+
     def test_get_header_data_3(self):
         names, types, flags = _TableHeader.create_header_data(self.header3[:3])
         self.assertListEqual(names, ["a", "b", "c", "d", "w", "e", "f", "g"])
