@@ -1155,6 +1155,15 @@ data/io_base.py:
     ^\s*( |{}|)*\s*$: false
     class `_TableHeader`:
         '#': false
+        def `_header1`:
+            TYPE_HEADERS: false
+            ^((?P<flags>: false
+            [{roles}{types}]|: false
+            ([{roles}][{types}])|: false
+            ([{types}][{roles}]): false
+            )#)?(?P<name>.*): false
+            flags: false
+            name: false
     class `_TableBuilder`:
         def `__init__`:
             'Feature ': false
