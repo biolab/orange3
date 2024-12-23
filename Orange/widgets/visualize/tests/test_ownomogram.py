@@ -98,7 +98,7 @@ class TestOWNomogram(WidgetTest):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons for multiclass data"""
         cls = LogisticRegressionLearner(
-            multi_class="ovr", solver="liblinear"
+            solver="liblinear"
         )(self.lenses)
         self._test_helper(cls, [9, 45, 52])
 
