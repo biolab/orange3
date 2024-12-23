@@ -202,9 +202,9 @@ util.py:
         def `funcv`:
             unsafe: false
 version.py:
-    3.38.0: false
-    3.38.0.dev0+b3dd2eb: false
-    b3dd2eba6a3cfa73ba06460226d6e16a8e25a23a: false
+    3.39.0: false
+    3.39.0.dev0+c2c1648: false
+    c2c16487816d19a63177fae0b9febf1f0220f982: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -1155,6 +1155,15 @@ data/io_base.py:
     ^\s*( |{}|)*\s*$: false
     class `_TableHeader`:
         '#': false
+        def `_header1`:
+            TYPE_HEADERS: false
+            ^((?P<flags>: false
+            [{roles}{types}]|: false
+            ([{roles}][{types}])|: false
+            ([{types}][{roles}]): false
+            )#)?(?P<name>.*): false
+            flags: false
+            name: false
     class `_TableBuilder`:
         def `__init__`:
             'Feature ': false
@@ -14661,6 +14670,8 @@ widgets/visualize/owscatterplot.py:
             label: false
         def `_update_curve`:
             '#505050': true
+        def `update_error_bars`:
+            '#505050': true
     class `OWScatterPlot`:
         Scatter Plot: Razsevni diagram
         'Interactive scatter plot visualization with ': Interaktivni prikaz podatkov z razsevnim diagramom.
@@ -14687,6 +14698,7 @@ widgets/visualize/owscatterplot.py:
             Hotelling's T² confidence ellipse (α=95%): Elipsa zaupanja po Hotellingu (α=95%)
         def `_add_controls_axis`:
             Axes: Osi
+            m: false
             attr_x: false
             Axis x:: Os x:
             attr_y: false
@@ -14734,6 +14746,10 @@ widgets/visualize/owscatterplot.py:
             attr_label: false
             attr_x: false
             attr_y: false
+        def `__get_bar_icons`:
+            Orange.widgets.visualize: false
+            icons/interval-horizontal.svg: false
+            icons/interval-vertical.svg: false
     __main__: false
     iris: false
 widgets/visualize/owscatterplotgraph.py:
@@ -15412,6 +15428,18 @@ widgets/visualize/utils/customizableplot.py:
         def `__init__`:
             bottom: false
             left: false
+widgets/visualize/utils/error_bars_dialog.py:
+    class `ErrorBarsDialog`:
+        def `__init__`:
+            (None): (Brez)
+            Difference from plotted value: Odmik od vrednosti
+            Absolute position on the plot: Absolutni položaj na grafu
+            Upper:: Zgornje:
+            Lower:: Spodnje:
+    __main__: false
+    Error Bars: false
+    Open: false
+    iris: false
 widgets/visualize/utils/heatmap.py:
     class `ColorMap`:
         def `replace`:

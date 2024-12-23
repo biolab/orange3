@@ -21,8 +21,8 @@ except ImportError:
 
 try:
     # need sphinx and recommonmark for build_htmlhelp command
-    from sphinx.setup_command import BuildDoc
     # pylint: disable=unused-import
+    import sphinx
     import recommonmark
     have_sphinx = True
 except ImportError:
@@ -36,7 +36,7 @@ except ImportError:
 
 NAME = 'Orange3'
 
-VERSION = '3.38.0'
+VERSION = '3.38.1'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -393,16 +393,23 @@ HAVE_SPHINX_SOURCE = os.path.isdir("doc/visual-programming/source")
 HAVE_BUILD_HTML = os.path.exists("doc/visual-programming/build/htmlhelp/index.html")
 
 if have_sphinx and HAVE_SPHINX_SOURCE:
-    class build_htmlhelp(BuildDoc):
+    class build_htmlhelp(Command):
+        user_options = []
+
+        def finalize_options(self):
+            pass
+
         def initialize_options(self):
-            super().initialize_options()
             self.build_dir = "doc/visual-programming/build"
-            self.source_dir = "doc/visual-programming/source"
-            self.builder = "htmlhelp"
-            self.version = VERSION
 
         def run(self):
-            super().run()
+            subprocess.check_call([
+                "sphinx-build", "-b", "htmlhelp", "-d", "build/doctrees",
+                "-D", f"version={VERSION}",
+                "source", "build"
+                ],
+                cwd="doc/visual-programming"
+            )
             helpdir = os.path.join(self.build_dir, "htmlhelp")
             files = find_htmlhelp_files(helpdir)
             # add the build files to distribution

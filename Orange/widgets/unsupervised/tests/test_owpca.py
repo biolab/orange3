@@ -225,13 +225,8 @@ class TestOWPCA(WidgetTest):
         U, S, Va = U[:, :2], S[:2], Va[:2]
         x_pca = U * S
 
-        # In scikit-learn==1.4.0, the svd_flip function requires a `V` matrix,
-        # therefore, we provide a dummy matrix of the correct size, so we can
-        # call the function. In scikit-learn==1.5.0, we can remove this since
-        # V can be None if we are passing `u_based_decision=True`.
-        dummy_v = np.zeros_like(x_pca.T)
-        x_pca, _ = svd_flip(x_pca, dummy_v, u_based_decision=True)
-        x_widget, _ = svd_flip(widget_result.X.copy(), dummy_v, u_based_decision=True)
+        x_pca, _ = svd_flip(x_pca, None, u_based_decision=True)
+        x_widget, _ = svd_flip(widget_result.X.copy(), None, u_based_decision=True)
 
         np.testing.assert_almost_equal(x_widget, x_pca)
 

@@ -140,7 +140,7 @@ conda activate orange3
 git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange3
 
 # Install PyQT and PyQtWebEngine. You can also use PyQt6
-pip install -r requirements-pyqt.txt
+pip install -r orange3/requirements-pyqt.txt
 pip install -e orange3
 ```
 

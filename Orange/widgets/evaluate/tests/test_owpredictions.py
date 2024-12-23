@@ -1,6 +1,7 @@
 """Tests for OWPredictions"""
 # pylint: disable=protected-access,too-many-lines,too-many-public-methods
 import os
+import random
 import unittest
 from functools import partial
 from tempfile import NamedTemporaryFile
@@ -1765,6 +1766,16 @@ class PredictionsModelTest(unittest.TestCase):
         np.testing.assert_almost_equal(
             [model.data(model.index(row, 3)) for row in range(5)],
             1 - np.array(sorted([80, 5, 20, 60, 50])) / 100)
+
+        # Numpy's sort puts nan's at the end, and the widget counts on it
+        # because we want to show them last. If this test fails, this
+        # (undocumented) numpy's behavior has changed, and the widget needs
+        # to be updated.
+        data = list(range(10)) + [np.nan] * 10
+        copy = data.copy()
+        for _ in range(10):
+            random.shuffle(data)
+            np.testing.assert_equal(np.sort(data), copy)
 
     def test_sorting_classification_different(self):
         model = PredictionsModel(self.values, self.probs, self.actual)
