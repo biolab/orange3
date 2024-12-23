@@ -5,6 +5,20 @@ Change Log
 ------------
 
 
+[3.38.1] - 2024-12-23
+--------------------
+##### Enhancements
+* Scatter Plot: Error Bars ([#6934](../../pull/6934))
+
+##### Bugfixes
+* 1 line headers: only allow single-letter types and flags ([#6959](../../pull/6959))
+* Group By: fix categorical aggregations ([#6958](../../pull/6958))
+* Orange can be imported without Qt (fixed importing localization) ([#6955](../../pull/6955))
+* Fix documentation in packages: fix sphinx build command ([#6950](../../pull/6950))
+* httpx 0.28 support: use mounts instead of proxies ([#6943](../../pull/6943))
+* owpredicttions: Remove special magic value 2 ([#6933](../../pull/6933))
+
+
 [3.38.0] - 2024-11-15
 --------------------
 ##### Enhancements
@@ -1897,8 +1911,9 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.38.0..HEAD
-[3.37.0]: https://github.com/biolab/orange3/compare/3.37.0...3.38.0
+[next]: https://github.com/biolab/orange3/compare/3.38.1..HEAD
+[3.38.1]: https://github.com/biolab/orange3/compare/3.38.0...3.38.1
+[3.38.0]: https://github.com/biolab/orange3/compare/3.37.0...3.38.0
 [3.37.0]: https://github.com/biolab/orange3/compare/3.36.2...3.37.0
 [3.36.2]: https://github.com/biolab/orange3/compare/3.36.1...3.36.2
 [3.36.1]: https://github.com/biolab/orange3/compare/3.36.0...3.36.1
