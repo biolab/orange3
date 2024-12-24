@@ -6,36 +6,39 @@ Displays attribute-value data in a spreadsheet.
 **Inputs**
 
 - Data: input dataset
+- Data Subset: a subset of the input dataset
 
 **Outputs**
 
 - Selected Data: instances selected from the table
+- Data: the full input dataset
 
-The **Data Table** widget receives one or more datasets in its input and presents them as a spreadsheet. Data instances may be sorted by attribute values. The widget also supports manual selection of data instances.
+The **Data Table** widget can receive a dataset and a data subset on its input and presents them as a spreadsheet. The widget also supports manual selection of data instances. Data
+instances are in rows and their attribute values (features) in columns, which can be used for sorting.  
 
 ![](images/DataTable-stamped.png)
 
-1. The name of the dataset (usually the input data file). Data
-   instances are in rows and their attribute values in columns. In this
+1. The name of the dataset (usually the input data file). In this
    example, the dataset is sorted by the attribute "sepal length".
 2. Info on current dataset size and number and types of attributes
 3. Values of continuous attributes can be visualized with bars; colors
    can be attributed to different classes.
 4. Data instances (rows) can be selected and sent to the widget's output
    channel.
-5. Use the *Restore Original Order* button to reorder data instances after
-   attribute-based sorting.
-6. Produce a report.
-7. While auto-send is on, all changes will be automatically communicated
-   to other widgets. Otherwise, press *Send Selected Rows*.
+5. Clicking the *Restore Original Order* button will reset the original data order that might have changed because of sorting.
+6. While auto-send is on, all changes will be automatically communicated
+   to other widgets. Otherwise, press *Send Selection*.
+7. Produce a report.
 
-Example
--------
+Examples
+--------
 
-We used two [File](../data/file.md) widgets to read the *Iris* and *Glass* dataset (provided in Orange distribution), and send them to the **Data Table** widget.
+In our first example we show how selections work in **Data Table**. First, we send the _iris_ dataset from the **[Datasets](../data/datasets.md)** widget to a **Data Table**. There, we select the first ten data instances and send them to a second **Data Table** widget. The workflow and the two **Data Table** widgets are shown below on the figure.
 
-![](images/DataTable-Schema.png)
+![](images/DataTable-example1.png)
 
-Selected data instances in the first **Data Table** are passed to the second **Data Table**. Notice that we can select which dataset to view (iris or glass). Changing from one dataset to another alters the communicated selection of data instances if *Commit on any change* is selected.
+Since the widget has a _Data Subset_ input, we can use it to inspect selections from upstream processing steps and compare them to the full dataset. In this following example we send the _iris_ dataset to the _Data_ input of **Data Table** and also randomly select data instances using the **[Data Sampler](../data/datasampler.md)** widget. Notice the result in **Data Table**: the selected instances are highlighted in dark grey. 
 
-![](images/DataTable-Example.png)
+![](images/DataTable-example2.png)
+
+One could combine the above examples and could further select subsets in subsequent **Data Table** widgets.
