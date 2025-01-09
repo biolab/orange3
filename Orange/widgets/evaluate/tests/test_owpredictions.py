@@ -1304,7 +1304,7 @@ class TestOWPredictions(WidgetTest):
         log_reg = LogisticRegressionLearner()
         self.send_signal(self.widget.Inputs.predictors, log_reg(data), 0)
         self.send_signal(self.widget.Inputs.predictors,
-                         LogisticRegressionLearner(penalty="l1")(data), 1)
+                         LogisticRegressionLearner(penalty="l1", max_iter=1000)(data), 1)
         with data.unlocked(data.Y):
             data.Y[1] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
@@ -1316,7 +1316,7 @@ class TestOWPredictions(WidgetTest):
         names = [f"{log_reg.name}{x}" for x in names]
         self.assertEqual(names, [m.name for m in pred.domain.metas])
         self.assertAlmostEqual(pred.metas[0, 4], 0.018, 3)
-        self.assertAlmostEqual(pred.metas[0, 9], 0.113, 3)
+        self.assertAlmostEqual(pred.metas[0, 9], 0.008, 3)
         self.assertTrue(np.isnan(pred.metas[1, 4]))
         self.assertTrue(np.isnan(pred.metas[1, 9]))
 
