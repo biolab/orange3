@@ -521,12 +521,18 @@ classification/logistic_regression.py:
         def `__init__`:
             l2: false
             auto: false
+            deprecated: false
+            'The multi_class parameter was ': false
+            'deprecated in scikit-learn 1.5. Using it with ': false
+            scikit-learn 1.7 will lead to a crash.: false
         def `_initialize_wrapped`:
+            multi_class: false
+            deprecated: false
             solver: false
             penalty: false
             auto: false
             l1: false
-            liblinear: false
+            saga: false
             lbfgs: false
 classification/majority.py:
     MajorityLearner: false
@@ -3096,9 +3102,6 @@ projection/pca.py:
             auto: false
         def `fit`:
             n_components: false
-            svd_solver: false
-            auto: false
-            arpack: false
     class `SparsePCA`:
         Sparse PCA: false
         def `__init__`:
@@ -15437,7 +15440,6 @@ widgets/visualize/utils/error_bars_dialog.py:
             Upper:: Zgornje:
             Lower:: Spodnje:
     __main__: false
-    Error Bars: false
     Open: false
     iris: false
 widgets/visualize/utils/heatmap.py:
