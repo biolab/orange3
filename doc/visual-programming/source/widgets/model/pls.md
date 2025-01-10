@@ -1,4 +1,5 @@
-# PLS
+PLS
+===
 
 Partial Least Squares Regression widget for multivariate data analysis.
 

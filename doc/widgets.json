@@ -745,7 +745,7 @@
    },
    {
     "text": "PLS",
-    "doc": null,
+    "doc": "visual-programming/source/widgets/model/pls.md",
     "icon": "../Orange/widgets/model/icons/PLS.svg",
     "background": "#FAC1D9",
     "keywords": [
