@@ -421,9 +421,9 @@ class MosaicVizRankTests(WidgetTest):
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b"), ContinuousVariable("c")]),
             np.array([
-                [0, np.NaN, 0],
-                [0, np.NaN, 0],
-                [0, np.NaN, 0]
+                [0, np.nan, 0],
+                [0, np.nan, 0],
+                [0, np.nan, 0]
             ])
         )
         self.send_signal(self.widget.Inputs.data, table)
