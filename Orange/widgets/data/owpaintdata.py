@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 import os
 import unicodedata
 import itertools
@@ -1246,11 +1246,13 @@ class OWPaintData(OWWidget):
             y = self.__buffer[:, 1].copy()
         else:
             y = np.zeros(self.__buffer.shape[0])
-
-        colors = self.colors[self.__buffer[:, 2]]
-        pens = [pen(c) for c in colors]
-        brushes = [QBrush(c) for c in colors]
-
+        color_table, colors_index = prepare_color_table_and_index(
+            self.colors, self.__buffer[:, 2]
+        )
+        pen_table = np.array([pen(c) for c in color_table], dtype=object)
+        brush_table = np.array([QBrush(c) for c in color_table], dtype=object)
+        pens = pen_table[colors_index]
+        brushes = brush_table[colors_index]
         self._scatter_item = pg.ScatterPlotItem(
             x, y, symbol="+", brush=brushes, pen=pens
         )
@@ -1320,6 +1322,18 @@ class OWPaintData(OWWidget):
         settings += [("Number of points", len(self.data))]
         self.report_items("Painted data", settings)
         self.report_plot()
+
+
+def prepare_color_table_and_index(
+        palette: colorpalettes.IndexedPalette, data: np.ndarray[float]
+) -> tuple[np.ndarray[object], np.ndarray[np.intp]]:
+    # to index array and map nan to -1
+    index = np.full(data.shape, -1, np.intp)
+    mask = np.isnan(data)
+    np.copyto(index, data, where=~mask, casting="unsafe")
+    color_table = np.array([c for c in palette] + [palette[np.nan]], dtype=object)
+    return color_table, index
+
 
 
 if __name__ == "__main__":  # pragma: no cover
