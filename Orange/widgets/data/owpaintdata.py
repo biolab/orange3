@@ -1254,10 +1254,9 @@ class OWPaintData(OWWidget):
         pens = pen_table[colors_index]
         brushes = brush_table[colors_index]
         self._scatter_item = pg.ScatterPlotItem(
-            x, y, symbol="+", brush=brushes, pen=pens
+            x, y, symbol="+", brush=brushes, pen=pens, size=self.symbol_size
         )
         self.plot.addItem(self._scatter_item)
-        self.set_symbol_size()
 
     def _attr_name_changed(self):
         self.plot.getAxis("bottom").setLabel(self.attr1)
