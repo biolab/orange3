@@ -18,22 +18,20 @@ This is a versatile widget with 2-D visualization of [classification and regress
 
 1. Information on the input.
 2. Display options:
-   - Zoom in and zoom out
-   - Select the tree width. The nodes display information bubbles when hovering over them.
+   - Zoom in and zoom out.
+   - Select the tree width. The nodes display tooltips when hovering over them.
    - Select the depth of your tree.
    - Select edge width. The edges between the nodes in the tree graph are drawn based on the selected edge width.
       - All the edges will be of equal width if *Fixed* is chosen.
-      - When *Relative to root* is selected, the width of the edge will
-         correspond to the proportion of instances in the corresponding
-         node with respect to all the instances in the training data. Under
-         this selection, the edge will get thinner and thinner when
-         traversing toward the bottom of the tree.
-      - *Relative to parent* makes the edge width correspond to the proportion
-         of instances in the nodes with respect to the instances in their
-         parent node.
-   - Define the target class, which you can change based on classes in the data.
-3. Press *Save image* to save the created tree graph to your computer as a *.svg* or *.png* file.
-4. Produce a report.
+      - When *Relative to root* is selected, the width of the edge will correspond to the proportion of instances in the node with respect to all the instances in the training data. Under this selection, the edges will get thinner and thinner when traversing toward the bottom of the tree.
+      - *Relative to parent* makes the edge width correspond to the proportion of instances in the nodes with respect to the instances in their parent node.
+   - Target class (for classification): color the nodes based on the selected class value. If *None* is selected, the nodes will be colored by majority class. If a class value is selected, the nodes will be colored by the proportion of the selected value.
+   - Color by (for regression):
+      - *Default* will color all nodes the same.
+      - *Number of instances* will color the nodes based on the number of samples in a given node.
+      - *Mean value* will color the nodes based on the mean value of the target variable in the node.
+      - *Variance* will color the nodes based on the variance of the target variable in the node.
+   - If *Show details in non-leaves* is checked, details on class distribution are shown in all parent nodes.
 
 Examples
 --------
