@@ -1,6 +1,7 @@
 """Tests for OWPredictions"""
 # pylint: disable=protected-access,too-many-lines,too-many-public-methods
 import os
+import random
 import unittest
 from functools import partial
 from tempfile import NamedTemporaryFile
@@ -1303,7 +1304,7 @@ class TestOWPredictions(WidgetTest):
         log_reg = LogisticRegressionLearner()
         self.send_signal(self.widget.Inputs.predictors, log_reg(data), 0)
         self.send_signal(self.widget.Inputs.predictors,
-                         LogisticRegressionLearner(penalty="l1")(data), 1)
+                         LogisticRegressionLearner(penalty="l1", max_iter=1000)(data), 1)
         with data.unlocked(data.Y):
             data.Y[1] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
@@ -1315,7 +1316,7 @@ class TestOWPredictions(WidgetTest):
         names = [f"{log_reg.name}{x}" for x in names]
         self.assertEqual(names, [m.name for m in pred.domain.metas])
         self.assertAlmostEqual(pred.metas[0, 4], 0.018, 3)
-        self.assertAlmostEqual(pred.metas[0, 9], 0.113, 3)
+        self.assertAlmostEqual(pred.metas[0, 9], 0.008, 3)
         self.assertTrue(np.isnan(pred.metas[1, 4]))
         self.assertTrue(np.isnan(pred.metas[1, 9]))
 
@@ -1765,6 +1766,16 @@ class PredictionsModelTest(unittest.TestCase):
         np.testing.assert_almost_equal(
             [model.data(model.index(row, 3)) for row in range(5)],
             1 - np.array(sorted([80, 5, 20, 60, 50])) / 100)
+
+        # Numpy's sort puts nan's at the end, and the widget counts on it
+        # because we want to show them last. If this test fails, this
+        # (undocumented) numpy's behavior has changed, and the widget needs
+        # to be updated.
+        data = list(range(10)) + [np.nan] * 10
+        copy = data.copy()
+        for _ in range(10):
+            random.shuffle(data)
+            np.testing.assert_equal(np.sort(data), copy)
 
     def test_sorting_classification_different(self):
         model = PredictionsModel(self.values, self.probs, self.actual)

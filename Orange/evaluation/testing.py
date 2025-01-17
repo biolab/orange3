@@ -25,7 +25,7 @@ def _identity(x):
 
 
 def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
-               store_models):
+               store_models, suppresses_exceptions=True):
     predicted, probs, model, failed = None, None, None, False
     train_time, test_time = None, None
     try:
@@ -45,6 +45,8 @@ def _mp_worker(fold_i, train_data, test_data, learner_i, learner,
         test_time = time() - t0
     # Different models can fail at any time raising any exception
     except Exception as ex:  # pylint: disable=broad-except
+        if not suppresses_exceptions:
+            raise ex
         failed = ex
     return _MpResults(fold_i, learner_i, store_models and model,
                       failed, len(test_data), predicted, probs,
@@ -96,6 +98,7 @@ class Results:
                  row_indices=None, folds=None, score_by_folds=True,
                  learners=None, models=None, failed=None,
                  actual=None, predicted=None, probabilities=None,
+                 # pylint: disable=unused-argument
                  store_data=None, store_models=None,
                  train_time=None, test_time=None):
         """
@@ -426,7 +429,8 @@ class Validation:
              DeprecationWarning)
         return self(*args, **kwargs)
 
-    def __call__(self, data, learners, preprocessor=None, *, callback=None):
+    def __call__(self, data, learners, preprocessor=None, *, callback=None,
+                 suppresses_exceptions=True):
         """
         Args:
             data (Orange.data.Table): data to be used (usually split) into
@@ -435,6 +439,7 @@ class Validation:
             preprocessor (Orange.preprocess.Preprocess): preprocessor applied
                 on training data
             callback (Callable): a function called to notify about the progress
+            suppresses_exceptions (bool): suppress the exceptions if True
 
         Returns:
             results (Result): results of testing
@@ -457,7 +462,10 @@ class Validation:
         part_results = []
         parts = np.linspace(.0, .99, len(learners) * len(indices) + 1)[1:]
         for progress, part in zip(parts, args_iter):
-            part_results.append(_mp_worker(*(part + ())))
+            part_results.append(
+                _mp_worker(*(part + ()),
+                           suppresses_exceptions=suppresses_exceptions)
+            )
             callback(progress)
         callback(1)
 
@@ -723,7 +731,7 @@ class TestOnTestData(Validation):
             test_data=test_data, **kwargs)
 
     def __call__(self, data, test_data, learners, preprocessor=None,
-                 *, callback=None):
+                 *, callback=None, suppresses_exceptions=True):
         """
         Args:
             data (Orange.data.Table): training data
@@ -732,6 +740,7 @@ class TestOnTestData(Validation):
             preprocessor (Orange.preprocess.Preprocess): preprocessor applied
                 on training data
             callback (Callable): a function called to notify about the progress
+            suppresses_exceptions (bool): suppress the exceptions if True
 
         Returns:
             results (Result): results of testing
@@ -746,7 +755,7 @@ class TestOnTestData(Validation):
         for (learner_i, learner) in enumerate(learners):
             part_results.append(
                 _mp_worker(0, train_data, test_data, learner_i, learner,
-                           self.store_models))
+                           self.store_models, suppresses_exceptions))
             callback((learner_i + 1) / len(learners))
         callback(1)
 
@@ -778,13 +787,14 @@ class TestOnTrainingData(TestOnTestData):
             **kwargs)
 
     def __call__(self, data, learners, preprocessor=None, *, callback=None,
-                 **kwargs):
+                 suppresses_exceptions=True, **kwargs):
         kwargs.setdefault("test_data", data)
         # if kwargs contains anything besides test_data, this will be detected
         # (and complained about) by super().__call__
         return super().__call__(
             data=data, learners=learners, preprocessor=preprocessor,
-            callback=callback, **kwargs)
+            callback=callback, suppresses_exceptions=suppresses_exceptions,
+            **kwargs)
 
 
 def sample(table, n=0.7, stratified=False, replace=False,

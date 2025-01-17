@@ -572,6 +572,39 @@ class TestFeatureStatisticsUI(WidgetTest):
         self.assertIn("<table>", report_text)
         self.assertEqual(6, report_text.count("<tr>"))  # header + 5 rows
 
+    def test_color_legend(self):
+        w = self.widget
+        data = Table("heart_disease")
+        self.send_signal(self.widget.Inputs.data, data)
+
+        self.assertIs(w.color_var, data.domain.class_var)
+        self.assertEqual(len(w.legend_items), 2)
+        self.assertFalse(w.legend_view.isHidden())
+
+        w.cb_color_var.setCurrentIndex(4)  # age (numeric, no legend)
+        w.cb_color_var.activated.emit(4)
+        self.assertEqual(len(w.legend_items), 0)
+        self.assertTrue(w.legend_view.isHidden())
+
+        w.cb_color_var.setCurrentIndex(6)  # chest pain
+        w.cb_color_var.activated.emit(6)
+        self.assertEqual(len(w.legend_items), 4)
+        self.assertFalse(w.legend_view.isHidden())
+
+        w.cb_color_var.setCurrentIndex(0)  # None
+        w.cb_color_var.activated.emit(0)
+        self.assertEqual(len(w.legend_items), 0)
+        self.assertTrue(w.legend_view.isHidden())
+
+        # Show
+        w.cb_color_var.setCurrentIndex(6)  # chest pain
+        w.cb_color_var.activated.emit(6)
+
+        # to check that the legend is hidden when the data is removed
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(len(w.legend_items), 0)
+        self.assertTrue(w.legend_view.isHidden())
+
 
 class TestSummary(WidgetTest):
     def setUp(self):

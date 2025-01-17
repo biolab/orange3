@@ -1,10 +1,8 @@
-if [ "$#" -ne 2 ]
+if [ "$#" -ne 1 ]
 then
-    echo "trans <language> <destination>"
+    echo "trans <destination>"
     exit
 else
-    lang=$1
-    dest=$2
-    trubar --conf $lang/trubar-config.yaml translate -s ../Orange -d $dest/Orange --static $lang/static $lang/msgs.jaml
-    trubar --conf $lang/tests-config.yaml translate -s ../Orange -d $dest/Orange $lang/tests-msgs.jaml
+    dest=$1
+    trubar --conf trubar-config.yaml translate -s ../Orange -d $dest/Orange msgs.jaml
 fi

@@ -1,5 +1,6 @@
 import os
 import unittest
+from collections import Counter
 from typing import List
 from unittest.mock import Mock, patch
 
@@ -463,14 +464,14 @@ class TestOWGroupBy(WidgetTest):
             "dvar - Count defined",
             "dvar - Count",
             "dvar - Proportion defined",
-            "svar - First value",
-            "svar - Last value",
             "svar - Count defined",
             "svar - Count",
             "svar - Proportion defined",
             "cvar - Concatenate",
             "dvar - Concatenate",
             "svar - Concatenate",
+            "svar - First value",
+            "svar - Last value",
             "a",  # groupby variables are last two in metas
             "b",
         ]
@@ -479,33 +480,33 @@ class TestOWGroupBy(WidgetTest):
         expected_df = pd.DataFrame([
             [.15, .15, .125, .175, .1, .2, .1, .07, .005, .3, .1, 0.1, 0.2, 2, 2, 1,
              "val1", "val1", "val2", 2, 2, 1,
-             "sval1", "sval2", 2, 2, 1,
-             "0.1 0.2", "val1 val2", "sval1 sval2",
+             2, 2, 1,
+             "0.1 0.2", "val1 val2", "sval1 sval2", "sval1", "sval2",
              1, 1],
             [.3, .3, .3, .3, .3, .3, .3, np.nan, np.nan, .3, 0, .3, .3, 1, 2, 0.5,
              "val2", "val2", "val2", 1, 2, 0.5,
-             "", "sval2", 2, 2, 1,
-             "0.3", "val2", "sval2",
+             2, 2, 1,
+             "0.3", "val2", "sval2", "", "sval2",
              1, 2],
             [.433, .4, .35, .5, .3, .6, .3, 0.153, 0.023, 1.3, .3, .3, .6, 3, 3, 1,
              "val1", "val1", "val1", 3, 3, 1,
-             "sval1", "sval1", 3, 3, 1,
-             "0.3 0.4 0.6", "val1 val2 val1", "sval1 sval2 sval1",
+             3, 3, 1,
+             "0.3 0.4 0.6", "val1 val2 val1", "sval1 sval2 sval1", "sval1", "sval1",
              1, 3],
             [1.5, 1.5, 1.25, 1.75, 1, 2, 1, 0.707, 0.5, 3, 1, 1, 2, 2, 2, 1,
              "val1", "val2", "val1", 2, 2, 1,
-             "sval2", "sval1", 2, 2, 1,
-             "1.0 2.0", "val2 val1", "sval2 sval1",
+             2, 2, 1,
+             "1.0 2.0", "val2 val1", "sval2 sval1", "sval2", "sval1",
              2, 1],
             [-0.5, -0.5, -2.25, 1.25, -4, 3, -4, 4.95, 24.5, -1, 7, 3, -4, 2, 2, 1,
              "val1", "val2", "val1", 2, 2, 1,
-             "sval2", "sval1", 2, 2, 1,
-             "3.0 -4.0", "val2 val1", "sval2 sval1",
+             2, 2, 1,
+             "3.0 -4.0", "val2 val1", "sval2 sval1", "sval2", "sval1",
              2, 2],
             [5, 5, 5, 5, 5, 5, 5, 0, 0, 10, 0, 5, 5, 2, 2, 1,
              "val1", "val2", "val1", 2, 2, 1,
-             "sval2", "sval1", 2, 2, 1,
-             "5.0 5.0", "val2 val1", "sval2 sval1",
+             2, 2, 1,
+             "5.0 5.0", "val2 val1", "sval2 sval1", "sval2", "sval1",
              2, 3]
             ], columns=expected_columns
         )
@@ -939,6 +940,25 @@ class TestOWGroupBy(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         # sepal length is hidden - only sepal width remain selected
         self.assertListEqual([data.domain["sepal width"]], self.widget.gb_attrs)
+
+    def test_aggregate_discrete(self):
+        values = ["HCD", "DOS", "SDE"]
+        domain = Domain([DiscreteVariable("Cluster", ["C1", "C2"]),
+                         DiscreteVariable("group", values)])
+        l = [[1, 1], [1, 1], [1, 1], [0, 2], [1, 1], [0, 2], [0, 0], [0, 2],
+             [1, 1], [1, 1], [0, 2], [0, 2], [1, 2], [1, 1], [0, 2], [0, 1]]
+        array = np.array(l)
+        data = Table.from_list(domain, array)
+
+        mask0 = array[:, 0] == 0
+        mask1 = array[:, 0] == 1
+        most_common0 = Counter(array[mask0, 1]).most_common(1)[0][0]
+        most_common1 = Counter(array[mask1, 1]).most_common(1)[0][0]
+
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(output[0, 1], values[most_common0])  # 2 - SDE
+        self.assertEqual(output[1, 1], values[most_common1])  # 1 - DOS
 
 
 if __name__ == "__main__":

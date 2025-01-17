@@ -360,6 +360,10 @@ class TestDiscreteVariable(VariableTest):
         self.assertEqual(list(a.values), ["a", "b", "c"])
         self.assertEqual(list(a._value_index), ["a", "b", "c"])
 
+    def test_no_duplicates_in_constructor(self):
+        self.assertRaises(ValueError, DiscreteVariable,
+                          "foo", values=("a", "b", "a"))
+
     def test_unpickle(self):
         d1 = DiscreteVariable("A", values=("two", "one"))
         s = pickle.dumps(d1)

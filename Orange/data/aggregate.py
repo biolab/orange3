@@ -1,5 +1,5 @@
 from functools import lru_cache
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple, Union, Type
 
 import pandas as pd
 
@@ -39,15 +39,20 @@ class OrangeTableGroupBy:
         df = table_to_frame(table, include_metas=True)
         # observed=True keeps only groups with at leas one instance
         self.group_by = df.groupby([a.name for a in by], observed=True)
+        self.by = tuple(by)
 
         # lru_cache that is caches on the object level
         self.compute_aggregation = lru_cache()(self._compute_aggregation)
 
+    AggDescType = Union[str,
+                    Callable,
+                    Tuple[str, Union[str, Callable]],
+                    Tuple[str, Union[str, Callable], Union[Type[Variable], bool]]
+    ]
+
     def aggregate(
         self,
-        aggregations: Dict[
-            Variable, List[Union[str, Callable, Tuple[str, Union[str, Callable]]]]
-        ],
+        aggregations: Dict[Variable, List[AggDescType]],
         callback: Callable = dummy_callback,
     ) -> Table:
         """
@@ -57,12 +62,16 @@ class OrangeTableGroupBy:
         ----------
         aggregations
             The dictionary that defines aggregations that need to be computed
-            for variables. We support two formats:
+            for variables. We support three formats:
             - {variable name: [agg function 1, agg function 2]}
             - {variable name: [(agg name 1, agg function 1),  (agg name 1, agg function 1)]}
+            - {variable name: [(agg name 1, agg function 1, output_variable_type1), ...]}
             Where agg name is the aggregation name used in the output column name.
             Aggregation function can be either function or string that defines
             aggregation in Pandas (e.g. mean).
+            output_variable_type can be a type for a new variable, True to copy
+            the input variable, or False to create a new variable of the same type
+            as the input
         callback
             Callback function to report the progress
 
@@ -75,29 +84,47 @@ class OrangeTableGroupBy:
         count = 0
 
         result_agg = []
+        output_variables = []
         for col, aggs in aggregations.items():
             for agg in aggs:
-                res = self._compute_aggregation(col, agg)
+                res, var = self._compute_aggregation(col, agg)
                 result_agg.append(res)
+                output_variables.append(var)
                 count += 1
                 callback(count / num_aggs * 0.8)
 
-        agg_table = self._aggregations_to_table(result_agg)
+        agg_table = self._aggregations_to_table(result_agg, output_variables)
         callback(1)
         return agg_table
 
     def _compute_aggregation(
-        self, col: Variable, agg: Union[str, Callable, Tuple[str, Union[str, Callable]]]
-    ) -> pd.Series:
+            self, col: Variable, agg: AggDescType) -> Tuple[pd.Series, Variable]:
         # use named aggregation to avoid issues with same column names when reset_index
         if isinstance(agg, tuple):
-            name, agg = agg
+            name, agg, var_type, *_ = (*agg, None)
         else:
             name = agg if isinstance(agg, str) else agg.__name__
+            var_type = None
         col_name = f"{col.name} - {name}"
-        return self.group_by[col.name].agg(**{col_name: agg})
+        agg_col = self.group_by[col.name].agg(**{col_name: agg})
+        if col.is_discrete and var_type is True:
+            dtype = pd.CategoricalDtype(categories=col.values, ordered=True)
+            agg_col = agg_col.astype(dtype)
+        if var_type is True:
+            var = col.copy(name=col_name)
+        elif var_type is False:
+            var = col.make(name=col_name)
+        elif var_type is None:
+            var = None
+        else:
+            assert issubclass(var_type, Variable)
+            var = var_type.make(name=col_name)
+        return agg_col, var
 
-    def _aggregations_to_table(self, aggregations: List[pd.Series]) -> Table:
+    def _aggregations_to_table(
+            self,
+            aggregations: List[pd.Series],
+            output_variables: List[Union[Variable, None]]) -> Table:
         """Concatenate aggregation series and convert back to Table"""
         if aggregations:
             df = pd.concat(aggregations, axis=1)
@@ -107,7 +134,7 @@ class OrangeTableGroupBy:
             df = df.drop(columns=df.columns)
         gb_attributes = df.index.names
         df = df.reset_index()  # move group by var that are in index to columns
-        table = table_from_frame(df)
+        table = table_from_frame(df, variables=(*self.by, *output_variables))
 
         # group by variables should be last two columns in metas in the output
         metas = table.domain.metas

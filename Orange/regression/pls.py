@@ -1,10 +1,9 @@
-from typing import Tuple
-
 import numpy as np
 import scipy.stats as ss
 import sklearn.cross_decomposition as skl_pls
 from sklearn.preprocessing import StandardScaler
 
+from Orange.base import Learner
 from Orange.data import Table, Domain, Variable, \
     ContinuousVariable, StringVariable
 from Orange.data.util import get_unique_names, SharedComputeValue
@@ -163,11 +162,11 @@ class PLSModel(LinearModel):
         return coef_table
 
     @property
-    def rotations(self) -> Tuple[np.ndarray, np.ndarray]:
+    def rotations(self) -> tuple[np.ndarray, np.ndarray]:
         return self.skl_model.x_rotations_, self.skl_model.y_rotations_
 
     @property
-    def loadings(self) -> Tuple[np.ndarray, np.ndarray]:
+    def loadings(self) -> tuple[np.ndarray, np.ndarray]:
         return self.skl_model.x_loadings_, self.skl_model.y_loadings_
 
     def residuals_normal_probability(self, data: Table) -> Table:
@@ -255,6 +254,11 @@ class PLSRegressionLearner(SklLearnerRegression, _FeatureScorerMixin):
                 if not cv.is_continuous:
                     reason = "Only numeric target variables expected."
         return reason
+
+    @property
+    def fitted_parameters(self) -> list[Learner.FittedParameter]:
+        return [self.FittedParameter("n_components", "Components",
+                                     int, 1, None)]
 
 
 if __name__ == '__main__':

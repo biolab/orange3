@@ -9,7 +9,7 @@ from os import getenv
 from typing import Any, Callable, List, Optional, Dict, Union
 
 from AnyQt.QtCore import QSettings
-from httpx import AsyncClient, NetworkError, ReadTimeout, Response
+from httpx import AsyncClient, NetworkError, ReadTimeout, Response, AsyncHTTPTransport
 from numpy import linspace
 
 from Orange.misc.utils.embedder_utils import (
@@ -21,6 +21,12 @@ from Orange.util import dummy_callback
 
 log = logging.getLogger(__name__)
 TaskItem = namedtuple("TaskItem", ("id", "item", "no_repeats"))
+
+
+def _rewrite_proxies_to_mounts(proxies):
+    if proxies is None:
+        return None
+    return {c: AsyncHTTPTransport(proxy=url) for c, url in get_proxies().items()}
 
 
 class ServerEmbedderCommunicator:
@@ -154,8 +160,10 @@ class ServerEmbedderCommunicator:
         for i, item in enumerate(data):
             queue.put_nowait(TaskItem(id=i, item=item, no_repeats=0))
 
+        proxy_mounts = _rewrite_proxies_to_mounts(get_proxies())
+
         async with AsyncClient(
-            timeout=self.timeout, base_url=self.server_url, proxies=get_proxies()
+            timeout=self.timeout, base_url=self.server_url, mounts=proxy_mounts
         ) as client:
             tasks = self._init_workers(client, queue, results, success_callback)
 

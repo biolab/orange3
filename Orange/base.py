@@ -3,7 +3,7 @@ import itertools
 from collections.abc import Iterable
 import re
 import warnings
-from typing import Callable, Dict, Optional
+from typing import Callable, Optional, NamedTuple, Type
 
 import numpy as np
 import scipy
@@ -87,6 +87,13 @@ class Learner(ReprableWithPreprocessors):
     #: A sequence of data preprocessors to apply on data prior to
     #: fitting the model
     preprocessors = ()
+
+    class FittedParameter(NamedTuple):
+        name: str
+        label: str
+        type: Type
+        min: Optional[int] = None
+        max: Optional[int] = None
 
     # Note: Do not use this class attribute.
     #       It remains here for compatibility reasons.
@@ -178,6 +185,10 @@ class Learner(ReprableWithPreprocessors):
         if (self.use_default_preprocessors and
                 self.preprocessors is not type(self).preprocessors):
             yield from type(self).preprocessors
+
+    @property
+    def fitted_parameters(self) -> list:
+        return []
 
     # pylint: disable=no-self-use
     def incompatibility_reason(self, _: Domain) -> Optional[str]:
@@ -883,5 +894,5 @@ class XGBBase(SklLearner):
         self.params = kwargs
 
     @SklLearner.params.setter
-    def params(self, values: Dict):
+    def params(self, values: dict):
         self._params = values

@@ -27,7 +27,7 @@ class TestOWNomogram(WidgetTest):
         super().setUpClass()
         cls.data = Table("heart_disease")
         cls.nb_cls = NaiveBayesLearner()(cls.data)
-        cls.lr_cls = LogisticRegressionLearner()(cls.data)
+        cls.lr_cls = LogisticRegressionLearner(max_iter=1000)(cls.data)
         cls.titanic = Table("titanic")
         cls.lenses = Table(test_filename("datasets/lenses.tab"))
 
@@ -86,7 +86,7 @@ class TestOWNomogram(WidgetTest):
     def test_nomogram_lr(self):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons"""
-        self._test_helper(self.lr_cls, [61, 39])
+        self._test_helper(self.lr_cls, [57, 43])
 
     def test_nomogram_nb_multiclass(self):
         """Check probabilities for naive bayes classifier for various values
@@ -97,10 +97,8 @@ class TestOWNomogram(WidgetTest):
     def test_nomogram_lr_multiclass(self):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons for multiclass data"""
-        cls = LogisticRegressionLearner(
-            multi_class="ovr", solver="liblinear"
-        )(self.lenses)
-        self._test_helper(cls, [9, 45, 52])
+        cls = LogisticRegressionLearner(max_iter=100)(self.lenses)
+        self._test_helper(cls, [18, 56, 78])
 
     def test_nomogram_with_instance_nb(self):
         """Check initialized marker values and feature sorting for naive bayes

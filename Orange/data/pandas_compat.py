@@ -1,11 +1,13 @@
 """Pandas DataFrame↔Table conversion helpers"""
-from unittest.mock import patch
+from functools import partial
+from itertools import zip_longest
 
 import numpy as np
 from scipy import sparse as sp
 from scipy.sparse import csr_matrix
 import pandas as pd
 from pandas.core.arrays import SparseArray
+import pandas.core.arrays.sparse.accessor
 from pandas.api.types import (
     is_object_dtype,
     is_datetime64_any_dtype,
@@ -20,6 +22,19 @@ from Orange.data import (
 from Orange.data.table import Role
 
 __all__ = ['table_from_frame', 'table_to_frame']
+
+
+# Patch a bug in pandas SparseFrameAccessor.to_dense
+# As of pandas=3.0.0.dev0+1524.g23c497bb2f, to_dense ignores _constructor
+# and alwats returns DataFrame.
+if pd.__version__ < "3":
+    def to_dense(self):
+        # pylint: disable=protected-access
+        data = {k: v.array.to_dense() for k, v in self._parent.items()}
+        constr = self._parent._constructor
+        return constr(data, index=self._parent.index, columns=self._parent.columns)
+
+    pandas.core.arrays.sparse.accessor.SparseFrameAccessor.to_dense = to_dense
 
 
 class OrangeDataFrame(pd.DataFrame):
@@ -74,8 +89,6 @@ class OrangeDataFrame(pd.DataFrame):
             data = dict(enumerate(sparrays))
             super().__init__(data, index=index, **kwargs)
             self.columns = columns
-            # a hack to keep Orange df _metadata in sparse->dense conversion
-            self.sparse.to_dense = self.__patch_constructor(self.sparse.to_dense)
         else:
             copy = kwargs.pop("copy", False)
             super().__init__(
@@ -88,21 +101,15 @@ class OrangeDataFrame(pd.DataFrame):
                                if table.W.size > 0 else {})
         self.orange_attributes = table.attributes
 
-    def __patch_constructor(self, method):
-        def new_method(*args, **kwargs):
-            with patch(
-                    'pandas.DataFrame',
-                    OrangeDataFrame
-            ):
-                df = method(*args, **kwargs)
-            df.__finalize__(self)
-            return df
-
-        return new_method
-
     @property
     def _constructor(self):
-        return OrangeDataFrame
+        return partial(self.from_existing, self)
+
+    @staticmethod
+    def from_existing(existing, *args, **kwargs):
+        self = type(existing)(*args, **kwargs)
+        self.__finalize__(existing)
+        return self
 
     def to_orange_table(self):
         return table_from_frame(self)
@@ -204,7 +211,7 @@ def _convert_datetime(series, var):
     def col_type(dt):
         """Test if is date, time or datetime"""
         dt_nonnat = dt[~pd.isnull(dt)]  # nat == nat is False
-        if (dt_nonnat.dt.floor("d") == dt_nonnat).all():
+        if (dt_nonnat.dt.floor("D") == dt_nonnat).all():
             # all times are 00:00:00.0 - pure date
             return 1, 0
         elif (dt_nonnat.dt.date == pd.Timestamp("now").date()).all():
@@ -249,7 +256,14 @@ def to_categorical(s, _):
     return np.asarray(x)
 
 
-def vars_from_df(df, role=None, force_nominal=False):
+def to_numeric(s, _):
+    return np.asarray(pd.to_numeric(s))
+
+
+def vars_from_df(df, role=None, force_nominal=False, variables=None):
+    if variables is not None:
+        assert len(variables) == len(df.columns)
+
     if role is None and hasattr(df, 'orange_role'):
         role = df.orange_role
     df = _reset_index(df)
@@ -258,39 +272,52 @@ def vars_from_df(df, role=None, force_nominal=False):
     exprs = [], [], []
     vars_ = [], [], []
 
-    for column in df.columns:
+    def _convert_string(s, _):
+        return np.asarray(
+                    # to object so that fillna can replace with nans if Unknown in nan
+                    # replace nan with object Unknown assure that all values are string
+                    s.astype(object).fillna(StringVariable.Unknown).astype(str),
+                    dtype=object
+                )
+
+    conversions = {
+        DiscreteVariable: to_categorical,
+        ContinuousVariable: to_numeric,
+        TimeVariable: _convert_datetime,
+        StringVariable: _convert_string
+    }
+
+    for column, var in zip_longest(df.columns, variables or [], fillvalue=None):
         s = df[column]
         _role = Role.Attribute if role is None else role
-        if hasattr(df, 'orange_variables') and column in df.orange_variables:
+        if var is not None:
+            if not var.is_primitive():
+                _role = Role.Meta
+            expr = conversions[type(var)]
+        elif hasattr(df, 'orange_variables') and column in df.orange_variables:
             original_var = df.orange_variables[column]
             var = original_var.copy(compute_value=None)
             expr = None
-        elif _is_datetime(s):
-            var = TimeVariable(str(column))
-            expr = _convert_datetime
-        elif _is_discrete(s, force_nominal):
-            discrete = s.astype("category").cat
-            var = DiscreteVariable(
-                str(column), discrete.categories.astype(str).tolist()
-            )
-            expr = to_categorical
-        elif is_numeric_dtype(s):
-            var = ContinuousVariable(
-                # set number of decimals to 0 if int else keeps default behaviour
-                str(column), number_of_decimals=(0 if is_integer_dtype(s) else None)
-            )
-            expr = None
         else:
-            if role is not None and role != Role.Meta:
-                raise ValueError("String variable must be in metas.")
-            _role = Role.Meta
-            var = StringVariable(str(column))
-            expr = lambda s, _: np.asarray(
-                # to object so that fillna can replace with nans if Unknown in nan
-                # replace nan with object Unknown assure that all values are string
-                s.astype(object).fillna(StringVariable.Unknown).astype(str),
-                dtype=object
-            )
+            if _is_datetime(s):
+                var = TimeVariable(str(column))
+            elif _is_discrete(s, force_nominal):
+                discrete = s.astype("category").cat
+                var = DiscreteVariable(
+                    str(column), discrete.categories.astype(str).tolist()
+                )
+            elif is_numeric_dtype(s):
+                var = ContinuousVariable(
+                    # set number of decimals to 0 if int else keeps default behaviour
+                    str(column), number_of_decimals=(0 if is_integer_dtype(s) else None)
+                )
+            else:
+                if role is not None and role != Role.Meta:
+                    raise ValueError("String variable must be in metas.")
+                _role = Role.Meta
+                var = StringVariable(str(column))
+            expr = conversions[type(var)]
+
 
         cols[_role].append(column)
         exprs[_role].append(expr)
@@ -324,8 +351,10 @@ def vars_from_df(df, role=None, force_nominal=False):
     return xym, Domain(*vars_)
 
 
-def table_from_frame(df, *, force_nominal=False):
-    XYM, domain = vars_from_df(df, force_nominal=force_nominal)
+def table_from_frame(df, *, force_nominal=False, variables=None):
+    XYM, domain = vars_from_df(df,
+                               force_nominal=force_nominal,
+                               variables=variables)
 
     if hasattr(df, 'orange_weights') and hasattr(df, 'orange_attributes'):
         W = [df.orange_weights[i] for i in df.index if i in df.orange_weights]

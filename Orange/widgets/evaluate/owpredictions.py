@@ -16,7 +16,6 @@ from AnyQt.QtCore import (
     QModelIndex, pyqtSignal, QTimer,
     QItemSelectionModel, QItemSelection)
 
-from orangecanvas.utils.localization import pl
 from orangewidget.utils.itemmodels import AbstractSortTableModel
 from orangewidget.utils.signals import LazyValue
 
@@ -39,6 +38,7 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.utils.state_summary import format_summary_details
 from Orange.widgets.utils.colorpalettes import LimitedDiscretePalette
 from Orange.widgets.utils.itemdelegates import TableDataDelegate
+from Orange.widgets.utils.localization import pl
 
 # Input slot for the Predictors channel
 PredictorSlot = NamedTuple(
@@ -915,7 +915,6 @@ class OWPredictions(OWWidget):
             name = f"{slot.predictor.name} (error)"
             newmetas.append(ContinuousVariable(name=name))
             err = self.predictionsview.model().errorColumn(index)
-            err[err == 2] = numpy.nan
             newcolumns.append(err)
 
     def send_report(self):
@@ -1383,8 +1382,7 @@ class PredictionsModel(AbstractSortTableModel):
             nans = numpy.isnan(actuals)
             actuals[nans] = 0
             errors = 1 - numpy.choose(actuals.astype(int), self._probs[column].T)
-            errors[nans] = 2
-            errors[numpy.isnan(errors)] = 2
+            errors[nans] = numpy.nan
             return errors
         else:
             actual = self._actual

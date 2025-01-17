@@ -10,6 +10,7 @@ omit =
     */tests/*
     */setup.py
     */*/setup.py
+    Orange/classification/utils/fasterrisk/*
 
 [report]
 exclude_lines =

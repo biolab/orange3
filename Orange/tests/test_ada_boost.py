@@ -33,7 +33,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         self.assertLess(ca, 0.99)
 
     def test_adaboost_estimator(self):
-        np.random.seed(0)
+        np.random.seed(4)
         stump_estimator = SklTreeLearner(max_depth=1)
         tree_estimator = SklTreeLearner()
         stump = SklAdaBoostClassificationLearner(

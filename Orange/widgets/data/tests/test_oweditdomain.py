@@ -35,11 +35,13 @@ from Orange.widgets.data.oweditdomain import (
     VariableEditDelegate, TransformRole,
     RealVector, TimeVector, StringVector, make_dict_mapper,
     LookupMappingTransform, as_float_or_nan, column_str_repr,
-    GroupItemsDialog, VariableListModel, StrpTime, RestoreOriginal, BaseEditor
+    GroupItemsDialog, VariableListModel, StrpTime, RestoreOriginal, BaseEditor,
+    RestoreWarningRole
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
 from Orange.widgets.tests.utils import contextMenu
+from Orange.widgets.utils.itemmodels import select_row
 from Orange.widgets.utils import colorpalettes
 from Orange.tests import test_filename, assert_array_nanequal
 
@@ -381,6 +383,16 @@ class TestOWEditDomain(WidgetTest):
         self.assertEqual(output.domain.class_var.name, "K")
         self.assertEqual(output.domain.class_var.values,
                          ("Iris-setosa", "Iris-versicolor", "Iris-virginica"))
+
+        restore({viris_1: [("Rename", ("K",),),
+                           ("CategoriesMapping", ([("A", "AA")],))]})
+        self.assertTrue(w.Warning.cat_mapping_does_not_apply.is_shown())
+        w.reset_all()
+        self.assertFalse(w.Warning.cat_mapping_does_not_apply.is_shown())
+
+        select_row(w.variables_view, 4)
+        w.reset_selected()
+        self.assertFalse(w.Warning.cat_mapping_does_not_apply.is_shown())
 
         restore({viris: [("Rename", ("A")), ("NonexistantTransform", ("AA",))]})
         tr = model.data(model.index(4), TransformRole)
@@ -1222,6 +1234,16 @@ class TestDelegates(GuiTest):
             )
             p.assert_called_once()
 
+        set_item(1, {
+            TransformRole: Rename("bb"),
+            RestoreWarningRole: ("bb", "aa"),
+        })
+        opt = get_style_option(1)
+        self.assertIn(
+            opt.palette.color(QPalette.Text),
+            (QColor(Qt.yellow), QColor(255, 148, 11))
+        )
+
 
 class TestTransforms(TestCase):
     def _test_common(self, var):
@@ -1409,7 +1431,7 @@ class TestReinterpretTransforms(TestCase):
             ["07.02.2022 01:02:03", "18.04.2021 01:02:03"],  # datetime
             # datetime with timezone
             ["2021-02-08 01:02:03+01:00", "2021-02-07 01:02:03+01:00"],
-            ["010203", "010203"],  # time
+            ["010203", "010204"],  # time
             ["02-07", "04-18"],
         )
         formats = [
@@ -1419,7 +1441,7 @@ class TestReinterpretTransforms(TestCase):
             [d("2022-02-07"), d("2021-04-18")],
             [d("2022-02-07 01:02:03"), d("2021-04-18 01:02:03")],
             [d("2021-02-08 01:02:03+0100"), d("2021-02-07 01:02:03+0100")],
-            [d("01:02:03"), d("01:02:03")],
+            [d("01:02:03"), d("01:02:04")],
             [d("1900-02-07"), d("1900-04-18")],
         ]
         variables = [StringVariable(f"s{i}") for i in range(len(times))]

@@ -441,23 +441,73 @@ class TestDomainInit(unittest.TestCase):
         self.assertEqual(domain1, domain2)
 
         var1 = ContinuousVariable('var1')
-        domain1.attributes = (var1,)
+        domain1 = Domain([var1])
         self.assertNotEqual(domain1, domain2)
 
-        domain2.attributes = (var1,)
+        domain2 = Domain([var1])
         self.assertEqual(domain1, domain2)
 
-        domain1.class_vars = (var1,)
+        var2 = ContinuousVariable('var2')
+        domain1 = Domain([var1], [var2])
         self.assertNotEqual(domain1, domain2)
 
-        domain2.class_vars = (var1,)
+        domain2 = Domain([var1], [var2])
         self.assertEqual(domain1, domain2)
 
-        domain1._metas = (var1,)
+        var3 = ContinuousVariable('var3')
+        domain1 = Domain([var1], [var2], [var3])
         self.assertNotEqual(domain1, domain2)
 
-        domain2._metas = (var1,)
+        domain2 = Domain([var1], [var2], [var3])
         self.assertEqual(domain1, domain2)
+
+    def test_eq_cached(self):
+
+        class ComputeValueEqOnce:
+            calls = 0
+
+            def __eq__(self, other):
+                if self.calls > 0:
+                    raise RuntimeError()
+                self.calls += 1
+                return type(self) is type(other)
+
+            def __hash__(self):
+                return hash(type(self))
+
+        var1 = ContinuousVariable('var1', compute_value=ComputeValueEqOnce())
+        var1a = ContinuousVariable('var1', compute_value=ComputeValueEqOnce())
+        domain1 = Domain([var1])
+        domain2 = Domain([var1a])
+        self.assertTrue(domain1 == domain2)
+
+        # the second call would crash if __eq__ was not cached
+        self.assertTrue(domain1 == domain2)
+
+        # modify the cache, see if that has an effect
+        domain1._eq_cache[(domain2,)] = False  # pylint: disable=protected-access
+        self.assertFalse(domain1 == domain2)
+
+    def test_eq_cache_not_grow(self):
+        var = ContinuousVariable('var')
+        domain = Domain([var])
+        domains = [Domain([var]) for _ in range(10)]
+        for d in domains:
+            self.assertTrue(domain == d)
+
+        # pylint: disable=protected-access,pointless-statement
+
+        # __eq__ results to all ten domains should be cached
+        for d in domains:
+            domain._eq_cache[(d,)]
+
+        dn = Domain([var])
+        self.assertTrue(domain == dn)
+        # the last compared domain should be cached
+        domain._eq_cache[(dn,)]
+        # but the first compared should be lost in cache
+        with self.assertRaises(KeyError):
+            domain._eq_cache[(domains[0],)]
 
     def test_domain_conversion_is_fast_enough(self):
         attrs = [ContinuousVariable("f%i" % i) for i in range(10000)]

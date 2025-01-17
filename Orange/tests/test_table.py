@@ -2068,6 +2068,24 @@ class CreateTableWithDomainAndTable(TableTests):
         # attributes dict of old table not be changed since new dist is a copy
         self.assertDictEqual(self.table.attributes, {"A": "Test", "B": []})
 
+    def test_attributes_copied_once(self):
+        A = Mock()
+        A.__deepcopy__ = Mock()
+        self.table.attributes = {"A": A}
+
+        # a single direct transformation
+        self.table.from_table(self.table.domain, self.table)
+        self.assertEqual(1, A.__deepcopy__.call_count)
+        A.__deepcopy__.reset_mock()
+
+        # hierarchy of transformations
+        ndom = Domain([a.copy(compute_value=lambda x: x.transform(Domain([a])))
+                       for a in self.table.domain.attributes])
+        self.table.from_table(ndom, self.table)
+        self.assertEqual(1, A.__deepcopy__.call_count)
+        # HISTORIC: before only the outermost transformation deepcopied the
+        # attributes, here were 23 calls to __deepcopy__ instead of 1
+
 
 def isspecial(s):
     return isinstance(s, slice) or s is Ellipsis
