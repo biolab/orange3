@@ -149,7 +149,10 @@ class SelectedLabelsModel(PyListModel):
             return font
         if role == Qt.BackgroundRole:
             if self.__colors is not None:
-                return self.__colors[index.row()]
+                if index.row() < len(self.__colors):
+                    return self.__colors[index.row()]
+                else:
+                    return QColor()
             elif not any(self) and self.subset:  # no labels, no color, but subset
                 return QColor(0, 0, 0)
         if role == Qt.UserRole and self.subset:
