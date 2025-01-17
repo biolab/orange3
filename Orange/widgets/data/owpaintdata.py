@@ -90,6 +90,7 @@ Jitter = namedtuple("Jitter", ["pos", "radius", "intensity", "rstate"])
 Magnet = namedtuple("Magnet", ["pos", "radius", "density"])
 SelectRegion = namedtuple("SelectRegion", ["region"])
 DeleteSelection = namedtuple("DeleteSelection", [])
+DeleteAll = namedtuple("DeleteAll", [])
 MoveSelection = namedtuple("MoveSelection", ["delta"])
 
 
@@ -112,7 +113,7 @@ def transform(command, data):
 def append(command, data):
     np.clip(command.points[:, :2], 0, 1, out=command.points[:, :2])
     return (np.vstack([data, command.points]),
-            DeleteIndices(slice(len(data),
+            DeleteIndices(range(len(data),
                                 len(data) + len(command.points))))
 
 
@@ -125,7 +126,7 @@ def insert(command, data):
 
 @transform.register(DeleteIndices)
 def delete(command, data, ):
-    if isinstance(command.indices, slice):
+    if isinstance(command.indices, range):
         condition = indices_to_mask(command.indices, len(data))
     else:
         indices = np.asarray(command.indices)
@@ -139,7 +140,11 @@ def delete(command, data, ):
 
 @transform.register(Move)
 def move(command, data):
-    data[command.indices] += command.delta
+    if isinstance(command.indices, tuple):
+        idx = np.ix_(*command.indices)
+    else:
+        idx = command.indices
+    data[idx] += command.delta
     return data, Move(command.indices, -command.delta)
 
 
@@ -565,7 +570,7 @@ class ClearTool(DataTool):
 
     def activate(self):
         self.editingStarted.emit()
-        self.issueCommand.emit(DeleteIndices(slice(None, None, None)))
+        self.issueCommand.emit(DeleteAll())
         self.editingFinished.emit()
 
 
@@ -631,7 +636,7 @@ def indices_eq(ind1, ind2):
         if len(ind1) != len(ind2):
             return False
         return all(indices_eq(i1, i2) for i1, i2 in zip(ind1, ind2))
-    elif isinstance(ind1, slice) and isinstance(ind2, slice):
+    elif isinstance(ind1, range) and isinstance(ind2, range):
         return ind1 == ind2
     elif ind1 is ... and ind2 is ...:
         return True
@@ -656,11 +661,10 @@ def merge_cmd(composit):
         if indices_eq(f.indices, g.indices):
             return Move(f.indices, f.delta + g.delta)
         else:
-            # TODO: union of indices, ...
             return composit
-#     elif isinstance(f, DeleteIndices) and isinstance(g, DeleteIndices):
-#         indices = np.array(g.indices)
-#         return DeleteIndices(indices)
+    elif isinstance(f, DeleteIndices) and isinstance(g, DeleteIndices):
+        indices = np.fromiter(itertools.chain(g.indices, f.indices), int)
+        return DeleteIndices(indices)
     else:
         return composit
 
@@ -1158,7 +1162,7 @@ class OWPaintData(OWWidget):
         self.undo_stack.endMacro()
 
     def execute(self, command):
-        assert isinstance(command, (Append, DeleteIndices, Insert, Move)), \
+        assert isinstance(command, (Append, DeleteIndices, DeleteAll, Insert, Move)), \
             "Non normalized command"
         if isinstance(command, (DeleteIndices, Insert)):
             self._selected_indices = None
@@ -1197,12 +1201,17 @@ class OWPaintData(OWWidget):
                 self.undo_stack.push(
                     UndoCommand(DeleteIndices(indices), self, text="Delete")
                 )
+        elif isinstance(cmd, DeleteAll):
+            indices = range(0, len(self.__buffer))
+            self.undo_stack.push(
+                UndoCommand(DeleteIndices(indices), self, text="Clear All")
+            )
         elif isinstance(cmd, MoveSelection):
             indices = self._selected_indices
             if indices is not None and indices.size:
                 self.undo_stack.push(
                     UndoCommand(
-                        Move((self._selected_indices, slice(0, 2)),
+                        Move((self._selected_indices, range(0, 2)),
                              np.array([cmd.delta.x(), cmd.delta.y()])),
                         self, text="Move")
                 )
@@ -1222,12 +1231,12 @@ class OWPaintData(OWWidget):
             point = np.array([cmd.pos.x(), cmd.pos.y()])
             delta = - apply_jitter(self.__buffer[:, :2], point,
                                    self.density / 100.0, 0, cmd.rstate)
-            self._add_command(Move((..., slice(0, 2)), delta))
+            self._add_command(Move((range(0, len(self.__buffer)), range(0, 2)), delta))
         elif isinstance(cmd, Magnet):
             point = np.array([cmd.pos.x(), cmd.pos.y()])
             delta = - apply_attractor(self.__buffer[:, :2], point,
                                       self.density / 100.0, 0)
-            self._add_command(Move((..., slice(0, 2)), delta))
+            self._add_command(Move((range(0, len(self.__buffer)), range(0, 2)), delta))
         else:
             assert False, "unreachable"
 
