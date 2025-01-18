@@ -99,6 +99,8 @@ class TestOWScoringSheetViewer(WidgetTest):
     def test_target_class_change(self):
         self.send_signal(self.widget.Inputs.classifier, self.scoring_sheet_model)
         self.class_combo = self.widget.class_combo
+        self.class_combo.setCurrentIndex(0)
+        self.widget._class_combo_changed()
 
         # Check if the values of the combobox "match" the domain
         self.assertEqual(
