@@ -6750,6 +6750,7 @@ widgets/data/owpaintdata.py:
     SelectRegion: false
     region: false
     DeleteSelection: false
+    DeleteAll: false
     MoveSelection: false
     class `PaintViewBox`:
         def `__init__`:
@@ -6845,6 +6846,7 @@ widgets/data/owpaintdata.py:
         def `_add_command`:
             Name: Ime
             Delete: Brisanje
+            Clear All: Pobriši vse
             Move: Premik
             unreachable: false
         def `_replot`:
@@ -6864,6 +6866,8 @@ widgets/data/owpaintdata.py:
             Axis y: Os y
             Number of points: Število točk
             Painted data: Narisani podatki
+    def `prepare_color_table_and_index`:
+        unsafe: false
     __main__: false
 widgets/data/owpivot.py:
     class `Pivot`:
