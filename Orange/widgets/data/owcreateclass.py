@@ -1,6 +1,7 @@
 """Widget for creating classes from non-numeric attribute by substrings"""
 import re
 from itertools import count
+from typing import Optional, Sequence
 
 import numpy as np
 
@@ -19,39 +20,71 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Input, Output
 
 
-def map_by_substring(a, patterns, case_sensitive, match_beginning,
-                     map_values=None):
+def map_by_substring(
+        a: np.ndarray,
+        patterns: list[str],
+        case_sensitive: bool, match_beginning: bool, regular_expressions: bool,
+        map_values: Optional[Sequence[int]] = None) -> np.ndarray:
     """
     Map values in a using a list of patterns. The patterns are considered in
     order of appearance.
+
+    Flags `match_beginning` and `regular_expressions` are incompatible.
 
     Args:
         a (np.array): input array of `dtype` `str`
         patterns (list of str): list of strings
         case_sensitive (bool): case sensitive match
         match_beginning (bool): match only at the beginning of the string
-        map_values (list of int): list of len(pattens);
-                                  contains return values for each pattern
+        map_values (list of int, optional):
+            list of len(patterns); return values for each pattern
+        regular_expressions (bool): use regular expressions
 
     Returns:
         np.array of floats representing indices of matched patterns
     """
+    assert not (regular_expressions and match_beginning)
     if map_values is None:
         map_values = np.arange(len(patterns))
     else:
         map_values = np.array(map_values, dtype=int)
     res = np.full(len(a), np.nan)
-    if not case_sensitive:
+    if not case_sensitive and not regular_expressions:
         a = np.char.lower(a)
         patterns = (pattern.lower() for pattern in patterns)
     for val_idx, pattern in reversed(list(enumerate(patterns))):
-        indices = np.char.find(a, pattern)
-        matches = indices == 0 if match_beginning else indices != -1
+        # Note that similar code repeats in update_counts. Any changes here
+        # should be reflected there.
+        if regular_expressions:
+            re_pattern = re.compile(pattern,
+                                    re.IGNORECASE if not case_sensitive else 0)
+            matches = np.array([bool(re_pattern.search(s)) for s in a],
+                                dtype=bool)
+        else:
+            indices = np.char.find(a, pattern)
+            matches = indices == 0 if match_beginning else indices != -1
         res[matches] = map_values[val_idx]
     return res
 
 
-class ValueFromStringSubstring(Transformation):
+class _EqHashMixin:
+    def __eq__(self, other):
+        return super().__eq__(other) \
+               and self.patterns == other.patterns \
+               and self.case_sensitive == other.case_sensitive \
+               and self.match_beginning == other.match_beginning \
+               and self.regular_expressions == other.regular_expressions \
+               and np.all(self.map_values == other.map_values)
+
+    def __hash__(self):
+        return hash((type(self), self.variable,
+                     tuple(self.patterns),
+                     self.case_sensitive, self.match_beginning,
+                     self.regular_expressions,
+                     None if self.map_values is None else tuple(self.map_values)
+                    ))
+
+class ValueFromStringSubstring(_EqHashMixin, Transformation):
     """
     Transformation that computes a discrete variable from a string variable by
     pattern matching.
@@ -67,14 +100,27 @@ class ValueFromStringSubstring(Transformation):
             sensitive
         match_beginning (bool, optional): if set to `True`, the pattern must
             appear at the beginning of the string
+        map_values (list of int, optional): return values for each pattern
+        regular_expressions (bool, optional): if set to `True`, the patterns are
     """
-    def __init__(self, variable, patterns,
-                 case_sensitive=False, match_beginning=False, map_values=None):
+    # regular_expressions was added later and at the end (instead of with other
+    # flags) for compatibility with older existing pickles
+    def __init__(
+            self,
+            variable: StringVariable,
+            patterns: list[str],
+            case_sensitive: bool = False,
+            match_beginning: bool = False,
+            map_values: Optional[Sequence[int]] = None,
+            regular_expressions: bool = False):
         super().__init__(variable)
         self.patterns = patterns
         self.case_sensitive = case_sensitive
         self.match_beginning = match_beginning
+        self.regular_expressions = regular_expressions
         self.map_values = map_values
+
+    InheritEq = True
 
     def transform(self, c):
         """
@@ -90,26 +136,14 @@ class ValueFromStringSubstring(Transformation):
         c = c.astype(str)
         c[nans] = ""
         res = map_by_substring(
-            c, self.patterns, self.case_sensitive, self.match_beginning,
+            c, self.patterns,
+            self.case_sensitive, self.match_beginning, self.regular_expressions,
             self.map_values)
         res[nans] = np.nan
         return res
 
-    def __eq__(self, other):
-        return super().__eq__(other) \
-               and self.patterns == other.patterns \
-               and self.case_sensitive == other.case_sensitive \
-               and self.match_beginning == other.match_beginning \
-               and self.map_values == other.map_values
 
-    def __hash__(self):
-        return hash((type(self), self.variable,
-                     tuple(self.patterns),
-                     self.case_sensitive, self.match_beginning,
-                     self.map_values))
-
-
-class ValueFromDiscreteSubstring(Lookup):
+class ValueFromDiscreteSubstring(_EqHashMixin, Lookup):
     """
     Transformation that computes a discrete variable from discrete variable by
     pattern matching.
@@ -126,15 +160,28 @@ class ValueFromDiscreteSubstring(Lookup):
             sensitive
         match_beginning (bool, optional): if set to `True`, the pattern must
             appear at the beginning of the string
+        map_values (list of int, optional): return values for each pattern
+        regular_expressions (bool, optional): if set to `True`, the patterns are
+
     """
-    def __init__(self, variable, patterns,
-                 case_sensitive=False, match_beginning=False,
-                 map_values=None):
+    # regular_expressions was added later and at the end (instead of with other
+    # flags) for compatibility with older existing pickles
+    def __init__(
+            self,
+            variable: DiscreteVariable,
+            patterns: list[str],
+            case_sensitive: bool = False,
+            match_beginning: bool = False,
+            map_values: Optional[Sequence[int]] = None,
+            regular_expressions: bool = False):
         super().__init__(variable, [])
         self.case_sensitive = case_sensitive
         self.match_beginning = match_beginning
         self.map_values = map_values
+        self.regular_expressions = regular_expressions
         self.patterns = patterns  # Finally triggers computation of the lookup
+
+    InheritEq = True
 
     def __setattr__(self, key, value):
         """__setattr__ is overloaded to recompute the lookup table when the
@@ -145,10 +192,10 @@ class ValueFromDiscreteSubstring(Lookup):
                         "variable", "map_values"):
             self.lookup_table = map_by_substring(
                 self.variable.values, self.patterns,
-                self.case_sensitive, self.match_beginning, self.map_values)
+                self.case_sensitive, self.match_beginning,
+                self.regular_expressions, self.map_values)
 
-
-def unique_in_order_mapping(a):
+def unique_in_order_mapping(a: Sequence[str]) -> tuple[list[str], list[int]]:
     """ Return
     - unique elements of the input list (in the order of appearance)
     - indices of the input list onto the returned uniques
@@ -187,6 +234,7 @@ class OWCreateClass(widget.OWWidget):
     rules = ContextSetting({})
     match_beginning = ContextSetting(False)
     case_sensitive = ContextSetting(False)
+    regular_expressions = ContextSetting(False)
 
     TRANSFORMERS = {StringVariable: ValueFromStringSubstring,
                     DiscreteVariable: ValueFromDiscreteSubstring}
@@ -202,6 +250,7 @@ class OWCreateClass(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         class_name_duplicated = Msg("Class name duplicated.")
         class_name_empty = Msg("Class name should not be empty.")
+        invalid_regular_expression = Msg("Invalid regular expression.")
 
     def __init__(self):
         super().__init__()
@@ -265,7 +314,11 @@ class OWCreateClass(widget.OWWidget):
 
         optionsbox = gui.vBox(self.controlArea, "Options")
         gui.checkBox(
+            optionsbox, self, "regular_expressions", "Use regular expressions",
+            callback=self.options_changed)
+        gui.checkBox(
             optionsbox, self, "match_beginning", "Match only at the beginning",
+            stateWhenDisabled=False,
             callback=self.options_changed)
         gui.checkBox(
             optionsbox, self, "case_sensitive", "Case sensitive",
@@ -322,6 +375,7 @@ class OWCreateClass(widget.OWWidget):
         # TODO: Indicator that changes need to be applied
 
     def options_changed(self):
+        self.controls.match_beginning.setEnabled(not self.regular_expressions)
         self.update_counts()
 
     def adjust_n_rule_rows(self):
@@ -404,20 +458,45 @@ class OWCreateClass(widget.OWWidget):
         return [label_edit.text() or "C{}".format(next(class_count))
                 for label_edit, _ in self.line_edits]
 
+    def check_patterns(self):
+        if not self.regular_expressions:
+            return True
+        for pattern in self.active_rules:
+            try:
+                re.compile(pattern[1])
+            except re.error:
+                return False
+        return True
+
     def update_counts(self):
         """Recompute and update the counts of matches."""
-        def _matcher(strings, pattern):
-            """Return indices of strings into patterns; consider case
-            sensitivity and matching at the beginning. The given strings are
-            assumed to be in lower case if match is case insensitive. Patterns
-            are fixed on the fly."""
-            if not self.case_sensitive:
-                pattern = pattern.lower()
-            indices = np.char.find(strings, pattern.strip())
-            return indices == 0 if self.match_beginning else indices != -1
+        if self.regular_expressions:
+            def _matcher(strings, pattern):
+                # Note that similar code repeats in map_by_substring.
+                # Any changes here should be reflected there.
+                re_pattern = re.compile(
+                    pattern,
+                    re.IGNORECASE if not self.case_sensitive else 0)
+                return np.array([bool(re_pattern.search(s)) for s in strings],
+                                 dtype=bool)
 
-        def _lower_if_needed(strings):
-            return strings if self.case_sensitive else np.char.lower(strings)
+            def _lower_if_needed(strings):
+                return strings
+        else:
+            def _matcher(strings, pattern):
+                """Return indices of strings into patterns; consider case
+                sensitivity and matching at the beginning. The given strings are
+                assumed to be in lower case if match is case insensitive. Patterns
+                are fixed on the fly."""
+                # Note that similar code repeats in map_by_substring.
+                # Any changes here should be reflected there.
+                if not self.case_sensitive:
+                    pattern = pattern.lower()
+                indices = np.char.find(strings, pattern.strip())
+                return indices == 0 if self.match_beginning else indices != -1
+
+            def _lower_if_needed(strings):
+                return strings if self.case_sensitive else np.char.lower(strings)
 
         def _string_counts():
             """
@@ -496,6 +575,11 @@ class OWCreateClass(widget.OWWidget):
                     lab_edit.setPlaceholderText(label)
 
         _clear_labels()
+        if not self.check_patterns():
+            self.Error.invalid_regular_expression()
+            return
+        self.Error.invalid_regular_expression.clear()
+
         attr = self.attribute
         if attr is None:
             return
@@ -510,6 +594,11 @@ class OWCreateClass(widget.OWWidget):
     def apply(self):
         """Output the transformed data."""
         self.Error.clear()
+        if not self.check_patterns():
+            self.Error.invalid_regular_expression()
+            self.Outputs.data.send(None)
+            return
+
         self.class_name = self.class_name.strip()
         if not self.attribute:
             self.Outputs.data.send(None)
@@ -541,19 +630,21 @@ class OWCreateClass(widget.OWWidget):
             if valid)
         transformer = self.TRANSFORMERS[type(self.attribute)]
 
-        # join patters with the same names
+        # join patterns with the same names
         names, map_values = unique_in_order_mapping(names)
         names = tuple(str(a) for a in names)
         map_values = tuple(map_values)
 
         var_key = (self.attribute, self.class_name, names,
-                   patterns, self.case_sensitive, self.match_beginning, map_values)
+                   patterns, self.case_sensitive, self.match_beginning,
+                   self.regular_expressions, map_values)
         if var_key in self.cached_variables:
             return self.cached_variables[var_key]
 
         compute_value = transformer(
-            self.attribute, patterns, self.case_sensitive, self.match_beginning,
-            map_values)
+            self.attribute, patterns, self.case_sensitive,
+            self.match_beginning and not self.regular_expressions,
+            map_values, self.regular_expressions)
         new_var = DiscreteVariable(
             self.class_name, names, compute_value=compute_value)
         self.cached_variables[var_key] = new_var

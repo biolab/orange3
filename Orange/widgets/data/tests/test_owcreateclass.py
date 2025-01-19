@@ -23,54 +23,84 @@ class TestHelpers(unittest.TestCase):
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "bc", ""],
-                             case_sensitive=True, match_beginning=False),
+                             case_sensitive=True, match_beginning=False,
+                             regular_expressions=False),
             [0, 1, 2, 0, 3])
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "Bc", ""],
-                             case_sensitive=True, match_beginning=False),
+                             case_sensitive=True, match_beginning=False,
+                             regular_expressions=False),
             [0, 1, 3, 0, 3])
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "Bc", ""],
-                             case_sensitive=False, match_beginning=False),
+                             case_sensitive=False, match_beginning=False,
+                             regular_expressions=False),
             [0, 1, 2, 0, 3])
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "bc", ""],
-                             case_sensitive=False, match_beginning=True),
+                             case_sensitive=False, match_beginning=True,
+                             regular_expressions=False),
             [0, 1, 2, 3, 3])
         np.testing.assert_equal(
-            map_by_substring(self.arr, ["", ""], False, False),
+            map_by_substring(self.arr, ["", ""], False, False, False),
             0)
         self.assertTrue(np.all(np.isnan(
-            map_by_substring(self.arr, [], False, False))))
+            map_by_substring(self.arr, [], False, False, False))))
 
     def test_map_by_substring_with_map_values(self):
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "bc", ""],
                              case_sensitive=True, match_beginning=False,
+                             regular_expressions=False,
                              map_values=None),
             [0, 1, 2, 0, 3])
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "bc", ""],
                              case_sensitive=True, match_beginning=False,
+                             regular_expressions=False,
                              map_values=[0, 1, 2, 3]),
             [0, 1, 2, 0, 3])
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "bc", ""],
                              case_sensitive=True, match_beginning=False,
+                             regular_expressions=False,
                              map_values=[1, 0, 3, 2]),
             [1, 0, 3, 1, 2])
         np.testing.assert_equal(
             map_by_substring(self.arr,
                              ["abc", "a", "bc", ""],
                              case_sensitive=True, match_beginning=False,
+                             regular_expressions=False,
                              map_values=[1, 1, 0, 0]),
             [1, 1, 0, 1, 0])
+
+    def test_map_by_regular_expression(self):
+        # arr: ["abcd", "aa", "bcd", "rabc", "x"])
+        np.testing.assert_equal(
+            map_by_substring(self.arr,
+                             ["a.*C", "a", "b.*c", ""],
+                             case_sensitive=True, match_beginning=False,
+                             regular_expressions=True),
+            [1, 1, 2, 1, 3])
+        np.testing.assert_equal(
+            map_by_substring(self.arr,
+                             ["a.*C", "a", "b.*c", ""],
+                             case_sensitive=False, match_beginning=False,
+                             regular_expressions=True),
+            [0, 1, 2, 0, 3])
+        np.testing.assert_equal(
+            map_by_substring(self.arr,
+                                ["a.*C", "a", "b.*c", ""],
+                                case_sensitive=False, match_beginning=False,
+                                regular_expressions=True,
+                                map_values=[1, 0, 3, 2]),
+            [1, 0, 3, 1, 2])
 
     @staticmethod
     def test_unique_in_order_mapping():
@@ -105,11 +135,13 @@ class TestHelpers(unittest.TestCase):
 
         with patch('Orange.widgets.data.owcreateclass.map_by_substring') as mbs:
             trans.transform(self.arr)
-            a, patterns, case_sensitive, match_beginning, map_values = mbs.call_args[0]
+            a, patterns, case_sensitive, match_beginning, \
+                regular_expressions, map_values = mbs.call_args[0]
             np.testing.assert_equal(a, self.arr)
             self.assertEqual(patterns, self.patterns)
             self.assertFalse(case_sensitive)
             self.assertFalse(match_beginning)
+            self.assertFalse(regular_expressions)
             self.assertIsNone(map_values)
 
             trans.transform(arr2)
@@ -125,16 +157,27 @@ class TestHelpers(unittest.TestCase):
         with patch('Orange.widgets.data.owcreateclass.map_by_substring') as mbs:
             trans.case_sensitive = True
             trans.transform(self.arr)
-            case_sensitive, match_beginning = mbs.call_args[0][-3:-1]
+            case_sensitive, match_beginning, regular_expressions = mbs.call_args[0][-4:-1]
             self.assertTrue(case_sensitive)
             self.assertFalse(match_beginning)
+            self.assertFalse(regular_expressions)
 
             trans.case_sensitive = False
             trans.match_beginning = True
             trans.transform(self.arr)
-            case_sensitive, match_beginning = mbs.call_args[0][-3:-1]
+            case_sensitive, match_beginning, regular_expressions = mbs.call_args[0][-4:-1]
             self.assertFalse(case_sensitive)
             self.assertTrue(match_beginning)
+            self.assertFalse(regular_expressions)
+
+            trans.case_sensitive = False
+            trans.match_beginning = False
+            trans.regular_expressions = True
+            trans.transform(self.arr)
+            case_sensitive, match_beginning, regular_expressions = mbs.call_args[0][-4:-1]
+            self.assertFalse(case_sensitive)
+            self.assertFalse(match_beginning)
+            self.assertTrue(regular_expressions)
 
     def test_value_from_discrete_substring(self):
         trans = ValueFromDiscreteSubstring(
@@ -146,39 +189,57 @@ class TestHelpers(unittest.TestCase):
             DiscreteVariable("x", values=self.arr), self.patterns)
         with patch('Orange.widgets.data.owcreateclass.map_by_substring') as mbs:
             trans.case_sensitive = True
-            a, patterns, case_sensitive, match_beginning, map_values = mbs.call_args[0]
+            a, patterns, case_sensitive, match_beginning, \
+                regular_expressions, map_values = mbs.call_args[0]
             np.testing.assert_equal(a, self.arr)
             self.assertEqual(patterns, self.patterns)
             self.assertTrue(case_sensitive)
             self.assertFalse(match_beginning)
+            self.assertFalse(regular_expressions)
             self.assertIsNone(map_values)
 
             trans.case_sensitive = False
             trans.match_beginning = True
-            a, patterns, case_sensitive, match_beginning, map_values = mbs.call_args[0]
+            a, patterns, case_sensitive, match_beginning, \
+                regular_expressions, map_values = mbs.call_args[0]
             np.testing.assert_equal(a, self.arr)
             self.assertEqual(patterns, self.patterns)
             self.assertFalse(case_sensitive)
             self.assertTrue(match_beginning)
+            self.assertFalse(regular_expressions)
             self.assertIsNone(map_values)
 
             arr2 = self.arr[::-1]
             trans.variable = DiscreteVariable("x", values=arr2)
-            a, patterns, case_sensitive, match_beginning, map_values = mbs.call_args[0]
+            a, patterns, case_sensitive, match_beginning, \
+                regular_expressions, map_values = mbs.call_args[0]
             np.testing.assert_equal(a, arr2)
             self.assertEqual(patterns, self.patterns)
             self.assertFalse(case_sensitive)
             self.assertTrue(match_beginning)
+            self.assertFalse(regular_expressions)
             self.assertIsNone(map_values)
 
             patt2 = self.patterns[::-1]
             trans.patterns = patt2
-            a, patterns, case_sensitive, match_beginning, map_values = mbs.call_args[0]
+            a, patterns, case_sensitive, match_beginning, \
+                regular_expressions, map_values = mbs.call_args[0]
             np.testing.assert_equal(a, arr2)
             self.assertEqual(patterns, patt2)
             self.assertFalse(case_sensitive)
             self.assertTrue(match_beginning)
+            self.assertFalse(regular_expressions)
             self.assertIsNone(map_values)
+
+            trans.case_sensitive = False
+            trans.match_beginning = False
+            trans.regular_expressions = True
+            trans.patterns = patt2
+            a, patterns, case_sensitive, match_beginning, \
+                regular_expressions, map_values = mbs.call_args[0]
+            self.assertFalse(case_sensitive)
+            self.assertFalse(match_beginning)
+            self.assertTrue(regular_expressions)
 
     def test_valuefromstringsubstring_equality(self):
         str1 = StringVariable("d1")
@@ -211,6 +272,15 @@ class TestHelpers(unittest.TestCase):
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
 
+        t1 = ValueFromStringSubstring(str1, ["abc", "def"], True, False, None)
+        t1a = ValueFromStringSubstring(str1a, ["abc", "def"], True, False, np.array([1, 2]))
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
+
+        t1 = ValueFromStringSubstring(str1, ["abc", "def"], True, False, None, True)
+        t1a = ValueFromStringSubstring(str1a, ["abc", "def"], True, False, None, False)
+        self.assertNotEqual(t1, t1a)
+        self.assertNotEqual(hash(t1), hash(t1a))
 
     def test_valuefromsdiscretesubstring_equality(self):
         str1 = DiscreteVariable("d1", values=("abc", "ghi"))
@@ -256,6 +326,7 @@ class TestOWCreateClass(WidgetTest):
         attr_combo.activated.emit(idx)
 
     def _check_counts(self, expected):
+        self.assertEqual(len(self.widget.counts), len(expected))
         for countrow, expectedrow in zip(self.widget.counts, expected):
             for count, exp in zip(countrow, expectedrow):
                 self.assertEqual(count.text(), exp)
@@ -310,6 +381,43 @@ class TestOWCreateClass(WidgetTest):
         has_a = np.char.find(attr, "a") != -1
         np.testing.assert_equal(classes[has_a], 0)
         np.testing.assert_equal(classes[~has_a], 1)
+
+    def test_check_patterns(self):
+        widget = self.widget
+        widget.line_edits[0][1].setText("[a")
+
+        widget.regular_expressions = False
+        self.assertTrue(widget.check_patterns())
+
+        widget.regular_expressions = True
+        self.assertFalse(widget.check_patterns())
+
+    def test_check_re_counts(self):
+        widget = self.widget
+        self.send_signal(self.widget.Inputs.data, self.zoo)
+
+        widget.line_edits[0][1].setText("a.*a")
+        widget.line_edits[1][1].setText("b")
+        widget.add_row()
+
+        self._check_counts([["0", ""], ["34", ""], ["67", ""]])
+
+        widget.controls.regular_expressions.click()
+        self._check_counts([["45", ""], ["30", "+ 4"], ["26", ""]])
+        widget.apply()
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
+
+        widget.line_edits[0][1].setText("a[.*a")
+        self._check_counts([["", ""], ["", ""], ["", ""]])
+        self.assertTrue(widget.Error.invalid_regular_expression.is_shown())
+        widget.apply()
+        self.assertIsNone(self.get_output(self.widget.Outputs.data))
+
+        widget.line_edits[0][1].setText("a.*a")
+        self._check_counts([["45", ""], ["30", "+ 4"], ["26", ""]])
+        self.assertFalse(widget.Error.invalid_regular_expression.is_shown())
+        widget.apply()
+        self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
 
     def _set_repeated(self):
         widget = self.widget
@@ -482,7 +590,7 @@ class TestOWCreateClass(WidgetTest):
 
         widget.remove_buttons[1].click()
         self._check_counts([["117", ""], ["166", "+ 117"], ["18", "+ 117"],
-                            ["", ""], ["", ""]])
+                            ["", ""]])
         self.assertEqual([lab.text() for _, lab in widget.line_edits],
                          ["eversa", "a", "c", "b"])
 
@@ -504,16 +612,22 @@ class TestOWCreateClass(WidgetTest):
             widget.apply()
             outdata = self.get_output(self.widget.Outputs.data)
             transformer = outdata.domain.class_var.compute_value
-            return transformer.case_sensitive, transformer.match_beginning
+            return (transformer.case_sensitive,
+                    transformer.match_beginning,
+                    transformer.regular_expressions)
 
         widget = self.widget
         self.send_signal(self.widget.Inputs.data, self.heart)
-        self.assertEqual(_transformer_flags(), (False, False))
+        self.assertEqual(_transformer_flags(), (False, False, False))
         widget.controls.case_sensitive.click()
-        self.assertEqual(_transformer_flags(), (True, False))
+        self.assertEqual(_transformer_flags(), (True, False, False))
         widget.controls.case_sensitive.click()
         widget.controls.match_beginning.click()
-        self.assertEqual(_transformer_flags(), (False, True))
+        self.assertEqual(_transformer_flags(), (False, True, False))
+        widget.controls.regular_expressions.click()
+        # match_beginning is set to True, but a False is passed because
+        # we have regular expressions
+        self.assertEqual(_transformer_flags(), (False, False, True))
 
     def test_report(self):
         """Report does not crash"""
