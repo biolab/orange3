@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring,protected-access
+# pylint: disable=missing-docstring,protected-access,too-many-public-methods
 from os import path, remove, getcwd
 from os.path import dirname
 import unittest
@@ -23,7 +23,7 @@ from Orange.data import FileFormat, dataset_dirs, StringVariable, Table, \
     Domain, DiscreteVariable, ContinuousVariable
 from Orange.util import OrangeDeprecationWarning
 
-from Orange.data.io import TabReader, XlsReader
+from Orange.data.io import TabReader
 from Orange.tests import named_file
 from Orange.widgets.data.owfile import OWFile, OWFileDropHandler, DEFAULT_READER_TEXT
 from Orange.widgets.utils.filedialogs import dialog_formats, format_filter, RecentPath
@@ -41,7 +41,9 @@ class FailedSheetsFormat(FileFormat):
     def read(self):
         pass
 
+    @property
     def sheets(self):
+        # pylint: disable=broad-exception-raised
         raise Exception("Not working")
 
 
@@ -137,6 +139,7 @@ class TestOWFile(WidgetTest):
     def test_check_file_size(self):
         self.assertFalse(self.widget.Warning.file_too_big.is_shown())
         self.widget.SIZE_LIMIT = 4000
+        # We're avoiding __new__, pylint: disable=unnecessary-dunder-call
         self.widget.__init__()
         self.assertTrue(self.widget.Warning.file_too_big.is_shown())
 
@@ -337,7 +340,9 @@ a
         with named_file(dat, suffix=".tab") as filename:
             self.open_dataset(filename)
             domain_editor = self.widget.domain_editor
-            idx = lambda x: self.widget.domain_editor.model().createIndex(x, 1)
+
+            def idx(x):
+                return self.widget.domain_editor.model().createIndex(x, 1)
 
             qcombobox = QComboBox()
             combo = ComboDelegate(domain_editor,
