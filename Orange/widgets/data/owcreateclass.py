@@ -301,9 +301,9 @@ class OWCreateClass(widget.OWWidget):
         rules_box.addWidget(QLabel("Count"), 0, 3, 1, 2)
         self.update_rules()
 
-        widget = QWidget(patternbox)
-        widget.setLayout(rules_box)
-        patternbox.layout().addWidget(widget)
+        widg = QWidget(patternbox)
+        widg.setLayout(rules_box)
+        patternbox.layout().addWidget(widg)
 
         box = gui.hBox(patternbox)
         gui.rubber(box)
@@ -398,8 +398,8 @@ class OWCreateClass(widget.OWWidget):
             self.rules_box.addWidget(button, n_lines, 0)
             self.counts.append([])
             for coli, kwargs in enumerate(
-                    (dict(),
-                     dict(styleSheet="color: gray"))):
+                    ({},
+                     {"styleSheet": "color: gray"})):
                 label = QLabel(alignment=Qt.AlignCenter, **kwargs)
                 self.counts[-1].append(label)
                 self.rules_box.addWidget(label, n_lines, 3 + coli)
@@ -455,7 +455,7 @@ class OWCreateClass(widget.OWWidget):
                          if re.match("^C\\d+", label)),
                         default=0)
         class_count = count(largest_c + 1)
-        return [label_edit.text() or "C{}".format(next(class_count))
+        return [label_edit.text() or f"C{next(class_count)}"
                 for label_edit, _ in self.line_edits]
 
     def check_patterns(self):
@@ -548,9 +548,9 @@ class OWCreateClass(widget.OWWidget):
             for (n_matched, n_total), (lab_matched, lab_total), (lab, patt) in \
                     zip(self.match_counts, self.counts, self.active_rules):
                 n_before = n_total - n_matched
-                lab_matched.setText("{}".format(n_matched))
+                lab_matched.setText(f"{n_matched}")
                 if n_before and (lab or patt):
-                    lab_total.setText("+ {}".format(n_before))
+                    lab_total.setText(f"+ {n_before}")
                     if n_matched:
                         tip = f"{n_before} o" \
                               f"f {n_total} matching {pl(n_total, 'instance')} " \
@@ -688,10 +688,10 @@ class OWCreateClass(widget.OWWidget):
         for (n_matched, n_total), class_name, (lab, patt) in \
                 zip(self.match_counts, names, self.active_rules):
             if lab or patt or n_total:
-                output += "<li>{}; {}</li>".format(_cond_part(), _count_part())
+                output += f"<li>{_cond_part()}; {_count_part()}</li>"
         if output:
             self.report_items("Output", [("Class name", self.class_name)])
-            self.report_raw("<ol>{}</ol>".format(output))
+            self.report_raw(f"<ol>{output}</ol>")
 
 
 if __name__ == "__main__":  # pragma: no cover

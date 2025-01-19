@@ -4763,14 +4763,15 @@ widgets/data/owcreateclass.py:
         def `adjust_n_rule_rows`:
             def `_add_line`:
                 ×: true
+                styleSheet: false
                 'color: gray': false
         def `class_labels`:
             ^C\\d+: true
-            C{}: true
+            C{next(class_count)}: true
         def `update_counts`:
             def `_set_labels`:
-                {}: true
-                + {}: true
+                {n_matched}: false
+                + {n_before}: false
                 {n_before} o: {n_before} od
                 "f {n_total} matching {pl(n_total, 'instance')} ": " {n_total} {plsi(n_total, 'pojavitve|pojavitev|pojavitev')} "
                 {pl(n_before, 'is|are')} already covered above.: {plsi(n_before, 'je že pokrita|sta že pokriti|so že pokrite|je že pokritih')} s predhodnimi vzorci.
@@ -4793,10 +4794,10 @@ widgets/data/owcreateclass.py:
                 " (+{n_already} that {pl(n_already, 'is|are')} {aca})": " (+{n_already}, ki {pl(n_already, 'je že pokrita|sta že pokriti|so že pokrite|je že pokritih')} {aca})"
             Input: Vhod
             Source attribute: Izvorni stolpec
-            <li>{}; {}</li>: false
+            <li>{_cond_part()}; {_count_part()}</li>: false
             Output: Izhod
             Class name: Ime razreda
-            <ol>{}</ol>: false
+            <ol>{output}</ol>: false
     __main__: false
     zoo: false
 widgets/data/owcreateinstance.py:
