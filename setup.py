@@ -11,8 +11,6 @@ from distutils.command.build_ext import build_ext
 from distutils.command import config, build
 from distutils.core import Extension
 
-from trubar import translate
-
 try:
     import numpy
     have_numpy = True
@@ -488,6 +486,10 @@ class InstallMultilingualCommand(install):
         self.compile_to_multilingual()
 
     def compile_to_multilingual(self):
+        # Import locally so that editable install won't require trubar
+        # pylint: disable=import-outside-toplevel
+        from trubar import translate
+
         package_dir = os.path.dirname(os.path.abspath(__file__))
         translate(
             "msgs.jaml",
