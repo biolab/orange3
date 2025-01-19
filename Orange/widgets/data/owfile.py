@@ -9,7 +9,6 @@ from AnyQt.QtWidgets import \
     QStyle, QComboBox, QMessageBox, QGridLayout, QLabel, \
     QLineEdit, QSizePolicy as Policy, QCompleter
 from AnyQt.QtCore import Qt, QTimer, QSize, QUrl
-from AnyQt.QtGui import QBrush
 
 from orangewidget.utils.filedialogs import format_filter
 from orangewidget.workflow.drophandler import SingleUrlDropHandler
@@ -327,6 +326,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
             self.set_file_list()
 
     def select_sheet(self):
+        # pylint: disable=unsubscriptable-object
         self.recent_paths[0].sheet = self.sheet_combo.currentText()
         self.load_data()
 
@@ -339,7 +339,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
             return  # ignore for URL's
 
         if self.recent_paths:
-            path = self.recent_paths[0]
+            path = self.recent_paths[0]  # pylint: disable=unsubscriptable-object
             if n == 0:  # default
                 path.file_format = None
             elif n <= len(self.available_readers):
@@ -384,6 +384,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
             return
         self.add_path(filename)
         if reader is not None:
+            # pylint: disable=unsubscriptable-object
             self.recent_paths[0].file_format = reader.qualified_name()
 
         self.source = self.LOCAL_FILE
@@ -479,6 +480,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
             path = self.last_path()
             self.reader_combo.setEnabled(True)
 
+            # pylint: disable=unsubscriptable-object
             if self.recent_paths and self.recent_paths[0].file_format:
                 qname = self.recent_paths[0].file_format
                 qname_index = {r.qualified_name(): i for i, r in enumerate(self.available_readers)}
@@ -508,6 +510,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
                     self.select_reader(old_idx)
                     return self._get_reader()
 
+            # pylint: disable=unsubscriptable-object
             if self.recent_paths and self.recent_paths[0].sheet:
                 reader.select_sheet(self.recent_paths[0].sheet)
             return reader
@@ -597,10 +600,12 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
         return text
 
     def storeSpecificSettings(self):
+        # pylint: disable=unsubscriptable-object
         self.current_context.modified_variables = self.variables[:]
 
     def retrieveSpecificSettings(self):
         if hasattr(self.current_context, "modified_variables"):
+            # pylint: disable=unsubscriptable-object
             self.variables[:] = self.current_context.modified_variables
 
     def reset_domain_edit(self):
