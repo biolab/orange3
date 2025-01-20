@@ -1074,19 +1074,14 @@ class OWPaintData(OWWidget):
 
         self.commit.deferred()
 
-    def add_new_class_label(self, undoable=True):
-
+    def add_new_class_label(self):
         newlabel = next(label for label in namegen('C', 1)
                         if label not in self.class_model)
-
         command = SimpleUndoCommand(
             lambda: self.class_model.append(newlabel),
             lambda: self.class_model.__delitem__(-1)
         )
-        if undoable:
-            self.undo_stack.push(command)
-        else:
-            command.redo()
+        self.undo_stack.push(command)
 
     def remove_selected_class_label(self):
         index = self.selected_class_label()

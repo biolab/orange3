@@ -13,6 +13,7 @@ from AnyQt.QtTest import QTest
 from orangecanvas.gui.test import mouseMove
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
+from Orange.widgets.utils import itemmodels
 from Orange.widgets.data import owpaintdata
 from Orange.widgets.data.owpaintdata import OWPaintData
 from Orange.widgets.tests.base import WidgetTest, datasets
@@ -179,6 +180,32 @@ class TestOWPaintData(WidgetTest):
         mouse_path(stroke)
         w.undo_stack.undo()
         assert_close(w.data[0], p0)
+
+    def test_add_remove_class(self):
+        def put_instance():
+            w.set_current_tool(owpaintdata.PutInstanceTool)
+            QTest.mouseClick(viewport, Qt.LeftButton)
+
+        def assert_class_column_equal(data):
+            assert_array_equal(np.array(w.data)[:, 2].ravel(), data)
+
+        w = self.widget
+        viewport = w.plotview.viewport()
+        put_instance()
+        itemmodels.select_row(w.classValuesView, 1)
+        put_instance()
+        w.add_new_class_label()
+        itemmodels.select_row(w.classValuesView, 2)
+        put_instance()
+        self.assertSequenceEqual(w.class_model, ["C1", "C2", "C3"])
+        assert_class_column_equal([0, 1, 2])
+        itemmodels.select_row(w.classValuesView, 0)
+        w.remove_selected_class_label()
+        self.assertSequenceEqual(w.class_model, ["C2", "C3"])
+        assert_class_column_equal([0, 1])
+        w.undo_stack.undo()
+        self.assertSequenceEqual(w.class_model, ["C1", "C2", "C3"])
+        assert_class_column_equal([0, 1, 2])
 
 
 class TestCommands(unittest.TestCase):
