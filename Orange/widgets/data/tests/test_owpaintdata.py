@@ -3,11 +3,14 @@
 import unittest
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_almost_equal
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QRectF, QPointF, QEvent, Qt
+from AnyQt.QtCore import QRectF, QPointF, QPoint ,QEvent, Qt
 from AnyQt.QtGui import QMouseEvent
+from AnyQt.QtTest import QTest
+
+from orangecanvas.gui.test import mouseMove
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
 from Orange.widgets.data import owpaintdata
@@ -122,6 +125,60 @@ class TestOWPaintData(WidgetTest):
         self.widget.reset_to_input()
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(output), len(data))
+
+    def test_tools_interaction(self):
+        def mouse_path(stroke, button=Qt.LeftButton, delay=50):
+            assert len(stroke) > 2
+            QTest.mousePress(viewport, button, pos=stroke[0], delay=delay)
+            for p in stroke[1:-1]:
+                mouseMove(viewport, button, pos=p, delay=delay)
+            QTest.mouseRelease(viewport, button, pos=stroke[-1], delay=delay)
+
+        def assert_close(p1, p2):
+            assert_almost_equal(np.array(p1), np.array(p2))
+
+        w = self.widget
+        w.adjustSize()
+        viewport = w.plotview.viewport()
+        center = viewport.rect().center()
+        # Put single point
+        w.set_current_tool(owpaintdata.PutInstanceTool)
+        QTest.mouseClick(viewport, Qt.LeftButton)
+        p0 = w.data[0]
+        # Air brush stroke
+        w.set_current_tool(owpaintdata.AirBrushTool)
+        mouse_path([center, center + QPoint(5, 5), center + QPoint(5, 10), center + QPoint(0, 10)])
+
+        w.set_current_tool(owpaintdata.SelectTool)
+
+        # Draw selection rect
+        mouse_path([center - QPoint(100, 100), center, center + QPoint(100, 100)])
+        # Move selection
+        mouse_path([center, center + QPoint(30, 30), center + QPoint(50, 50)])
+        self.assertNotEqual(w.data[0], p0)
+        count = len(w.data)
+
+        w.current_tool.delete()  #
+        self.assertNotEqual(len(w.data), count)
+
+        w.set_current_tool(owpaintdata.ClearTool)
+        self.assertEqual(len(w.data), 0)
+        w.undo_stack.undo() # clear
+        w.undo_stack.undo() # delete selection
+        w.undo_stack.undo() # move
+        assert_close(w.data[0], p0)
+
+        stroke = [center - QPoint(10, 10), center, center + QPoint(10, 10)]
+
+        w.set_current_tool(owpaintdata.MagnetTool)
+        mouse_path(stroke)
+        w.undo_stack.undo()
+        assert_close(w.data[0], p0)
+
+        w.set_current_tool(owpaintdata.JitterTool)
+        mouse_path(stroke)
+        w.undo_stack.undo()
+        assert_close(w.data[0], p0)
 
 
 class TestCommands(unittest.TestCase):
