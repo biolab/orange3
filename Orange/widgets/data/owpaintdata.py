@@ -638,14 +638,19 @@ def indices_eq(ind1, ind2):
         return all(indices_eq(i1, i2) for i1, i2 in zip(ind1, ind2))
     elif isinstance(ind1, range) and isinstance(ind2, range):
         return ind1 == ind2
-    elif ind1 is ... and ind2 is ...:
-        return True
 
-    ind1, ind1 = np.array(ind1), np.array(ind2)
+    ind1, ind2 = np.array(ind1), np.array(ind2)
 
     if ind1.shape != ind2.shape or ind1.dtype != ind2.dtype:
         return False
     return (ind1 == ind2).all()
+
+
+def merged_range(r1: range, r2: range) -> range | None:
+    r1, r2 = sorted([r1, r2], key=lambda r: r.start)
+    if r1.stop == r2.start and r1.step == r2.step:
+        return range(r1.start, r2.stop, r1.step)
+    return None
 
 
 def merge_cmd(composit):
@@ -662,9 +667,10 @@ def merge_cmd(composit):
             return Move(f.indices, f.delta + g.delta)
         else:
             return composit
-    elif isinstance(f, DeleteIndices) and isinstance(g, DeleteIndices):
-        indices = np.fromiter(itertools.chain(g.indices, f.indices), int)
-        return DeleteIndices(indices)
+    elif isinstance(f, DeleteIndices) and isinstance(g, DeleteIndices) \
+            and isinstance(f.indices, range) and isinstance(g.indices, range) \
+            and (r := merged_range(f.indices, g.indices)) is not None:
+        return DeleteIndices(r)
     else:
         return composit
 

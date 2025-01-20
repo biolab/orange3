@@ -1,7 +1,9 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, protected-access
+import unittest
 
 import numpy as np
+from numpy.testing import assert_array_equal
 import scipy.sparse as sp
 
 from AnyQt.QtCore import QRectF, QPointF, QEvent, Qt
@@ -120,3 +122,35 @@ class TestOWPaintData(WidgetTest):
         self.widget.reset_to_input()
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(output), len(data))
+
+
+class TestCommands(unittest.TestCase):
+    def test_merge_cmd(self):  # pylint: disable=import-outside-toplevel
+        from Orange.widgets.data.owpaintdata import (
+            Append, Move, DeleteIndices, Composite, merge_cmd
+        )
+
+        def merge(a, b):
+            return merge_cmd(Composite(a, b))
+
+        a1 = Append(np.array([[0., 0., 1.], [1., 1., 0.]]))
+        a2 = Append(np.array([[2., 2., 1,]]))
+        c = merge(a1, a2)
+        self.assertIsInstance(c, Append)
+        assert_array_equal(c.points, np.array([[0., 0., 1.], [1, 1, 0], [2, 2, 1]]))
+        m1 = Move(range(2), np.array([1., 1., 0.]))
+        m2 = Move(range(2), np.array([.5, .5, -1]))
+        c = merge(m1, m2)
+        self.assertIsInstance(c, Move)
+        assert_array_equal(c.delta,  np.array([1.5, 1.5, -1]))
+        c = merge(m1, Move(range(100, 102), np.array([1., 1., 1.])))
+        self.assertIsInstance(c, Composite)
+
+        c = merge(m1, Move([100, 105], np.array([0., 0, 0])))
+        self.assertIsInstance(c, Composite)
+
+        d1 = DeleteIndices(range(0, 3))
+        d2 = DeleteIndices(range(3, 5))
+        c = merge(d1, d2)
+        self.assertIsInstance(c, DeleteIndices)
+        self.assertEqual(c.indices, range(0, 5))
