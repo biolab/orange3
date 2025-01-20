@@ -1100,7 +1100,7 @@ class OWPaintData(OWWidget):
 
         self.undo_stack.beginMacro("Delete class label")
         self.undo_stack.push(UndoCommand(DeleteIndices(mask), self))
-        self.undo_stack.push(UndoCommand(Move((move_mask, 2), -1), self))
+        self.undo_stack.push(UndoCommand(Move((move_mask, range(2, 3)), -1), self))
         self.undo_stack.push(
             SimpleUndoCommand(lambda: self.class_model.__delitem__(index),
                               lambda: self.class_model.insert(index, label)))
