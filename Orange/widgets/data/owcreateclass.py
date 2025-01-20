@@ -250,7 +250,7 @@ class OWCreateClass(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         class_name_duplicated = Msg("Class name duplicated.")
         class_name_empty = Msg("Class name should not be empty.")
-        invalid_regular_expression = Msg("Invalid regular expression.")
+        invalid_regular_expression = Msg("Invalid regular expression: {}")
 
     def __init__(self):
         super().__init__()
@@ -458,15 +458,15 @@ class OWCreateClass(widget.OWWidget):
         return [label_edit.text() or f"C{next(class_count)}"
                 for label_edit, _ in self.line_edits]
 
-    def check_patterns(self):
+    def invalid_patterns(self):
         if not self.regular_expressions:
-            return True
-        for pattern in self.active_rules:
+            return None
+        for _, pattern in self.active_rules:
             try:
-                re.compile(pattern[1])
+                re.compile(pattern)
             except re.error:
-                return False
-        return True
+                return pattern
+        return None
 
     def update_counts(self):
         """Recompute and update the counts of matches."""
@@ -575,8 +575,8 @@ class OWCreateClass(widget.OWWidget):
                     lab_edit.setPlaceholderText(label)
 
         _clear_labels()
-        if not self.check_patterns():
-            self.Error.invalid_regular_expression()
+        if (invalid := self.invalid_patterns()) is not None:
+            self.Error.invalid_regular_expression(invalid)
             return
         self.Error.invalid_regular_expression.clear()
 
@@ -594,8 +594,8 @@ class OWCreateClass(widget.OWWidget):
     def apply(self):
         """Output the transformed data."""
         self.Error.clear()
-        if not self.check_patterns():
-            self.Error.invalid_regular_expression()
+        if (invalid := self.invalid_patterns()) is not None:
+            self.Error.invalid_regular_expression(invalid)
             self.Outputs.data.send(None)
             return
 

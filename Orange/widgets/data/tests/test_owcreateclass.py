@@ -387,10 +387,10 @@ class TestOWCreateClass(WidgetTest):
         widget.line_edits[0][1].setText("[a")
 
         widget.regular_expressions = False
-        self.assertTrue(widget.check_patterns())
+        self.assertIsNone(widget.invalid_patterns())
 
         widget.regular_expressions = True
-        self.assertFalse(widget.check_patterns())
+        self.assertEqual(widget.invalid_patterns(), "[a")
 
     def test_check_re_counts(self):
         widget = self.widget
@@ -407,13 +407,14 @@ class TestOWCreateClass(WidgetTest):
         widget.apply()
         self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
 
-        widget.line_edits[0][1].setText("a[.*a")
+        widget.line_edits[1][1].setText("b[")
         self._check_counts([["", ""], ["", ""], ["", ""]])
         self.assertTrue(widget.Error.invalid_regular_expression.is_shown())
+        self.assertIn("b[", str(widget.Error.invalid_regular_expression))
         widget.apply()
         self.assertIsNone(self.get_output(self.widget.Outputs.data))
 
-        widget.line_edits[0][1].setText("a.*a")
+        widget.line_edits[1][1].setText("b")
         self._check_counts([["45", ""], ["30", "+ 4"], ["26", ""]])
         self.assertFalse(widget.Error.invalid_regular_expression.is_shown())
         widget.apply()

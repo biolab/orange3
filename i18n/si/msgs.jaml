@@ -4741,7 +4741,7 @@ widgets/data/owcreateclass.py:
         class `Error`:
             Class name duplicated.: Spremenljivka s tem imenom že obstaja.
             Class name should not be empty.: Ime razreda ne more biti prazno.
-            Invalid regular expression.: Napačen regularni izraz.
+            'Invalid regular expression: {}': 'Napačen regularni izraz: {}'
         def `__init__`:
             class_name: false
             New Class Name: Ime novega razreda
