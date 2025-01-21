@@ -1,13 +1,19 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, protected-access
+import unittest
 
 import numpy as np
+from numpy.testing import assert_array_equal, assert_almost_equal
 import scipy.sparse as sp
 
-from AnyQt.QtCore import QRectF, QPointF, QEvent, Qt
+from AnyQt.QtCore import QRectF, QPointF, QPoint ,QEvent, Qt
 from AnyQt.QtGui import QMouseEvent
+from AnyQt.QtTest import QTest
+
+from orangecanvas.gui.test import mouseMove
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
+from Orange.widgets.utils import itemmodels
 from Orange.widgets.data import owpaintdata
 from Orange.widgets.data.owpaintdata import OWPaintData
 from Orange.widgets.tests.base import WidgetTest, datasets
@@ -120,3 +126,115 @@ class TestOWPaintData(WidgetTest):
         self.widget.reset_to_input()
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(output), len(data))
+
+    def test_tools_interaction(self):
+        def mouse_path(stroke, button=Qt.LeftButton, delay=50):
+            assert len(stroke) > 2
+            QTest.mousePress(viewport, button, pos=stroke[0], delay=delay)
+            for p in stroke[1:-1]:
+                mouseMove(viewport, button, pos=p, delay=delay)
+            QTest.mouseRelease(viewport, button, pos=stroke[-1], delay=delay)
+
+        def assert_close(p1, p2):
+            assert_almost_equal(np.array(p1), np.array(p2))
+
+        w = self.widget
+        w.adjustSize()
+        viewport = w.plotview.viewport()
+        center = viewport.rect().center()
+        # Put single point
+        w.set_current_tool(owpaintdata.PutInstanceTool)
+        QTest.mouseClick(viewport, Qt.LeftButton)
+        p0 = w.data[0]
+        # Air brush stroke
+        w.set_current_tool(owpaintdata.AirBrushTool)
+        mouse_path([center, center + QPoint(5, 5), center + QPoint(5, 10), center + QPoint(0, 10)])
+
+        w.set_current_tool(owpaintdata.SelectTool)
+
+        # Draw selection rect
+        mouse_path([center - QPoint(100, 100), center, center + QPoint(100, 100)])
+        # Move selection
+        mouse_path([center, center + QPoint(30, 30), center + QPoint(50, 50)])
+        self.assertNotEqual(w.data[0], p0)
+        count = len(w.data)
+
+        w.current_tool.delete()  #
+        self.assertNotEqual(len(w.data), count)
+
+        w.set_current_tool(owpaintdata.ClearTool)
+        self.assertEqual(len(w.data), 0)
+        w.undo_stack.undo() # clear
+        w.undo_stack.undo() # delete selection
+        w.undo_stack.undo() # move
+        assert_close(w.data[0], p0)
+
+        stroke = [center - QPoint(10, 10), center, center + QPoint(10, 10)]
+
+        w.set_current_tool(owpaintdata.MagnetTool)
+        mouse_path(stroke)
+        w.undo_stack.undo()
+        assert_close(w.data[0], p0)
+
+        w.set_current_tool(owpaintdata.JitterTool)
+        mouse_path(stroke)
+        w.undo_stack.undo()
+        assert_close(w.data[0], p0)
+
+    def test_add_remove_class(self):
+        def put_instance():
+            w.set_current_tool(owpaintdata.PutInstanceTool)
+            QTest.mouseClick(viewport, Qt.LeftButton)
+
+        def assert_class_column_equal(data):
+            assert_array_equal(np.array(w.data)[:, 2].ravel(), data)
+
+        w = self.widget
+        viewport = w.plotview.viewport()
+        put_instance()
+        itemmodels.select_row(w.classValuesView, 1)
+        put_instance()
+        w.add_new_class_label()
+        itemmodels.select_row(w.classValuesView, 2)
+        put_instance()
+        self.assertSequenceEqual(w.class_model, ["C1", "C2", "C3"])
+        assert_class_column_equal([0, 1, 2])
+        itemmodels.select_row(w.classValuesView, 0)
+        w.remove_selected_class_label()
+        self.assertSequenceEqual(w.class_model, ["C2", "C3"])
+        assert_class_column_equal([0, 1])
+        w.undo_stack.undo()
+        self.assertSequenceEqual(w.class_model, ["C1", "C2", "C3"])
+        assert_class_column_equal([0, 1, 2])
+
+
+class TestCommands(unittest.TestCase):
+    def test_merge_cmd(self):  # pylint: disable=import-outside-toplevel
+        from Orange.widgets.data.owpaintdata import (
+            Append, Move, DeleteIndices, Composite, merge_cmd
+        )
+
+        def merge(a, b):
+            return merge_cmd(Composite(a, b))
+
+        a1 = Append(np.array([[0., 0., 1.], [1., 1., 0.]]))
+        a2 = Append(np.array([[2., 2., 1,]]))
+        c = merge(a1, a2)
+        self.assertIsInstance(c, Append)
+        assert_array_equal(c.points, np.array([[0., 0., 1.], [1, 1, 0], [2, 2, 1]]))
+        m1 = Move(range(2), np.array([1., 1., 0.]))
+        m2 = Move(range(2), np.array([.5, .5, -1]))
+        c = merge(m1, m2)
+        self.assertIsInstance(c, Move)
+        assert_array_equal(c.delta,  np.array([1.5, 1.5, -1]))
+        c = merge(m1, Move(range(100, 102), np.array([1., 1., 1.])))
+        self.assertIsInstance(c, Composite)
+
+        c = merge(m1, Move([100, 105], np.array([0., 0, 0])))
+        self.assertIsInstance(c, Composite)
+
+        d1 = DeleteIndices(range(0, 3))
+        d2 = DeleteIndices(range(3, 5))
+        c = merge(d1, d2)
+        self.assertIsInstance(c, DeleteIndices)
+        self.assertEqual(c.indices, range(0, 5))
