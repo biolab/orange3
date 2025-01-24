@@ -1,3 +1,4 @@
+import codecs
 import os.path
 import subprocess
 from collections import defaultdict
@@ -45,6 +46,16 @@ def open_compressed(filename, *args, _open=open, **kwargs):
     # Else already a file, just pass it through
     return filename
 
+def _is_utf8_sig(filename: str) -> bool:
+    """Does filename start with an UTF-8 BOM."""
+    try:
+        with open(filename, "rb") as f:
+            bom = f.read(3)
+            return bom == codecs.BOM_UTF8
+    except OSError:  # pragma: no cover
+        return False
+
+
 
 def detect_encoding(filename):
     """
@@ -59,6 +70,9 @@ def detect_encoding(filename):
                 proc.wait()
                 if proc.returncode == 0:
                     encoding = proc.stdout.read().strip()
+                    # file does not detect/report UTF-8 BOM
+                    if encoding == b'utf-8':
+                        return "utf-8-sig" if _is_utf8_sig(filename) else "utf-8"
                     # file only supports these encodings; for others it says
                     # unknown-8bit or binary. So we give chardet a chance to do
                     # better
