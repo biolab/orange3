@@ -158,7 +158,7 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         Silhouette Plot now sets axis range properly.
         GH-2377
         """
-        nan = np.NaN
+        nan = np.nan
         table = Table.from_list(
             Domain(
                 [ContinuousVariable("a"), ContinuousVariable("b"), ContinuousVariable("c")],

@@ -56,7 +56,7 @@ class TestOWContinuize(WidgetTest):
     def test_one_column_nan_values_normalize_sd(self):
         table = Table("iris")
         with table.unlocked():
-            table[:, 2] = np.NaN
+            table[:, 2] = np.nan
         self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySD
         self.widget.continuous_treatment = 2
@@ -64,14 +64,14 @@ class TestOWContinuize(WidgetTest):
 
         table = Table("iris")
         with table.unlocked():
-            table[1, 2] = np.NaN
+            table[1, 2] = np.nan
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.commit.now()
 
     def test_one_column_nan_values_normalize_span(self):
         table = Table("iris")
         with table.unlocked():
-            table[:, 2] = np.NaN
+            table[:, 2] = np.nan
         self.send_signal(self.widget.Inputs.data, table)
         # Normalize.NormalizeBySpan
         self.widget.continuous_treatment = 1
@@ -79,7 +79,7 @@ class TestOWContinuize(WidgetTest):
 
         table = Table("iris")
         with table.unlocked():
-            table[1, 2] = np.NaN
+            table[1, 2] = np.nan
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.commit.now()
 
