@@ -371,7 +371,7 @@ cdef tuple prepare(X, y, is_discrete, contingencies):
     is_defined = np.logical_not(np.isnan(y))
     X = X[is_defined]
     y = y[is_defined]
-    attr_stats = np.row_stack((np.nanmean(X, 0), np.nanstd(X, 0)))
+    attr_stats = np.vstack((np.nanmean(X, 0), np.nanstd(X, 0)))
     is_discrete = np.asarray(is_discrete, dtype=np.int8)
     contingency_tables(X, y, is_discrete, contingencies)
     return X, y, attr_stats, is_discrete

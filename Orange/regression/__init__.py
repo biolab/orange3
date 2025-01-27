@@ -17,7 +17,7 @@ from .pls import *
 from ..classification.simple_tree import *
 try:
     from .catgb import *
-except ModuleNotFoundError:
+except Exception:
     pass
 from .gb import *
 try:

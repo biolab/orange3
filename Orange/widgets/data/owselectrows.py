@@ -652,7 +652,7 @@ class OWSelectRows(widget.OWWidget):
                 filters.negate = True
                 non_matching_output = filters(self.data)
 
-                row_sel = np.in1d(self.data.ids, matching_output.ids)
+                row_sel = np.isin(self.data.ids, matching_output.ids)
                 annotated_output = create_annotated_table(self.data, row_sel)
 
             # if hasattr(self.data, "name"):
