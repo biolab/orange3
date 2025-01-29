@@ -1252,11 +1252,14 @@ data/io_util.py:
         .gz: false
         .bz2: false
         .xz: false
+    def `_is_utf8_sig`:
+        rb: false
     def `detect_encoding`:
         file: false
         --brief: false
         --mime-encoding: false
         utf-8: false
+        utf-8-sig: false
         us-ascii: false
         iso-8859-1: false
         utf-7: false
