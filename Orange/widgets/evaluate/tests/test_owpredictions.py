@@ -702,6 +702,11 @@ class TestOWPredictions(WidgetTest):
         self.assertFalse(self.widget.Warning.missing_targets.is_shown())
         self.assertFalse(self.widget.Error.scorer_failed.is_shown())
 
+        self.send_signal(self.widget.Inputs.predictors, model)
+        self.assertTrue(self.widget.Warning.missing_targets.is_shown())
+        self.widget.controls.show_scores.setChecked(False)
+        self.assertFalse(self.widget.Warning.missing_targets.is_shown())
+
     def test_missing_target_reg(self):
         mask = np.zeros(len(self.housing), dtype=bool)
         mask[::2] = True
