@@ -9,38 +9,37 @@ Set color legend for variables.
 
 **Outputs**
 
-- Data: data set with a new color legend
+- Data: data set with new colors
 
-The **Color** widget sets the color legend for visualizations.
+With the **Color** widget it is possible to change the colors and color palettes for visualizations.
 
 ![](images/Color-stamped.png)
 
 1. A list of discrete variables. Set the color of each variable by double-clicking on it. The widget also enables renaming variables by clicking on their names.
 2. A list of continuous variables. Click on the color strip to choose a different palette. To use the same palette for all variables, change it for one variable and click *Copy to all* that appears on the right. The widget also enables renaming variables by clicking on their names.
-3. Produce a report.
-4. Apply changes. If *Apply automatically* is ticked, changes will be communicated automatically. Alternatively, just click *Apply*.
-
-![](images/Color-Continuous_unindexed.png)
+3. **Save**, **load** or **reset** the colors.
+4. **Apply** changes by pressing the button or tick the checkbox to do so automatically.
+5. Produce a report.
 
 Palettes for numeric variables are grouped and tagged by their properties.
 
-- Diverging palettes have two colors on its ends and a central color (white or black) in the middle. Such palettes are particularly useful when the the values can be positive or negative, as some widgets (for instance the Heat map) will put the 0 at the middle point in the palette.
+![](images/Color-Continuous_unindexed.png)
 
-- Linear palettes are constructed so that human perception of the color change is linear with the change of the value.
+- **Linear** palettes are constructed so that human perception of the color change is linear with the change of the value.
 
-- Color blind palettes cover different types of color blindness, and can also be linear or diverging.
+- **Diverging** palettes have two colors on its ends and a central color (white or black) in the middle. Such palettes are particularly useful when the values can be positive or negative, as some widgets (for instance the Heat map) will put the 0 at the middle point in the palette.
 
-- In isoluminant palettes, all colors have equal brightness.
+- **Color-blind friendly** palettes cover different types of color blindness, and can also be linear or diverging.
 
-- Rainbow palettes are particularly nice in widgets that bin numeric values in visualizations.
+- In the **Other** section you find and isoluminant palette, where all colors have equal brightness and the Rainbow palette which is particularly nice in visualizations that bin numeric values.
 
 Example
 -------
 
-We chose to work with the *heart_disease* data set. We opened the color palette and selected two new colors for diameter narrowing variable. Then we opened the [Scatter Plot](../visualize/scatterplot.md) widget and viewed the changes made to the scatter plot.
+Let's load the _heart_disease_ data set. Then we  selected two new colors for the _diameter narrowing_ variable in the **Colors** widget. Finally, we can add the **[Scatter Plot](../visualize/scatterplot.md)** widget and inspect the color changes while coloring the data points by _diameter narrowing_.
 
 ![](images/Color-Example-Discrete.png)
 
-To see the effect of color palettes for numeric variables, we color the points in the scatter plot by cholesterol and change the palette for this attribute in the Color widget.
+To see the effect of color palettes for numeric variables, we can color the points in the scatter plot by _cholesterol_ and change the palette for this attribute in the **Color** widget to _Rainbow_.
 
 ![](images/Color-Example-Continuous.png)
