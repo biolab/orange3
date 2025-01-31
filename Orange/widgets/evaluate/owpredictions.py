@@ -502,6 +502,7 @@ class OWPredictions(OWWidget):
         else:
             view.setVisible(False)
             self.Error.scorer_failed.clear()
+        self._set_errors()
 
     def _set_errors(self):
         # Not all predictors are run every time, so errors can't be collected
@@ -520,7 +521,8 @@ class OWPredictions(OWWidget):
                              and p.results.probabilities is None))
             self.Warning.wrong_targets(inv_targets, shown=bool(inv_targets))
 
-            show_warning = numpy.isnan(self.data.Y).any() and self.predictors
+            show_warning = numpy.isnan(self.data.Y).any() and self.predictors \
+                and self.show_scores
             self.Warning.missing_targets(shown=show_warning)
         else:
             self.Warning.wrong_targets.clear()
