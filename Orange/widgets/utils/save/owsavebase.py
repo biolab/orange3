@@ -124,9 +124,13 @@ class OWSaveBase(widget.OWWidget, openclass=True):
         self.stored_path = absolute_path
         workflow_dir = self.workflowEnv().get("basedir", None)
         if workflow_dir:
-            relative_path = os.path.relpath(absolute_path, start=workflow_dir)
-            if not relative_path.startswith(".."):
-                self.stored_path = relative_path
+            try:
+                relative_path = os.path.relpath(absolute_path, start=workflow_dir)
+            except ValueError:  # on Windows for paths on different drives
+                pass
+            else:
+                if not relative_path.startswith(".."):
+                    self.stored_path = relative_path
 
     def _abs_path_from_setting(self):
         """
