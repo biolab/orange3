@@ -5,6 +5,9 @@ build:
    tools:
       python: "3.10"
 
+submodules:
+   include: all
+
 sphinx:
    # Path to the shared conf.py file.
    configuration: doc/conf.py
