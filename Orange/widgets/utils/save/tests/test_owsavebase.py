@@ -384,7 +384,9 @@ class TestOWSaveBase(WidgetTest):
         # absolute stored paths
         for workflow_dir, filename in [("C:/Temp", "C:/Folder/abc.csv"),
                                        ("C:/Temp/Project", "C:/Temp/abc.csv"),
-                                       ("C:\\Temp\\Project", "C:\\Temp\\abc.csv")]:
+                                       ("C:\\Temp\\Project", "C:\\Temp\\abc.csv"),
+                                       ("C:/Temp", "D:/Folder/abc.csv"),
+                                       ("C:\\Temp\\Project", "D:\\Temp\\abc.csv")]:
             widget.workflowEnv = lambda bd=workflow_dir: {"basedir": bd}
             widget.filename = filename
             self.assertTrue(os.path.isabs(widget.stored_path))
