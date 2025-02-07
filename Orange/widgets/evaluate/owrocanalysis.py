@@ -898,7 +898,7 @@ def roc_curve_threshold_average(curves, thresh_samples):
     tpr_samples = np.array(tpr_samples)
 
     return ((fpr_samples.mean(axis=0), fpr_samples.std(axis=0)),
-            (tpr_samples.mean(axis=0), fpr_samples.std(axis=0)))
+            (tpr_samples.mean(axis=0), tpr_samples.std(axis=0)))
 
 
 def roc_curve_thresh_avg_interp(curves, thresh_samples):
@@ -914,7 +914,7 @@ def roc_curve_thresh_avg_interp(curves, thresh_samples):
     tpr_samples = np.array(tpr_samples)
 
     return ((fpr_samples.mean(axis=0), fpr_samples.std(axis=0)),
-            (tpr_samples.mean(axis=0), fpr_samples.std(axis=0)))
+            (tpr_samples.mean(axis=0), tpr_samples.std(axis=0)))
 
 
 RocPoint = namedtuple("RocPoint", ["fpr", "tpr", "threshold"])
