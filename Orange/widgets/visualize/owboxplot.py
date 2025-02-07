@@ -1180,7 +1180,7 @@ class OWBoxPlot(widget.OWWidget):
         conditions = self._gather_conditions()
         if conditions:
             selected = Values(conditions, conjunction=False)(self.dataset)
-            selection = np.in1d(
+            selection = np.isin(
                 self.dataset.ids, selected.ids, assume_unique=True).nonzero()[0]
         else:
             selected, selection = None, []
