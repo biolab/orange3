@@ -10,6 +10,7 @@ from AnyQt.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QStyle,
+    QProxyStyle,
     QToolTip,
     QStyleOptionSlider,
 )
@@ -90,6 +91,48 @@ class ScoringSheetTable(QTableWidget):
             self.main_widget._update_slider_value()
 
 
+class NonDraggableSlider(QSlider):
+    """
+    A custom slider that ignores mouse events. 
+    
+    It is used instead of disabling the default slider so that the 
+    tooltip will be shown when the mouse is over the slider thumb on macOS.
+    """
+
+    def mousePressEvent(self, event):
+        event.ignore()
+
+    def mouseMoveEvent(self, event):
+        event.ignore()
+
+    def mouseReleaseEvent(self, event):
+        event.ignore()
+
+
+class CustomSliderStyle(QProxyStyle):
+    """
+    A custom slider handle style.
+    
+    It draws a 2px wide black rectangle to replace the default handle.
+    This is done to suggest to the user that the slider is not interactive.
+    """
+
+    def drawComplexControl(self, cc, opt, painter, widget=None):
+        if cc == QStyle.CC_Slider:
+            opt2 = QStyleOptionSlider(opt)
+            opt2.subControls &= ~QStyle.SC_SliderHandle
+            super().drawComplexControl(cc, opt2, painter, widget)
+            hr = self.subControlRect(cc, opt, QStyle.SC_SliderHandle, widget)
+            painter.save()
+            painter.setRenderHint(QPainter.Antialiasing)
+            painter.fillRect(
+                QRect(hr.center().x() - 1, hr.y(), 2, hr.height()), Qt.black
+            )
+            painter.restore()
+        else:
+            super().drawComplexControl(cc, opt, painter, widget)
+
+
 class RiskSlider(QWidget):
     def __init__(self, points, probabilities, parent=None):
         super().__init__(parent)
@@ -107,9 +150,8 @@ class RiskSlider(QWidget):
         # Setup the labels
         self.setup_labels()
 
-        # Create the slider
-        self.slider = QSlider(Qt.Horizontal, self)
-        self.slider.setEnabled(False)
+        self.slider = NonDraggableSlider(Qt.Horizontal, self)
+        self.slider.setStyle(CustomSliderStyle())
         self.layout.addWidget(self.slider)
 
         self.points = points
