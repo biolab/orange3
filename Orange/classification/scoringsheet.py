@@ -56,7 +56,9 @@ class ScoringSheetLearner(Learner):
         if preprocessors is None:
             self.preprocessors = [
                 *self.preprocessors,
-                SelectBestFeatures(method=ReliefF(), k=num_attr_after_selection),
+                SelectBestFeatures(
+                    method=ReliefF(random_state=42), k=num_attr_after_selection
+                ),
             ]
 
         super().__init__(preprocessors=preprocessors)
