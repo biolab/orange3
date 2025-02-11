@@ -91,23 +91,6 @@ class ScoringSheetTable(QTableWidget):
             self.main_widget._update_slider_value()
 
 
-class NonDraggableSlider(QSlider):
-    """
-    A custom slider that ignores mouse events. 
-    
-    It is used instead of disabling the default slider so that the 
-    tooltip will be shown when the mouse is over the slider thumb on macOS.
-    """
-
-    def mousePressEvent(self, event):
-        event.ignore()
-
-    def mouseMoveEvent(self, event):
-        event.ignore()
-
-    def mouseReleaseEvent(self, event):
-        event.ignore()
-
 
 class CustomSliderStyle(QProxyStyle):
     """
@@ -116,21 +99,24 @@ class CustomSliderStyle(QProxyStyle):
     It draws a 2px wide black rectangle to replace the default handle.
     This is done to suggest to the user that the slider is not interactive.
     """
-
     def drawComplexControl(self, cc, opt, painter, widget=None):
-        if cc == QStyle.CC_Slider:
-            opt2 = QStyleOptionSlider(opt)
-            opt2.subControls &= ~QStyle.SC_SliderHandle
-            super().drawComplexControl(cc, opt2, painter, widget)
-            hr = self.subControlRect(cc, opt, QStyle.SC_SliderHandle, widget)
-            painter.save()
-            painter.setRenderHint(QPainter.Antialiasing)
-            painter.fillRect(
-                QRect(hr.center().x() - 1, hr.y(), 2, hr.height()), Qt.black
-            )
-            painter.restore()
-        else:
-            super().drawComplexControl(cc, opt, painter, widget)
+        if cc != QStyle.CC_Slider:
+            return super().drawComplexControl(cc, opt, painter, widget)
+        
+        # Make a copy of the style option and remove the handle subcontrol.
+        slider_opt = QStyleOptionSlider(opt)
+        slider_opt.subControls &= ~QStyle.SC_SliderHandle
+        super().drawComplexControl(cc, slider_opt, painter, widget)
+
+        # Get the rectangle for the slider handle.
+        handle_rect = self.subControlRect(cc, opt, QStyle.SC_SliderHandle, widget)
+        
+        # Draw a simple 2px wide black rectangle as the custom handle.
+        painter.save()
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(Qt.black)
+        painter.drawRect(QRect(handle_rect.center().x() - 1, handle_rect.y(), 4, handle_rect.height()))
+        painter.restore()
 
 
 class RiskSlider(QWidget):
@@ -146,12 +132,14 @@ class RiskSlider(QWidget):
         self.layout.setContentsMargins(
             self.leftMargin, self.topMargin, self.rightMargin, self.bottomMargin
         )
+        self.setMouseTracking(True)
 
         # Setup the labels
         self.setup_labels()
 
-        self.slider = NonDraggableSlider(Qt.Horizontal, self)
+        self.slider = QSlider(Qt.Horizontal, self)
         self.slider.setStyle(CustomSliderStyle())
+        self.slider.setEnabled(False)
         self.layout.addWidget(self.slider)
 
         self.points = points
