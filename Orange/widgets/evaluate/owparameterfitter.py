@@ -18,7 +18,7 @@ from Orange.data import Table
 from Orange.evaluation import CrossValidation, TestOnTrainingData, Results
 from Orange.evaluation.scoring import Score, AUC, R2
 from Orange.modelling import Fitter
-from Orange.util import dummy_callback
+from Orange.util import dummy_callback, wrap_callback
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import userinput
@@ -42,12 +42,19 @@ FitterResults = tuple[list[ScoreType], str, str]
 def _validate(
         data: Table,
         learner: Learner,
-        scorer: type[Score]
+        scorer: type[Score],
+        progress_callback: Callable
 ) -> tuple[float, float]:
     res: Results = TestOnTrainingData()(data, [learner],
-                                        suppresses_exceptions=False)
+                                        suppresses_exceptions=False,
+                                        callback=wrap_callback(
+                                            progress_callback, 0, 1/(1+N_FOLD))
+                                        )
     res_cv: Results = CrossValidation(k=N_FOLD)(data, [learner],
-                                                suppresses_exceptions=False)
+                                                suppresses_exceptions=False,
+                                                callback=wrap_callback(
+                                                    progress_callback, 1/(1+N_FOLD), 1.)
+                                                )
     # pylint: disable=unsubscriptable-object
     return scorer(res)[0], scorer(res_cv)[0]
 
@@ -68,7 +75,8 @@ def _search(
         progress_callback(i / len(steps))
         params = initial_parameters.copy()
         params[name] = value
-        result = _validate(data, type(learner)(**params), scorer)
+        result = _validate(data, type(learner)(**params), scorer,
+                           wrap_callback(progress_callback, i / len(steps), (i+1) / len(steps)))
         scores.append((value, result))
     return scores, scorer.name, fitted_parameter_props.label
 
