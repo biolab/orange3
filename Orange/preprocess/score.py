@@ -351,7 +351,7 @@ class ReliefF(Scorer):
     friendly_name = "ReliefF"
     preprocessors = Scorer.preprocessors + [RemoveNaNColumns()]
 
-    def __init__(self, n_iterations=50, k_nearest=10, random_state=None):
+    def __init__(self, n_iterations=50, k_nearest=10, random_state=0):
         self.n_iterations = n_iterations
         self.k_nearest = k_nearest
         self.random_state = random_state
@@ -386,7 +386,7 @@ class RReliefF(Scorer):
     friendly_name = "RReliefF"
     preprocessors = Scorer.preprocessors + [RemoveNaNColumns()]
 
-    def __init__(self, n_iterations=50, k_nearest=50, random_state=None):
+    def __init__(self, n_iterations=50, k_nearest=50, random_state=0):
         self.n_iterations = n_iterations
         self.k_nearest = k_nearest
         self.random_state = random_state
