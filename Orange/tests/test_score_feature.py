@@ -119,8 +119,8 @@ class FeatureScoringTest(unittest.TestCase):
         weights = ReliefF()(old_breast, None)
 
         np.testing.assert_array_equal(
-            ReliefF(random_state=1)(self.breast, None),
-            ReliefF(random_state=1)(self.breast, None)
+            ReliefF()(self.breast, None),
+            ReliefF()(self.breast, None)
         )
 
     def test_rrelieff(self):
