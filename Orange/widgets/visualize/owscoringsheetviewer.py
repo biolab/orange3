@@ -15,7 +15,7 @@ from AnyQt.QtWidgets import (
     QStyleOptionSlider,
 )
 from AnyQt.QtCore import Qt, QRect
-from AnyQt.QtGui import QPainter, QFontMetrics
+from AnyQt.QtGui import QPainter, QFontMetrics, QPalette
 
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting
@@ -91,18 +91,18 @@ class ScoringSheetTable(QTableWidget):
             self.main_widget._update_slider_value()
 
 
-
 class CustomSliderStyle(QProxyStyle):
     """
     A custom slider handle style.
-    
+
     It draws a 2px wide black rectangle to replace the default handle.
     This is done to suggest to the user that the slider is not interactive.
     """
+
     def drawComplexControl(self, cc, opt, painter, widget=None):
         if cc != QStyle.CC_Slider:
             return super().drawComplexControl(cc, opt, painter, widget)
-        
+
         # Make a copy of the style option and remove the handle subcontrol.
         slider_opt = QStyleOptionSlider(opt)
         slider_opt.subControls &= ~QStyle.SC_SliderHandle
@@ -110,12 +110,18 @@ class CustomSliderStyle(QProxyStyle):
 
         # Get the rectangle for the slider handle.
         handle_rect = self.subControlRect(cc, opt, QStyle.SC_SliderHandle, widget)
-        
+
         # Draw a simple 2px wide black rectangle as the custom handle.
         painter.save()
         painter.setPen(Qt.NoPen)
-        painter.setBrush(Qt.black)
-        painter.drawRect(QRect(handle_rect.center().x() - 1, handle_rect.y(), 4, handle_rect.height()))
+        painter.setBrush(QPalette().color(QPalette.WindowText))
+        painter.drawRoundedRect(
+            QRect(
+                handle_rect.center().x() - 1, handle_rect.y(), 3, handle_rect.height()
+            ),
+            3,
+            3,
+        )
         painter.restore()
 
 
