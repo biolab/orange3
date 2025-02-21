@@ -10,11 +10,12 @@ from AnyQt.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QStyle,
+    QProxyStyle,
     QToolTip,
     QStyleOptionSlider,
 )
 from AnyQt.QtCore import Qt, QRect
-from AnyQt.QtGui import QPainter, QFontMetrics
+from AnyQt.QtGui import QPainter, QFontMetrics, QPalette
 
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting
@@ -90,6 +91,40 @@ class ScoringSheetTable(QTableWidget):
             self.main_widget._update_slider_value()
 
 
+class CustomSliderStyle(QProxyStyle):
+    """
+    A custom slider handle style.
+
+    It draws a 2px wide black rectangle to replace the default handle.
+    This is done to suggest to the user that the slider is not interactive.
+    """
+
+    def drawComplexControl(self, cc, opt, painter, widget=None):
+        if cc != QStyle.CC_Slider:
+            return super().drawComplexControl(cc, opt, painter, widget)
+
+        # Make a copy of the style option and remove the handle subcontrol.
+        slider_opt = QStyleOptionSlider(opt)
+        slider_opt.subControls &= ~QStyle.SC_SliderHandle
+        super().drawComplexControl(cc, slider_opt, painter, widget)
+
+        # Get the rectangle for the slider handle.
+        handle_rect = self.subControlRect(cc, opt, QStyle.SC_SliderHandle, widget)
+
+        # Draw a simple 2px wide black rectangle as the custom handle.
+        painter.save()
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QPalette().color(QPalette.WindowText))
+        painter.drawRoundedRect(
+            QRect(
+                handle_rect.center().x() - 1, handle_rect.y(), 3, handle_rect.height()
+            ),
+            3,
+            3,
+        )
+        painter.restore()
+
+
 class RiskSlider(QWidget):
     def __init__(self, points, probabilities, parent=None):
         super().__init__(parent)
@@ -103,12 +138,13 @@ class RiskSlider(QWidget):
         self.layout.setContentsMargins(
             self.leftMargin, self.topMargin, self.rightMargin, self.bottomMargin
         )
+        self.setMouseTracking(True)
 
         # Setup the labels
         self.setup_labels()
 
-        # Create the slider
         self.slider = QSlider(Qt.Horizontal, self)
+        self.slider.setStyle(CustomSliderStyle())
         self.slider.setEnabled(False)
         self.layout.addWidget(self.slider)
 
