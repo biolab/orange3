@@ -135,7 +135,7 @@ class SortProxyModel(QSortFilterProxyModel):
         role = self.sortRole()
         l_score = left.data(role)
         r_score = right.data(role)
-        return r_score is not None and (l_score is None or l_score < r_score)
+        return r_score is not None and (l_score is None or bool(l_score < r_score))
 
 
 class OWBoxPlot(widget.OWWidget):

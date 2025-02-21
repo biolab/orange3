@@ -127,7 +127,7 @@ class ScoreModel(QSortFilterProxyModel):
     def lessThan(self, left, right):
         def is_bad(x):
             return not isinstance(x, (int, float, str)) \
-                   or isinstance(x, float) and np.isnan(x)
+                   or isinstance(x, float) and bool(np.isnan(x))
 
         left = left.data()
         right = right.data()
@@ -146,7 +146,7 @@ class ScoreModel(QSortFilterProxyModel):
             return left.upper() < right.upper()
 
         # otherwise, compare numbers
-        return left < right
+        return bool(left < right)
 
 
 DEFAULT_HINTS = {"Model_": True, "Train_": False, "Test_": False}
