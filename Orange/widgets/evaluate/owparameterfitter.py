@@ -72,7 +72,6 @@ def _search(
     scorer = AUC if data.domain.has_discrete_class else R2
     name = fitted_parameter_props.name
     for i, value in enumerate(steps):
-        progress_callback(i / len(steps))
         params = initial_parameters.copy()
         params[name] = value
         result = _validate(data, type(learner)(**params), scorer,
