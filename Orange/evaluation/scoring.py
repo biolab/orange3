@@ -410,11 +410,17 @@ class MAE(RegressionScore):
     long_name = "Mean absolute error"
     priority = 40
 
+
 class MAPE(RegressionScore):
     __wraps__ = skl_metrics.mean_absolute_percentage_error
     name = "MAPE"
     long_name = "Mean absolute percentage error"
     priority = 45
+
+    def compute_score(self, results):
+        res = super().compute_score(results)
+        return res * 100
+
 
 # pylint: disable=invalid-name
 class R2(RegressionScore):
