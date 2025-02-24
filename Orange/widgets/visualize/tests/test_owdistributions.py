@@ -524,6 +524,16 @@ class TestOWDistributions(WidgetTest):
             self.assertTrue(all(curve.opts["brush"] is not None
                                 for curve in widget.curve_items))
 
+        self._set_fitter(1)
+        self._set_check(widget.controls.hide_bars, True)
+        self.assertTrue(all(bar.hidden for bar in widget.bar_items))
+
+        self._set_fitter(0)
+        self.assertTrue(all(not bar.hidden for bar in widget.bar_items))
+
+        self._set_fitter(1)
+        self.assertTrue(all(bar.hidden for bar in widget.bar_items))
+
     def test_report(self):
         """Report doesn't crash"""
         widget = self.widget
