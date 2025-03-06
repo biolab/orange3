@@ -14,7 +14,7 @@ from AnyQt.QtWidgets import (
     QToolTip,
     QStyleOptionSlider,
 )
-from AnyQt.QtCore import Qt, QRect
+from AnyQt.QtCore import Qt, QRect, pyqtSignal as Signal
 from AnyQt.QtGui import QPainter, QFontMetrics, QPalette
 
 from Orange.widgets import gui
@@ -31,6 +31,8 @@ from Orange.classification.utils.fasterrisk.utils import (
 
 
 class ScoringSheetTable(QTableWidget):
+    state_changed = Signal(int)
+
     def __init__(self, main_widget, parent=None):
         """
         Initialize the ScoringSheetTable.
@@ -88,7 +90,7 @@ class ScoringSheetTable(QTableWidget):
         It updates the slider value depending on the collected points.
         """
         if item.column() == 2:
-            self.main_widget._update_slider_value()
+            self.state_changed.emit(item.row())
 
 
 class CustomSliderStyle(QProxyStyle):
@@ -101,7 +103,8 @@ class CustomSliderStyle(QProxyStyle):
 
     def drawComplexControl(self, cc, opt, painter, widget=None):
         if cc != QStyle.CC_Slider:
-            return super().drawComplexControl(cc, opt, painter, widget)
+            super().drawComplexControl(cc, opt, painter, widget)
+            return
 
         # Make a copy of the style option and remove the handle subcontrol.
         slider_opt = QStyleOptionSlider(opt)
@@ -115,9 +118,11 @@ class CustomSliderStyle(QProxyStyle):
         painter.save()
         painter.setPen(Qt.NoPen)
         painter.setBrush(QPalette().color(QPalette.WindowText))
+        h = handle_rect.height()
         painter.drawRoundedRect(
             QRect(
-                handle_rect.center().x() - 1, handle_rect.y(), 3, handle_rect.height()
+                handle_rect.center().x() - 2, handle_rect.y() + int(0.2 * h),
+                4, int(0.6 * h)
             ),
             3,
             3,
@@ -303,7 +308,8 @@ class RiskSlider(QWidget):
             probability = self.probabilities[value]
             tooltip = str(
                 f"<b>{self.target_class}</b>\n "
-                f"<hr style='margin: 0px; padding: 0px; border: 0px; height: 1px; background-color: #000000'>"
+                "<hr style='margin: 0px; padding: 0px; border: 0px; "
+                "height: 1px; background-color: #000000'>"
                 f"<b>Points:</b> {int(points)}<br>"
                 f"<b>Probability:</b> {probability:.1f}%"
             )
@@ -402,6 +408,7 @@ class OWScoringSheetViewer(OWWidget):
 
         self.coefficient_table = ScoringSheetTable(main_widget=self, parent=self)
         gui.widgetBox(self.mainArea).layout().addWidget(self.coefficient_table)
+        self.coefficient_table.state_changed.connect(self._update_slider_value)
 
         self.risk_slider = RiskSlider([], [], self)
         gui.widgetBox(self.mainArea).layout().addWidget(self.risk_slider)
