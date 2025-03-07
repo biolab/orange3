@@ -114,7 +114,7 @@ class OWKMeans(widget.OWWidget):
             ANNOTATED_DATA_SIGNAL_NAME, Table, default=True,
             replaces=["Annotated Data"]
         )
-        centroids = Output("Centroids", Table)
+        centroids = Output("Centroids", Table, dynamic=False)
 
     class Error(widget.OWWidget.Error):
         failed = widget.Msg("Clustering failed\nError: {}")

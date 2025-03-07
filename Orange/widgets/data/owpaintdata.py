@@ -758,7 +758,7 @@ class OWPaintData(OWWidget):
         data = Input("Data", Table)
 
     class Outputs:
-        data = Output("Data", Table)
+        data = Output("Data", Table, dynamic=False)
 
     autocommit = Setting(True)
     table_name = Setting("Painted data")

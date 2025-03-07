@@ -37,7 +37,7 @@ class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
     class Outputs:
         transformed_data = Output("Transformed Data", Table, replaces=["Transformed data"])
         data = Output("Data", Table, default=True)
-        components = Output("Components", Table)
+        components = Output("Components", Table, dynamic=False)
         pca = Output("PCA", PCA, dynamic=False)
 
     ncomponents = Setting(2)

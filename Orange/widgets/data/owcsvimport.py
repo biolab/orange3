@@ -627,12 +627,15 @@ class OWCSVFileImport(OWUrlDropBase):
         data = widget.Output(
             name="Data",
             type=Orange.data.Table,
-            doc="Loaded data set.")
+            doc="Loaded data set.",
+            dynamic=False,
+        )
         data_frame = widget.Output(
             name="Data Frame",
             type=pd.DataFrame,
             doc="",
-            auto_summary=False
+            auto_summary=False,
+            dynamic=False,
         )
 
     class Error(widget.OWWidget.Error):

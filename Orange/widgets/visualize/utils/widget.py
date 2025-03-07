@@ -667,7 +667,7 @@ class OWAnchorProjectionWidget(OWDataProjectionWidget, openclass=True):
     graph = SettingProvider(OWGraphWithAnchors)
 
     class Outputs(OWDataProjectionWidget.Outputs):
-        components = Output("Components", Table)
+        components = Output("Components", Table, dynamic=False)
 
     class Error(OWDataProjectionWidget.Error):
         sparse_data = Msg("Sparse data is not supported")

@@ -219,7 +219,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
 
     class Outputs:
         reduced_data = Output("Reduced Data", Table, default=True)
-        scores = Output("Scores", Table)
+        scores = Output("Scores", Table, dynamic=False)
         features = Output("Features", AttributeList, dynamic=False)
 
     SelectNone, SelectAll, SelectManual, SelectNBest = range(4)

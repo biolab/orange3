@@ -731,9 +731,9 @@ class OWPivot(OWWidget):
         data = Input("Data", Table, default=True)
 
     class Outputs:
-        pivot_table = Output("Pivot Table", Table, default=True)
+        pivot_table = Output("Pivot Table", Table, default=True, dynamic=False)
         filtered_data = Output("Filtered Data", Table)
-        grouped_data = Output("Grouped Data", Table)
+        grouped_data = Output("Grouped Data", Table, dynamic=False)
 
     class Warning(OWWidget.Warning):
         # TODO - inconsistent for different variable types

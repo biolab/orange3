@@ -39,7 +39,7 @@ class OWCorrespondenceAnalysis(widget.OWWidget):
         data = Input("Data", Table)
 
     class Outputs:
-        coordinates = Output("Coordinates", Table)
+        coordinates = Output("Coordinates", Table, dynamic=False)
 
     Invalidate = QEvent.registerEventType()
 
