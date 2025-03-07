@@ -256,7 +256,8 @@ class OWMergeData(widget.OWWidget):
     class Outputs:
         data = Output("Data",
                       Orange.data.Table,
-                      replaces=["Merged Data A+B", "Merged Data B+A", "Merged Data"])
+                      replaces=["Merged Data A+B", "Merged Data B+A", "Merged Data"],
+                      dynamic=False)
 
     LeftJoin, InnerJoin, OuterJoin = range(3)
     OptionNames = ("Append columns from Extra data",

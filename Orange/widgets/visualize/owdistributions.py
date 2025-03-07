@@ -258,7 +258,7 @@ class OWDistributions(OWWidget):
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
-        histogram_data = Output("Histogram Data", Table)
+        histogram_data = Output("Histogram Data", Table, dynamic=False)
 
     class Error(OWWidget.Error):
         no_defined_values_var = \
