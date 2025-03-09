@@ -521,7 +521,8 @@ class OWKMeans(widget.OWWidget):
         domain = self.data.domain
         cluster_var = DiscreteVariable(
             get_unique_names(domain, "Cluster"),
-            values=["C%d" % (x + 1) for x in range(km.k)]
+            values=["C%d" % (x + 1) for x in range(km.k)],
+            compute_value=lambda data, km=km: km(data)
         )
         clust_ids = km.labels
         silhouette_var = ContinuousVariable(
