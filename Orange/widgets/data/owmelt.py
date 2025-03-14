@@ -69,7 +69,7 @@ class OWMelt(widget.OWWidget):
         data = widget.Input("Data", Table)
 
     class Outputs:
-        data = widget.Output("Data", Table)
+        data = widget.Output("Data", Table, dynamic=False)
 
     class Information(widget.OWWidget.Information):
         no_suitable_features = Msg(
