@@ -49,9 +49,9 @@ requirements:
     - keyring
     - keyrings.alt
     - networkx
-    - numpy >=1.20.0
+    - numpy >=1.21.0
     - openpyxl >=3.1.3
-    - openTSNE >=0.6.1,!=0.7.0
+    - openTSNE >=0.6.2,!=0.7.0
     - pandas >=1.4.0,!=1.5.0,!=2.0.0
     - packaging
     - pip >=19.3
