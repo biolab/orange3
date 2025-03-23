@@ -675,7 +675,8 @@ class OWBoxPlot(widget.OWWidget):
                 label.show()
 
         r = QRectF(self.scene_min_x, -30 - len(self.stats) * heights,
-                   self.scene_width, len(self.stats) * heights + 90)
+                   self.scene_width, len(self.stats) * heights + 90 +
+                   self._axis_font.pixelSize() * 4)
         self.box_scene.setSceneRect(r)
 
         self._compute_tests_cont()
