@@ -734,7 +734,8 @@ class OWBoxPlot(widget.OWWidget):
 
         self.box_scene.setSceneRect(-self.label_width - 5,
                                     -30 - len(self.boxes) * 40,
-                                    self.scene_width, len(self.boxes * 40) + 90)
+                                    self.scene_width, len(self.boxes * 40) +
+                                    90 + self._axis_font.pixelSize() * 4)
         self._compute_tests_disc()
 
     def __draw_group_labels(self, y, row):
