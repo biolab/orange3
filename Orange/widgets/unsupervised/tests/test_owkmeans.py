@@ -11,6 +11,7 @@ from sklearn.metrics import silhouette_score
 
 import Orange.clustering
 from Orange.data import Table, Domain
+from Orange.data.table import DomainTransformationError
 from Orange.widgets import gui
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owkmeans import OWKMeans, ClusterTableModel
@@ -214,8 +215,8 @@ class TestOWKMeans(WidgetTest):
         np.testing.assert_equal(np.isnan(transformed), False)
 
         incompatible_data = Table("iris")
-        transformed = incompatible_data.transform(out.domain).get_column("Cluster")
-        np.testing.assert_equal(np.isnan(transformed), True)
+        with self.assertRaises(DomainTransformationError):
+            transformed = incompatible_data.transform(out.domain)
 
     def test_centroids_on_output(self):
         widget = self.widget
