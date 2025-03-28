@@ -19,6 +19,15 @@ class KMeansModel(ClusteringModel):
     def predict(self, X):
         return self.projector.predict(X)
 
+    def __eq__(self, other):
+        return super().__eq__(other) \
+               and self.centroids == other.centroids \
+               and self.k == other.k
+
+    def __hash__(self):
+        # TODO self.centroids
+        return hash((super().__hash__(), self.k))
+
 
 class KMeans(Clustering):
 
