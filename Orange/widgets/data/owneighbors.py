@@ -132,6 +132,7 @@ class OWNeighbors(OWWidget):
             neighbors = None
         else:
             neighbors = self._data_with_similarity(indices)
+            neighbors.name = self.data.name + " (neighbors)"
         self.Outputs.data.send(neighbors)
 
     def _compute_indices(self):
