@@ -521,15 +521,16 @@ class OWKMeans(widget.OWWidget):
         domain = self.data.domain
         cluster_var = DiscreteVariable(
             get_unique_names(domain, "Cluster"),
-            values=["C%d" % (x + 1) for x in range(km.k)]
+            values=["C%d" % (x + 1) for x in range(km.k)],
+            compute_value=km
         )
-        clust_ids = km.labels
         silhouette_var = ContinuousVariable(
             get_unique_names(domain, "Silhouette"))
         if km.silhouette_samples is not None:
             self.Warning.no_silhouettes.clear()
             scores = np.arctan(km.silhouette_samples) / np.pi + 0.5
             clust_scores = []
+            clust_ids = km.labels
             for i in range(km.k):
                 in_clust = clust_ids == i
                 if in_clust.any():
@@ -545,7 +546,6 @@ class OWKMeans(widget.OWWidget):
         new_domain = add_columns(domain, metas=[cluster_var, silhouette_var])
         new_table = self.data.transform(new_domain)
         with new_table.unlocked(new_table.metas):
-            new_table.set_column(cluster_var, clust_ids)
             new_table.set_column(silhouette_var, scores)
 
         domain_attributes = set(domain.attributes)
