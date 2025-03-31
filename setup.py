@@ -79,7 +79,7 @@ CLASSIFIERS = [
     'Intended Audience :: Developers',
 ]
 
-PYTHON_REQUIRES = ">=3.9"
+PYTHON_REQUIRES = ">=3.10"
 
 
 requirements = ['requirements-core.txt', 'requirements-gui.txt']
