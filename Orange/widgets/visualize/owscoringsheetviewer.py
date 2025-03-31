@@ -338,8 +338,11 @@ class OWScoringSheetViewer(OWWidget):
         self.instance = None
         self.instance_points = []
         self.classifier = None
-        self.coefficients = None
+        self._base_coefficients = None
+        self._base_all_scores = None
+        self._base_all_risks = None
         self.attributes = None
+        self.coefficients = None
         self.all_scores = None
         self.all_risks = None
         self.domain = None
@@ -463,14 +466,16 @@ class OWScoringSheetViewer(OWWidget):
         This allows user to select the target class and see the
         corresponding coefficients, scores, and risks.
         """
-        # Negate the coefficients
-        self.coefficients = [-coef for coef in self.coefficients]
-        # Negate the scores
-        self.all_scores = [-score if score != 0 else score for score in self.all_scores]
-        self.all_scores.sort()
-        # Adjust the risks
-        self.all_risks = [100 - risk for risk in self.all_risks]
-        self.all_risks.sort()
+        if self.target_class_index == 1:
+            self.coefficients = self._base_coefficients[:]
+            self.all_scores = self._base_all_scores[:]
+            self.all_risks = self._base_all_risks[:]
+        else:
+            self.coefficients = [-coef for coef in self._base_coefficients]
+            self.all_scores = sorted(
+                [-score if score != 0 else score for score in self._base_all_scores]
+            )
+            self.all_risks = sorted([100 - risk for risk in self._base_all_risks])
 
     # Classifier Input Methods ---------------------------------------------------------------------
 
@@ -510,6 +515,9 @@ class OWScoringSheetViewer(OWWidget):
         all_risks = 1 / (1 + np.exp(-all_scaled_scores))
 
         self.attributes = attributes
+        self._base_coefficients = coefficients
+        self._base_all_scores = all_scores.tolist()
+        self._base_all_risks = (all_risks * 100).tolist()
         self.coefficients = coefficients
         self.all_scores = all_scores.tolist()
         self.all_risks = (all_risks * 100).tolist()
@@ -517,7 +525,21 @@ class OWScoringSheetViewer(OWWidget):
 
         # For some reason when leading the model the scores and probabilities are
         # set for the wrong target class. This is a workaround to fix that.
+        self._sort_attributes_by_importance()
         self._adjust_for_target_class()
+
+    def _sort_attributes_by_importance(self):
+        """
+        Sorts the attributes in descending order of importance (absolute coefficient value)
+        by combining the attributes and coefficients into tuples and sorting them.
+        """
+        combined = list(
+            zip(self.attributes, self.coefficients, self._base_coefficients)
+        )
+        combined_sorted = sorted(combined, key=lambda t: abs(t[1]), reverse=True)
+        self.attributes, self.coefficients, self._base_coefficients = map(
+            list, zip(*combined_sorted)
+        )
 
     def _is_valid_classifier(self, classifier):
         """Check if the classifier is a valid ScoringSheetModel."""
@@ -533,6 +555,9 @@ class OWScoringSheetViewer(OWWidget):
         self.all_scores = None
         self.all_risks = None
         self.classifier = None
+        self._base_coefficients = None
+        self._base_all_scores = None
+        self._base_all_risks = None
         self.Outputs.features.send(None)
 
     # Data Input Methods ---------------------------------------------------------------------------
