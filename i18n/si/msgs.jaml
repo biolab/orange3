@@ -6604,6 +6604,8 @@ widgets/data/owneighbors.py:
             n_neighbors: false
             Limit number of neighbors to:: Omeji število sosedov na:
             limit_neighbors: false
+        def `commit`:
+            ' (neighbors)': ' (sosedi)'
         def `_data_with_similarity`:
             distance: false
     __main__: false
