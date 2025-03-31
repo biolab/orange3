@@ -276,6 +276,7 @@ class OWHierarchicalClustering(widget.OWWidget):
             minimumContentsLength=14,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
+        cb.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         cb.setModel(model)
         cb.setCurrentIndex(cb.findData(self.annotation, Qt.EditRole))
 
@@ -305,7 +306,9 @@ class OWHierarchicalClustering(widget.OWWidget):
             model=model, callback=self._update_labels,
             sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
                                    QSizePolicy.Fixed))
+        cb.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         self.color_by_label = QLabel("Color by:")
+        self.color_by_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         grid.addWidget(self.color_by_label, 2, 0)
         grid.addWidget(cb, 2, 1)
 
