@@ -2,6 +2,14 @@
 <!-- Generator: Adobe Illustrator 23.0.4, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 viewBox="0 0 48 48" style="enable-background:new 0 0 48 48;" xml:space="preserve">
+<defs>
+<style type="text/css" id="current-color-scheme">
+* { color: #333; }
+.ColorScheme-Text { color: #333; }
+.ColorScheme-Disabled-Text { color: #666; }
+.ColorScheme-Background { color: #fff; }
+</style>
+</defs>
 <style type="text/css">
 	.st0{fill:none;stroke:#B2B2B2;stroke-width:2;stroke-miterlimit:10;}
 	.st1{fill:#989898;}
@@ -52,27 +60,21 @@
 	</g>
 	<g>
 		<g>
-			<g>
-				<line class="st2" x1="32" y1="4" x2="42.5" y2="10.4"/>
-				<g>
-					<polygon class="st3" points="40.2,12.5 46.1,12.6 43.3,7.4 					"/>
-				</g>
+			<g class="ColorScheme-Text">
+				<line style="fill:none;stroke:currentColor;stroke-width:2;stroke-miterlimit:10" x1="32" y1="4" x2="42.5" y2="10.4"/>
+				<polygon style="fill:currentColor" points="40.2,12.5 46.1,12.6 43.3,7.4 					"/>
 			</g>
 		</g>
 		<g>
-			<g>
-				<line class="st2" x1="32.3" y1="42.4" x2="20.1" y2="42.4"/>
-				<g>
-					<polygon class="st3" points="20.9,39.5 15.8,42.4 20.9,45.4 					"/>
-				</g>
+			<g class="ColorScheme-Text">
+				<line style="fill:none;stroke:currentColor;stroke-width:2;stroke-miterlimit:10" x1="32.3" y1="42.4" x2="20.1" y2="42.4"/>
+				<polygon style="fill:currentColor" points="20.9,39.5 15.8,42.4 20.9,45.4 					"/>
 			</g>
 		</g>
 		<g>
-			<g>
-				<line class="st2" x1="2.4" y1="11.2" x2="12.8" y2="4.8"/>
-				<g>
-					<polygon class="st3" points="13.6,7.8 16.5,2.6 10.5,2.7 					"/>
-				</g>
+			<g class="ColorScheme-Text">
+				<line style="fill:none;stroke:currentColor;stroke-width:2;stroke-miterlimit:10" x1="2.4" y1="11.2" x2="12.8" y2="4.8"/>
+				<polygon style="fill:currentColor" points="13.6,7.8 16.5,2.6 10.5,2.7 					"/>
 			</g>
 		</g>
 	</g>
