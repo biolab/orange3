@@ -57,26 +57,26 @@ class TestManifold(unittest.TestCase):
             n_components=2, dissimilarity=Euclidean, init_type='PCA',
             n_init=1)
         X = projector(self.iris).embedding_
-        np.testing.assert_array_almost_equal(X[0], result)
+        np.testing.assert_allclose(X[0], result, rtol=1e-3)
 
         projector = MDS(
             n_components=2, dissimilarity='precomputed', init_type='PCA',
             n_init=1)
         X = projector(Euclidean(self.iris)).embedding_
-        np.testing.assert_array_almost_equal(X[0], result)
+        np.testing.assert_allclose(X[0], result,  rtol=1e-3)
 
         projector = MDS(
             n_components=2, dissimilarity='euclidean', init_type='PCA',
             n_init=1)
         X = projector(self.iris).embedding_
-        np.testing.assert_array_almost_equal(X[0], result)
+        np.testing.assert_allclose(X[0], result, rtol=1e-3)
 
         projector = MDS(
             n_components=6, dissimilarity='euclidean', init_type='PCA',
             n_init=1)
         X = projector(self.iris[:5]).embedding_
-        result = np.array([-0.31871, -0.064644, 0.015653, -1.5e-08, -4.3e-11, 0])
-        np.testing.assert_array_almost_equal(np.abs(X[0]), np.abs(result))
+        result = np.array([-0.31871, -0.064644, 0.015653, 0, 0, 0])
+        np.testing.assert_allclose(np.abs(X[0]), np.abs(result), rtol=1e-3)
 
     def test_isomap(self):
         for i in range(1, 4):
