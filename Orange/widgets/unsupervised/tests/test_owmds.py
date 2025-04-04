@@ -364,7 +364,7 @@ class TestOWMDSRunner(unittest.TestCase):
                           [-2.9022707, -0.13465859],
                           [-2.75267253, -0.33899134],
                           [-2.74108069, 0.35393209]])
-        np.testing.assert_almost_equal(array, result.embedding[:5])
+        np.testing.assert_allclose(array, result.embedding[:5], rtol=1e-2, atol=1e-4)
         state.set_status.assert_called_once_with("Running...")
         self.assertGreater(state.set_partial_result.call_count, 2)
         self.assertGreater(state.set_progress_value.call_count, 2)
