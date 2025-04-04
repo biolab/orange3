@@ -470,7 +470,7 @@ class OWSelectRows(widget.OWWidget):
                 self.cond_list.setCellWidget(oper_combo.row, 2, combo)
                 combo.currentIndexChanged.connect(self.conditions_changed)
         else:
-            box = gui.hBox(self, addToLayout=False)
+            box = gui.hBox(self.cond_list, addToLayout=False)
             box.var_type = vtype
             self.cond_list.setCellWidget(oper_combo.row, 2, box)
             if vtype == 2:  # continuous:
@@ -874,7 +874,12 @@ class DateTimeWidget(QDateTimeEdit):
                 self.setDateTime(
                     QDateTime(self.date(), self.calendarWidget.timeedit.time()))
             else:
-                self.setDateTime(date_time)
+                if isinstance(date_time, QDateTime):
+                    self.setDateTime(date_time)
+                elif isinstance(date_time, QDate):
+                    self.setDate(date_time)
+                elif isinstance(date_time, QTime):
+                    self.setTime(date_time)
         elif self.have_date and not self.have_time:
             self.setDate(date_time)
         elif not self.have_date and self.have_time:
