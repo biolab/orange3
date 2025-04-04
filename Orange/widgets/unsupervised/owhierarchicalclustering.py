@@ -304,7 +304,9 @@ class OWHierarchicalClustering(widget.OWWidget):
             None, self, "color_by", orientation=Qt.Horizontal,
             model=model, callback=self._update_labels,
             sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
-                                   QSizePolicy.Fixed))
+                                   QSizePolicy.Fixed),
+            contentsLength=10
+        )
         self.color_by_label = QLabel("Color by:")
         grid.addWidget(self.color_by_label, 2, 0)
         grid.addWidget(cb, 2, 1)
