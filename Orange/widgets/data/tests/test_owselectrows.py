@@ -155,6 +155,33 @@ class TestOWSelectRows(WidgetTest):
             self.widget.add_row(data.domain.metas[0], i, TFValues[op])
             self.widget.conditions_changed()
             self.widget.commit.now()
+        
+        self.widget.remove_all()
+        self.enterFilter("breach_start", "equals", QDate(2014, 6, 2))
+
+        container = self.widget.cond_list.cellWidget(0, 2)
+        date_widget = container.findChild(DateTimeWidget)
+        self.assertIsNotNone(date_widget)
+
+        fmt = date_widget.format  # Tuple: (have_date, have_time)
+
+        # Test with QDate if the widget supports date
+        if fmt[0]:
+            test_date = QDate(2014, 6, 2)
+            date_widget.set_datetime(test_date)
+            self.assertEqual(date_widget.date(), test_date)
+
+        # Test with QTime if the widget supports time
+        if fmt[1]:
+            test_time = QTime(16, 0)
+            date_widget.set_datetime(test_time)
+            self.assertEqual(date_widget.time(), test_time)
+
+        # Test with QDateTime if the widget supports both
+        if fmt == (1, 1):
+            test_dt = QDateTime(QDate(2014, 6, 2), QTime(16, 0))
+            date_widget.set_datetime(test_dt)
+            self.assertEqual(date_widget.dateTime(), test_dt)
 
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_continuous_filter_with_c_locale(self):
