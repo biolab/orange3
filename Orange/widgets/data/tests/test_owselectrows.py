@@ -217,12 +217,12 @@ class TestOWSelectRows(WidgetTest):
         dtw.set_datetime(QTime(12, 0))
         self.assertEqual(dtw.time(), QTime(12, 0))
 
-    def test_set_datetime_with_only_date(self):
-        dt = QDateTime.fromString("2024-01-01T00:00:00", Qt.ISODate)
+    def test_set_datetime_sets_date_with_qdate(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
         dt.setTimeSpec(Qt.UTC)
         column = np.array([dt.toSecsSinceEpoch()])
 
-        dtw = DateTimeWidget(None, column, (1, 0))  # solo fecha
+        dtw = DateTimeWidget(None, column, (1, 1))  # tiene fecha y hora
         test_date = QDate(2024, 1, 1)
 
         dtw.set_datetime(test_date)
