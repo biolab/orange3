@@ -208,6 +208,24 @@ class TestOWSelectRows(WidgetTest):
         dtw = DateTimeWidget(None, column, (0, 1))
         dtw.set_datetime(QTime(12, 0))
         self.assertEqual(dtw.time(), QTime(12, 0))
+        
+    def test_set_datetime_dispatch_qdate(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+        dtw = DateTimeWidget(None, column, (1, 0))  # solo fecha
+        date = QDate(2024, 1, 1)
+        dtw.set_datetime(date)
+        self.assertEqual(dtw.date(), date)
+
+    def test_set_datetime_dispatch_qtime(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+        dtw = DateTimeWidget(None, column, (0, 1))  # solo hora
+        time = QTime(12, 0)
+        dtw.set_datetime(time)
+        self.assertEqual(dtw.time(), time)
 
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_continuous_filter_with_c_locale(self):
