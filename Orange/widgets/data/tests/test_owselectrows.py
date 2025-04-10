@@ -226,6 +226,47 @@ class TestOWSelectRows(WidgetTest):
         time = QTime(12, 0)
         dtw.set_datetime(time)
         self.assertEqual(dtw.time(), time)
+        
+    def test_set_datetime_with_qtime_when_have_both(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+        dtw = DateTimeWidget(None, column, (1, 1))  # fecha y hora
+        dtw.set_datetime(QTime(12, 0))
+        self.assertEqual(dtw.time(), QTime(12, 0))
+
+    def test_set_datetime_sets_date_with_qdate(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+
+        dtw = DateTimeWidget(None, column, (1, 1))  # tiene fecha y hora
+        test_date = QDate(2024, 1, 1)
+
+        dtw.set_datetime(test_date)
+        assert dtw.date() == test_date
+
+    def test_set_datetime_sets_time_with_qtime(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+
+        dtw = DateTimeWidget(None, column, (1, 1))  # tiene fecha y hora
+        test_time = QTime(12, 0)
+
+        dtw.set_datetime(test_time)
+        assert dtw.time() == test_time
+
+    def test_set_datetime_with_only_date(self):
+        dt = QDateTime.fromString("2024-01-01T00:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+
+        dtw = DateTimeWidget(None, column, (1, 0))  # solo fecha
+        test_date = QDate(2024, 1, 1)
+
+        dtw.set_datetime(test_date)
+        assert dtw.date() == test_date
 
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_continuous_filter_with_c_locale(self):
