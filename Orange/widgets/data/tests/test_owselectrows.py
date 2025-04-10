@@ -209,24 +209,6 @@ class TestOWSelectRows(WidgetTest):
         dtw.set_datetime(QTime(12, 0))
         self.assertEqual(dtw.time(), QTime(12, 0))
         
-    def test_set_datetime_dispatch_qdate(self):
-        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
-        dt.setTimeSpec(Qt.UTC)
-        column = np.array([dt.toSecsSinceEpoch()])
-        dtw = DateTimeWidget(None, column, (1, 0))  # solo fecha
-        date = QDate(2024, 1, 1)
-        dtw.set_datetime(date)
-        self.assertEqual(dtw.date(), date)
-
-    def test_set_datetime_dispatch_qtime(self):
-        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
-        dt.setTimeSpec(Qt.UTC)
-        column = np.array([dt.toSecsSinceEpoch()])
-        dtw = DateTimeWidget(None, column, (0, 1))  # solo hora
-        time = QTime(12, 0)
-        dtw.set_datetime(time)
-        self.assertEqual(dtw.time(), time)
-        
     def test_set_datetime_with_qtime_when_have_both(self):
         dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
         dt.setTimeSpec(Qt.UTC)
@@ -234,28 +216,6 @@ class TestOWSelectRows(WidgetTest):
         dtw = DateTimeWidget(None, column, (1, 1))  # fecha y hora
         dtw.set_datetime(QTime(12, 0))
         self.assertEqual(dtw.time(), QTime(12, 0))
-
-    def test_set_datetime_sets_date_with_qdate(self):
-        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
-        dt.setTimeSpec(Qt.UTC)
-        column = np.array([dt.toSecsSinceEpoch()])
-
-        dtw = DateTimeWidget(None, column, (1, 1))  # tiene fecha y hora
-        test_date = QDate(2024, 1, 1)
-
-        dtw.set_datetime(test_date)
-        self.assertEqual(dtw.date(), test_date)
-
-    def test_set_datetime_sets_time_with_qtime(self):
-        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
-        dt.setTimeSpec(Qt.UTC)
-        column = np.array([dt.toSecsSinceEpoch()])
-
-        dtw = DateTimeWidget(None, column, (1, 1))  # tiene fecha y hora
-        test_time = QTime(12, 0)
-
-        dtw.set_datetime(test_time)
-        self.assertEqual(dtw.time(), test_time)
 
     def test_set_datetime_with_only_date(self):
         dt = QDateTime.fromString("2024-01-01T00:00:00", Qt.ISODate)
