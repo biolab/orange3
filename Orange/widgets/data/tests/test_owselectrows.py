@@ -282,6 +282,20 @@ class TestOWSelectRows(WidgetTest):
         self.widget.remove_all_button.click()
         self.enterFilter(iris.domain[2], "is below", "5,2")
         self.assertEqual(self.widget.conditions[0][2], ("52",))
+        
+    def test_set_datetime_sets_time_when_only_time_enabled(self):
+        # We prepare a QDateTime with only time (the date is irrelevant)
+        dt = QDateTime.fromString("2000-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+
+        # We create a widget that has only time, not date.
+        dtw = DateTimeWidget(None, column, (0, 1))  # have_date=False, have_time=True
+
+        test_time = QTime(12, 0)
+        dtw.set_datetime(test_time)
+
+        self.assertEqual(dtw.time(), test_time)
 
     @override_locale(QLocale.Slovenian)  # Locale with decimal comma
     def test_continuous_filter_with_sl_SI_locale(self):
