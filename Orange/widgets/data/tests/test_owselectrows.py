@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 
-from AnyQt.QtCore import QLocale, Qt, QDate
+from AnyQt.QtCore import QLocale, Qt, QDate, QDateTime, QTime
 from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QLineEdit, QComboBox
 
@@ -182,6 +182,32 @@ class TestOWSelectRows(WidgetTest):
             test_dt = QDateTime(QDate(2014, 6, 2), QTime(16, 0))
             date_widget.set_datetime(test_dt)
             self.assertEqual(date_widget.dateTime(), test_dt)
+            
+    def test_set_datetime_with_qdatetime(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+        dtw = DateTimeWidget(None, column, (1, 1))
+        dtw.set_datetime(dt)
+        self.assertEqual(dtw.dateTime().time().hour(), 12)
+        self.assertEqual(dtw.dateTime().date(), QDate(2024, 1, 1))
+
+    def test_set_datetime_with_qdate(self):
+        dt = QDateTime(QDate(2024, 1, 1), QTime(0, 0), Qt.UTC)
+        timestamp = dt.toSecsSinceEpoch()
+        column = np.array([timestamp])
+        dtw = DateTimeWidget(None, column, (1, 0))
+        dtw.set_datetime(QDate(2024, 1, 1))
+        self.assertEqual(dtw.date(), QDate(2024, 1, 1))
+
+    def test_set_datetime_with_qtime(self):
+        # Use a fixed day (2000-01-01) and desired time
+        dt = QDateTime(QDate(2000, 1, 1), QTime(12, 0), Qt.UTC)
+        timestamp = dt.toSecsSinceEpoch()
+        column = np.array([timestamp])
+        dtw = DateTimeWidget(None, column, (0, 1))
+        dtw.set_datetime(QTime(12, 0))
+        self.assertEqual(dtw.time(), QTime(12, 0))
 
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_continuous_filter_with_c_locale(self):
