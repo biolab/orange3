@@ -878,8 +878,6 @@ class DateTimeWidget(QDateTimeEdit):
                     self.setDateTime(date_time)
                 elif isinstance(date_time, QDate):
                     self.setDate(date_time)
-                elif isinstance(date_time, QTime):
-                    self.setTime(date_time)
         elif self.have_date and not self.have_time:
             self.setDate(date_time)
         elif not self.have_date and self.have_time:
