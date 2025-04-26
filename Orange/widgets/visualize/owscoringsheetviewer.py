@@ -10,11 +10,12 @@ from AnyQt.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QStyle,
+    QProxyStyle,
     QToolTip,
     QStyleOptionSlider,
 )
-from AnyQt.QtCore import Qt, QRect
-from AnyQt.QtGui import QPainter, QFontMetrics
+from AnyQt.QtCore import Qt, QRect, pyqtSignal as Signal
+from AnyQt.QtGui import QPainter, QFontMetrics, QPalette
 
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting
@@ -30,6 +31,8 @@ from Orange.classification.utils.fasterrisk.utils import (
 
 
 class ScoringSheetTable(QTableWidget):
+    state_changed = Signal(int)
+
     def __init__(self, main_widget, parent=None):
         """
         Initialize the ScoringSheetTable.
@@ -87,7 +90,44 @@ class ScoringSheetTable(QTableWidget):
         It updates the slider value depending on the collected points.
         """
         if item.column() == 2:
-            self.main_widget._update_slider_value()
+            self.state_changed.emit(item.row())
+
+
+class CustomSliderStyle(QProxyStyle):
+    """
+    A custom slider handle style.
+
+    It draws a 2px wide black rectangle to replace the default handle.
+    This is done to suggest to the user that the slider is not interactive.
+    """
+
+    def drawComplexControl(self, cc, opt, painter, widget=None):
+        if cc != QStyle.CC_Slider:
+            super().drawComplexControl(cc, opt, painter, widget)
+            return
+
+        # Make a copy of the style option and remove the handle subcontrol.
+        slider_opt = QStyleOptionSlider(opt)
+        slider_opt.subControls &= ~QStyle.SC_SliderHandle
+        super().drawComplexControl(cc, slider_opt, painter, widget)
+
+        # Get the rectangle for the slider handle.
+        handle_rect = self.subControlRect(cc, opt, QStyle.SC_SliderHandle, widget)
+
+        # Draw a simple 2px wide black rectangle as the custom handle.
+        painter.save()
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QPalette().color(QPalette.WindowText))
+        h = handle_rect.height()
+        painter.drawRoundedRect(
+            QRect(
+                handle_rect.center().x() - 2, handle_rect.y() + int(0.2 * h),
+                4, int(0.6 * h)
+            ),
+            3,
+            3,
+        )
+        painter.restore()
 
 
 class RiskSlider(QWidget):
@@ -103,12 +143,13 @@ class RiskSlider(QWidget):
         self.layout.setContentsMargins(
             self.leftMargin, self.topMargin, self.rightMargin, self.bottomMargin
         )
+        self.setMouseTracking(True)
 
         # Setup the labels
         self.setup_labels()
 
-        # Create the slider
         self.slider = QSlider(Qt.Horizontal, self)
+        self.slider.setStyle(CustomSliderStyle())
         self.slider.setEnabled(False)
         self.layout.addWidget(self.slider)
 
@@ -267,7 +308,8 @@ class RiskSlider(QWidget):
             probability = self.probabilities[value]
             tooltip = str(
                 f"<b>{self.target_class}</b>\n "
-                f"<hr style='margin: 0px; padding: 0px; border: 0px; height: 1px; background-color: #000000'>"
+                "<hr style='margin: 0px; padding: 0px; border: 0px; "
+                "height: 1px; background-color: #000000'>"
                 f"<b>Points:</b> {int(points)}<br>"
                 f"<b>Probability:</b> {probability:.1f}%"
             )
@@ -366,6 +408,7 @@ class OWScoringSheetViewer(OWWidget):
 
         self.coefficient_table = ScoringSheetTable(main_widget=self, parent=self)
         gui.widgetBox(self.mainArea).layout().addWidget(self.coefficient_table)
+        self.coefficient_table.state_changed.connect(self._update_slider_value)
 
         self.risk_slider = RiskSlider([], [], self)
         gui.widgetBox(self.mainArea).layout().addWidget(self.risk_slider)

@@ -14840,7 +14840,8 @@ widgets/visualize/owscoringsheetviewer.py:
             %: false
         def `handle_hover_event`:
             '<b>{self.target_class}</b>\n ': false
-            "<hr style='margin: 0px; padding: 0px; border: 0px; height: 1px; background-color: #000000'>": false
+            "<hr style='margin: 0px; padding: 0px; border: 0px; ": false
+            "height: 1px; background-color: #000000'>": false
             <b>Points:</b> {int(points)}<br>: <b>Točke:</b> {int(points)}<br>
             <b>Probability:</b> {probability:.1f}%: <b>Verjetnost:</b> {probability:.1f}%
     class `OWScoringSheetViewer`:
