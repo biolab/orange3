@@ -514,32 +514,12 @@ class OWScoringSheetViewer(OWWidget):
         all_scaled_scores = (model.intercept + all_scores) / model.multiplier
         all_risks = 1 / (1 + np.exp(-all_scaled_scores))
 
-        self.attributes = attributes
-        self._base_coefficients = coefficients
         self._base_all_scores = all_scores.tolist()
         self._base_all_risks = (all_risks * 100).tolist()
-        self.coefficients = coefficients
-        self.all_scores = all_scores.tolist()
-        self.all_risks = (all_risks * 100).tolist()
+        combined_sorted = sorted(zip(coefficients, attributes), reverse=True)
+        self._base_coefficients, self.attributes = zip(*combined_sorted)
         self.domain = classifier.domain
-
-        # For some reason when leading the model the scores and probabilities are
-        # set for the wrong target class. This is a workaround to fix that.
-        self._sort_attributes_by_importance()
         self._adjust_for_target_class()
-
-    def _sort_attributes_by_importance(self):
-        """
-        Sorts the attributes in descending order of importance (absolute coefficient value)
-        by combining the attributes and coefficients into tuples and sorting them.
-        """
-        combined = list(
-            zip(self.attributes, self.coefficients, self._base_coefficients)
-        )
-        combined_sorted = sorted(combined, key=lambda t: abs(t[1]), reverse=True)
-        self.attributes, self.coefficients, self._base_coefficients = map(
-            list, zip(*combined_sorted)
-        )
 
     def _is_valid_classifier(self, classifier):
         """Check if the classifier is a valid ScoringSheetModel."""
