@@ -57,6 +57,20 @@ class ClusteringModel:
         raise NotImplementedError(
             "This clustering algorithm does not support predicting.")
 
+    def __eq__(self, other):
+        if self is other:
+            return True
+        print(self.labels, other.labels)
+        return type(self) is type(other) \
+            and self.projector == other.projector \
+            and self.domain == other.domain \
+            and self.original_domain == other.original_domain \
+            and self.labels == other.labels
+
+    def __hash__(self):
+        # TODO handle labels
+        return hash((self.projector, self.domain, self.original_domain))
+
 
 class Clustering(metaclass=WrapperMeta):
     """
