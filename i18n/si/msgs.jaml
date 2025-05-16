@@ -15041,10 +15041,9 @@ widgets/visualize/owtreeviewer.py:
         def `__init__`:
             'Target class: ': 'Ciljni razred: '
             None: Brez
-            instance_label: false
-            'Variable that identifies the instance ': 'Spremenljivka, ki opiše '
-            in data shown on mouse hover: podatke v namigu pod miško
-            Instance labels:: Oznake primerov:
+            node_labels: false
+            Variable that identifies the instances in nodes.: Spremenljivka, ki identificira primere v vozliščih.
+            Node labels:: "Oznake vozlišč:"
             show_intermediate: false
             Show details in non-leaves: Podrobnosti v notranjih vozliščih
         def `_update_node_info_attr_name`:
@@ -15059,10 +15058,6 @@ widgets/visualize/owtreeviewer.py:
         def `node_tooltip`:
             &nbsp;&nbsp;&nbsp;: false
             <p style='white-space:pre'>: false
-            <p>: false
-            ', ': false
-            <br/> ... and {len(data) - 5} more: <br/> ... in še {len(data) - 5}
-            </p>: false
             <br/>: false
             {indent}– {to_html(str(rule))}: false
             <p><b>Selection</b></p><p>{rule}</p>: <p><b>Kriterij</b></p><p>{rule}</p>
@@ -15089,6 +15084,9 @@ widgets/visualize/owtreeviewer.py:
             Target class: Ciljni razred
             Color by: Obarvaj po
         def `update_node_info`:
+            <hr/>: false
+            ', ': false
+            ' + {len(data) - 3}': true
             '<p style="line-height: 120%; margin-bottom: 0">{text}</p>': false
         def `node_content_cls`:
             <b>{self.domain.class_vars[0].values[int(modus)]}</b><br/>: false

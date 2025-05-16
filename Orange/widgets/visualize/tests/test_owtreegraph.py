@@ -215,25 +215,24 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         self.assertNotIn("20 instances", txt)
         self.assertIn("ccc", txt)
 
-    def test_select_instance_labels(self):
+    def test_select_node_labels(self):
         widget = self.widget
-        combo = self.widget.controls.instance_label
+        combo = self.widget.controls.node_labels
 
         def check_labels(attr):
             column = widget.dataset.get_column(attr)
             to_str = widget.domain[attr].str_val
             for node in widget.scene.nodes():
+                if widget.tree_adapter.has_children(node.node_inst):
+                    continue
                 subset = node.node_inst.subset
-                if len(subset) <= 6:
+                if len(subset) <= 4:
                     self.assertIn(
-                        ", ".join(map(to_str, column[subset])),
-                        widget.node_tooltip(node))
+                        ", ".join(map(to_str, column[subset])), node.toHtml())
                 else:
                     self.assertIn(
-                        ", ".join(map(to_str, column[subset[:5]])),
-                        widget.node_tooltip(node))
-                    self.assertIn(str(len(subset) - 5),
-                                  widget.node_tooltip(node))
+                        ", ".join(map(to_str, column[subset[:3]])), node.toHtml())
+                    self.assertIn(str(len(subset) - 3), node.toHtml())
 
         def switch_to(attr):
             idx = combo.model().indexOf(attr and widget.domain[attr])
@@ -245,11 +244,11 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         zootree = TreeLearner()(zoo)
         iristree = TreeLearner()(iris)
 
-        self.assertIsNone(widget.instance_label)
+        self.assertIsNone(widget.node_labels)
 
         # Default label is a string variable (with most unique values)
         self.send_signal(widget.Inputs.tree, zootree)
-        self.assertIs(widget.instance_label, zootree.domain["name"])
+        self.assertIs(widget.node_labels, zootree.domain["name"])
         check_labels("name")
 
         # Change to another variable
@@ -258,30 +257,30 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
 
         # See that losing the data for a while keeps the label
         self.send_signal(widget.Inputs.tree, None)
-        self.assertIsNone(widget.instance_label)
+        self.assertIsNone(widget.node_labels)
         self.send_signal(widget.Inputs.tree, zootree)
         check_labels("hair")
 
         self.send_signal(widget.Inputs.tree, iristree)
-        self.assertIsNone(widget.instance_label)
+        self.assertIsNone(widget.node_labels)
         switch_to("petal length")
         check_labels("petal length")
         self.send_signal(widget.Inputs.tree, None)
-        self.assertIsNone(widget.instance_label)
+        self.assertIsNone(widget.node_labels)
         self.send_signal(widget.Inputs.tree, iristree)
-        self.assertEqual(widget.instance_label, iristree.domain["petal length"])
+        self.assertEqual(widget.node_labels, iristree.domain["petal length"])
         check_labels("petal length")
 
         instances = zootree.instances
         zootree.instances = None
         self.send_signal(widget.Inputs.tree, zootree)
-        self.assertIsNone(widget.instance_label)
+        self.assertIsNone(widget.node_labels)
         self.assertEqual(list(widget.label_model), [None])
 
         zootree.instances = instances
-        widget.instance_label_hint = ""  # Reset to no hint
+        widget.node_labels_hint = ""  # Reset to no hint
         self.send_signal(widget.Inputs.tree, zootree)
-        self.assertIs(widget.instance_label, zootree.domain["name"])
+        self.assertIs(widget.node_labels, zootree.domain["name"])
         check_labels("name")
 
 
