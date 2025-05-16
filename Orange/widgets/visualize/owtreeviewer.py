@@ -1,5 +1,6 @@
 """Widget for visualization of tree models"""
 from html import escape
+from typing import Optional
 
 import numpy as np
 
@@ -11,10 +12,12 @@ from AnyQt.QtGui import QColor, QBrush, QPen, QFontMetrics
 from AnyQt.QtCore import Qt, QPointF, QSizeF, QRectF
 
 from orangewidget.utils.combobox import ComboBoxSearch
+from orangewidget.utils.itemmodels import PyListModel
 
 from Orange.base import TreeModel, SklModel
 from Orange.widgets import gui
 from Orange.widgets.utils.signals import Input, Output
+from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owtreeviewer2d import \
     GraphicsNode, GraphicsEdge, OWTreeViewer2D
@@ -183,6 +186,8 @@ class OWTreeGraph(OWTreeViewer2D):
     settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
     regression_colors = Setting(0)
+    # None is a hint, "" means 'no hint'
+    instance_label_hint: Optional[str] = ContextSetting("")
     show_intermediate = Setting(False)
 
     replaces = [
@@ -197,8 +202,8 @@ class OWTreeGraph(OWTreeViewer2D):
         super().__init__()
         self.domain = None
         self.dataset = None
-        self.clf_dataset = None
         self.tree_adapter = None
+        self.instance_label = None
 
         self.color_label = QLabel("Target class: ")
         combo = self.color_combo = ComboBoxSearch()
@@ -208,6 +213,25 @@ class OWTreeGraph(OWTreeViewer2D):
         combo.setMinimumContentsLength(8)
         combo.activated[int].connect(self.color_changed)
         self.display_box.layout().addRow(self.color_label, combo)
+
+        self.label_model = DomainModel(
+            placeholder="None",
+            order=(DomainModel.METAS,
+                   PyListModel.Separator,
+                   DomainModel.ATTRIBUTES)
+        )
+        combo = gui.comboBox(
+            None, self, "instance_label",
+            model=self.label_model,
+            orientation=Qt.Horizontal,
+            callback=self.label_changed,
+            sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
+            sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed),
+            minimumContentsLength=8,
+            tooltip=("Variable that identifies the instance "
+                     "in data shown on mouse hover")
+        )
+        self.display_box.layout().addRow("Instance labels:", combo)
 
         box = gui.hBox(None)
         gui.rubber(box)
@@ -258,6 +282,10 @@ class OWTreeGraph(OWTreeViewer2D):
             self.regression_colors = i
             self.toggle_node_color_reg()
 
+    def label_changed(self):
+        self.instance_label_hint = self.instance_label and self.instance_label.name
+        self.update_node_tooltips()
+
     def toggle_node_size(self):
         self.set_node_info()
         self.scene.update()
@@ -282,38 +310,68 @@ class OWTreeGraph(OWTreeViewer2D):
         self.model = model
         self.target_class_index = 0
         if model is None:
-            self.infolabel.setText('No tree.')
-            self.root_node = None
-            self.dataset = None
-            self.tree_adapter = None
+            self._ctree_clean()
         else:
-            self.tree_adapter = self._get_tree_adapter(model)
-            self.domain = model.domain
-            self.dataset = model.instances
-            if self.dataset is not None and self.dataset.domain != self.domain:
-                self.clf_dataset = self.dataset.transform(model.domain)
-            else:
-                self.clf_dataset = self.dataset
-            class_var = self.domain.class_var
-            self.scene.colors = class_var.palette
-            if class_var.is_discrete:
-                self.color_label.setText("Target class: ")
-                self.color_combo.addItem("None")
-                self.color_combo.addItems(self.domain.class_vars[0].values)
-                self.color_combo.setCurrentIndex(self.target_class_index)
-            else:
-                self.color_label.setText("Color by: ")
-                self.color_combo.addItems(self.COL_OPTIONS)
-                self.color_combo.setCurrentIndex(self.regression_colors)
-            self.openContext(self.domain.class_var)
-            # self.root_node = self.walkcreate(model.root, None)
-            self.root_node = self.walkcreate(self.tree_adapter.root)
-            nodes = self.tree_adapter.num_nodes
-            leaves = len(self.tree_adapter.leaves(self.tree_adapter.root))
-            self.infolabel.setText(f'{nodes} {pl(nodes, "node")}, {leaves} {pl(leaves, "leaf|leaves")}')
+            self._ctree_setup(model)
+
         self.setup_scene()
         self.Outputs.selected_data.send(None)
         self.Outputs.annotated_data.send(create_annotated_table(self.dataset, []))
+
+    def _ctree_clean(self):
+        self.infolabel.setText('No tree.')
+        self.label_model.set_domain(None)
+        self.root_node = None
+        self.dataset = None
+        self.tree_adapter = None
+        self.instance_label = None
+
+    def _ctree_setup(self, model):
+        self.tree_adapter = self._get_tree_adapter(model)
+        self.domain = model.domain
+        self.dataset = model.instances
+        class_var = self.domain.class_var
+        self.scene.colors = class_var.palette
+        if class_var.is_discrete:
+            self.color_label.setText("Target class: ")
+            self.color_combo.addItem("None")
+            self.color_combo.addItems(self.domain.class_vars[0].values)
+            self.color_combo.setCurrentIndex(self.target_class_index)
+        else:
+            self.color_label.setText("Color by: ")
+            self.color_combo.addItems(self.COL_OPTIONS)
+            self.color_combo.setCurrentIndex(self.regression_colors)
+
+        self.openContext(self.domain)
+
+        self.set_instance_label(model)
+        self.root_node = self.walkcreate(self.tree_adapter.root)
+        nodes = self.tree_adapter.num_nodes
+        leaves = len(self.tree_adapter.leaves(self.tree_adapter.root))
+        self.infolabel.setText(f'{nodes} {pl(nodes, "node")}, {leaves} {pl(leaves, "leaf|leaves")}')
+
+    def set_instance_label(self, model):
+        # Note: This function set the instance label but not the hint
+        # Hints are only set by users. If the label is set heuristically
+        # it will be set to the same (heuristic) value next time anyway.
+
+        # Set instance_label to None before changing the model,
+        # for the sake of hygiene
+        self.instance_label = None
+        self.label_model.set_domain(model.instances and model.instances.domain)
+
+        # If we have no data or the hint say to not use labels, leave it None
+        if model.instances is None or self.instance_label_hint is None:
+            return
+
+        if self.instance_label_hint in self.domain:
+            # Use the hint if you can
+            self.instance_label = self.domain[self.instance_label_hint]
+        else:
+            self.instance_label = \
+                max((v for v in self.domain.metas if v.is_string),
+                    key=lambda v: len(set(self.dataset.get_column(v))),
+                    default=None)
 
     def walkcreate(self, node, parent=None):
         """Create a structure of tree nodes from the given model"""
@@ -329,9 +387,20 @@ class OWTreeGraph(OWTreeViewer2D):
         return node_obj
 
     def node_tooltip(self, node):
-        # We uses <br/> and &nbsp: styling of <li> in Qt doesn't work well
+        # We use <br/> and &nbsp: styling of <li> in Qt doesn't work well
         indent = "&nbsp;&nbsp;&nbsp;"
         nbp = "<p style='white-space:pre'>"
+
+        label_list = ""
+        if self.instance_label is not None:
+            data = self.tree_adapter.get_instances_in_nodes([node.node_inst])
+            var = self.instance_label
+            labels = [escape(var.str_val(label))
+                      for label in data.get_column(var)[:5 + (len(data) == 6)]]
+            label_list = "<p>" + ", ".join(labels)
+            if len(data) > 5:
+                label_list += f"<br/> ... and {len(data) - 5} more"
+            label_list += "</p>"
 
         rule = "<br/>".join(f"{indent}– {to_html(str(rule))}"
                             for rule in self.tree_adapter.rules(node.node_inst))
@@ -365,8 +434,8 @@ class OWTreeGraph(OWTreeViewer2D):
 
         split = self._update_node_info_attr_name(node, "")
         if split:
-            split = f"<p style='white-space:pre'><b>Next split: </b>{split}</p>"
-        return "<hr/>".join(filter(None, (rule, content, split)))
+            split = f"{nbp}<b>Next split: </b>{split}</p>"
+        return "<hr/>".join(filter(None, (label_list, rule, content, split)))
 
     def update_selection(self):
         if self.model is None:
