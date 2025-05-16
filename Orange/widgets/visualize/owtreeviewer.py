@@ -187,7 +187,7 @@ class OWTreeGraph(OWTreeViewer2D):
     target_class_index = ContextSetting(0)
     regression_colors = Setting(0)
     # None is a hint, "" means 'no hint'
-    instance_label_hint: Optional[str] = ContextSetting("")
+    node_labels_hint: Optional[str] = ContextSetting("")
     show_intermediate = Setting(False)
 
     replaces = [
@@ -203,7 +203,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.domain = None
         self.dataset = None
         self.tree_adapter = None
-        self.instance_label = None
+        self.node_labels = None
 
         self.color_label = QLabel("Target class: ")
         combo = self.color_combo = ComboBoxSearch()
@@ -221,17 +221,16 @@ class OWTreeGraph(OWTreeViewer2D):
                    DomainModel.ATTRIBUTES)
         )
         combo = gui.comboBox(
-            None, self, "instance_label",
+            None, self, "node_labels",
             model=self.label_model,
             orientation=Qt.Horizontal,
             callback=self.label_changed,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed),
             minimumContentsLength=8,
-            tooltip=("Variable that identifies the instance "
-                     "in data shown on mouse hover")
+            tooltip="Variable that identifies the instances in nodes."
         )
-        self.display_box.layout().addRow("Instance labels:", combo)
+        self.display_box.layout().addRow("Node labels:", combo)
 
         box = gui.hBox(None)
         gui.rubber(box)
@@ -283,8 +282,8 @@ class OWTreeGraph(OWTreeViewer2D):
             self.toggle_node_color_reg()
 
     def label_changed(self):
-        self.instance_label_hint = self.instance_label and self.instance_label.name
-        self.update_node_tooltips()
+        self.node_labels_hint = self.node_labels and self.node_labels.name
+        self.set_node_info()
 
     def toggle_node_size(self):
         self.set_node_info()
@@ -324,7 +323,7 @@ class OWTreeGraph(OWTreeViewer2D):
         self.root_node = None
         self.dataset = None
         self.tree_adapter = None
-        self.instance_label = None
+        self.node_labels = None
 
     def _ctree_setup(self, model):
         self.tree_adapter = self._get_tree_adapter(model)
@@ -344,34 +343,36 @@ class OWTreeGraph(OWTreeViewer2D):
 
         self.openContext(self.domain)
 
-        self.set_instance_label(model)
+        self.set_node_labels(model)
         self.root_node = self.walkcreate(self.tree_adapter.root)
         nodes = self.tree_adapter.num_nodes
         leaves = len(self.tree_adapter.leaves(self.tree_adapter.root))
         self.infolabel.setText(f'{nodes} {pl(nodes, "node")}, {leaves} {pl(leaves, "leaf|leaves")}')
 
-    def set_instance_label(self, model):
+    def set_node_labels(self, model):
         # Note: This function set the instance label but not the hint
         # Hints are only set by users. If the label is set heuristically
         # it will be set to the same (heuristic) value next time anyway.
 
-        # Set instance_label to None before changing the model,
+        # Set node_labels to None before changing the model,
         # for the sake of hygiene
-        self.instance_label = None
+        self.node_labels = None
         self.label_model.set_domain(model.instances and model.instances.domain)
 
         # If we have no data or the hint say to not use labels, leave it None
-        if model.instances is None or self.instance_label_hint is None:
+        if model.instances is None or self.node_labels_hint is None:
             return
 
-        if self.instance_label_hint in self.domain:
+        if self.node_labels_hint in self.domain:
             # Use the hint if you can
-            self.instance_label = self.domain[self.instance_label_hint]
+            self.node_labels = self.domain[self.node_labels_hint]
         else:
-            self.instance_label = \
-                max((v for v in self.domain.metas if v.is_string),
-                    key=lambda v: len(set(self.dataset.get_column(v))),
-                    default=None)
+            nunique, var = max(
+                ((len(set(self.dataset.get_column(v))), v)
+                 for v in self.domain.metas if v.is_string),
+                default=(0, None))
+            if nunique > 0.8 * len(self.dataset):
+                self.node_labels = var
 
     def walkcreate(self, node, parent=None):
         """Create a structure of tree nodes from the given model"""
@@ -390,17 +391,6 @@ class OWTreeGraph(OWTreeViewer2D):
         # We use <br/> and &nbsp: styling of <li> in Qt doesn't work well
         indent = "&nbsp;&nbsp;&nbsp;"
         nbp = "<p style='white-space:pre'>"
-
-        label_list = ""
-        if self.instance_label is not None:
-            data = self.tree_adapter.get_instances_in_nodes([node.node_inst])
-            var = self.instance_label
-            labels = [escape(var.str_val(label))
-                      for label in data.get_column(var)[:5 + (len(data) == 6)]]
-            label_list = "<p>" + ", ".join(labels)
-            if len(data) > 5:
-                label_list += f"<br/> ... and {len(data) - 5} more"
-            label_list += "</p>"
 
         rule = "<br/>".join(f"{indent}– {to_html(str(rule))}"
                             for rule in self.tree_adapter.rules(node.node_inst))
@@ -435,7 +425,7 @@ class OWTreeGraph(OWTreeViewer2D):
         split = self._update_node_info_attr_name(node, "")
         if split:
             split = f"{nbp}<b>Next split: </b>{split}</p>"
-        return "<hr/>".join(filter(None, (label_list, rule, content, split)))
+        return "<hr/>".join(filter(None, (rule, content, split)))
 
     def update_selection(self):
         if self.model is None:
@@ -472,6 +462,16 @@ class OWTreeGraph(OWTreeViewer2D):
             text = self.node_content_reg(node)
 
         text = self._update_node_info_attr_name(node, text)
+        if self.node_labels is not None and not self.tree_adapter.has_children(node.node_inst):
+            text += "<hr/>"
+            data = self.tree_adapter.get_instances_in_nodes([node.node_inst])
+            var = self.node_labels
+            labels = [escape(var.str_val(label))
+                      for label in data.get_column(var)[:3 + (len(data) == 4)]]
+            text += ", ".join(labels)
+            if len(data) > 4:
+                text += f" + {len(data) - 3}"
+
         node.setHtml(
             f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
 
