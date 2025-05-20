@@ -283,6 +283,69 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         self.assertIs(widget.node_labels, zootree.domain["name"])
         check_labels("name")
 
+    def test_select_node_many_labels(self):
+        zoo = Table("zoo")
+        zootree = TreeLearner()(zoo)
+
+        self.send_signal(self.widget.Inputs.tree, zootree)
+
+        ta = self.widget.tree_adapter
+        node = next(node for node in self.widget.scene.nodes()
+                    if not ta.has_children(node.node_inst))
+
+        var = zoo.domain["name"]
+        values = zoo.get_column(var)
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50]])),
+                      node.toHtml())
+
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75]])),
+                      node.toHtml())
+
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])),
+                      node.toHtml())
+
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11, 3]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75]])) + " + 2",
+                      node.toHtml())
+
+        var = zoo.domain["legs"]
+        values = zoo.get_column(var)
+        self.widget.node_labels = var
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])),
+                      node.toHtml())
+
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11, 3]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75]]))
+                      + " (+ 2 more)",
+                      node.toHtml())
+
+        iris = Table("iris")
+        iristree = TreeLearner()(iris)
+        self.send_signal(self.widget.Inputs.tree, iristree)
+        var = iris.domain["petal length"]
+        values = iris.get_column(var)
+        self.widget.node_labels = var
+        ta = self.widget.tree_adapter
+        node = next(node for node in self.widget.scene.nodes()
+                    if not ta.has_children(node.node_inst))
+
+        ta.get_instances_in_nodes = lambda *_: iris[[0, 50, 75, 11, 13,
+                                                     14, 15, 16]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75]]))
+                      + " (+ 5 more)",
+                      node.toHtml())
+
 
 if __name__ == "__main__":
     unittest.main()

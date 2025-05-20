@@ -1,4 +1,5 @@
 """Widget for visualization of tree models"""
+import re
 from html import escape
 from typing import Optional
 
@@ -470,7 +471,10 @@ class OWTreeGraph(OWTreeViewer2D):
                       for label in data.get_column(var)[:3 + (len(data) == 4)]]
             text += ", ".join(labels)
             if len(data) > 4:
-                text += f" + {len(data) - 3}"
+                if any(re.match("\d+\.?\d*", label) for label in labels):
+                    text += f" (+ {len(data) - 3} more)"
+                else:
+                    text += f" + {len(data) - 3}"
 
         node.setHtml(
             f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
