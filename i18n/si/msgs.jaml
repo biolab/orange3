@@ -8312,13 +8312,13 @@ widgets/data/utils/tablesummary.py:
         Future[int]: false
     def `format_summary`:
         def `format_part`:
-            ' ({perc:.1f} % missing data)': ' ({perc:.1f} % manjkajočih podatkov)'
+            ' ({perc:.1f} % missing data)': '\n    ({perc:.1f} % manjkajočih podatkov)'
             sparse: redki
             tags: oznake
             ' ({tag}, density {dens:.2f} %)': ' ({tag}, gostota {dens:.2f} %)'
         {ninst} {pl(ninst, 'instance')}: {ninst} {plsi(ninst, 'primer')}
         ~{ninst} {pl(ninst, 'instance')}: ~{ninst} {plsi(ninst, 'primer')}
-        ' (no missing data)': ' (ni manjkajočih podatkov)'
+        ' (no missing data)': '\n     (ni manjkajočih podatkov)'
         {nattrs} {pl(nattrs, 'feature')}: {nattrs} {plsi(nattrs, 'spremenljivka')}
         No target variable.: Ni ciljne spremenljivke.
         {nclasses} {pl(nclasses, 'outcome')}: {nclasses} {plsi(nclasses, 'ciljna spremenljivka|ciljni spremenljivki|ciljne spremenljivke|ciljnih spremenljivk')}
