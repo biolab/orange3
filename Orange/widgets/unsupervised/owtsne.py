@@ -682,6 +682,11 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         self.valid_data = np.ones(len(embedding), dtype=bool)
         return embedding
 
+    def _get_projection_variables(self):
+        if self.tsne_embedding is None:
+            return super()._get_projection_variables()
+        return self.tsne_embedding.domain.attributes
+
     def _toggle_run(self):
         # If no data, there's nothing to do
         if self.data is None:
