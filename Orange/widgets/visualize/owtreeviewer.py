@@ -468,13 +468,10 @@ class OWTreeGraph(OWTreeViewer2D):
             data = self.tree_adapter.get_instances_in_nodes([node.node_inst])
             var = self.node_labels
             labels = [escape(var.str_val(label))
-                      for label in data.get_column(var)[:3 + (len(data) == 4)]]
+                      for label in data.get_column(var)[:4]]
             text += ", ".join(labels)
             if len(data) > 4:
-                if any(re.match("\d+\.?\d*", label) for label in labels):
-                    text += f" (+ {len(data) - 3} more)"
-                else:
-                    text += f" + {len(data) - 3}"
+                text += ", …"
 
         node.setHtml(
             f'<p style="line-height: 120%; margin-bottom: 0">{text}</p>')
