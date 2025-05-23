@@ -226,13 +226,10 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
                 if widget.tree_adapter.has_children(node.node_inst):
                     continue
                 subset = node.node_inst.subset
-                if len(subset) <= 4:
-                    self.assertIn(
-                        ", ".join(map(to_str, column[subset])), node.toHtml())
-                else:
-                    self.assertIn(
-                        ", ".join(map(to_str, column[subset[:3]])), node.toHtml())
-                    self.assertIn(str(len(subset) - 3), node.toHtml())
+                exp = ", ".join(map(to_str, column[subset[:4]]))
+                if len(subset) > 4:
+                    exp += ", …"
+                self.assertIn(exp, node.toHtml())
 
         def switch_to(attr):
             idx = combo.model().indexOf(attr and widget.domain[attr])
@@ -312,7 +309,7 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
 
         ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11, 3]]
         self.widget.update_node_info(node)
-        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75]])) + " + 2",
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])) + ", …",
                       node.toHtml())
 
         var = zoo.domain["legs"]
@@ -325,8 +322,7 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
 
         ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11, 3]]
         self.widget.update_node_info(node)
-        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75]]))
-                      + " (+ 2 more)",
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])) + ", …",
                       node.toHtml())
 
         iris = Table("iris")
@@ -342,8 +338,7 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         ta.get_instances_in_nodes = lambda *_: iris[[0, 50, 75, 11, 13,
                                                      14, 15, 16]]
         self.widget.update_node_info(node)
-        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75]]))
-                      + " (+ 5 more)",
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])) + ", …",
                       node.toHtml())
 
 
