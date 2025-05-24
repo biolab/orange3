@@ -1,0 +1,111 @@
+@startuml
+' Orange.data
+abstract class Variable {
+  name: str
+}
+class ContinuousVariable extends Variable
+class DiscreteVariable extends Variable
+class StringVariable extends Variable
+
+class Domain {
+  variables: list[Variable]
+  class_vars: list[Variable]
+  metas: list[Variable]
+}
+Domain "1" o-- "*" Variable : attributes
+Domain "1" o-- "*" Variable : class_vars
+Domain "1" o-- "*" Variable : metas
+
+class Value {
+  value
+}
+
+class Instance {
+  domain: Domain
+  _values: list[Value]
+}
+Instance "1" *-- "1" Domain
+Instance "*" o-- "*" Value
+
+class Table {
+  domain: Domain
+  Y: array
+  metas: array
+}
+Table "1" *-- "1" Domain
+Table "1" o-- "*" Instance
+
+' Orange.base
+interface Learner {
+  __call__(data: Table) -> Model
+}
+interface Model {
+  predict(data: Table) -> array
+}
+class SklLearner implements Learner
+class SklModel implements Model
+
+' Orange.classification
+class LearnerClassification extends Learner
+class ModelClassification extends Model
+
+class LogisticRegressionLearner extends LearnerClassification
+class LogisticRegressionModel extends ModelClassification
+LogisticRegressionLearner ..> LogisticRegressionModel : creates
+
+class TreeLearner extends LearnerClassification
+class TreeModel extends ModelClassification
+TreeLearner ..> TreeModel : creates
+
+class Rule
+class Selector
+TreeLearner o-- "*" Rule
+Rule o-- "*" Selector
+
+class Node {
+  children: list[Node]
+}
+TreeModel o-- "*" Node
+
+' Orange.regression
+class LearnerRegression extends Learner
+class ModelRegression extends Model
+
+' Orange.clustering
+class LearnerClustering extends Learner
+class ModelClustering extends Model
+class KMeansLearner extends LearnerClustering
+class KMeansModel extends ModelClustering
+KMeansLearner ..> KMeansModel : creates
+
+class Tree {
+ ' Orange.clustering.hierarchical.Tree
+}
+ModelClustering <|-- Tree
+
+' Orange.widgets
+class OWWidget {
+  settings_handler: SettingsHandler
+}
+class OWComponent
+OWWidget o-- "*" OWComponent
+
+class Input {
+  name: str
+  type: type
+}
+class Output {
+  name: str
+  type: type
+}
+OWWidget o-- "*" Input
+OWWidget o-- "*" Output
+
+class SettingsHandler
+class Setting
+class ContextSetting extends Setting
+SettingsHandler o-- "*" Setting
+
+OWWidget *-- SettingsHandler
+
+@enduml

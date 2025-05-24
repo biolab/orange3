@@ -1,0 +1,53 @@
+@startuml
+' Entities
+entity Dataset {
+  Name: string
+  Description: string
+  RowCount: int
+  Source: string
+}
+
+entity DomainSchema {
+  SchemaID: UUID <<PK>>
+  Description: string
+}
+
+entity VariableDefinition {
+  VariableID: UUID <<PK>>
+  Name: string
+  Type: string (e.g., Continuous, Discrete, String)
+  Description: string
+}
+
+entity InstanceData {
+  InstanceID: UUID <<PK>>
+  Weight: float
+  Timestamp: datetime
+}
+
+' Associative entity for M:N relationship between InstanceData and VariableDefinition
+entity CellValue {
+  Value: any
+  ' This entity represents a specific value in a cell,
+  ' linking an instance to a variable definition.
+}
+
+' Relationships
+Dataset ||--|| DomainSchema : "has"
+Dataset ||--o{ InstanceData : "contains"
+
+DomainSchema }o--o{ VariableDefinition : "defines attributes"
+DomainSchema }o--o{ VariableDefinition : "defines class variables"
+DomainSchema }o--o{ VariableDefinition : "defines meta attributes"
+
+InstanceData }o--|| CellValue : "has values"
+VariableDefinition ||--o{ CellValue : "is value for"
+
+' Note on InstanceData -- VariableDefinition M:N relationship:
+' The M:N relationship between InstanceData and VariableDefinition,
+' representing the actual data values in the cells of a table,
+' is modeled through the "CellValue" associative entity.
+' An InstanceData record is composed of multiple CellValue records,
+' each linking to a specific VariableDefinition and holding the actual value.
+
+@enduml
