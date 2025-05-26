@@ -38,24 +38,24 @@ jobs:
       fail-fast: False
       matrix:
         os: [ubuntu-22.04]
-        python-version: [3.9, '3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
         tox_env: [orange-released]
         name: [Released]
         include:
           - os: ubuntu-22.04
-            python-version: '3.12'
+            python-version: '3.13'
             tox_env: orange-latest
             name: Latest
           - os: ubuntu-20.04
-            python-version: 3.9
+            python-version: '3.10'
             tox_env: orange-oldest
             name: Oldest dependencies
           - os: ubuntu-22.04
-            python-version: '3.10'
+            python-version: '3.12'
             tox_env: pyqt6
             name: PyQt6
           - os: ubuntu-22.04
-            python-version: '3.12'
+            python-version: '3.13'
             tox_env: beta
             name: "Scientific Python nightly wheels"
 
@@ -126,24 +126,24 @@ jobs:
       fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
-        python-version: [3.9, '3.10', '3.11', '3.12']
+        python-version: ['3.10', '3.11', '3.12', '3.13']
         tox_env: [orange-released]
         name: [Released]
         include:
           - os: windows-latest
-            python-version: '3.12'
+            python-version: '3.13'
             tox_env: orange-latest
             name: Latest
           - os: macos-latest
-            python-version: '3.12'
+            python-version: '3.13'
             tox_env: orange-latest
             name: Latest
           - os: windows-latest
-            python-version: '3.10'
+            python-version: '3.12'
             tox_env: pyqt6
             name: PyQt6
           - os: macos-latest
-            python-version: 3.9
+            python-version: '3.12'
             tox_env: pyqt6
             name: PyQt6
 
