@@ -10,7 +10,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -37,24 +37,24 @@ jobs:
     strategy:
       fail-fast: False
       matrix:
-        os: [ubuntu-22.04]
+        os: [ubuntu-latest]
         python-version: ['3.10', '3.11', '3.12', '3.13']
         tox_env: [orange-released]
         name: [Released]
         include:
-          - os: ubuntu-22.04
+          - os: ubuntu-latest
             python-version: '3.13'
             tox_env: orange-latest
             name: Latest
-          - os: ubuntu-20.04
+          - os: ubuntu-22.04
             python-version: '3.10'
             tox_env: orange-oldest
             name: Oldest dependencies
-          - os: ubuntu-22.04
+          - os: ubuntu-latest
             python-version: '3.12'
             tox_env: pyqt6
             name: PyQt6
-          - os: ubuntu-22.04
+          - os: ubuntu-latest
             python-version: '3.13'
             tox_env: beta
             name: "Scientific Python nightly wheels"
@@ -88,11 +88,7 @@ jobs:
       - name: Install linux system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libegl1-mesa libxcb-shape0 libxcb-cursor0
-
-      - name: Install glibc-tools dependency on Ubuntu-22.04
-        if: matrix.os == 'ubuntu-22.04'
-        run: sudo apt-get install -y glibc-tools  # required for catchsegv
+          sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libxcb-cursor0 glibc-tools libegl1
 
       - name: Install Tox
         run: |
