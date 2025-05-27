@@ -48,9 +48,10 @@ class TestKNNLearner(unittest.TestCase):
         self.assertEqual(predictions[3], 1.0)
 
     def test_random(self):
+        np.random.seed(1) 
         nrows, ncols = 1000, 5
         x = np.random.randint(-20, 51, (nrows, ncols))
-        y = np.random.randint(0, 9, (nrows, 1))
+        y = np.random.randint(0, 5, (nrows, 1))
         x1, x2 = np.split(x, 2)
         y1, y2 = np.split(y, 2)
         attr = (ContinuousVariable('Feature 1'),
@@ -66,8 +67,10 @@ class TestKNNLearner(unittest.TestCase):
         z = clf(x2)
         correct = (z == y2.flatten())
         ca = np.mean(correct)
+        # expected accuracy is around 0.2
         self.assertGreater(ca, 0.1)
         self.assertLess(ca, 0.3)
+
 
     def test_KNN_mahalanobis(self):
         learners = [KNNLearner(metric="mahalanobis")]
