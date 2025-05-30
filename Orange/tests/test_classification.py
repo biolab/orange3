@@ -22,6 +22,7 @@ from Orange.classification import (
     SVMLearner, LinearSVMLearner, OneClassSVMLearner, TreeLearner, KNNLearner,
     SimpleRandomForestLearner, EllipticEnvelopeLearner, ThresholdLearner,
     CalibratedLearner)
+from Orange.modelling import ColumnLearner
 from Orange.classification.rules import _RuleLearner
 from Orange.data import (ContinuousVariable, DiscreteVariable,
                          Domain, Table)
@@ -29,6 +30,10 @@ from Orange.data.table import DomainTransformationError
 from Orange.evaluation import CrossValidation
 from Orange.tests.dummy_learners import DummyLearner, DummyMulticlassLearner
 from Orange.tests import test_filename
+
+# While this could be determined automatically from __init__ signatures,
+# it is better to do it explicitly
+LEARNERS_WITH_ARGUMENTS = (ThresholdLearner, CalibratedLearner, ColumnLearner)
 
 
 def all_learners():
@@ -214,8 +219,7 @@ class ModelTest(unittest.TestCase):
         """
         iris = Table('iris')
         for learner in all_learners():
-            # calibration, threshold learners' __init__ requires arguments
-            if learner in (ThresholdLearner, CalibratedLearner):
+            if learner in LEARNERS_WITH_ARGUMENTS:
                 continue
 
             # Skip learners that are incompatible with the dataset
@@ -260,6 +264,8 @@ class ModelTest(unittest.TestCase):
                 args = []
                 if learner in (ThresholdLearner, CalibratedLearner):
                     args = [LogisticRegressionLearner()]
+                elif learner in LEARNERS_WITH_ARGUMENTS:
+                    continue
                 data = iris_bin if learner is ThresholdLearner else iris
                 # Skip learners that are incompatible with the dataset
                 if learner.incompatibility_reason(self, data.domain):
@@ -284,6 +290,10 @@ class ModelTest(unittest.TestCase):
                     continue
                 if learner in (ThresholdLearner, CalibratedLearner):
                     model = learner(LogisticRegressionLearner())(data)
+                elif learner in LEARNERS_WITH_ARGUMENTS:
+                    # note that above two also require arguments, but we
+                    # provide them
+                    continue
                 else:
                     model = learner()(data)
                 probs = model.predict_proba(data)
@@ -392,8 +402,7 @@ class UnknownValuesInPrediction(unittest.TestCase):
     def test_missing_class(self):
         table = Table(test_filename("datasets/adult_sample_missing"))
         for learner in all_learners():
-            # calibration, threshold learners' __init__ require arguments
-            if learner in (ThresholdLearner, CalibratedLearner):
+            if learner in LEARNERS_WITH_ARGUMENTS:
                 continue
             # Skip slow tests
             if isinstance(learner, _RuleLearner):
@@ -421,8 +430,7 @@ class LearnerAccessibility(unittest.TestCase):
     def test_all_models_work_after_unpickling(self):
         datasets = [Table('iris'), Table('titanic')]
         for learner in list(all_learners()):
-            # calibration, threshold learners' __init__ require arguments
-            if learner in (ThresholdLearner, CalibratedLearner):
+            if learner in LEARNERS_WITH_ARGUMENTS:
                 continue
             # Skip slow tests
             if issubclass(learner, _RuleLearner):
@@ -448,8 +456,7 @@ class LearnerAccessibility(unittest.TestCase):
     def test_all_models_work_after_unpickling_pca(self):
         datasets = [Table('iris'), Table('titanic')]
         for learner in list(all_learners()):
-            # calibration, threshold learners' __init__ require arguments
-            if learner in (ThresholdLearner, CalibratedLearner):
+            if learner in LEARNERS_WITH_ARGUMENTS:
                 continue
             # Skip slow tests
             if issubclass(learner, _RuleLearner):
@@ -478,8 +485,7 @@ class LearnerAccessibility(unittest.TestCase):
 
     def test_adequacy_all_learners(self):
         for learner in all_learners():
-            # calibration, threshold learners' __init__ requires arguments
-            if learner in (ThresholdLearner, CalibratedLearner):
+            if learner in LEARNERS_WITH_ARGUMENTS:
                 continue
             with self.subTest(learner.__name__):
                 learner = learner()
@@ -488,8 +494,7 @@ class LearnerAccessibility(unittest.TestCase):
 
     def test_adequacy_all_learners_multiclass(self):
         for learner in all_learners():
-            # calibration, threshold learners' __init__ require arguments
-            if learner in (ThresholdLearner, CalibratedLearner):
+            if learner in LEARNERS_WITH_ARGUMENTS:
                 continue
             with self.subTest(learner.__name__):
                 learner = learner()
