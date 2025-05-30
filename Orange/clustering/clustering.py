@@ -13,7 +13,11 @@ class ClusteringModel:
         self.projector = projector
         self.domain = None
         self.original_domain = None
-        self.labels = projector.labels_
+
+    @property
+    def labels(self):
+        # converted into a property for __eq__ and __hash__ implementation
+        return self.projector.labels_
 
     def __call__(self, data):
         def fix_dim(x):
@@ -56,6 +60,17 @@ class ClusteringModel:
     def predict(self, X):
         raise NotImplementedError(
             "This clustering algorithm does not support predicting.")
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        return type(self) is type(other) \
+            and self.projector == other.projector \
+            and self.domain == other.domain \
+            and self.original_domain == other.original_domain
+
+    def __hash__(self):
+        return hash((type(self), self.projector, self.domain, self.original_domain))
 
 
 class Clustering(metaclass=WrapperMeta):
