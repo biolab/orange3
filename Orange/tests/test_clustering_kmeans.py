@@ -138,6 +138,27 @@ class TestKMeans(unittest.TestCase):
         # totally different domain - should fail
         self.assertRaises(DomainTransformationError, c, Table("housing"))
 
+    def test_model_eq_hash(self):
+        kmeans = KMeans(n_clusters=2, max_iter=10, random_state=42)
+        d = self.iris
+        k1 = kmeans.get_model(d)
+        k2 = kmeans.get_model(d)
+
+        # results are the same
+        c1, c2 = k1(d), k2(d)
+        np.testing.assert_equal(c1, c2)
+
+        # transformations are not because .projector is a different object
+        self.assertNotEqual(k1, k2)
+        self.assertNotEqual(k1.projector, k2.projector)
+        self.assertNotEqual(hash(k1), hash(k2))
+        self.assertNotEqual(hash(k1.projector), hash(k2.projector))
+
+        # if projector was hacket to be the same, they match
+        k1.projector = k2.projector
+        self.assertEqual(k1, k2)
+        self.assertEqual(hash(k1), hash(k2))
+
     def test_deprecated_silhouette(self):
         with warnings.catch_warnings(record=True) as w:
             KMeans(compute_silhouette_score=True)
