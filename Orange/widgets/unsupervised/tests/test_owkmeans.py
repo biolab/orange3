@@ -224,14 +224,18 @@ class TestOWKMeans(WidgetTest):
         widget.k = 4
         self.send_signal(widget.Inputs.data, self.data)
         self.commit_and_wait()
-        widget.clusterings[widget.k].labels = np.array([0] * 100 + [1] * 203).flatten()
-        widget.clusterings[widget.k].silhouette_samples = np.arange(303) / 303
-        widget.send_data()
+        km = widget.clusterings[widget.k]
+
         out = self.get_output(widget.Outputs.centroids)
-        np.testing.assert_array_almost_equal(
-            np.array([[0, np.mean(np.arctan(np.arange(100) / 303)) / np.pi + 0.5],
-                      [1, np.mean(np.arctan(np.arange(100, 303) / 303)) / np.pi + 0.5],
-                      [2, 0], [3, 0]]), out.metas.astype(float))
+        sklearn_centroids = km.centroids
+        np.testing.assert_equal(sklearn_centroids, out.X)
+
+        scores = np.arctan(km.silhouette_samples) / np.pi + 0.5
+        silhouette = [np.mean(scores[km.labels == i]) for i in range(4)]
+        self.assertTrue(2, len(out.domain.metas))
+        np.testing.assert_almost_equal([0, 1, 2, 3], out.get_column("Cluster"))
+        np.testing.assert_almost_equal(silhouette, out.get_column("Silhouette"))
+
         self.assertEqual(out.name, "heart_disease centroids")
 
     def test_centroids_domain_on_output(self):
