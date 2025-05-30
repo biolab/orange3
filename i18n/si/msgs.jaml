@@ -203,8 +203,8 @@ util.py:
             unsafe: false
 version.py:
     3.39.0: false
-    3.39.0.dev0+c2c1648: false
-    c2c16487816d19a63177fae0b9febf1f0220f982: false
+    3.39.0.dev0+0a43fd4: false
+    0a43fd438e4e20613c4d9899c1781f874d33d921: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -4744,7 +4744,7 @@ widgets/data/owcreateclass.py:
         class `Error`:
             Class name duplicated.: Spremenljivka s tem imenom že obstaja.
             Class name should not be empty.: Ime razreda ne more biti prazno.
-            'Invalid regular expression: {}': 'Napačen regularni izraz: {}'
+            'Invalid regular expression: {}': Napačen regularni izraz: {}
         def `__init__`:
             class_name: false
             New Class Name: Ime novega razreda
@@ -8312,13 +8312,13 @@ widgets/data/utils/tablesummary.py:
         Future[int]: false
     def `format_summary`:
         def `format_part`:
-            ' ({perc:.1f} % missing data)': '\n    ({perc:.1f} % manjkajočih podatkov)'
+            ' ({perc:.1f} % missing data)': \n    ({perc:.1f} % manjkajočih podatkov)
             sparse: redki
             tags: oznake
             ' ({tag}, density {dens:.2f} %)': ' ({tag}, gostota {dens:.2f} %)'
         {ninst} {pl(ninst, 'instance')}: {ninst} {plsi(ninst, 'primer')}
         ~{ninst} {pl(ninst, 'instance')}: ~{ninst} {plsi(ninst, 'primer')}
-        ' (no missing data)': '\n     (ni manjkajočih podatkov)'
+        ' (no missing data)': \n     (ni manjkajočih podatkov)
         {nattrs} {pl(nattrs, 'feature')}: {nattrs} {plsi(nattrs, 'spremenljivka')}
         No target variable.: Ni ciljne spremenljivke.
         {nclasses} {pl(nclasses, 'outcome')}: {nclasses} {plsi(nclasses, 'ciljna spremenljivka|ciljni spremenljivki|ciljne spremenljivke|ciljnih spremenljivk')}
@@ -15040,12 +15040,17 @@ widgets/visualize/owtreeviewer.py:
         Variance: Varianca
         def `__init__`:
             'Target class: ': 'Ciljni razred: '
+            None: Brez
+            node_labels: false
+            Variable that identifies the instances in nodes.: Spremenljivka, ki identificira primere v vozliščih.
+            Node labels:: Oznake vozlišč:
             show_intermediate: false
             Show details in non-leaves: Podrobnosti v notranjih vozliščih
         def `_update_node_info_attr_name`:
             <hr/>: false
-        def `ctree`:
+        def `_ctree_clean`:
             No tree.: Ni drevesa.
+        def `_ctree_setup`:
             'Target class: ': 'Ciljni razred: '
             None: Brez
             'Color by: ': 'Obarvaj po: '
@@ -15068,7 +15073,7 @@ widgets/visualize/owtreeviewer.py:
             </table>: false
             {nbp}{class_var.name} = {mean:.3g} ± {var:.3g}<br/>: false
             ({self.tree_adapter.num_samples(node.node_inst)} instances)</p>: ({self.tree_adapter.num_samples(node.node_inst)} {plsi(self.tree_adapter.num_samples(node.node_inst), "primer")})
-            "<p style='white-space:pre'><b>Next split: </b>{split}</p>": <p style='white-space:pre'><b>Naslednja delitev: </b>{split}</p>
+            '{nbp}<b>Next split: </b>{split}</p>': {nbp}<b>Naslednja delitev: </b>{split}</p>
             <hr/>: false
         def `send_report`:
             Tree size: Velikost drevesa
@@ -15079,6 +15084,9 @@ widgets/visualize/owtreeviewer.py:
             Target class: Ciljni razred
             Color by: Obarvaj po
         def `update_node_info`:
+            <hr/>: false
+            ', ': false
+            , …: true
             '<p style="line-height: 120%; margin-bottom: 0">{text}</p>': false
         def `node_content_cls`:
             <b>{self.domain.class_vars[0].values[int(modus)]}</b><br/>: false
