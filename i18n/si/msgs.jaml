@@ -891,7 +891,7 @@ clustering/hierarchical.py:
 clustering/kmeans.py:
     KMeans: false
     class `KMeansModel`:
-        def `__init__`:
+        def `k`:
             n_clusters: false
     class `KMeans`:
         def `__init__`:
