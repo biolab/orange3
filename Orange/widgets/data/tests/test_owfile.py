@@ -470,7 +470,7 @@ a
 
     def test_auto_detect_and_override(self):
         tab_as_xlsx = FileFormat.locate("actually-a-tab-file.xlsx",
-                                        path.split(__file__)[0])
+                                        [dirname(__file__)])
         iris = FileFormat.locate("iris", dataset_dirs)
 
         reader_combo = self.widget.reader_combo
@@ -536,7 +536,7 @@ a
 
             # Now load a real Excel file: this is a known excention so the combo
             # should return to auto-detect
-            filename = FileFormat.locate("an_excel_file.xlsx", dataset_dirs)
+            filename = FileFormat.locate("an_excel_file.xlsx", [dirname(__file__)])
             self.widget.browse_file()
             self.assertEqual(self.widget.reader_combo.currentText(),
                              "Determine type from the file extension")
@@ -551,7 +551,7 @@ a
             assert self.get_output(self.widget.Outputs.data) is not None
 
             # Files with unknown extensions require manual selection
-            filename = FileFormat.locate("an_excel_file.foo", dataset_dirs)
+            filename = FileFormat.locate("an_excel_file.foo", [dirname(__file__)])
             self.widget.browse_file()
             self.assertTrue(self.widget.Error.select_file_type.is_shown())
             self.assertIsNone(self.get_output(self.widget.Outputs.data))
@@ -562,7 +562,7 @@ a
             self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
 
             # Consecutive loading of files with the same extension keeps selection
-            filename = FileFormat.locate("an_excel_file-too.foo", dataset_dirs)
+            filename = FileFormat.locate("an_excel_file-too.foo", [dirname(__file__)])
             self.widget.browse_file()
             self.assertFalse(self.widget.Error.unknown_select.is_shown())
             self.assertFalse(self.widget.Error.select_file_type.is_shown())
