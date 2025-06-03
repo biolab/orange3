@@ -7,7 +7,7 @@ from types import SimpleNamespace as namespace
 from typing import Optional  # pylint: disable=unused-import
 
 from Orange.data import Table, Domain
-from Orange.data.util import array_equal
+from Orange.data.util import array_equal, get_unique_names
 from Orange.misc import DistMatrix
 from Orange.preprocess import preprocess
 from Orange.projection import PCA
@@ -681,6 +681,14 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         embedding = self.tsne_embedding.embedding.X
         self.valid_data = np.ones(len(embedding), dtype=bool)
         return embedding
+
+    def _get_projection_variables(self):
+        if self.tsne_embedding is None:
+            return super()._get_projection_variables()
+        proposed = [a.name for a in self.tsne_embedding.domain.attributes]
+        names = get_unique_names(self.data.domain, proposed)
+        return tuple(a.copy(name=n) for a, n in
+                     zip(self.tsne_embedding.domain.attributes, names))
 
     def _toggle_run(self):
         # If no data, there's nothing to do

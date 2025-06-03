@@ -895,6 +895,29 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         w.controls.use_pca_preprocessing.setChecked(False)
         self.widget.run_button.click(), self.wait_until_finished()
 
+    def test_output_compute_value(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.wait_until_finished()
+
+        data = self.get_output(self.widget.Outputs.annotated_data)
+        self.assertIsNotNone(data.domain.metas[0].compute_value)
+        self.assertIsNotNone(data.domain.metas[1].compute_value)
+
+        transformed = self.data.transform(data.domain)
+        self.assert_table_equal(transformed[:, ["t-SNE-x", "t-SNE-y"]],
+                                data[:, ["t-SNE-x", "t-SNE-y"]])
+
+    def test_output_repeating_names(self):
+        data = self.data.transform(Domain(self.data.domain.attributes
+                                          + (ContinuousVariable("t-SNE-x"),)))
+        self.send_signal(self.widget.Inputs.data, data)
+        self.wait_until_finished()
+
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        meta_names = {a.name for a in out.domain.metas}
+        self.assertIn("t-SNE-x (1)", meta_names)
+        self.assertIn("t-SNE-y (1)", meta_names)
+
 
 class TestTSNERunner(unittest.TestCase):
     @classmethod
