@@ -90,7 +90,7 @@ def check_for_updates():
                     request = Request('https://orange.biolab.si/version/',
                                       headers={
                                           'Accept': 'text/plain',
-                                          'Accept-Encoding': 'gzip, deflate',
+                                          'Accept-Encoding': 'identity',
                                           'Connection': 'close',
                                           'User-Agent': ua_string()})
                     contents = urlopen(request, timeout=10).read().decode()
@@ -209,6 +209,7 @@ def pull_notifications():
                 request = Request('https://orange.biolab.si/notification-feed',
                                   headers={
                                       'Accept': 'text/plain',
+                                      'Accept-Encoding': 'identity',
                                       'Connection': 'close',
                                       'User-Agent': ua_string(),
                                       'Cache-Control': 'no-cache',

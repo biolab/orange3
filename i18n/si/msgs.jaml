@@ -227,7 +227,7 @@ canvas/__main__.py:
                 Accept: false
                 text/plain: false
                 Accept-Encoding: false
-                gzip, deflate: false
+                identity: false
                 Connection: false
                 close: false
                 User-Agent: false
@@ -259,6 +259,8 @@ canvas/__main__.py:
                 https://orange.biolab.si/notification-feed: false
                 Accept: false
                 text/plain: false
+                Accept-Encoding: false
+                identity: false
                 Connection: false
                 close: false
                 User-Agent: false
