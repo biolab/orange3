@@ -215,6 +215,132 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         self.assertNotIn("20 instances", txt)
         self.assertIn("ccc", txt)
 
+    def test_select_node_labels(self):
+        widget = self.widget
+        combo = self.widget.controls.node_labels
+
+        def check_labels(attr):
+            column = widget.dataset.get_column(attr)
+            to_str = widget.domain[attr].str_val
+            for node in widget.scene.nodes():
+                if widget.tree_adapter.has_children(node.node_inst):
+                    continue
+                subset = node.node_inst.subset
+                exp = ", ".join(map(to_str, column[subset[:4]]))
+                if len(subset) > 4:
+                    exp += ", …"
+                self.assertIn(exp, node.toHtml())
+
+        def switch_to(attr):
+            idx = combo.model().indexOf(attr and widget.domain[attr])
+            combo.setCurrentIndex(idx)
+            combo.activated[int].emit(idx)
+
+        zoo = Table("zoo")
+        iris = Table("iris")
+        zootree = TreeLearner()(zoo)
+        iristree = TreeLearner()(iris)
+
+        self.assertIsNone(widget.node_labels)
+
+        # Default label is a string variable (with most unique values)
+        self.send_signal(widget.Inputs.tree, zootree)
+        self.assertIs(widget.node_labels, zootree.domain["name"])
+        check_labels("name")
+
+        # Change to another variable
+        switch_to("hair")
+        check_labels("hair")
+
+        # See that losing the data for a while keeps the label
+        self.send_signal(widget.Inputs.tree, None)
+        self.assertIsNone(widget.node_labels)
+        self.send_signal(widget.Inputs.tree, zootree)
+        check_labels("hair")
+
+        self.send_signal(widget.Inputs.tree, iristree)
+        self.assertIsNone(widget.node_labels)
+        switch_to("petal length")
+        check_labels("petal length")
+        self.send_signal(widget.Inputs.tree, None)
+        self.assertIsNone(widget.node_labels)
+        self.send_signal(widget.Inputs.tree, iristree)
+        self.assertEqual(widget.node_labels, iristree.domain["petal length"])
+        check_labels("petal length")
+
+        instances = zootree.instances
+        zootree.instances = None
+        self.send_signal(widget.Inputs.tree, zootree)
+        self.assertIsNone(widget.node_labels)
+        self.assertEqual(list(widget.label_model), [None])
+
+        zootree.instances = instances
+        widget.node_labels_hint = ""  # Reset to no hint
+        self.send_signal(widget.Inputs.tree, zootree)
+        self.assertIs(widget.node_labels, zootree.domain["name"])
+        check_labels("name")
+
+    def test_select_node_many_labels(self):
+        zoo = Table("zoo")
+        zootree = TreeLearner()(zoo)
+
+        self.send_signal(self.widget.Inputs.tree, zootree)
+
+        ta = self.widget.tree_adapter
+        node = next(node for node in self.widget.scene.nodes()
+                    if not ta.has_children(node.node_inst))
+
+        var = zoo.domain["name"]
+        values = zoo.get_column(var)
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50]])),
+                      node.toHtml())
+
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75]])),
+                      node.toHtml())
+
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])),
+                      node.toHtml())
+
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11, 3]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])) + ", …",
+                      node.toHtml())
+
+        var = zoo.domain["legs"]
+        values = zoo.get_column(var)
+        self.widget.node_labels = var
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])),
+                      node.toHtml())
+
+        ta.get_instances_in_nodes = lambda *_: zoo[[0, 50, 75, 11, 3]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])) + ", …",
+                      node.toHtml())
+
+        iris = Table("iris")
+        iristree = TreeLearner()(iris)
+        self.send_signal(self.widget.Inputs.tree, iristree)
+        var = iris.domain["petal length"]
+        values = iris.get_column(var)
+        self.widget.node_labels = var
+        ta = self.widget.tree_adapter
+        node = next(node for node in self.widget.scene.nodes()
+                    if not ta.has_children(node.node_inst))
+
+        ta.get_instances_in_nodes = lambda *_: iris[[0, 50, 75, 11, 13,
+                                                     14, 15, 16]]
+        self.widget.update_node_info(node)
+        self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])) + ", …",
+                      node.toHtml())
+
 
 if __name__ == "__main__":
     unittest.main()
