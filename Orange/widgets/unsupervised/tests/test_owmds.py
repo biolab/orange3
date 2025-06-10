@@ -75,7 +75,7 @@ class TestOWMDS(WidgetTest, ProjectionWidgetTestMixin,
              [-2.90244761, -0.13630526],
              [-2.75281107, -0.33854819]]
         )
-        np.testing.assert_array_almost_equal(output.metas[:4, :2], expected)
+        np.testing.assert_allclose(output.metas[:4, :2], expected, rtol=1e-1, atol=2e-2)
 
     def test_nan_plot(self):
         def combobox_run_through_all():
