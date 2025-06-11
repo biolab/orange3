@@ -11,10 +11,20 @@ __all__ = ["KMeans"]
 
 class KMeansModel(ClusteringModel):
 
+    InheritEq = True
+
     def __init__(self, projector):
         super().__init__(projector)
-        self.centroids = projector.cluster_centers_
-        self.k = projector.get_params()["n_clusters"]
+
+    @property
+    def centroids(self):
+        # converted into a property for __eq__ and __hash__ implementation
+        return self.projector.cluster_centers_
+
+    @property
+    def k(self):
+        # converted into a property for __eq__ and __hash__ implementation
+        return self.projector.get_params()["n_clusters"]
 
     def predict(self, X):
         return self.projector.predict(X)
