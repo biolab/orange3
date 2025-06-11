@@ -23,7 +23,7 @@ requirements:
     - python
     - pip
     - cython
-    - numpy >= 2
+    - numpy >=2
     - recommonmark
     - setuptools
     - sphinx >=4.2.0,<8
