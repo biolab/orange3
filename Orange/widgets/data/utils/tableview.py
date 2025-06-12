@@ -125,7 +125,12 @@ class RichTableView(DataTableView):
             self.horizontalHeader().setSortIndicator(-1, Qt.AscendingOrder)
 
             sortable = self.isModelSortable(model)
-            self.setSortingEnabled(sortable)
+            if sortable != self.isSortingEnabled():
+                # setSortingEnabled disconnects/reconnects Qt's internal
+                # connections to model.sort(), causing client
+                # sortIndicatorChange connections to trigger before the model
+                # is actually sorted. Avoid unnecessary calls.
+                self.setSortingEnabled(sortable)
             header = self.horizontalHeader()
             header.setSectionsClickable(sortable)
             header.setSortIndicatorShown(sortable)
