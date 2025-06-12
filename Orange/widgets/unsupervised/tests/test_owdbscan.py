@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.clustering import DBSCAN
 from Orange.preprocess import Normalize, Continuize, SklImpute
 from Orange.widgets.tests.base import WidgetTest
@@ -55,6 +55,16 @@ class TestOWDBSCAN(WidgetTest):
 
         self.send_signal(w.Inputs.data, self.iris)
         self.assertFalse(w.Error.not_enough_instances.is_shown())
+
+        new_domain = Domain([], self.iris.domain.class_vars,
+                            metas=self.iris.domain.attributes)
+        iris_all_metas = self.iris.transform(new_domain)
+        self.send_signal(w.Inputs.data, iris_all_metas)
+        self.assertTrue(w.Error.no_features.is_shown())
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertFalse(w.Error.no_features.is_shown())
+
 
     def test_data_none(self):
         w = self.widget
