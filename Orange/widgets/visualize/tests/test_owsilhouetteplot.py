@@ -49,6 +49,17 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(self.scorename, annotated.domain.metas[0].name)
         np.testing.assert_array_equal(selected.X, self.data.X[selected_indices])
 
+    def test_score(self):
+        # check that the self.score is computed correctly
+        self.send_signal(self.widget.Inputs.data, self.data)
+        score1 = self.widget.score_label.text()
+        zoo = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, zoo)
+        score2 = self.widget.score_label.text()
+        self.assertNotEqual(score1, score2)
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(self.widget.score_label.text(), "")
+
     def _select_data(self):
         random.seed(42)
         points = random.sample(range(0, len(self.data)), 20)
