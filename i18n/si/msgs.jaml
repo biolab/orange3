@@ -2003,7 +2003,7 @@ data/sql/backend/postgres.py:
                         AND n.nspname !~ '^pg_toast'
                         {}
                         AND NOT c.relname LIKE '\\_\\_%'
-                   ORDER BY 1;": false
+                   ORDER BY 1,2;": null
         def `create_variable`:
             extract(epoch from {}): false
             ({})::double precision: false
