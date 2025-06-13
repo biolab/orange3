@@ -837,6 +837,16 @@
     ]
    },
    {
+    "text": "Feature as Predictor",
+    "doc": null,
+    "icon": "../Orange/widgets/evaluate/icons/FeatureAsPredictor.svg",
+    "background": "#C3F3F3",
+    "keywords": [
+     "column",
+     "predictor"
+    ]
+   },
+   {
     "text": "Confusion Matrix",
     "doc": "visual-programming/source/widgets/evaluate/confusionmatrix.md",
     "icon": "../Orange/widgets/evaluate/icons/ConfusionMatrix.svg",
