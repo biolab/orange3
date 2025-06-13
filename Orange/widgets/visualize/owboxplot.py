@@ -135,7 +135,7 @@ class SortProxyModel(QSortFilterProxyModel):
         role = self.sortRole()
         l_score = left.data(role)
         r_score = right.data(role)
-        return r_score is not None and (l_score is None or l_score < r_score)
+        return r_score is not None and (l_score is None or bool(l_score < r_score))
 
 
 class OWBoxPlot(widget.OWWidget):
@@ -675,7 +675,8 @@ class OWBoxPlot(widget.OWWidget):
                 label.show()
 
         r = QRectF(self.scene_min_x, -30 - len(self.stats) * heights,
-                   self.scene_width, len(self.stats) * heights + 90)
+                   self.scene_width, len(self.stats) * heights + 90 +
+                   self._axis_font.pixelSize() * 4)
         self.box_scene.setSceneRect(r)
 
         self._compute_tests_cont()
@@ -733,7 +734,8 @@ class OWBoxPlot(widget.OWWidget):
 
         self.box_scene.setSceneRect(-self.label_width - 5,
                                     -30 - len(self.boxes) * 40,
-                                    self.scene_width, len(self.boxes * 40) + 90)
+                                    self.scene_width, len(self.boxes * 40) +
+                                    90 + self._axis_font.pixelSize() * 4)
         self._compute_tests_disc()
 
     def __draw_group_labels(self, y, row):
@@ -1180,7 +1182,7 @@ class OWBoxPlot(widget.OWWidget):
         conditions = self._gather_conditions()
         if conditions:
             selected = Values(conditions, conjunction=False)(self.dataset)
-            selection = np.in1d(
+            selection = np.isin(
                 self.dataset.ids, selected.ids, assume_unique=True).nonzero()[0]
         else:
             selected, selection = None, []

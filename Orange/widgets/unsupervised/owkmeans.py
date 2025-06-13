@@ -114,7 +114,7 @@ class OWKMeans(widget.OWWidget):
             ANNOTATED_DATA_SIGNAL_NAME, Table, default=True,
             replaces=["Annotated Data"]
         )
-        centroids = Output("Centroids", Table)
+        centroids = Output("Centroids", Table, dynamic=False)
 
     class Error(widget.OWWidget.Error):
         failed = widget.Msg("Clustering failed\nError: {}")
@@ -283,7 +283,7 @@ class OWKMeans(widget.OWWidget):
         return len(self.data.domain.attributes)
 
     @staticmethod
-    def _compute_clustering(data, k, init, n_init, max_iter, random_state):
+    def _compute_clustering(data, k, init, n_init, max_iter, random_state, original_domain):
         # type: (Table, int, str, int, int, bool) -> KMeansModel
         if k > len(data):
             raise NotEnoughData()
@@ -292,6 +292,9 @@ class OWKMeans(widget.OWWidget):
             n_clusters=k, init=init, n_init=n_init, max_iter=max_iter,
             random_state=random_state, preprocessors=[]
         ).get_model(data)
+
+        # set explict original domain because data was preprocessed separately
+        model.original_domain = original_domain
 
         if data.X.shape[0] <= SILHOUETTE_MAX_SAMPLES:
             model.silhouette_samples = silhouette_samples(data.X, model.labels)
@@ -365,6 +368,7 @@ class OWKMeans(widget.OWWidget):
             n_init=self.n_init,
             max_iter=self.max_iterations,
             random_state=RANDOM_STATE,
+            original_domain=self.data.domain,
         ) for k in ks]
         watcher = FutureSetWatcher(futures)
         watcher.resultReadyAt.connect(self.__clustering_complete)
@@ -521,15 +525,16 @@ class OWKMeans(widget.OWWidget):
         domain = self.data.domain
         cluster_var = DiscreteVariable(
             get_unique_names(domain, "Cluster"),
-            values=["C%d" % (x + 1) for x in range(km.k)]
+            values=["C%d" % (x + 1) for x in range(km.k)],
+            compute_value=km
         )
-        clust_ids = km.labels
         silhouette_var = ContinuousVariable(
             get_unique_names(domain, "Silhouette"))
         if km.silhouette_samples is not None:
             self.Warning.no_silhouettes.clear()
             scores = np.arctan(km.silhouette_samples) / np.pi + 0.5
             clust_scores = []
+            clust_ids = km.labels
             for i in range(km.k):
                 in_clust = clust_ids == i
                 if in_clust.any():
@@ -545,7 +550,6 @@ class OWKMeans(widget.OWWidget):
         new_domain = add_columns(domain, metas=[cluster_var, silhouette_var])
         new_table = self.data.transform(new_domain)
         with new_table.unlocked(new_table.metas):
-            new_table.set_column(cluster_var, clust_ids)
             new_table.set_column(silhouette_var, scores)
 
         domain_attributes = set(domain.attributes)

@@ -11,8 +11,6 @@ from distutils.command.build_ext import build_ext
 from distutils.command import config, build
 from distutils.core import Extension
 
-from trubar import translate
-
 try:
     import numpy
     have_numpy = True
@@ -36,7 +34,7 @@ except ImportError:
 
 NAME = 'Orange3'
 
-VERSION = '3.38.1'
+VERSION = '3.39.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -81,7 +79,7 @@ CLASSIFIERS = [
     'Intended Audience :: Developers',
 ]
 
-PYTHON_REQUIRES = ">=3.9"
+PYTHON_REQUIRES = ">=3.10"
 
 
 requirements = ['requirements-core.txt', 'requirements-gui.txt']
@@ -488,6 +486,10 @@ class InstallMultilingualCommand(install):
         self.compile_to_multilingual()
 
     def compile_to_multilingual(self):
+        # Import locally so that editable install won't require trubar
+        # pylint: disable=import-outside-toplevel
+        from trubar import translate
+
         package_dir = os.path.dirname(os.path.abspath(__file__))
         translate(
             "msgs.jaml",

@@ -309,7 +309,7 @@ class OWRadviz(OWAnchorProjectionWidget, VizRankMixin(RadvizVizRank)):
     def _send_components_x(self):
         components_ = super()._send_components_x()
         angle = np.arctan2(*components_[::-1])
-        return np.row_stack((components_, angle))
+        return np.vstack((components_, angle))
 
     def _send_components_metas(self):
         return np.vstack((super()._send_components_metas(), ["angle"]))

@@ -11,6 +11,7 @@ from sklearn.metrics import silhouette_score
 
 import Orange.clustering
 from Orange.data import Table, Domain
+from Orange.data.table import DomainTransformationError
 from Orange.widgets import gui
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.unsupervised.owkmeans import OWKMeans, ClusterTableModel
@@ -200,20 +201,41 @@ class TestOWKMeans(WidgetTest):
         # removing data should have cleared the output
         self.assertEqual(self.widget.data, None)
 
+    def test_clusters_compute_value(self):
+        orig_data = self.data[:20]
+        self.send_signal(self.widget.Inputs.data, orig_data, wait=5000)
+        out = self.get_output(self.widget.Outputs.annotated_data)
+        orig = out.get_column("Cluster")
+
+        transformed =  orig_data.transform(out.domain).get_column("Cluster")
+        np.testing.assert_equal(orig, transformed)
+
+        new_data = self.data[20:40]
+        transformed = new_data.transform(out.domain).get_column("Cluster")
+        np.testing.assert_equal(np.isnan(transformed), False)
+
+        incompatible_data = Table("iris")
+        with self.assertRaises(DomainTransformationError):
+            transformed = incompatible_data.transform(out.domain)
+
     def test_centroids_on_output(self):
         widget = self.widget
         widget.optimize_k = False
         widget.k = 4
         self.send_signal(widget.Inputs.data, self.data)
         self.commit_and_wait()
-        widget.clusterings[widget.k].labels = np.array([0] * 100 + [1] * 203).flatten()
-        widget.clusterings[widget.k].silhouette_samples = np.arange(303) / 303
-        widget.send_data()
+        km = widget.clusterings[widget.k]
+
         out = self.get_output(widget.Outputs.centroids)
-        np.testing.assert_array_almost_equal(
-            np.array([[0, np.mean(np.arctan(np.arange(100) / 303)) / np.pi + 0.5],
-                      [1, np.mean(np.arctan(np.arange(100, 303) / 303)) / np.pi + 0.5],
-                      [2, 0], [3, 0]]), out.metas.astype(float))
+        sklearn_centroids = km.centroids
+        np.testing.assert_equal(sklearn_centroids, out.X)
+
+        scores = np.arctan(km.silhouette_samples) / np.pi + 0.5
+        silhouette = [np.mean(scores[km.labels == i]) for i in range(4)]
+        self.assertTrue(2, len(out.domain.metas))
+        np.testing.assert_almost_equal([0, 1, 2, 3], out.get_column("Cluster"))
+        np.testing.assert_almost_equal(silhouette, out.get_column("Silhouette"))
+
         self.assertEqual(out.name, "heart_disease centroids")
 
     def test_centroids_domain_on_output(self):

@@ -111,7 +111,7 @@ class Psycopg2Backend(Backend):
                         AND n.nspname !~ '^pg_toast'
                         {}
                         AND NOT c.relname LIKE '\\_\\_%'
-                   ORDER BY 1;""".format(schema_clause)
+                   ORDER BY 1,2;""".format(schema_clause)
 
     def create_variable(self, field_name, field_metadata,
                         type_hints, inspect_table=None):

@@ -10,11 +10,12 @@ from AnyQt.QtWidgets import (
     QHBoxLayout,
     QWidget,
     QStyle,
+    QProxyStyle,
     QToolTip,
     QStyleOptionSlider,
 )
-from AnyQt.QtCore import Qt, QRect
-from AnyQt.QtGui import QPainter, QFontMetrics
+from AnyQt.QtCore import Qt, QRect, pyqtSignal as Signal
+from AnyQt.QtGui import QPainter, QFontMetrics, QPalette
 
 from Orange.widgets import gui
 from Orange.widgets.settings import ContextSetting
@@ -30,6 +31,8 @@ from Orange.classification.utils.fasterrisk.utils import (
 
 
 class ScoringSheetTable(QTableWidget):
+    state_changed = Signal(int)
+
     def __init__(self, main_widget, parent=None):
         """
         Initialize the ScoringSheetTable.
@@ -87,7 +90,44 @@ class ScoringSheetTable(QTableWidget):
         It updates the slider value depending on the collected points.
         """
         if item.column() == 2:
-            self.main_widget._update_slider_value()
+            self.state_changed.emit(item.row())
+
+
+class CustomSliderStyle(QProxyStyle):
+    """
+    A custom slider handle style.
+
+    It draws a 2px wide black rectangle to replace the default handle.
+    This is done to suggest to the user that the slider is not interactive.
+    """
+
+    def drawComplexControl(self, cc, opt, painter, widget=None):
+        if cc != QStyle.CC_Slider:
+            super().drawComplexControl(cc, opt, painter, widget)
+            return
+
+        # Make a copy of the style option and remove the handle subcontrol.
+        slider_opt = QStyleOptionSlider(opt)
+        slider_opt.subControls &= ~QStyle.SC_SliderHandle
+        super().drawComplexControl(cc, slider_opt, painter, widget)
+
+        # Get the rectangle for the slider handle.
+        handle_rect = self.subControlRect(cc, opt, QStyle.SC_SliderHandle, widget)
+
+        # Draw a simple 2px wide black rectangle as the custom handle.
+        painter.save()
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QPalette().color(QPalette.WindowText))
+        h = handle_rect.height()
+        painter.drawRoundedRect(
+            QRect(
+                handle_rect.center().x() - 2, handle_rect.y() + int(0.2 * h),
+                4, int(0.6 * h)
+            ),
+            3,
+            3,
+        )
+        painter.restore()
 
 
 class RiskSlider(QWidget):
@@ -103,12 +143,13 @@ class RiskSlider(QWidget):
         self.layout.setContentsMargins(
             self.leftMargin, self.topMargin, self.rightMargin, self.bottomMargin
         )
+        self.setMouseTracking(True)
 
         # Setup the labels
         self.setup_labels()
 
-        # Create the slider
         self.slider = QSlider(Qt.Horizontal, self)
+        self.slider.setStyle(CustomSliderStyle())
         self.slider.setEnabled(False)
         self.layout.addWidget(self.slider)
 
@@ -267,7 +308,8 @@ class RiskSlider(QWidget):
             probability = self.probabilities[value]
             tooltip = str(
                 f"<b>{self.target_class}</b>\n "
-                f"<hr style='margin: 0px; padding: 0px; border: 0px; height: 1px; background-color: #000000'>"
+                "<hr style='margin: 0px; padding: 0px; border: 0px; "
+                "height: 1px; background-color: #000000'>"
                 f"<b>Points:</b> {int(points)}<br>"
                 f"<b>Probability:</b> {probability:.1f}%"
             )
@@ -338,8 +380,11 @@ class OWScoringSheetViewer(OWWidget):
         self.instance = None
         self.instance_points = []
         self.classifier = None
-        self.coefficients = None
+        self._base_coefficients = None
+        self._base_all_scores = None
+        self._base_all_risks = None
         self.attributes = None
+        self.coefficients = None
         self.all_scores = None
         self.all_risks = None
         self.domain = None
@@ -366,6 +411,7 @@ class OWScoringSheetViewer(OWWidget):
 
         self.coefficient_table = ScoringSheetTable(main_widget=self, parent=self)
         gui.widgetBox(self.mainArea).layout().addWidget(self.coefficient_table)
+        self.coefficient_table.state_changed.connect(self._update_slider_value)
 
         self.risk_slider = RiskSlider([], [], self)
         gui.widgetBox(self.mainArea).layout().addWidget(self.risk_slider)
@@ -463,14 +509,16 @@ class OWScoringSheetViewer(OWWidget):
         This allows user to select the target class and see the
         corresponding coefficients, scores, and risks.
         """
-        # Negate the coefficients
-        self.coefficients = [-coef for coef in self.coefficients]
-        # Negate the scores
-        self.all_scores = [-score if score != 0 else score for score in self.all_scores]
-        self.all_scores.sort()
-        # Adjust the risks
-        self.all_risks = [100 - risk for risk in self.all_risks]
-        self.all_risks.sort()
+        if self.target_class_index == 1:
+            self.coefficients = self._base_coefficients[:]
+            self.all_scores = self._base_all_scores[:]
+            self.all_risks = self._base_all_risks[:]
+        else:
+            self.coefficients = [-coef for coef in self._base_coefficients]
+            self.all_scores = sorted(
+                [-score if score != 0 else score for score in self._base_all_scores]
+            )
+            self.all_risks = sorted([100 - risk for risk in self._base_all_risks])
 
     # Classifier Input Methods ---------------------------------------------------------------------
 
@@ -509,14 +557,11 @@ class OWScoringSheetViewer(OWWidget):
         all_scaled_scores = (model.intercept + all_scores) / model.multiplier
         all_risks = 1 / (1 + np.exp(-all_scaled_scores))
 
-        self.attributes = attributes
-        self.coefficients = coefficients
-        self.all_scores = all_scores.tolist()
-        self.all_risks = (all_risks * 100).tolist()
+        self._base_all_scores = all_scores.tolist()
+        self._base_all_risks = (all_risks * 100).tolist()
+        combined_sorted = sorted(zip(coefficients, attributes), reverse=True)
+        self._base_coefficients, self.attributes = zip(*combined_sorted)
         self.domain = classifier.domain
-
-        # For some reason when leading the model the scores and probabilities are
-        # set for the wrong target class. This is a workaround to fix that.
         self._adjust_for_target_class()
 
     def _is_valid_classifier(self, classifier):
@@ -533,6 +578,9 @@ class OWScoringSheetViewer(OWWidget):
         self.all_scores = None
         self.all_risks = None
         self.classifier = None
+        self._base_coefficients = None
+        self._base_all_scores = None
+        self._base_all_risks = None
         self.Outputs.features.send(None)
 
     # Data Input Methods ---------------------------------------------------------------------------

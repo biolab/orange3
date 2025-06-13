@@ -250,7 +250,7 @@ class OWCorrelations(OWWidget):
     class Outputs:
         data = Output("Data", Table)
         features = Output("Features", AttributeList)
-        correlations = Output("Correlations", Table)
+        correlations = Output("Correlations", Table, dynamic=False)
 
     want_main_area = False
     want_control_area = True

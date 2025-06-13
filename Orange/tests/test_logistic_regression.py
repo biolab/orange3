@@ -1,6 +1,7 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 
+from datetime import datetime
 import unittest
 
 import numpy as np
@@ -9,6 +10,7 @@ import sklearn
 from Orange.data import Table, ContinuousVariable, Domain
 from Orange.classification import LogisticRegressionLearner, Model
 from Orange.evaluation import CrossValidation, CA
+from Orange.util import OrangeDeprecationWarning
 
 
 class TestLogisticRegressionLearner(unittest.TestCase):
@@ -149,8 +151,16 @@ class TestLogisticRegressionLearner(unittest.TestCase):
         # liblinear is default for l2 penalty
         lr = LogisticRegressionLearner(penalty="l1", solver="auto")
         skl_clf = lr._initialize_wrapped()
-        self.assertEqual(skl_clf.solver, "liblinear")
+        self.assertEqual(skl_clf.solver, "saga")
         self.assertEqual(skl_clf.penalty, "l1")
 
     def test_supports_weights(self):
         self.assertTrue(LogisticRegressionLearner().supports_weights)
+
+    def test_multi_class_deprecation(self):
+        with self.assertWarns(OrangeDeprecationWarning):
+            LogisticRegressionLearner(penalty="l1", multi_class="multinomial")
+        now = datetime.now()
+        if (now.year, now.month) >= (2026, 1):
+            raise Exception("If Orange depends on scikit-learn >= 1.7, remove this test "
+                            "and any mention of multi_class in LogisticRegressionLearner.")

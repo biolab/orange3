@@ -89,10 +89,14 @@ class TestFixedTimeWidth(unittest.TestCase):
                                         "1916-01-01", "1916-07-01",
                                         "1917-01-01", "1917-07-01",
                                         "1918-01-01", "1918-07-01")])
-        self.assertEqual(dvar.values,
-                         ('< 15 Jan', '15 Jan - Jul', '15 Jul - 16 Jan',
-                          '16 Jan - Jul', '16 Jul - 17 Jan', '17 Jan - Jul',
-                          '17 Jul - 18 Jan', '18 Jan - Jul', '≥ 18 Jul'))
+
+        def tuple_lower(t):
+            return tuple(a.lower() for a in t)
+
+        self.assertEqual(tuple_lower(dvar.values),
+                         ('< 15 jan', '15 jan - jul', '15 jul - 16 jan',
+                          '16 jan - jul', '16 jul - 17 jan', '17 jan - jul',
+                          '17 jul - 18 jan', '18 jan - jul', '≥ 18 jul'))
 
         data = Table.from_numpy(
             Domain([t]),
@@ -104,15 +108,16 @@ class TestFixedTimeWidth(unittest.TestCase):
         np.testing.assert_almost_equal(
             dvar.compute_value.points,
             [int(t.to_val(y)) for y in ("1914-09-01", "1914-11-01")])
-        self.assertEqual(dvar.values, ('< Sep', 'Sep - Nov', '≥ Nov'))
+        self.assertEqual(tuple_lower(dvar.values), ('< sep', 'sep - nov', '≥ nov'))
 
         dvar = FixedTimeWidth(1, 1)(data, 0)
         np.testing.assert_almost_equal(
             dvar.compute_value.points,
             [int(t.to_val(y)) for y in ("1914-08-01", "1914-09-01",
                                         "1914-10-01", "1914-11-01")])
-        self.assertEqual(dvar.values, ('< Aug', 'Aug - Sep', 'Sep - Oct',
-                                       'Oct - Nov', '≥ Nov'))
+        self.assertEqual(tuple_lower(dvar.values),
+                         ('< aug', 'aug - sep', 'sep - oct',
+                          'oct - nov', '≥ nov'))
 
         data = Table.from_numpy(
             Domain([t]),
@@ -123,8 +128,9 @@ class TestFixedTimeWidth(unittest.TestCase):
             dvar.compute_value.points,
             [int(t.to_val(y)) for y in ("1914-06-29", "1914-07-01",
                                         "1914-07-03")])
-        self.assertEqual(dvar.values, ('< Jun 29', 'Jun 29 - Jul 01',
-                                       'Jul 01 - Jul 03', '≥ Jul 03'))
+        self.assertEqual(tuple_lower(dvar.values),
+                         ('< jun 29', 'jun 29 - jul 01',
+                          'jul 01 - jul 03', '≥ jul 03'))
 
         dvar = FixedTimeWidth(1, 2)(data, 0)
         np.testing.assert_almost_equal(
@@ -132,10 +138,11 @@ class TestFixedTimeWidth(unittest.TestCase):
             [int(t.to_val(y)) for y in ("1914-06-29", "1914-06-30",
                                         "1914-07-01", "1914-07-02",
                                         "1914-07-03", "1914-07-04")])
-        self.assertEqual(dvar.values, ('< Jun 29', 'Jun 29 - Jun 30',
-                                       'Jun 30 - Jul 01', 'Jul 01 - Jul 02',
-                                        'Jul 02 - Jul 03', 'Jul 03 - Jul 04',
-                                        '≥ Jul 04'))
+        self.assertEqual(tuple_lower(dvar.values),
+                         ('< jun 29', 'jun 29 - jun 30',
+                          'jun 30 - jul 01', 'jul 01 - jul 02',
+                          'jul 02 - jul 03', 'jul 03 - jul 04',
+                          '≥ jul 04'))
 
         data = Table.from_numpy(
             Domain([t]),
@@ -146,9 +153,10 @@ class TestFixedTimeWidth(unittest.TestCase):
             dvar.compute_value.points,
             [int(t.to_val(y)) for y in ("1914-12-31", "1915-01-01",
                                         "1915-01-02")])
-        self.assertEqual(dvar.values, ('< 14 Dec 31',
-                                       '14 Dec 31 - 15 Jan 01',
-                                       '15 Jan 01 - Jan 02', '≥ 15 Jan 02'))
+        self.assertEqual(tuple_lower(dvar.values),
+                         ('< 14 dec 31',
+                          '14 dec 31 - 15 jan 01',
+                          '15 jan 01 - jan 02', '≥ 15 jan 02'))
 
         data = Table.from_numpy(
             Domain([t]),
@@ -184,12 +192,13 @@ class TestFixedTimeWidth(unittest.TestCase):
             [int(t.to_val(y)) for y in ("1914-06-28 23:00", "1914-06-29 00:00",
                                         "1914-06-29 01:00", "1914-06-29 02:00",
                                         "1914-06-29 03:00")])
-        self.assertEqual(dvar.values, ('< Jun 28 23:00',
-                                       'Jun 28 23:00 - Jun 29 00:00',
-                                       'Jun 29 00:00 - 01:00',
-                                       'Jun 29 01:00 - 02:00',
-                                       'Jun 29 02:00 - 03:00',
-                                       '≥ Jun 29 03:00'))
+        self.assertEqual(tuple_lower(dvar.values),
+                         ('< jun 28 23:00',
+                          'jun 28 23:00 - jun 29 00:00',
+                          'jun 29 00:00 - 01:00',
+                          'jun 29 01:00 - 02:00',
+                          'jun 29 02:00 - 03:00',
+                          '≥ jun 29 03:00'))
 
         data = Table.from_numpy(
             Domain([t]),
@@ -213,9 +222,10 @@ class TestFixedTimeWidth(unittest.TestCase):
             dvar.compute_value.points,
             [int(t.to_val(y)) for y in ("1914-06-30 23:50", "1914-06-30 23:55",
                                         "1914-07-01 00:00", "1914-07-01 00:05")])
-        self.assertEqual(dvar.values, ('< Jun 30 23:50', "Jun 30 23:50 - 23:55",
-                                       "Jun 30 23:55 - Jul 01 00:00",
-                                       "Jul 01 00:00 - 00:05", '≥ Jul 01 00:05'))
+        self.assertEqual(tuple_lower(dvar.values),
+                         ('< jun 30 23:50', "jun 30 23:50 - 23:55",
+                          "jun 30 23:55 - jul 01 00:00",
+                          "jul 01 00:00 - 00:05", '≥ jul 01 00:05'))
 
         data = Table.from_numpy(
             Domain([t]),
@@ -226,9 +236,10 @@ class TestFixedTimeWidth(unittest.TestCase):
             dvar.compute_value.points,
             [int(t.to_val(y)) for y in ("1914-06-29 23:50", "1914-06-29 23:55",
                                         "1914-06-30 00:00", "1914-06-30 00:05")])
-        self.assertEqual(dvar.values, ('< Jun 29 23:50', "Jun 29 23:50 - 23:55",
-                                       "Jun 29 23:55 - Jun 30 00:00",
-                                       "Jun 30 00:00 - 00:05", '≥ Jun 30 00:05'))
+        self.assertEqual(tuple_lower(dvar.values),
+                         ('< jun 29 23:50', "jun 29 23:50 - 23:55",
+                          "jun 29 23:55 - jun 30 00:00",
+                          "jun 30 00:00 - 00:05", '≥ jun 30 00:05'))
 
         data = Table.from_numpy(
             Domain([t]),

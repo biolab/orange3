@@ -1,0 +1,3 @@
+[submodule "doc/visual-programming"]
+	path = doc/visual-programming
+	url = https://github.com/biolab/orange3-doc-visual-programming.git

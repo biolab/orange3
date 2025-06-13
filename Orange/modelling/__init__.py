@@ -11,6 +11,7 @@ from .neural_network import *
 from .randomforest import *
 from .svm import *
 from .tree import *
+from .column import *
 try:
     from .catgb import *
 except ImportError:

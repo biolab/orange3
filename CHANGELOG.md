@@ -5,6 +5,31 @@ Change Log
 ------------
 
 
+[3.39.0] - 2025-06-13
+--------------------
+##### Enhancements
+* Feature as Predictor ([#6852](../../pull/6852))
+* K-means: clusters can be inferred for new data ([#7010](../../pull/7010))
+* Parameter Fitter: more responsive when changing settings ([#7027](../../pull/7027))
+* Paint Data: Slight optimization ([#6990](../../pull/6990))
+* Numpy 2.0 compatibility  ([#6850](../../pull/6850))
+
+##### Bugfixes
+* Order available PostgreSQL tables ([#7099](../../pull/7099))
+* tableview: Avoid unnecessary calls to setSortingEnabled ([#7109](../../pull/7109))
+* Update check and notifications: avoid compression ([#7097](../../pull/7097))
+* tSNE: Add compute_value to tSNE variables ([#7066](../../pull/7066))
+* ScoringSheetViewer computing target class values from base values ([#7025](../../pull/7025))
+* ScoringSheetViewer slider style and tooltip ([#7024](../../pull/7024))
+* Disable dynamic signals where applicable ([#7045](../../pull/7045))
+* Make ReliefF and RReliefF results replicable ([#7026](../../pull/7026))
+* ScoringSheet deterministic results ([#7023](../../pull/7023))
+* io_util: Detect utf-8-sig when using `file` utility ([#7006](../../pull/7006))
+* Fix error bars for threshold averaged ROC curves ([#7014](../../pull/7014))
+* Save Data: fix when saving to different drives on Windows ([#7019](../../pull/7019))
+* owhierarchicalclustering: Fix IndexError ([#6989](../../pull/6989))
+
+
 [3.38.1] - 2024-12-23
 --------------------
 ##### Enhancements
@@ -1911,7 +1936,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.38.1..HEAD
+[next]: https://github.com/biolab/orange3/compare/3.39.0..HEAD
+[3.39.0]: https://github.com/biolab/orange3/compare/3.38.1...3.39.0
 [3.38.1]: https://github.com/biolab/orange3/compare/3.38.0...3.38.1
 [3.38.0]: https://github.com/biolab/orange3/compare/3.37.0...3.38.0
 [3.37.0]: https://github.com/biolab/orange3/compare/3.36.2...3.37.0

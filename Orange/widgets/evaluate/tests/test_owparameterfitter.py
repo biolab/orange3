@@ -228,11 +228,11 @@ class TestOWParameterFitter(WidgetTest):
     def test_steps_preview(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
         self.send_signal(self.widget.Inputs.learner, self._pls)
-        self.wait_until_finished()
+        self.widget.cancel()
         self.assertEqual(self.widget.range_preview.steps(), (1, 2))
 
         self.widget.controls.type.buttons[1].click()
-        self.wait_until_finished()
+        self.widget.cancel()
         self.assertIsNone(self.widget.range_preview.steps())
 
     def test_on_parameter_changed(self):
@@ -283,11 +283,11 @@ class TestOWParameterFitter(WidgetTest):
 
         self.send_signal(self.widget.Inputs.learner, self._pls)
         self.assertEqual(len(self.widget.initial_parameters), 3)
-        self.wait_until_finished()
+        self.widget.cancel()
 
         self.send_signal(self.widget.Inputs.learner, self._rf)
         self.assertEqual(len(self.widget.initial_parameters), 13)
-        self.wait_until_finished()
+        self.widget.cancel()
 
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(len(self.widget.initial_parameters), 14)
@@ -297,12 +297,12 @@ class TestOWParameterFitter(WidgetTest):
 
     def test_bounds(self):
         self.widget.controls.minimum.setValue(-3)
-        self.widget.controls.maximum.setValue(6)
+        self.widget.controls.maximum.setValue(2)
         self.send_signal(self.widget.Inputs.learner, self._pls)
         self.send_signal(self.widget.Inputs.data, self._housing)
         self.send_signal(self.widget.Inputs.learner, None)
         self.widget.controls.minimum.setValue(-3)
-        self.widget.controls.maximum.setValue(6)
+        self.widget.controls.maximum.setValue(2)
         self.send_signal(self.widget.Inputs.learner, self._pls)
         self.wait_until_finished()
         self.assertFalse(self.widget.Error.unknown_err.is_shown())
@@ -310,19 +310,19 @@ class TestOWParameterFitter(WidgetTest):
     def test_saved_workflow(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
         self.send_signal(self.widget.Inputs.learner, self._dummy)
-        self.wait_until_finished()
+        self.widget.cancel()
         simulate.combobox_activate_index(
             self.widget.controls.parameter_index, 2)
         self.widget.controls.minimum.setValue(3)
         self.widget.controls.maximum.setValue(6)
-        self.wait_until_finished()
+        self.widget.cancel()
 
         settings = self.widget.settingsHandler.pack_data(self.widget)
         widget = self.create_widget(OWParameterFitter,
                                     stored_settings=settings)
         self.send_signal(widget.Inputs.data, self._housing, widget=widget)
         self.send_signal(widget.Inputs.learner, self._dummy, widget=widget)
-        self.wait_until_finished(widget=widget)
+        widget.cancel()
         self.assertEqual(widget.controls.parameter_index.currentText(), "Baz")
         self.assertEqual(widget.minimum, 3)
         self.assertEqual(widget.maximum, 6)
@@ -538,12 +538,12 @@ class TestOWParameterFitter(WidgetTest):
         w: OWParameterFitter = self.widget
         self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
-        self.wait_until_finished()
+        self.widget.cancel()
         w.type = w.MANUAL
 
         # No limits
         simulate.combobox_activate_index(w.controls.parameter_index, 3)
-        self.wait_until_finished()
+        self.widget.cancel()
         check([("1, 2, ..., 5", (1, 2, 3, 4, 5)),
                ("1, 2, 3, ..., 5, 6, 7", (1, 2, 3, 4, 5, 6, 7)),
                ("3, ..., 5, 6", (3, 4, 5, 6)),
@@ -555,7 +555,7 @@ class TestOWParameterFitter(WidgetTest):
 
         # 5 to 10
         simulate.combobox_activate_index(w.controls.parameter_index, 1)
-        self.wait_until_finished()
+        self.widget.cancel()
         check([("4, 5, ..., 8", ()),
                ("5, 6, ..., 12", ()),
                ("5, 6, ..., 9", (5, 6, 7, 8, 9)),
@@ -569,7 +569,7 @@ class TestOWParameterFitter(WidgetTest):
 
         # 5 to None
         simulate.combobox_activate_index(w.controls.parameter_index, 0)
-        self.wait_until_finished()
+        self.widget.cancel()
         check([("4, 5, ..., 8", ()),
                ("5, 6, ..., 12", (5, 6, 7, 8, 9, 10, 11, 12)),
                ("6, 7, ..., 9", (6, 7, 8, 9)),
@@ -580,7 +580,7 @@ class TestOWParameterFitter(WidgetTest):
 
         # None to 10
         simulate.combobox_activate_index(w.controls.parameter_index, 2)
-        self.wait_until_finished()
+        self.widget.cancel()
         check([("4, 5, ..., 8", (4, 5, 6, 7, 8)),
                ("5, 6, ..., 12", ()),
                ("5, 6, ..., 9", (5, 6, 7, 8, 9)),

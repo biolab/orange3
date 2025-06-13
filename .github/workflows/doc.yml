@@ -14,11 +14,13 @@ jobs:
     strategy:
       fail-fast: False
       matrix:
-        python: [3.9]
+        python: ['3.10']
         os: [ubuntu-22.04]
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: 'true'
       - name: Setup Python
         uses: actions/setup-python@v5
         with:

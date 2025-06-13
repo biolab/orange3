@@ -4,7 +4,7 @@ import unittest
 from unittest.mock import patch
 import numpy as np
 
-from AnyQt.QtCore import QLocale, Qt, QDate
+from AnyQt.QtCore import QLocale, Qt, QDate, QDateTime, QTime
 from AnyQt.QtTest import QTest
 from AnyQt.QtWidgets import QLineEdit, QComboBox
 
@@ -156,6 +156,78 @@ class TestOWSelectRows(WidgetTest):
             self.widget.conditions_changed()
             self.widget.commit.now()
 
+        self.widget.remove_all()
+        self.enterFilter("breach_start", "equals", QDate(2014, 6, 2))
+
+        container = self.widget.cond_list.cellWidget(0, 2)
+        date_widget = container.findChild(DateTimeWidget)
+        self.assertIsNotNone(date_widget)
+
+        fmt = date_widget.format  # Tuple: (have_date, have_time)
+
+        # Test with QDate if the widget supports date
+        if fmt[0]:
+            test_date = QDate(2014, 6, 2)
+            date_widget.set_datetime(test_date)
+            self.assertEqual(date_widget.date(), test_date)
+
+        # Test with QTime if the widget supports time
+        if fmt[1]:
+            test_time = QTime(16, 0)
+            date_widget.set_datetime(test_time)
+            self.assertEqual(date_widget.time(), test_time)
+
+        # Test with QDateTime if the widget supports both
+        if fmt == (1, 1):
+            test_dt = QDateTime(QDate(2014, 6, 2), QTime(16, 0))
+            date_widget.set_datetime(test_dt)
+            self.assertEqual(date_widget.dateTime(), test_dt)
+            
+    def test_set_datetime_with_qdatetime(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+        dtw = DateTimeWidget(None, column, (1, 1))
+        dtw.set_datetime(dt)
+        self.assertEqual(dtw.dateTime().time().hour(), 12)
+        self.assertEqual(dtw.dateTime().date(), QDate(2024, 1, 1))
+
+    def test_set_datetime_with_qdate(self):
+        dt = QDateTime(QDate(2024, 1, 1), QTime(0, 0), Qt.UTC)
+        timestamp = dt.toSecsSinceEpoch()
+        column = np.array([timestamp])
+        dtw = DateTimeWidget(None, column, (1, 0))
+        dtw.set_datetime(QDate(2024, 1, 1))
+        self.assertEqual(dtw.date(), QDate(2024, 1, 1))
+
+    def test_set_datetime_with_qtime(self):
+        # Use a fixed day (2000-01-01) and desired time
+        dt = QDateTime(QDate(2000, 1, 1), QTime(12, 0), Qt.UTC)
+        timestamp = dt.toSecsSinceEpoch()
+        column = np.array([timestamp])
+        dtw = DateTimeWidget(None, column, (0, 1))
+        dtw.set_datetime(QTime(12, 0))
+        self.assertEqual(dtw.time(), QTime(12, 0))
+        
+    def test_set_datetime_with_qtime_when_have_both(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+        dtw = DateTimeWidget(None, column, (1, 1))  # fecha y hora
+        dtw.set_datetime(QTime(12, 0))
+        self.assertEqual(dtw.time(), QTime(12, 0))
+
+    def test_set_datetime_sets_date_with_qdate(self):
+        dt = QDateTime.fromString("2024-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+
+        dtw = DateTimeWidget(None, column, (1, 1))  # tiene fecha y hora
+        test_date = QDate(2024, 1, 1)
+
+        dtw.set_datetime(test_date)
+        self.assertEqual(dtw.date(), test_date)
+
     @override_locale(QLocale.C)  # Locale with decimal point
     def test_continuous_filter_with_c_locale(self):
         iris = Table("iris")[:5]
@@ -170,6 +242,20 @@ class TestOWSelectRows(WidgetTest):
         self.widget.remove_all_button.click()
         self.enterFilter(iris.domain[2], "is below", "5,2")
         self.assertEqual(self.widget.conditions[0][2], ("52",))
+        
+    def test_set_datetime_sets_time_when_only_time_enabled(self):
+        # We prepare a QDateTime with only time (the date is irrelevant)
+        dt = QDateTime.fromString("2000-01-01T12:00:00", Qt.ISODate)
+        dt.setTimeSpec(Qt.UTC)
+        column = np.array([dt.toSecsSinceEpoch()])
+
+        # We create a widget that has only time, not date.
+        dtw = DateTimeWidget(None, column, (0, 1))  # have_date=False, have_time=True
+
+        test_time = QTime(12, 0)
+        dtw.set_datetime(test_time)
+
+        self.assertEqual(dtw.time(), test_time)
 
     @override_locale(QLocale.Slovenian)  # Locale with decimal comma
     def test_continuous_filter_with_sl_SI_locale(self):

@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 import os
 import unicodedata
 import itertools
@@ -90,6 +90,7 @@ Jitter = namedtuple("Jitter", ["pos", "radius", "intensity", "rstate"])
 Magnet = namedtuple("Magnet", ["pos", "radius", "density"])
 SelectRegion = namedtuple("SelectRegion", ["region"])
 DeleteSelection = namedtuple("DeleteSelection", [])
+DeleteAll = namedtuple("DeleteAll", [])
 MoveSelection = namedtuple("MoveSelection", ["delta"])
 
 
@@ -112,7 +113,7 @@ def transform(command, data):
 def append(command, data):
     np.clip(command.points[:, :2], 0, 1, out=command.points[:, :2])
     return (np.vstack([data, command.points]),
-            DeleteIndices(slice(len(data),
+            DeleteIndices(range(len(data),
                                 len(data) + len(command.points))))
 
 
@@ -125,7 +126,7 @@ def insert(command, data):
 
 @transform.register(DeleteIndices)
 def delete(command, data, ):
-    if isinstance(command.indices, slice):
+    if isinstance(command.indices, range):
         condition = indices_to_mask(command.indices, len(data))
     else:
         indices = np.asarray(command.indices)
@@ -139,7 +140,11 @@ def delete(command, data, ):
 
 @transform.register(Move)
 def move(command, data):
-    data[command.indices] += command.delta
+    if isinstance(command.indices, tuple):
+        idx = np.ix_(*command.indices)
+    else:
+        idx = command.indices
+    data[idx] += command.delta
     return data, Move(command.indices, -command.delta)
 
 
@@ -565,7 +570,7 @@ class ClearTool(DataTool):
 
     def activate(self):
         self.editingStarted.emit()
-        self.issueCommand.emit(DeleteIndices(slice(None, None, None)))
+        self.issueCommand.emit(DeleteAll())
         self.editingFinished.emit()
 
 
@@ -631,16 +636,21 @@ def indices_eq(ind1, ind2):
         if len(ind1) != len(ind2):
             return False
         return all(indices_eq(i1, i2) for i1, i2 in zip(ind1, ind2))
-    elif isinstance(ind1, slice) and isinstance(ind2, slice):
+    elif isinstance(ind1, range) and isinstance(ind2, range):
         return ind1 == ind2
-    elif ind1 is ... and ind2 is ...:
-        return True
 
-    ind1, ind1 = np.array(ind1), np.array(ind2)
+    ind1, ind2 = np.array(ind1), np.array(ind2)
 
     if ind1.shape != ind2.shape or ind1.dtype != ind2.dtype:
         return False
     return (ind1 == ind2).all()
+
+
+def merged_range(r1: range, r2: range) -> range | None:
+    r1, r2 = sorted([r1, r2], key=lambda r: r.start)
+    if r1.stop == r2.start and r1.step == r2.step:
+        return range(r1.start, r2.stop, r1.step)
+    return None
 
 
 def merge_cmd(composit):
@@ -656,11 +666,11 @@ def merge_cmd(composit):
         if indices_eq(f.indices, g.indices):
             return Move(f.indices, f.delta + g.delta)
         else:
-            # TODO: union of indices, ...
             return composit
-#     elif isinstance(f, DeleteIndices) and isinstance(g, DeleteIndices):
-#         indices = np.array(g.indices)
-#         return DeleteIndices(indices)
+    elif isinstance(f, DeleteIndices) and isinstance(g, DeleteIndices) \
+            and isinstance(f.indices, range) and isinstance(g.indices, range) \
+            and (r := merged_range(f.indices, g.indices)) is not None:
+        return DeleteIndices(r)
     else:
         return composit
 
@@ -748,7 +758,7 @@ class OWPaintData(OWWidget):
         data = Input("Data", Table)
 
     class Outputs:
-        data = Output("Data", Table)
+        data = Output("Data", Table, dynamic=False)
 
     autocommit = Setting(True)
     table_name = Setting("Painted data")
@@ -1064,19 +1074,14 @@ class OWPaintData(OWWidget):
 
         self.commit.deferred()
 
-    def add_new_class_label(self, undoable=True):
-
+    def add_new_class_label(self):
         newlabel = next(label for label in namegen('C', 1)
                         if label not in self.class_model)
-
         command = SimpleUndoCommand(
             lambda: self.class_model.append(newlabel),
             lambda: self.class_model.__delitem__(-1)
         )
-        if undoable:
-            self.undo_stack.push(command)
-        else:
-            command.redo()
+        self.undo_stack.push(command)
 
     def remove_selected_class_label(self):
         index = self.selected_class_label()
@@ -1090,7 +1095,7 @@ class OWPaintData(OWWidget):
 
         self.undo_stack.beginMacro("Delete class label")
         self.undo_stack.push(UndoCommand(DeleteIndices(mask), self))
-        self.undo_stack.push(UndoCommand(Move((move_mask, 2), -1), self))
+        self.undo_stack.push(UndoCommand(Move((move_mask, range(2, 3)), -1), self))
         self.undo_stack.push(
             SimpleUndoCommand(lambda: self.class_model.__delitem__(index),
                               lambda: self.class_model.insert(index, label)))
@@ -1158,7 +1163,7 @@ class OWPaintData(OWWidget):
         self.undo_stack.endMacro()
 
     def execute(self, command):
-        assert isinstance(command, (Append, DeleteIndices, Insert, Move)), \
+        assert isinstance(command, (Append, DeleteIndices, DeleteAll, Insert, Move)), \
             "Non normalized command"
         if isinstance(command, (DeleteIndices, Insert)):
             self._selected_indices = None
@@ -1197,12 +1202,17 @@ class OWPaintData(OWWidget):
                 self.undo_stack.push(
                     UndoCommand(DeleteIndices(indices), self, text="Delete")
                 )
+        elif isinstance(cmd, DeleteAll):
+            indices = range(0, len(self.__buffer))
+            self.undo_stack.push(
+                UndoCommand(DeleteIndices(indices), self, text="Clear All")
+            )
         elif isinstance(cmd, MoveSelection):
             indices = self._selected_indices
             if indices is not None and indices.size:
                 self.undo_stack.push(
                     UndoCommand(
-                        Move((self._selected_indices, slice(0, 2)),
+                        Move((self._selected_indices, range(0, 2)),
                              np.array([cmd.delta.x(), cmd.delta.y()])),
                         self, text="Move")
                 )
@@ -1222,12 +1232,12 @@ class OWPaintData(OWWidget):
             point = np.array([cmd.pos.x(), cmd.pos.y()])
             delta = - apply_jitter(self.__buffer[:, :2], point,
                                    self.density / 100.0, 0, cmd.rstate)
-            self._add_command(Move((..., slice(0, 2)), delta))
+            self._add_command(Move((range(0, len(self.__buffer)), range(0, 2)), delta))
         elif isinstance(cmd, Magnet):
             point = np.array([cmd.pos.x(), cmd.pos.y()])
             delta = - apply_attractor(self.__buffer[:, :2], point,
                                       self.density / 100.0, 0)
-            self._add_command(Move((..., slice(0, 2)), delta))
+            self._add_command(Move((range(0, len(self.__buffer)), range(0, 2)), delta))
         else:
             assert False, "unreachable"
 
@@ -1246,16 +1256,17 @@ class OWPaintData(OWWidget):
             y = self.__buffer[:, 1].copy()
         else:
             y = np.zeros(self.__buffer.shape[0])
-
-        colors = self.colors[self.__buffer[:, 2]]
-        pens = [pen(c) for c in colors]
-        brushes = [QBrush(c) for c in colors]
-
+        color_table, colors_index = prepare_color_table_and_index(
+            self.colors, self.__buffer[:, 2]
+        )
+        pen_table = np.array([pen(c) for c in color_table], dtype=object)
+        brush_table = np.array([QBrush(c) for c in color_table], dtype=object)
+        pens = pen_table[colors_index]
+        brushes = brush_table[colors_index]
         self._scatter_item = pg.ScatterPlotItem(
-            x, y, symbol="+", brush=brushes, pen=pens
+            x, y, symbol="+", brush=brushes, pen=pens, size=self.symbol_size
         )
         self.plot.addItem(self._scatter_item)
-        self.set_symbol_size()
 
     def _attr_name_changed(self):
         self.plot.getAxis("bottom").setLabel(self.attr1)
@@ -1320,6 +1331,18 @@ class OWPaintData(OWWidget):
         settings += [("Number of points", len(self.data))]
         self.report_items("Painted data", settings)
         self.report_plot()
+
+
+def prepare_color_table_and_index(
+        palette: colorpalettes.IndexedPalette, data: np.ndarray[float]
+) -> tuple[np.ndarray[object], np.ndarray[np.intp]]:
+    # to index array and map nan to -1
+    index = np.full(data.shape, -1, np.intp)
+    mask = np.isnan(data)
+    np.copyto(index, data, where=~mask, casting="unsafe")
+    color_table = np.array([c for c in palette] + [palette[np.nan]], dtype=object)
+    return color_table, index
+
 
 
 if __name__ == "__main__":  # pragma: no cover

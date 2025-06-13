@@ -106,7 +106,7 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         """
         table = Table("iris")
         with table.unlocked():
-            table.Y[:5] = np.NaN
+            table.Y[:5] = np.nan
         self.send_signal(self.widget.Inputs.data, table)
         coef1 = self.get_output(self.widget.Outputs.coefficients)
         table = table[5:]

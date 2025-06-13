@@ -258,7 +258,7 @@ class OWDistributions(OWWidget):
     class Outputs:
         selected_data = Output("Selected Data", Table, default=True)
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table)
-        histogram_data = Output("Histogram Data", Table)
+        histogram_data = Output("Histogram Data", Table, dynamic=False)
 
     class Error(OWWidget.Error):
         no_defined_values_var = \
@@ -698,7 +698,7 @@ class OWDistributions(OWWidget):
                 x0 + xoff, bar_width, 0,
                 [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip,
-                desc=desc, hidden=self.hide_bars)
+                desc=desc, hidden=self.hide_bars and self.fitted_distribution)
 
         if self.fitted_distribution:
             self._plot_approximations(
@@ -744,7 +744,7 @@ class OWDistributions(OWWidget):
                 x0 + xoff, bar_width, 0 if self.stacked_columns else 0.1,
                 plotfreqs,
                 gcolors, stacked=self.stacked_columns, expanded=self.show_probs,
-                hidden=self.hide_bars,
+                hidden=self.hide_bars and self.fitted_distribution,
                 tooltip=self._split_tooltip(
                     desc, np.sum(plotfreqs), total, gvalues, plotfreqs),
                 desc=desc)

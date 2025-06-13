@@ -10,9 +10,10 @@ from Orange.classification import NaiveBayesLearner, MajorityLearner
 from Orange.evaluation.testing import Validation
 from Orange.regression import LinearRegressionLearner, MeanLearner
 from Orange.data import Table, Domain, DiscreteVariable
-from Orange.evaluation import (Results, CrossValidation, LeaveOneOut, TestOnTrainingData,
+from Orange.evaluation import (Results, CrossValidation, LeaveOneOut,
+                               TestOnTrainingData,
                                TestOnTestData, ShuffleSplit, sample, RMSE,
-                               CrossValidationFeature)
+                               CrossValidationFeature, MAPE)
 from Orange.preprocess import discretize, preprocess
 
 
@@ -190,6 +191,11 @@ class TestCrossValidation(TestSampling):
         res = CrossValidation(k=3)(
             self.housing, [LinearRegressionLearner()])
         self.assertLess(RMSE(res), 5)
+
+    def test_mape_percentage(self):
+        res = CrossValidation(k=3)(
+            self.housing, [LinearRegressionLearner()])
+        self.assertGreater(MAPE(res), 1)
 
     def test_folds(self):
         res = CrossValidation(k=5)(self.random_table, [NaiveBayesLearner()])

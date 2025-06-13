@@ -97,10 +97,8 @@ class TestOWNomogram(WidgetTest):
     def test_nomogram_lr_multiclass(self):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons for multiclass data"""
-        cls = LogisticRegressionLearner(
-            multi_class="ovr", solver="liblinear"
-        )(self.lenses)
-        self._test_helper(cls, [9, 45, 52])
+        cls = LogisticRegressionLearner(max_iter=100)(self.lenses)
+        self._test_helper(cls, [18, 56, 78])
 
     def test_nomogram_with_instance_nb(self):
         """Check initialized marker values and feature sorting for naive bayes

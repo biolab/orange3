@@ -11,6 +11,7 @@ from Orange.widgets.visualize.owscatterplot import OWScatterPlot
 
 def add_intro(a):
     r = "import matplotlib.pyplot as plt\n" + \
+        "import numpy as np\n" + \
         "from numpy import array\n" + \
         "plt.clf()"
     return r + a

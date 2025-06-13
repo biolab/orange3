@@ -5,7 +5,7 @@ Examples
 --------
 >>> import Orange
 >>> data = Orange.data.Table('iris')
->>> learner = Orange.classification.LogisticRegressionLearner(solver="liblinear")
+>>> learner = Orange.classification.LogisticRegressionLearner()
 >>> results = Orange.evaluation.TestOnTrainingData(data, [learner])
 
 """
@@ -296,7 +296,7 @@ class LogLoss(ClassificationScore):
     Examples
     --------
     >>> Orange.evaluation.LogLoss(results)
-    array([0.3...])
+    array([0.1...])
 
     """
     __wraps__ = skl_metrics.log_loss
@@ -410,11 +410,17 @@ class MAE(RegressionScore):
     long_name = "Mean absolute error"
     priority = 40
 
+
 class MAPE(RegressionScore):
     __wraps__ = skl_metrics.mean_absolute_percentage_error
     name = "MAPE"
     long_name = "Mean absolute percentage error"
     priority = 45
+
+    def compute_score(self, results):
+        res = super().compute_score(results)
+        return res * 100
+
 
 # pylint: disable=invalid-name
 class R2(RegressionScore):

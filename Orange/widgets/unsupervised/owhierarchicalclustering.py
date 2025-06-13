@@ -149,7 +149,10 @@ class SelectedLabelsModel(PyListModel):
             return font
         if role == Qt.BackgroundRole:
             if self.__colors is not None:
-                return self.__colors[index.row()]
+                if index.row() < len(self.__colors):
+                    return self.__colors[index.row()]
+                else:
+                    return QColor()
             elif not any(self) and self.subset:  # no labels, no color, but subset
                 return QColor(0, 0, 0)
         if role == Qt.UserRole and self.subset:
@@ -301,7 +304,9 @@ class OWHierarchicalClustering(widget.OWWidget):
             None, self, "color_by", orientation=Qt.Horizontal,
             model=model, callback=self._update_labels,
             sizePolicy=QSizePolicy(QSizePolicy.MinimumExpanding,
-                                   QSizePolicy.Fixed))
+                                   QSizePolicy.Fixed),
+            contentsLength=10
+        )
         self.color_by_label = QLabel("Color by:")
         grid.addWidget(self.color_by_label, 2, 0)
         grid.addWidget(cb, 2, 1)

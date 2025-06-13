@@ -62,7 +62,7 @@ class OWLouvainClustering(widget.OWWidget):
     class Outputs:
         annotated_data = Output(ANNOTATED_DATA_SIGNAL_NAME, Table, default=True)
         if Network is not None:
-            graph = Output("Network", Network)
+            graph = Output("Network", Network, dynamic=False)
 
     apply_pca = Setting(True)
     pca_components = Setting(_DEFAULT_PCA_COMPONENTS)
