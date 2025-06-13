@@ -68,6 +68,8 @@ class OWDBSCAN(widget.OWWidget):
     class Error(widget.OWWidget.Error):
         not_enough_instances = Msg("Not enough unique data instances. "
                                    "At least two are required.")
+        no_features = Msg("The data does not contain any features.")
+
 
     METRICS = [
         ("Euclidean", "euclidean"),
@@ -175,13 +177,13 @@ class OWDBSCAN(widget.OWWidget):
         self.Error.clear()
         if not self.check_data_size(data):
             data = None
+        if data and data.X.shape[1] == 0:
+            data = None
+            self.Error.no_features()
         self.data = self.data_normalized = data
         if self.data is None:
             self.Outputs.annotated_data.send(None)
             self.plot.clear_plot()
-            return
-
-        if self.data is None:
             return
 
         self._preprocess_data()
