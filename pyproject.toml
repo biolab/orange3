@@ -11,9 +11,12 @@ requires = [
 
 build-backend = "setuptools.build_meta"
 
+[project]
+requires-python = ">=3.10"
+
 [tool.cibuildwheel]
 # Restrict the set of builds to mirror the wheels available in Orange3.
-skip = ["cp36-*", "cp37-*", "cp38-*", "pp*", "*-musllinux_*"]
+skip = ["pp*", "*-musllinux_*"]
 build-verbosity = 2
 
 [tool.cibuildwheel.linux]
