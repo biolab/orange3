@@ -3,10 +3,17 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
 	 width="48px" height="48px" viewBox="0 0 48 48" enable-background="new 0 0 48 48" xml:space="preserve">
-<g>
-	<rect x="6.5" y="15" fill="#333333" width="8.001" height="23"/>
-	<rect x="15.5" y="10" fill="#333333" width="8.001" height="28"/>
-	<rect x="24.499" y="19" fill="#333333" width="8.001" height="19"/>
-	<rect x="33.5" y="28" fill="#333333" width="8.001" height="10"/>
+<defs>
+<style type="text/css" id="current-color-scheme">
+* { color: #333; }
+.ColorScheme-Text { color: #333; }
+.ColorScheme-Background { color: #fff; }
+</style>
+</defs>
+<g class="ColorScheme-Text" fill="currentColor">
+	<rect x="6.5" y="15" width="8.001" height="23"/>
+	<rect x="15.5" y="10" width="8.001" height="28"/>
+	<rect x="24.499" y="19" width="8.001" height="19"/>
+	<rect x="33.5" y="28" width="8.001" height="10"/>
 </g>
 </svg>
