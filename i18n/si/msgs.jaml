@@ -13773,6 +13773,8 @@ widgets/visualize/owboxplot.py:
             ': ': true
         def `draw_axis`:
             ?: true
+        def `draw_axis_disc`:
+            the callee must ensure this!: false
         def `strudel`:
             missing '{attr.name}': (neznana vrednost)
             add_lpad: false

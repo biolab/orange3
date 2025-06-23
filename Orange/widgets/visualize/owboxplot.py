@@ -684,6 +684,15 @@ class OWBoxPlot(widget.OWWidget):
 
     def _display_changed_disc(self):
         self.clear_scene()
+
+        if self.group_var and self.conts is None or \
+                not self.group_var and self.dist is None:  # readability counts
+            # This happens if the attribute or group attribute don't have any
+            # values. See the condition in compute_box_data. This tests can't
+            # be moved to input data handler because it's user-choice specific.
+            self.stat_test = ""
+            return
+
         self.attr_labels = [QGraphicsSimpleTextItem(lab)
                             for lab in self.label_txts_all]
 
@@ -991,9 +1000,11 @@ class OWBoxPlot(widget.OWWidget):
             step = steps = 10
         else:
             if self.group_var:
+                assert self.conts is not None, "the callee must ensure this!"
                 max_box = max(float(np.sum(dist))
                               for dist in self.conts.array_with_unknowns)
             else:
+                assert self.dist is not None, "the callee must ensure this!"
                 max_box = float(np.sum(self.dist.array_with_unknowns))
             if max_box == 0:
                 self.scale_x = 1
