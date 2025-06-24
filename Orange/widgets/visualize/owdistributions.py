@@ -68,9 +68,11 @@ class LegendItem(SPGLegendItem):
 
 class DistributionBarItem(pg.GraphicsObject):
     def __init__(self, x, width, padding, freqs, colors, stacked, expanded,
-                 tooltip, desc, hidden):
+                 tooltip, desc, hidden, low, high):
         super().__init__()
         self.x = x
+        self.low = low
+        self.high = high
         self.width = width
         self.freqs = freqs
         self.colors = colors
@@ -618,10 +620,10 @@ class OWDistributions(OWWidget):
         self.plot.autoRange()
 
     def _add_bar(self, x, width, padding, freqs, colors, stacked, expanded,
-                 tooltip, desc, hidden=False):
+                 tooltip, desc, hidden=False, low=None, high=None):
         item = DistributionBarItem(
             x, width, padding, freqs, colors, stacked, expanded, tooltip,
-            desc, hidden)
+            desc, hidden, low, high)
         self.plot.addItem(item)
         self.bar_items.append(item)
 
@@ -698,7 +700,9 @@ class OWDistributions(OWWidget):
                 x0 + xoff, bar_width, 0,
                 [tot_freq if self.cumulative_distr else freq],
                 colors, stacked=False, expanded=False, tooltip=tooltip,
-                desc=desc, hidden=self.hide_bars and self.fitted_distribution)
+                desc=desc, hidden=self.hide_bars and self.fitted_distribution,
+                low=x0, high=x1
+            )
 
         if self.fitted_distribution:
             self._plot_approximations(
@@ -747,7 +751,9 @@ class OWDistributions(OWWidget):
                 hidden=self.hide_bars and self.fitted_distribution,
                 tooltip=self._split_tooltip(
                     desc, np.sum(plotfreqs), total, gvalues, plotfreqs),
-                desc=desc)
+                desc=desc,
+                low=x0, high=x1
+            )
 
         if fitters:
             self._plot_approximations(bins[0], bins[-1], fitters, varcolors,
@@ -1022,14 +1028,16 @@ class OWDistributions(OWWidget):
             group = list(group)
             left_idx, right_idx = group[0], group[-1]
             left_pad, right_pad = self._determine_padding(left_idx, right_idx)
-            x0 = self.bar_items[left_idx].x0 - left_pad
-            x1 = self.bar_items[right_idx].x1 + right_pad
+            left, right = (self.bar_items[it] for it in (left_idx, right_idx))
+            x0 = left.x0 - left_pad
+            x1 = right.x1 + right_pad
             item = QGraphicsRectItem(x0, 0, x1 - x0, 1)
             item.setPen(pen)
             item.setBrush(brush)
             if self.var.is_continuous:
                 valname = self.str_int(
-                    x0, x1, not left_idx, right_idx == len(self.bar_items) - 1)
+                    left.low, right.high,
+                    self._is_first_bar(left_idx), self._is_last_bar(right_idx))
                 inside = sum(np.sum(self.bar_items[i].freqs) for i in group)
                 total = len(self.valid_data)
                 item.setToolTip(
@@ -1224,7 +1232,9 @@ class OWDistributions(OWWidget):
                 group_indices[mask] = group_idx
             # pylint: disable=undefined-loop-variable
             values.append(
-                self.str_int(x0, x1, not bar_idx, self._is_last_bar(bar_idx)))
+                self.str_int(
+                    x0, x1,
+                    self._is_first_bar(bar_idx), self._is_last_bar(bar_idx)))
         return group_indices, values
 
     def _get_histogram_table(self):
@@ -1251,15 +1261,21 @@ class OWDistributions(OWWidget):
             x0, x1, mask = self._get_cont_baritem_indices(col, bar_idx)
             group_indices[mask] = bar_idx + 1
             values.append(
-                self.str_int(x0, x1, not bar_idx, self._is_last_bar(bar_idx)))
+                self.str_int(
+                    x0, x1,
+                    self._is_first_bar(bar_idx), self._is_last_bar(bar_idx)))
         return group_indices, values
 
     def _get_cont_baritem_indices(self, col, bar_idx):
         bar_item = self.bar_items[bar_idx]
-        minx = bar_item.x0
-        maxx = bar_item.x1 + (bar_idx == len(self.bar_items) - 1)
+        minx = bar_item.low
+        maxx = bar_item.high + self._is_last_bar(bar_idx)
         with np.errstate(invalid="ignore"):
             return minx, maxx, (col >= minx) * (col < maxx)
+
+    @staticmethod
+    def _is_first_bar(idx):
+        return idx == 0
 
     def _is_last_bar(self, idx):
         return idx == len(self.bar_items) - 1
