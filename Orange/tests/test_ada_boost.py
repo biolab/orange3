@@ -4,9 +4,7 @@
 import unittest
 
 import numpy as np
-from packaging.version import Version
 
-import Orange
 from Orange.data import Table
 from Orange.classification import SklTreeLearner
 from Orange.regression import SklTreeRegressionLearner
@@ -15,7 +13,6 @@ from Orange.ensembles import (
     SklAdaBoostRegressionLearner,
 )
 from Orange.evaluation import CrossValidation, CA, RMSE
-from Orange.util import OrangeDeprecationWarning
 
 
 class TestSklAdaBoostLearner(unittest.TestCase):
@@ -108,16 +105,3 @@ class TestSklAdaBoostLearner(unittest.TestCase):
     def test_adaboost_adequacy_reg(self):
         learner = SklAdaBoostRegressionLearner()
         self.assertRaises(ValueError, learner, self.iris)
-
-    def test_remove_deprecation(self):
-        if (Version(Orange.__version__).is_prerelease
-                and Version(Orange.__version__) >= Version("3.40")):
-            self.fail(
-                "`base_estimator` was deprecated in "
-                "version 3.37. Please remove everything related to it."
-            )
-        stump_estimator = SklTreeLearner(max_depth=1)
-        with self.assertWarns(OrangeDeprecationWarning):
-            SklAdaBoostClassificationLearner(base_estimator=stump_estimator)
-        with self.assertWarns(OrangeDeprecationWarning):
-            SklAdaBoostClassificationLearner(base_estimator=stump_estimator)
