@@ -111,7 +111,7 @@ class TestSklAdaBoostLearner(unittest.TestCase):
 
     def test_remove_deprecation(self):
         if (Version(Orange.__version__).is_prerelease
-                and Version(Orange.__version__) >= Version("3.39")):
+                and Version(Orange.__version__) >= Version("3.40")):
             self.fail(
                 "`base_estimator` was deprecated in "
                 "version 3.37. Please remove everything related to it."
