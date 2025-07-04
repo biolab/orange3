@@ -19,24 +19,18 @@ class SklAdaBoostClassifier(SklModelClassification):
     pass
 
 
-def base_estimator_deprecation():
-    warnings.warn(
-        "`base_estimator` is deprecated (to be removed in 3.39): use `estimator` instead.",
-        OrangeDeprecationWarning, stacklevel=3)
-
-
 class SklAdaBoostClassificationLearner(SklLearnerClassification):
     __wraps__ = skl_ensemble.AdaBoostClassifier
     __returns__ = SklAdaBoostClassifier
     supports_weights = True
 
     def __init__(self, estimator=None, n_estimators=50, learning_rate=1.,
-                 algorithm='SAMME', random_state=None, preprocessors=None,
-                 base_estimator="deprecated"):
-        if base_estimator != "deprecated":
-            base_estimator_deprecation()
-            estimator = base_estimator
-        del base_estimator
+                 algorithm='deprecated', random_state=None, preprocessors=None):
+        if algorithm != "deprecated":
+            warnings.warn(
+                "`algorithm` is deprecated and has no effect (to be removed in 3.42).",
+                OrangeDeprecationWarning, stacklevel=2)
+        del algorithm
         from Orange.modelling import Fitter
         # If fitter, get the appropriate Learner instance
         if isinstance(estimator, Fitter):
@@ -59,12 +53,7 @@ class SklAdaBoostRegressionLearner(SklLearnerRegression):
     supports_weights = True
 
     def __init__(self, estimator=None, n_estimators=50, learning_rate=1.,
-                 loss='linear', random_state=None, preprocessors=None,
-                 base_estimator="deprecated"):
-        if base_estimator != "deprecated":
-            base_estimator_deprecation()
-            estimator = base_estimator
-        del base_estimator
+                 loss='linear', random_state=None, preprocessors=None):
         from Orange.modelling import Fitter
         # If fitter, get the appropriate Learner instance
         if isinstance(estimator, Fitter):
