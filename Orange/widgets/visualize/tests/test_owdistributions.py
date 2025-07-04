@@ -4,7 +4,7 @@ from functools import partial
 
 import os
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, Qt, QEvent
@@ -13,7 +13,8 @@ from AnyQt.QtWidgets import QCheckBox
 
 from orangewidget.utils.combobox import qcombobox_emit_activated
 
-from Orange.data import Table, Domain, DiscreteVariable
+from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
+from Orange.preprocess import BinDefinition
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.utils.annotated_data import ANNOTATED_DATA_FEATURE_NAME
 from Orange.widgets.utils.itemmodels import DomainModel
@@ -705,6 +706,19 @@ class TestOWDistributions(WidgetTest):
                 # Right again selects the item to the right of the single itsm
                 widget.keyPressEvent(press(right, Qt.ShiftModifier))
                 assert widget.selected_bars == {values[1], values[2]}
+
+    @patch("Orange.widgets.visualize.owdistributions.decimal_binnings")
+    def test_selection_with_offset_cont_hist(self, dec_bin):
+        widget = self.widget
+
+        dec_bin.return_value = [BinDefinition(np.arange(0, 1000, 100))]
+        self.send_signal(Table.from_numpy(Domain([ContinuousVariable("y")]),
+                                          np.arange(1000)[:, np.newaxis]))
+        widget._on_item_clicked(widget.bar_items[2], Qt.NoModifier, False)
+        widget._on_end_selecting()
+        np.testing.assert_equal(
+            self.get_output(widget.Outputs.selected_data).X,
+            np.arange(200, 300)[:, np.newaxis])
 
 
 if __name__ == "__main__":
