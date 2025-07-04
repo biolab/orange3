@@ -1,3 +1,5 @@
+import warnings
+
 import sklearn.ensemble as skl_ensemble
 
 from Orange.base import SklLearner
@@ -7,6 +9,7 @@ from Orange.classification.base_classification import (
 from Orange.regression.base_regression import (
     SklLearnerRegression, SklModelRegression
 )
+from Orange.util import OrangeDeprecationWarning
 
 
 __all__ = ['SklAdaBoostClassificationLearner', 'SklAdaBoostRegressionLearner']
@@ -22,7 +25,12 @@ class SklAdaBoostClassificationLearner(SklLearnerClassification):
     supports_weights = True
 
     def __init__(self, estimator=None, n_estimators=50, learning_rate=1.,
-                 algorithm='SAMME', random_state=None, preprocessors=None):
+                 algorithm='deprecated', random_state=None, preprocessors=None):
+        if algorithm != "deprecated":
+            warnings.warn(
+                "`algorithm` is deprecated and has no effect (to be removed in 3.42).",
+                OrangeDeprecationWarning, stacklevel=2)
+        del algorithm
         from Orange.modelling import Fitter
         # If fitter, get the appropriate Learner instance
         if isinstance(estimator, Fitter):
