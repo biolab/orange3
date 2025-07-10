@@ -79,12 +79,6 @@ base.py:
         def `preprocess`:
             'Wrapped scikit-learn methods do not support ': false
             multinomial variables.: false
-        def `supports_weights`:
-            'SklLearner.supports_weights property is deprecated. All ': false
-            'subclasses should redefine the supports_weights attribute. ': false
-            The property will be removed in 3.39.: false
-            __wrapped__: false
-            sample_weight: false
     class `KNNBase`:
         def `__init__`:
             euclidean: false
@@ -2105,16 +2099,12 @@ distance/distance.py:
 ensembles/ada_boost.py:
     SklAdaBoostClassificationLearner: false
     SklAdaBoostRegressionLearner: false
-    def `base_estimator_deprecation`:
-        '`base_estimator` is deprecated (to be removed in 3.39): use `estimator` instead.': false
     class `SklAdaBoostClassificationLearner`:
         def `__init__`:
             SAMME: false
-            deprecated: false
     class `SklAdaBoostRegressionLearner`:
         def `__init__`:
             linear: false
-            deprecated: false
 ensembles/stack.py:
     StackedLearner: false
     StackedClassificationLearner: false
@@ -2549,7 +2539,7 @@ modelling/column.py:
         variables: false
     class `ColumnLearner`:
         def `__init__`:
-            column '{column.name}': false
+            column '{column.name}': stolpec `{column.name}`
         def `fit_storage`:
             Class variable does not match the data: false
     class `ColumnModel`:
@@ -10095,7 +10085,7 @@ widgets/model/owlinearregression.py:
             Coefficients: Koeficienti
         No regularization: Brez regularizacije
         Ridge regression (L2): Ridge (L2)
-        Lasso regression (L1): Lasso (L2)
+        Lasso regression (L1): Lasso (L1)
         Elastic net regression: Elastična mreža
         def `add_main_layout`:
             Parameters: Parametri
@@ -11054,6 +11044,7 @@ widgets/unsupervised/owdbscan.py:
         class `Error`:
             'Not enough unique data instances. ': 'Ni dovolj primerov. '
             At least two are required.: Potrebna sta vsaj dva.
+            The data does not contain any features.: Podatki ne vsebujejo nobenih spremenljivk.
         Euclidean: Evklidska
         euclidean: false
         Manhattan: Manhattanska
