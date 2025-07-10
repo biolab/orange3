@@ -104,6 +104,19 @@ class TestOWBoxPlot(WidgetTest, WidgetOutputsTestMixin):
         self._select_list_items(self.widget.attr_list)
         self._select_list_items(self.widget.group_list)
 
+    def test_no_attribute_or_group_values(self):
+        attrs = [DiscreteVariable(n, values=tuple("xyz"[:i]))
+                 for i, n in enumerate("abc")]
+        n = np.nan
+        data = Table.from_numpy(Domain(attrs),
+                                [[n, n, n],
+                                 [n, n, 0],
+                                 [n, 0, 1]])
+        self.send_signal(data)
+        for self.widget.attribute in attrs:
+            for self.widget.group_var in attrs:
+                self.widget.update_graph()
+
     def test_attribute_combinations(self):
         self.send_signal(self.widget.Inputs.data, self.heart)
         group_list = self.widget.group_list
