@@ -54,7 +54,6 @@ requirements:
     - openTSNE >=0.6.2,!=0.7.0
     - pandas >=1.4.0,!=1.5.0,!=2.0.0
     - packaging
-    - pip >=19.3
     - python.app  # [osx]
     - python-louvain >=0.13
     - pyyaml
