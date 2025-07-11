@@ -2101,7 +2101,8 @@ ensembles/ada_boost.py:
     SklAdaBoostRegressionLearner: false
     class `SklAdaBoostClassificationLearner`:
         def `__init__`:
-            SAMME: false
+            deprecated: false
+            `algorithm` is deprecated and has no effect (to be removed in 3.42).: false
     class `SklAdaBoostRegressionLearner`:
         def `__init__`:
             linear: false
