@@ -9363,6 +9363,8 @@ widgets/evaluate/owpredictions.py:
             Target class: Ciljni razred
         def `migrate_settings`:
             score_table: false
+        def `migrate_context`:
+            target_class: false
     class `ClassificationItemDelegate`:
         def `__init__`:
             ' : ': false
