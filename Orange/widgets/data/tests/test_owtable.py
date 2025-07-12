@@ -52,6 +52,16 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         self.assertListEqual([], self.widget.stored_selection["columns"])
         self.assertListEqual([], self.widget.stored_selection["rows"])
 
+    def test_clear_selection(self):
+        self.send_signal(self.widget.Inputs.data, self.data)
+        self.assertFalse(self.widget.clear_button.isEnabled())
+        self._select_data()
+        self.assertTrue(self.widget.clear_button.isEnabled())
+        self.widget.clear_button.click()
+        self.assertListEqual([], self.widget.stored_selection["columns"])
+        self.assertListEqual([], self.widget.stored_selection["rows"])
+        self.assertFalse(self.widget.clear_button.isEnabled())
+
     def _select_data(self):
         self.widget.set_selection(
             list(range(0, len(self.data), 10)),
@@ -98,7 +108,9 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
             "stored_sort": [("sepal length", 1), ("sepal width", -1)]
         })
         self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(widget.restore_button.isEnabled())
         self.send_signal(widget.Inputs.data, self.data)
+        self.assertTrue(widget.restore_button.isEnabled())
         self.assertEqual(widget.view.horizontalHeader().sortIndicatorOrder(),
                          Qt.DescendingOrder)
         self.assertEqual(widget.view.horizontalHeader().sortIndicatorSection(), 2)
@@ -132,8 +144,10 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output(self.widget.Outputs.selected_data)
         output = output.get_column(0)
         output_original = output.tolist()
+        self.assertFalse(self.widget.restore_button.isEnabled())
 
         self.widget.view.sortByColumn(1, Qt.AscendingOrder)
+        self.assertTrue(self.widget.restore_button.isEnabled())
         self.assertEqual(self.widget.stored_sort, [('sepal length', 1)])
         output = self.get_output(self.widget.Outputs.selected_data)
         output = output.get_column(0)
@@ -147,6 +161,7 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(sorted(output_sorted) == output_sorted)
 
         self.widget.restore_order()
+        self.assertFalse(self.widget.restore_button.isEnabled())
         output = self.get_output(self.widget.Outputs.selected_data)
         self.assertEqual(output.get_column(0).tolist(), output_original)
 
