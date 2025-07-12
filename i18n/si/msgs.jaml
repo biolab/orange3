@@ -15138,7 +15138,7 @@ widgets/visualize/owtreeviewer.py:
             , …: true
             '<p style="line-height: 120%; margin-bottom: 0">{text}</p>': false
         def `node_content_cls`:
-            <b>{self.domain.class_vars[0].values[int(modus)]}</b><br/>: false
+            <b>{escape(self.domain.class_vars[0].values[int(modus)])}</b><br/>: false
             100%, {total}/{total}: false
             {100 * tabs:2.1f}%, {int(total * tabs)}/{total}: false
         def `node_content_reg`:
