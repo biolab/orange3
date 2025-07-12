@@ -239,17 +239,20 @@ class OWTable(OWWidget):
                      callback=self._on_distribution_color_changed)
 
         box = gui.vBox(self.controlArea, "Selection")
-
+        self.clear_button = gui.button(
+            box, self, "Clear Selection", callback=self.clear_selection,
+            autoDefault=False)
         gui.checkBox(box, self, "select_rows", "Select full rows",
                      callback=self._on_select_rows_changed)
 
         gui.rubber(self.controlArea)
 
-        gui.button(self.buttonsArea, self, "Restore Original Order",
-                   callback=self.restore_order,
-                   tooltip="Show rows in the original order",
-                   autoDefault=False,
-                   attribute=Qt.WA_LayoutUsesWidgetRect)
+        self.restore_button = gui.button(
+            self.buttonsArea, self, "Restore Original Order",
+            callback=self.restore_order,
+            tooltip="Show rows in the original order",
+            autoDefault=False,
+            attribute=Qt.WA_LayoutUsesWidgetRect)
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
         view = DataTableView(sortingEnabled=True)
@@ -308,6 +311,8 @@ class OWTable(OWWidget):
         self.__have_new_subset = True
 
     def handleNewSignals(self):
+        self.restore_button.setEnabled(False)
+        self.clear_button.setEnabled(False)
         super().handleNewSignals()
         self.Warning.non_sortable_input.clear()
         self.Warning.missing_sort_columns.clear()
@@ -464,6 +469,7 @@ class OWTable(OWWidget):
         self._update_input_summary()
 
     def _on_sort_indicator_changed(self, index: int, order: Qt.SortOrder) -> None:
+        self.restore_button.setEnabled(index != -1)
         if index == -1:
             self.stored_sort = []
         elif self.input is not None:
@@ -525,6 +531,7 @@ class OWTable(OWWidget):
             else:
                 missing_columns.append(self.__decode_column_id(colid))
         self.set_sort_columns(sort_)
+        self.restore_button.setEnabled(True)
         if missing_columns:
             self.Warning.missing_sort_columns(", ".join(missing_columns))
 
@@ -554,6 +561,10 @@ class OWTable(OWWidget):
         return [self.__encode_column_id(c) for c in self.input.model.columns]
 
     def update_selection(self, *_):
+        # Calling get_selection is expensive, so we consult selectionModel directly
+        sel_model = self.view.selectionModel()
+        selection = sel_model.selection()
+        self.clear_button.setEnabled(not selection.isEmpty())
         self.commit.deferred()
 
     def set_selection(self, rows: Sequence[int], columns: Sequence[int]) -> None:
@@ -569,6 +580,9 @@ class OWTable(OWWidget):
         Return the selected row and column indices of the selection in view.
         """
         return self.view.blockSelection()
+
+    def clear_selection(self):
+        self.set_selection([], [])
 
     @gui.deferred
     def commit(self):
