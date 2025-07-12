@@ -488,7 +488,7 @@ class OWTreeGraph(OWTreeViewer2D):
         else:
             modus = np.argmax(distr)
             tabs = distr[modus]
-            text = f"<b>{self.domain.class_vars[0].values[int(modus)]}</b><br/>"
+            text = f"<b>{escape(self.domain.class_vars[0].values[int(modus)])}</b><br/>"
         if tabs > 0.999:
             text += f"100%, {total}/{total}"
         else:
