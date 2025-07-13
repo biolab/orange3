@@ -73,6 +73,7 @@ class CustomRuleLearner(_RuleLearner):
 
         # bottom-level search procedure (search strategy)
         self.rule_finder.search_strategy.constrain_continuous = True
+        self.rule_finder.search_strategy.restrict_equality = params["Restrict to equality"]
 
         # bottom-level search procedure (search heuristics)
         evaluation_measure = params["Evaluation measure"]
@@ -229,6 +230,7 @@ class OWRuleLearner(OWBaseLearner):
     covering_algorithm = Setting(0)
     gamma = Setting(0.7)
     evaluation_measure = Setting(0)
+    restrict_equality = Setting(False)
     beam_width = Setting(5)
     min_covered_examples = Setting(1)
     max_rule_length = Setting(5)
@@ -312,6 +314,12 @@ class OWRuleLearner(OWBaseLearner):
             alignment=Qt.AlignRight, controlWidth=80,
             checked="checked_parent_alpha")
 
+        gui.checkBox(
+            widget=bottom_box, master=self, value="restrict_equality",
+            label="Restrict operator for categorical values to equality",
+            callback=self.settings_changed,
+        )
+
     def settings_changed(self, *args, **kwargs):
         self.gamma_spin.setDisabled(self.covering_algorithm == 0)
         super().settings_changed(*args, **kwargs)
@@ -349,6 +357,7 @@ class OWRuleLearner(OWBaseLearner):
             ("Covering algorithm", self.storage_covers[self.covering_algorithm]),
             ("Gamma", self.gamma),
             ("Evaluation measure", self.storage_measures[self.evaluation_measure]),
+            ("Restrict to equality", self.restrict_equality),
             ("Beam width", self.beam_width),
             ("Minimum rule coverage", self.min_covered_examples),
             ("Maximum rule length", self.max_rule_length),

@@ -10372,6 +10372,7 @@ widgets/model/owrules.py:
             weighted: utežena
             Gamma: Gama
             Beam width: Širina snopa
+            Restrict to equality: Omejitev na enakost
             Evaluation measure: Ocena kvalitete pravila
             entropy: entropija
             laplace: Laplacova natančnost
@@ -10427,11 +10428,14 @@ widgets/model/owrules.py:
             parent_alpha: false
             Relative significance (parent α):: Relativna značilnost (predniko α):
             checked_parent_alpha: false
+            restrict_equality: false
+            Restrict operator for categorical values to equality: Omeji operator za kategorične vrednosti na enakost
         def `get_learner_parameters`:
             Rule ordering: Urejenost pravil
             Covering algorithm: Način prekrivanja
             Gamma: Gama
             Evaluation measure: Ocena kvalitete pravila
+            Restrict to equality: Omejitev na enakost
             Beam width: Širina snopa
             Minimum rule coverage: Najmanjše število pokritih primerov
             Maximum rule length: Največja dolžina pravila
