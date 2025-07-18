@@ -139,7 +139,7 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
 
         needs_merging = attr.is_discrete \
                         and max_categories is not None \
-                        and len(attr.values) >= max_categories
+                        and len(attr.values) > max_categories
         if return_labels and not needs_merging:
             assert attr.is_discrete
             return attr.values

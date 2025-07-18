@@ -100,6 +100,11 @@ class TestOWProjectionWidget(WidgetTest):
         self.assertEqual(
             get_column(disc2, return_labels=True, max_categories=4),
             disc2.values)
+        np.testing.assert_almost_equal(
+            get_column(disc2, max_categories=3), y)
+        self.assertEqual(
+            get_column(disc2, return_labels=True, max_categories=3),
+            disc2.values)
 
         # Test that get_columns modify a copy of the data and not the data
         np.testing.assert_almost_equal(get_column(disc), x)
