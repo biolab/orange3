@@ -18,6 +18,9 @@ from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush, QFontMetrics
 from AnyQt.QtCore import Qt, QRectF, QSize, QPropertyAnimation, QObject, \
     pyqtProperty
 
+from orangewidget.io import ClipboardFormat
+from orangewidget.utils import saveplot
+
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable, \
     Variable
 from Orange.statistics.util import nanmin, nanmax, nanmean, unique
@@ -674,6 +677,10 @@ class OWNomogram(OWWidget):
     sort_index = Setting(SortBy.ABSOLUTE)
     cont_feature_dim_index = Setting(0)
 
+    # This is defined so that base widget shows the button for saving graph
+    # and connects the shortcut for copying to clipboard. The value itself
+    # is not used because send_report, save_graph and copy_to_clipboard are
+    # overridden.
     graph_name = "scene"  # QGraphicsScene
 
     class Error(OWWidget.Error):
@@ -1302,8 +1309,26 @@ class OWNomogram(OWWidget):
         self.dot_animator.clear()
         self.scene.clear()
 
+    def get_nomogram_view(self):
+        view = QGraphicsView(self.scene, self)
+        scene_rect = self.scene.itemsBoundingRect()
+        view.setSceneRect(scene_rect)
+        view.resize(scene_rect.size().toSize())
+        return view
+
+    def copy_to_clipboard(self):
+        ClipboardFormat.write_image(None, self.get_nomogram_view())
+
+    def save_graph(self):
+        saveplot.save_plot(self.get_nomogram_view(), self.graph_writers)
+
     def send_report(self):
-        self.report_plot()
+        # self.report_plot(name="", plot=self.get_nomogram_view())
+        # would work, but the resulting nomogram is too small
+        # The drawback of the below is that the space between top_view and view
+        self.report_plot(name="", plot=self.top_view)
+        self.report_plot(name="", plot=self.view)
+        self.report_plot(name="", plot=self.bottom_view)
 
     @staticmethod
     def reconstruct_domain(classifier: Model, preprocessed: Domain) -> Domain:
