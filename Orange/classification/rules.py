@@ -435,10 +435,12 @@ class TopDownSearchStrategy(SearchStrategy):
     instances is developed. The hypothesis space of possible rules is
     then searched repeatedly by specialising candidate rules.
     """
-    def __init__(self, constrain_continuous=True, evaluate=True):
+    def __init__(self, constrain_continuous=True, evaluate=True,
+                        restrict_equality=False):
         self.constrain_continuous = constrain_continuous
         self.storage = None
         self.evaluate = evaluate
+        self.restrict_equality = restrict_equality
 
     def initialise_rule(self, X, Y, W, target_class, base_rules, domain,
                         initial_class_dist, prior_class_dist,
@@ -531,14 +533,15 @@ class TopDownSearchStrategy(SearchStrategy):
 
         possible_selectors = []
         # examine covered examples, for each variable
+        disc_operators = ["=="] if self.restrict_equality else ["==", "!="]
         for i, attribute in enumerate(domain.attributes):
             # if discrete variable
             if attribute.is_discrete:
                 # for each unique value, generate all possible selectors
-                for val in np.unique(X[:, i]):
-                    s1 = Selector(column=i, op="==", value=val)
-                    s2 = Selector(column=i, op="!=", value=val)
-                    possible_selectors.extend([s1, s2])
+                for op in disc_operators:
+                    possible_selectors += (
+                        Selector(column=i, op=op, value=val)
+                        for val in np.unique(X[:, i]))
             # if continuous variable
             elif attribute.is_continuous:
                 if X.shape[0] == 1:
@@ -914,7 +917,8 @@ class _RuleLearner(Learner):
     """
     preprocessors = [RemoveNaNColumns(), HasClass(), Impute()]
 
-    def __init__(self, preprocessors=None, base_rules=None):
+    def __init__(self, preprocessors=None, base_rules=None,
+                 *, restrict_equality=False):
         """
         Constrain the search algorithm with a list of base rules.
 
@@ -940,6 +944,7 @@ class _RuleLearner(Learner):
         super().__init__(preprocessors=preprocessors)
         self.base_rules = base_rules if base_rules is not None else []
         self.rule_finder = RuleHunter()
+        self.rule_finder.search_strategy.restrict_equality = restrict_equality
 
         self.data_stopping = self.positive_remaining_data_stopping
         self.cover_and_remove = self.exclusive_cover_and_remove
@@ -1247,8 +1252,10 @@ class _BaseCN2Learner(_RuleLearner):
     """
     def __init__(self, preprocessors=None, base_rules=None, beam_width=5,
                  constrain_continuous=True, min_covered_examples=1,
-                 max_rule_length=5, default_alpha=1.0, parent_alpha=1.0):
-        super().__init__(preprocessors, base_rules)
+                 max_rule_length=5, default_alpha=1.0, parent_alpha=1.0, *,
+                 restrict_equality=False):
+        super().__init__(preprocessors, base_rules,
+                         restrict_equality=restrict_equality)
         rf = self.rule_finder
         rf.search_algorithm.beam_width = beam_width
         rf.search_strategy.constrain_continuous = constrain_continuous
@@ -1272,8 +1279,10 @@ class CN2Learner(_RuleLearner):
     "The CN2 Induction Algorithm", Peter Clark and Tim Niblett, Machine
     Learning Journal, 3 (4), pp261-283, (1989)
     """
-    def __init__(self, preprocessors=None, base_rules=None):
-        super().__init__(preprocessors, base_rules)
+    def __init__(self, preprocessors=None, base_rules=None,
+                 *, restrict_equality=False):
+        super().__init__(preprocessors, base_rules,
+                         restrict_equality=restrict_equality)
         self.rule_finder.quality_evaluator = EntropyEvaluator()
 
     def fit_storage(self, data):
@@ -1326,8 +1335,10 @@ class CN2UnorderedLearner(_RuleLearner):
     """
     name = 'CN2 unordered inducer'
 
-    def __init__(self, preprocessors=None, base_rules=None):
-        super().__init__(preprocessors, base_rules)
+    def __init__(self, preprocessors=None, base_rules=None,
+                 *, restrict_equality=False):
+        super().__init__(preprocessors, base_rules,
+                         restrict_equality=restrict_equality)
         self.rule_finder.quality_evaluator = LaplaceAccuracyEvaluator()
 
     def fit_storage(self, data):
@@ -1392,8 +1403,10 @@ class CN2SDLearner(_RuleLearner):
     """
     name = 'CN2-SD inducer'
 
-    def __init__(self, preprocessors=None, base_rules=None):
-        super().__init__(preprocessors, base_rules)
+    def __init__(self, preprocessors=None, base_rules=None,
+                 *, restrict_equality=False):
+        super().__init__(preprocessors, base_rules,
+                         restrict_equality=restrict_equality)
         self.rule_finder.quality_evaluator = WeightedRelativeAccuracyEvaluator()
         self.cover_and_remove = self.weighted_cover_and_remove
         self.gamma = 0.7
@@ -1461,8 +1474,10 @@ class CN2SDUnorderedLearner(_RuleLearner):
     """
     name = 'CN2-SD unordered inducer'
 
-    def __init__(self, preprocessors=None, base_rules=None):
-        super().__init__(preprocessors, base_rules)
+    def __init__(self, preprocessors=None, base_rules=None,
+                 *, restrict_equality=False):
+        super().__init__(preprocessors, base_rules,
+                         restrict_equality=restrict_equality)
         self.rule_finder.quality_evaluator = WeightedRelativeAccuracyEvaluator()
         self.cover_and_remove = self.weighted_cover_and_remove
         self.gamma = 0.7
