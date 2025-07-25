@@ -112,6 +112,19 @@ class TestRuleInduction(unittest.TestCase):
         predictions = classifier.predict(self.titanic.X)
         self.assertEqual(len(predictions), self.titanic.X.shape[0])
 
+    def testCN2PrefersEquality(self):
+        learner = CN2Learner()
+        classifier = learner(self.titanic)
+        operators = [s.op for rule in classifier.rule_list for s in rule.selectors]
+        self.assertEqual(operators.count('!='), 4)
+        self.assertEqual(operators.count('=='), 23)
+
+    def testCN2RestrictEquality(self):
+        learner = CN2Learner(restrict_equality=True)
+        classifier = learner(self.titanic)
+        operators = [s.op for rule in classifier.rule_list for s in rule.selectors]
+        self.assertEqual(operators.count('!='), 0)
+
     def testUnorderedCN2Learner(self):
         learner = CN2UnorderedLearner()
 

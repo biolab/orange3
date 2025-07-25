@@ -538,10 +538,10 @@ class TopDownSearchStrategy(SearchStrategy):
             # if discrete variable
             if attribute.is_discrete:
                 # for each unique value, generate all possible selectors
-                for val in np.unique(X[:, i]):
+                for op in disc_operators:
                     possible_selectors += (
                         Selector(column=i, op=op, value=val)
-                        for op in disc_operators)
+                        for val in np.unique(X[:, i]))
             # if continuous variable
             elif attribute.is_continuous:
                 if X.shape[0] == 1:
