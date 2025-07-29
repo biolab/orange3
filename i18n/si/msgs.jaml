@@ -4704,7 +4704,8 @@ widgets/data/owcorrelations.py:
         def `row_for_state`:
             name: false
             :: true
-            {:+.3f}: false
+            N/A: ?
+            {score[1]:+.3f}: false
     class `OWCorrelations`:
         Correlations: Korelacije
         Compute all pairwise attribute correlations.: Izračuna korelacije med vsemi pari spremenljivk.
@@ -4718,15 +4719,22 @@ widgets/data/owcorrelations.py:
             Correlations: Korelacije
         class `Information`:
             Constant features have been removed.: Konstantne spremenljivke so odstranjene.
-        class `Warning`:
+        class `Error`:
             At least two numeric features are needed.: Potrebni sta vsaj dve številski spremenljivki.
             At least two instances are needed.: Potrebna sta vsaj dva primera.
         def `__init__`:
             correlation_type: false
             (All combinations): (Vse kombinacije)
             feature: false
+            impute_missing: false
+            Impute missing values: Nadomesti manjkajoče vrednosti
+            Replace missing values with means;\n: Nadomesti manjkajoče vrednosti s povprečji;\n
+            if disabled, rows with missing values for the corre: v nasprotnem primeru so vrstice z manjkajočimi vrednos
+            sponding variables are ignored: tmi teh spremenljivk izključene
         def `set_data`:
             removed: false
+        def `set_actual_data`:
+            mean: false
         def `commit`:
             Correlation: Korelacije
             uncorrected p: nepopravljen p
@@ -4736,6 +4744,10 @@ widgets/data/owcorrelations.py:
             Correlations: Korelacije
         def `migrate_context`:
             selection: false
+    def `mock_data`:
+        a: false
+        abc: false
+        defghij: false
     __main__: false
     iris: false
 widgets/data/owcreateclass.py:
