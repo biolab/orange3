@@ -37,6 +37,21 @@ class TestOWDBSCAN(WidgetTest):
         self.assertEqual("Cluster", str(output.domain.metas[0]))
         self.assertEqual("DBSCAN Core", str(output.domain.metas[1]))
 
+        # one feature only
+        np_array = np.round(np.random.random((20, 1)), 0)
+        one_feature_table = Table.from_numpy(None, X=np_array)
+
+        self.send_signal(w.Inputs.data, one_feature_table)
+        output = self.get_output(w.Outputs.annotated_data)
+
+        self.assertIsNotNone(output)
+        self.assertEqual(len(one_feature_table), len(output))
+        self.assertTupleEqual(one_feature_table.X.shape, output.X.shape)
+        self.assertEqual(2, output.metas.shape[1])
+        self.assertEqual("Cluster", str(output.domain.metas[0]))
+        self.assertEqual("DBSCAN Core", str(output.domain.metas[1]))
+
+
     def test_unique_domain(self):
         w = self.widget
         data = possible_duplicate_table("Cluster")
