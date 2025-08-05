@@ -143,13 +143,52 @@ class SliderGraph(PlotWidget):
                 else (self.x.min(), self.x.max())
             )
             self._line.setCursor(Qt.SizeHorCursor)
-            self._line.setPen(mkPen(self.palette().text().color(), width=2))
+
+            # Set up hover state handling
+            self._line.hoverEvent = self._handle_hover  # Changed from lambda to direct method reference
+
+            # Initial pen style
+            self._line.setPen(mkPen(self.palette().text().color(), width=6, style=Qt.SolidLine, capStyle=Qt.RoundCap))
             self._line.sigPositionChanged.connect(self._on_cut_changed)
             self.addItem(self._line)
         else:
             self._line.setValue(x)
 
         self._update_horizontal_lines()
+
+    def _handle_hover(self, ev):
+        """
+        Handle hover events for the vertical line.
+
+        Parameters
+        ----------
+        ev : HoverEvent
+            The hover event from pyqtgraph
+        """
+        if not hasattr(ev, 'isEnter'):  # Add check for event type
+            return
+
+        if ev.isEnter():
+            highlight_color = self.palette().highlight().color()
+            highlight_color.setHsv(
+                highlight_color.hue(),
+                min(highlight_color.saturation() + 30, 255),
+                max(highlight_color.value() - 20, 0)
+            )
+            self._line.setPen(mkPen(
+                highlight_color,
+                width=10,
+                style=Qt.SolidLine,
+                capStyle=Qt.RoundCap
+            ))
+        elif ev.isExit():
+            # On hover exit: return to normal state
+            self._line.setPen(mkPen(
+                self.palette().text().color(),
+                width=6,
+                style=Qt.SolidLine,
+                capStyle=Qt.RoundCap
+            ))
 
     def _plot_horizontal_lines(self):
         """
