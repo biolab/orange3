@@ -607,6 +607,24 @@ class TestUtils(unittest.TestCase):
         df = owcsvimport.load_csv(io.BytesIO(contents), opts)
         assert_array_equal(df.values, np.array([[3.21, 3.37], [4.13, 1000.142]]))
 
+    def test_tz_local(self):
+        contents = (
+            b'1970-01-01T00:00:00Z\n'
+            b'1970-01-01T00:00:00+0100\n'
+            b'1999-12-31T00:00:00Z'
+        )
+        opts = owcsvimport.Options(
+            encoding="ascii",
+            columntypes=[
+                (range(0, 1), ColumnType.Time),
+            ],
+            rowspec=[]
+        )
+        df = owcsvimport.load_csv(io.BytesIO(contents), opts)
+        tb = pandas_to_table(df)
+        self.assertEqual(tb.X[0, 0], 0.0)
+        self.assertEqual(tb.X[1, 0], -3600.0)
+
     def test_open_compressed(self):
         content = 'abc'
         for ext in ["txt", "gz", "bz2", "xz", "zip"]:

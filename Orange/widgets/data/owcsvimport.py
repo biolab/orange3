@@ -1835,7 +1835,9 @@ def pandas_to_table(df):
             orangecol = np.array(codes, dtype=float)
             orangecol[codes < 0] = np.nan
         elif pdtypes.is_datetime64_any_dtype(series):
-            # Check that this converts tz local to UTC
+            # Convert (possible) tz local to UTC
+            if series.dt.tz is not None:
+                series = series.dt.tz_convert("UTC").dt.tz_localize(None)
             series = series.astype(np.dtype("M8[ns]"))
             coldata = series.values  # type: np.ndarray
             assert coldata.dtype == "M8[ns]"
