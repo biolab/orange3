@@ -1611,8 +1611,8 @@ def load_csv(path, opts, progress_callback=None, compatibility_mode=False):
             for date_col in parse_dates:
                 if df.dtypes[date_col] == "object":
                     df[df.columns[date_col]] = pd.to_datetime(
-                        df.iloc[:, date_col], errors="coerce"
-                    )
+                        df.iloc[:, date_col], errors="coerce", utc=True,
+                    ).dt.tz_localize(None)
         if prefix:
             df.columns = [f"{prefix}{column}" for column in df.columns]
 
