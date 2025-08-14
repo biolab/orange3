@@ -177,6 +177,9 @@ class OWSilhouettePlot(widget.OWWidget):
         ibox.setFixedWidth(ibox.sizeHint().width())
         warning.setVisible(False)
 
+        sbox = gui.vBox(self.controlArea, "Score")
+        self.score_label = gui.label(sbox, self, "")
+
         gui.rubber(self.controlArea)
 
         gui.auto_send(self.buttonsArea, self, "auto_commit")
@@ -255,6 +258,13 @@ class OWSilhouettePlot(widget.OWWidget):
 
         self.commit.now()
 
+    def update_score_label(self):
+        if self._silhouette is not None and len(self._silhouette) > 0:
+            avg = np.mean(self._silhouette)
+            self.score_label.setText(f"{avg:.2f}")
+        else:
+            self.score_label.setText("")
+
     def _setup_control_models(self, domain: Domain):
         groupvars = [
             v for v in domain.variables + domain.metas
@@ -290,6 +300,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self.cluster_var_model[:] = []
         self.annotation_var_model[:] = [None]
         self._clear_scene()
+        self.update_score_label()
         self.Error.clear()
         self.Warning.clear()
 
@@ -373,6 +384,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self._mask = mask
         self._labels = labels
         self._silhouette = silhouette
+        self.update_score_label()
 
         if mask is not None:
             count_missing = np.count_nonzero(cluster_mask)
@@ -387,6 +399,7 @@ class OWSilhouettePlot(widget.OWWidget):
     def _reset_all(self):
         self._mask = None
         self._silhouette = None
+        self.update_score_label()
         self._labels = None
         self._matrix = None
         self._clear_scene()
