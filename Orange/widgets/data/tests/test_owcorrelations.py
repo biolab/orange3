@@ -133,6 +133,19 @@ class TestOWCorrelations(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Error.not_enough_vars.is_shown())
 
+    def test_feature_model_imputation(self):
+        data = mock_data()
+        attributes = data.domain.attributes[:-1]
+        class_var = data.domain.attributes[-1]
+        data = data.transform(Domain(attributes, class_var))
+        self.send_signal(data)
+        assert self.widget.feature is not class_var, "No imputation?"
+        self.assertEqual(self.widget.feature.name, class_var.name)
+
+        self.widget.feature = self.widget.actual_data.domain.attributes[-1]
+        assert self.widget.feature is not attributes[-1], "No imputation?"
+        self.assertEqual(self.widget.feature.name, attributes[-1].name)
+
     def test_imputation(self):
         self.send_signal(mock_data())
         self.wait_until_finished()

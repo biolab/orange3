@@ -393,18 +393,18 @@ class OWCorrelations(OWWidget):
                     self.Error.not_enough_vars()
                 else:
                     self.cont_data = cont_data
-        self.set_feature_model()
         self.set_actual_data()
+        self.set_feature_model()
         self.openContext(self.actual_data)
         self.apply()
         self.vizrank.button.setEnabled(self.actual_data is not None)
 
     def set_feature_model(self):
         self.feature_model.set_domain(
-            self.cont_data.domain if self.cont_data else None)
+            self.actual_data.domain if self.actual_data else None)
         data = self.data
-        if self.cont_data and data.domain.has_continuous_class:
-            self.feature = self.cont_data.domain[data.domain.class_var.name]
+        if self.actual_data and data.domain.has_continuous_class:
+            self.feature = self.actual_data.domain[data.domain.class_var.name]
         else:
             self.feature = None
 
