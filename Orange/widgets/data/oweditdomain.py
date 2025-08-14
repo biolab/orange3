@@ -6,6 +6,8 @@ A widget for manual editing of a domain's attributes.
 
 """
 from __future__ import annotations
+
+import re
 import warnings
 from xml.sax.saxutils import escape
 from itertools import zip_longest, repeat, chain, groupby
@@ -65,7 +67,29 @@ V = TypeVar("V", bound=Orange.data.Variable)  # pylint: disable=invalid-name
 H = TypeVar("H", bound=Hashable)  # pylint: disable=invalid-name
 
 MAX_HINTS = 1000
-
+CUSTOM_TOOLTIP = """%a  Weekday abbreviated name
+%A  Weekday full name
+%w  Weekday as a number (0=Sunday, 6=Saturday)
+%d  Day of the month (01-31)
+%b  Month abbreviated name
+%B  Month full name
+%m  Month as a number (01-12)
+%y  Year without century (00-99)
+%Y  Year with century
+%H  Hour (00-23)
+%I  Hour (01-12)
+%p  AM or PM
+%M  Minute (00-59)
+%S  Second (00-59)
+%f  Microsecond (000000-999999)
+%z  UTC offset in the form +HHMM or -HHMM
+%Z  Time zone name
+%j  Day of the year (001-366)
+%U  Week number of the year (Sunday as the first day of the week)
+%W  Week number of the year (Monday as the first day of the week)
+%c  Locale's appropriate date and time representation
+%x  Locale's appropriate date representation
+%X  Locale's appropriate time representation"""
 
 class _DataType:
     def __eq__(self, other):
@@ -1524,6 +1548,7 @@ class ContinuousVariableEditor(VariableEditor):
 
 
 class TimeVariableEditor(VariableEditor):
+    CUSTOM_FORMAT_LABEL = "Custom format"
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         form = self.layout().itemAt(0)
@@ -1533,8 +1558,14 @@ class TimeVariableEditor(VariableEditor):
             Orange.data.TimeVariable.ADDITIONAL_FORMATS.items()
         ):
             self.format_cb.addItem(item, StrpTime(item, *data))
+        self.format_cb.addItem(self.CUSTOM_FORMAT_LABEL)
         self.format_cb.currentIndexChanged.connect(self.variable_changed)
+        self.custom_edit = QLineEdit()
+        self.custom_edit.setPlaceholderText("%Y-%m-%d %H:%M:%S")
+        self.custom_edit.setToolTip(CUSTOM_TOOLTIP)
+        self.custom_edit.textChanged.connect(self._on_custom_change)
         form.insertRow(2, "Format:", self.format_cb)
+        form.insertRow(3, "Custom format:", self.custom_edit)
 
     def set_data(self, var, transform=()):
         super().set_data(var, transform)
@@ -1553,8 +1584,29 @@ class TimeVariableEditor(VariableEditor):
         var, tr = super().get_data()
         if var is not None and (self.parent() is None or not isinstance(self.parent().var, Time)):
             # do not add StrpTime when transforming from time to time
-            tr.insert(0, self.format_cb.currentData())
+            if self.format_cb.currentText() == self.CUSTOM_FORMAT_LABEL:
+                custom_text = self.custom_edit.text()
+                date_pat = r"%(-?)d|%(b|B)|%(-?)m|%(y|Y)|%(-?)j|%(-?)U|%(-?)W|%(a|A)|%w"
+                time_pat = r"%(-?)H|%(-?)I|%p|%(-?)M|%(-?)S|%f"
+                have_date = int(bool(re.search(date_pat, custom_text)))
+                have_time = int(bool(re.search(time_pat, custom_text)))
+                # this is done to ensure that the custom format is correct
+                if not have_date and not have_time:
+                    trf = StrpTime(self.CUSTOM_FORMAT_LABEL, (None,),
+                                   have_date, have_time)
+                else:
+                    trf = StrpTime(self.CUSTOM_FORMAT_LABEL, (custom_text,),
+                                                          have_date, have_time)
+            else:
+                trf = self.format_cb.currentData()
+            tr.insert(0, trf)
         return var, tr
+
+    def _on_custom_change(self):
+        if self.format_cb.currentText() != self.CUSTOM_FORMAT_LABEL:
+            self.format_cb.setCurrentIndex(self.format_cb.count() - 1)
+        else:
+            self.variable_changed.emit()
 
 
 def variable_icon(var):
@@ -3122,4 +3174,5 @@ def column_str_repr_string(
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWEditDomain).run(Orange.data.Table("iris"))
+    WidgetPreview(OWEditDomain).run(Orange.data.Table(
+        "/Users/ajda/Desktop/test.csv"))
