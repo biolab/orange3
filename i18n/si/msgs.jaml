@@ -1546,6 +1546,7 @@ data/util.py:
         dim must be greater than max(values): false
     class `SharedComputeValue`:
         def `__init__`:
+            InheritEq: false
             '{type(compute_shared).__name__} should define ': false
             __eq__ and __hash__ to be used for compute_shared: false
     def `get_unique_names`:
