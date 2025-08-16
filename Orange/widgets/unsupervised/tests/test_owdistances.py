@@ -239,6 +239,43 @@ class TestOWDistances(WidgetTest):
         self.send_signal(widget.Inputs.data, self.iris)
         assert_no_error()
 
+    def test_data_too_large(self):
+        self._select(Cosine)
+        self.widget.start = Mock()
+
+        def assert_error_shown():
+            self.assertTrue(self.widget.Error.data_too_large.is_shown())
+            self.assertIsNone(self.widget.start.call_args[0][1])
+
+        def assert_no_error():
+            self.assertFalse(self.widget.Error.data_too_large.is_shown())
+            self.assertIsNotNone(self.widget.start.call_args[0][1])
+
+        self.send_signal(
+            Table.from_numpy(Domain([ContinuousVariable("x")]),
+                             np.zeros((1000, 1)))
+        )
+        assert_no_error()
+
+        self.send_signal(
+            Table.from_numpy(Domain([ContinuousVariable("x")]),
+                             np.zeros((20001, 1)))
+        )
+        assert_error_shown()
+
+        self.widget.controls.axis.buttons[1].click()
+        assert_no_error()
+
+        self.send_signal(
+            Table.from_numpy(Domain([ContinuousVariable(f"x{i}")
+                                     for i in range(20001)]),
+                             np.zeros((1, 20001)))
+        )
+        assert_error_shown()
+
+        self.widget.controls.axis.buttons[0].click()
+        assert_no_error()
+
     def test_discrete_in_metas(self):
         domain = self.iris.domain
         data = self.iris.transform(

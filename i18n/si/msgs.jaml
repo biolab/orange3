@@ -11256,6 +11256,7 @@ widgets/unsupervised/owdistances.py:
             Not enough memory: Premalo pomnilnika
             Problem in calculation:\n{}: Težava pri izračunu:\n{}
             Mahalanobis handles up to 1000 {}.: Mahalanobisova razdalja zmore do 1000 {}.
+            Data is too large (> {MAX_ITEMS} items).: Podatki so preveliki (> {MAX_ITEMS} primerov).
         class `Warning`:
             Ignoring categorical features: Kategoričnih spremenljivk ne upoštevam
             Ignoring non-binary features: Ne-binarnih spremenljivk ne upoštevam
