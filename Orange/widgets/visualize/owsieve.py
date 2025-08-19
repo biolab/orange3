@@ -54,7 +54,6 @@ class ChiSqStats:
         self.p = chi2.sf(
             self.chisq, (len(self.probs_x) - 1) * (len(self.probs_y) - 1))
 
-
 class SieveRank(VizRankDialogAttrPair):
     sort_names_in_row = True
 
@@ -124,6 +123,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         self.mainArea.layout().addWidget(self.canvasView)
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvasView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._cochran_ok = None
 
     def sizeHint(self):
         return QSize(450, 550)
@@ -444,6 +444,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
             self.canvas.removeItem(item)
         if self.data is None or len(self.data) == 0 or \
                 self.attr_x is None or self.attr_y is None:
+            self._cochran_ok = None
             return
 
         ddomain = self.discrete_data.domain
@@ -469,6 +470,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
                         disc_x if not disc_x.values else disc_y)
             text(text_, view.width() / 2 + 70, view.height() / 2,
                  Qt.AlignRight | Qt.AlignVCenter)
+            self._cochran_ok = None
             return
         n = chi.n
         curr_x = x_off
@@ -518,11 +520,11 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         text("N = " + fmt(chi.n), 0, bottom - xl.boundingRect().height())
         
         # Cochran condition check
-        expected = chi.expected
+        expected = np.array(chi.expected, dtype=float)
         total_cells = expected.size
         num_lt1 = int((expected < 1).sum())
         num_lt5 = int((expected < 5).sum())
-        cochran_ok = (num_lt1 == 0) and (num_lt5 <= 0.2 * total_cells)
+        self._cochran_ok = (num_lt1 == 0) and (num_lt5 <= 0.2 * total_cells)
 
         bottom += 35
         label_item = text("Cochran:", 0, bottom, Qt.AlignLeft | Qt.AlignVCenter)
@@ -533,7 +535,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         x_ind = label_item.boundingRect().width() + 6
         y_ind = bottom - rect_size / 2
 
-        color = QColor("#2ecc71") if cochran_ok else QColor("#e74c3c")
+        color = QColor("#2ecc71") if self._cochran_ok else QColor("#e74c3c")
         indic = CanvasRectangle(self.canvas, x_ind, y_ind, rect_size, rect_size, z=0)
         indic.setBrush(QBrush(color))
         indic.setPen(QPen(color))
