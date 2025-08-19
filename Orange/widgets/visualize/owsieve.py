@@ -516,7 +516,28 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
                   0, bottom)
         # Assume similar height for both lines
         text("N = " + fmt(chi.n), 0, bottom - xl.boundingRect().height())
+        
+        # Cochran condition check
+        expected = chi.expected
+        total_cells = expected.size
+        num_lt1 = int((expected < 1).sum())
+        num_lt5 = int((expected < 5).sum())
+        cochran_ok = (num_lt1 == 0) and (num_lt5 <= 0.2 * total_cells)
 
+        bottom += 35
+        label_item = text("Cochran:", 0, bottom, Qt.AlignLeft | Qt.AlignVCenter)
+
+        # Green/red square indicator
+        rect_size = 10
+        # Since the text starts at x=0, its width is enough to position the square on the right
+        x_ind = label_item.boundingRect().width() + 6
+        y_ind = bottom - rect_size / 2
+
+        color = QColor("#2ecc71") if cochran_ok else QColor("#e74c3c")
+        indic = CanvasRectangle(self.canvas, x_ind, y_ind, rect_size, rect_size, z=0)
+        indic.setBrush(QBrush(color))
+        indic.setPen(QPen(color))
+      
     def get_widget_name_extension(self):
         if self.data is not None:
             return "{} vs {}".format(self.attr_x.name, self.attr_y.name)
