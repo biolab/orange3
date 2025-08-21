@@ -6,9 +6,9 @@ from scipy.stats.distributions import chi2
 
 from AnyQt.QtCore import Qt, QSize
 from AnyQt.QtGui import QColor, QPen, QBrush
-from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem, QSizePolicy, QGraphicsItemGroup
+from AnyQt.QtWidgets import QGraphicsScene, QGraphicsLineItem, QSizePolicy
 
-from Orange.data import Table, filter, Variable
+from Orange.data import Table, filter as data_filter, Variable
 from Orange.data.sql.table import SqlTable, LARGE_TABLE, DEFAULT_SAMPLE_TIME
 from Orange.preprocess import Discretize
 from Orange.preprocess.discretize import EqualFreq
@@ -104,10 +104,10 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         self.mainArea.layout().setSpacing(0)
         self.attr_box = gui.hBox(self.mainArea, margin=0)
         self.domain_model = DomainModel(valid_types=DomainModel.PRIMITIVE)
-        combo_args = dict(
-            widget=self.attr_box, master=self, contentsLength=12,
-            searchable=True, sendSelectedValue=True,
-            callback=self.attr_changed, model=self.domain_model)
+        combo_args = {
+            "widget":self.attr_box, "master":self, "contentsLength":12,
+            "searchable":True, "sendSelectedValue":True,
+            "callback":self.attr_changed, "model":self.domain_model}
         fixed_size = (QSizePolicy.Fixed, QSizePolicy.Fixed)
         gui.comboBox(value="attr_x", **combo_args)
         gui.widgetLabel(self.attr_box, "\u2717", sizePolicy=fixed_size)
@@ -124,7 +124,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvasView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._cochran_ok = None
-        self._cochran_group = None
+        self._cochran_label = None
 
     def sizeHint(self):
         return QSize(450, 550)
@@ -271,7 +271,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
                 "Features from the input signal are not present in the data")
             return
         old_attrs = self.attr_x, self.attr_y
-        self.attr_x, self.attr_y = [f for f in (features * 2)[:2]]
+        self.attr_x, self.attr_y = (features * 2)[:2]
         self.attr_box.setEnabled(False)
         if (self.attr_x, self.attr_y) != old_attrs:
             self.selection = set()
@@ -314,9 +314,9 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
                 width = 4
                 val_x, val_y = area.value_pair
                 filts.append(
-                    filter.Values([
-                        filter.FilterDiscrete(self.attr_x.name, [val_x]),
-                        filter.FilterDiscrete(self.attr_y.name, [val_y])
+                    data_filter.Values([
+                        data_filter.FilterDiscrete(self.attr_x.name, [val_x]),
+                        data_filter.FilterDiscrete(self.attr_y.name, [val_y])
                     ]))
             else:
                 width = 1
@@ -326,7 +326,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         if len(filts) == 1:
             filts = filts[0]
         else:
-            filts = filter.Values(filts, conjunction=False)
+            filts = data_filter.Values(filts, conjunction=False)
         selection = filts(self.discrete_data)
         idset = set(selection.ids)
         sel_idx = [i for i, id in enumerate(self.data.ids) if id in idset]
