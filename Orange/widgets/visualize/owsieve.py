@@ -521,24 +521,66 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         
         # Cochran condition check
         expected = np.array(chi.expected, dtype=float)
-        total_cells = expected.size
-        num_lt1 = int((expected < 1).sum())
-        num_lt5 = int((expected < 5).sum())
-        self._cochran_ok = (num_lt1 == 0) and (num_lt5 <= 0.2 * total_cells)
-
+        cells = expected.size
+        if cells == 0:
+            self._cochran_ok = None
+        else:
+            num_lt1 = int((expected < 1.0).sum())
+            num_lt5 = int((expected < 5.0).sum())
+            self._cochran_ok = (num_lt1 == 0) and (num_lt5 <= 0.2 * cells)
+        # Rendering of the indicator
         bottom += 35
-        label_item = text("Cochran:", 0, bottom, Qt.AlignLeft | Qt.AlignVCenter)
-
-        # Green/red square indicator
-        rect_size = 10
-        # Since the text starts at x=0, its width is enough to position the square on the right
-        x_ind = label_item.boundingRect().width() + 6
-        y_ind = bottom - rect_size / 2
-
-        color = QColor("#2ecc71") if self._cochran_ok else QColor("#e74c3c")
-        indic = CanvasRectangle(self.canvas, x_ind, y_ind, rect_size, rect_size, z=0)
-        indic.setBrush(QBrush(color))
-        indic.setPen(QPen(color))
+        # Remove a previous indicator if it exists
+        if hasattr(self, "_cochran_group") and self._cochran_group is not None:
+            try:
+                self.canvas.removeItem(self._cochran_group)
+            except Exception:
+                pass
+            self._cochran_group = None
+        
+        scene = self.canvas
+        view = self.canvasView
+        if not scene or not view or view.width() <= 0 or view.height() <= 0:
+            return
+        
+        try:
+            # 1) Label "Cochran:"
+            label_item = text("Cochran:", 0, bottom, Qt.AlignLeft | Qt.AlignVCenter)
+            label_w = label_item.boundingRect().width()
+        
+            # 2) Green/red square indicator to the right of the label
+            rect_size = 10
+            x_ind = int(round(label_w + 6))
+            y_ind = int(round(bottom - rect_size / 2))
+        
+            # Bounds check: make sure it stays inside the scene
+            if x_ind + rect_size > view.width():
+                x_ind = max(0, int(view.width() - rect_size - 1))
+            if y_ind + rect_size > view.height():
+                y_ind = max(0, int(view.height() - rect_size - 1))
+        
+            color = QColor("#2ecc71") if self._cochran_ok else QColor("#e74c3c")
+        
+            # Cosmetic pen/brush to avoid scaling issues on HiDPI or offscreen rendering
+            pen = QPen(color, 1)
+            pen.setCosmetic(True)
+            brush = QBrush(color)
+        
+            square = CanvasRectangle(scene, x_ind, y_ind, rect_size, rect_size, z=0)
+            square.setPen(pen)
+            square.setBrush(brush)
+        
+            # 3) Group label and square together so they can be easily removed later
+            from AnyQt.QtWidgets import QGraphicsItemGroup
+            group = QGraphicsItemGroup()
+            scene.addItem(group)
+            group.addToGroup(label_item)
+            group.addToGroup(square)
+            self._cochran_group = group
+        
+        except Exception:
+            # Fail-safe: never let a rendering error break the widget
+            self._cochran_group = None
       
     def get_widget_name_extension(self):
         if self.data is not None:
