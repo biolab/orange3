@@ -109,29 +109,29 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         table = Table.from_list(Domain([a, b]), list(zip("yynny", "ynyyn")))
         chi = ChiSqStats(table, 0, 1)
         self.assertFalse(isnan(chi.chisq))
-    
+
     def test_cochran_indicator_passes(self):
         # Truly balanced 3x3: all expected frequencies >= 5
         a = DiscreteVariable("A", values=("a1", "a2", "a3"))
         b = DiscreteVariable("B", values=("b1", "b2", "b3"))
-    
+
         # 60 cases total, balanced by rows and columns
         # Row totals: 20, 20, 20
         # Col totals: 20, 20, 20
         # Expected per cell: (20*20)/60 = 6.666...  >= 5
         rows = ["a1"] * 20 + ["a2"] * 20 + ["a3"] * 20
         cols = ["b1"] * 20 + ["b2"] * 20 + ["b3"] * 20
-    
+
         table = Table.from_list(Domain([a, b]), list(zip(rows, cols)))
-    
+
         self.send_signal(self.widget.Inputs.data, table)
         # Force attributes and trigger computation
         self.widget.attr_x, self.widget.attr_y = a, b
         self.widget.update_graph()
-    
+
         # Cochran’s rule should be satisfied
         self.assertTrue(getattr(self.widget, "_cochran_ok", None))
-        
+
     def test_cochran_indicator_fails(self):
         # Highly unbalanced 3x3 contingency table -> many expected < 5, some near 0
         a = DiscreteVariable("A", values=("a1", "a2", "a3"))
@@ -140,11 +140,11 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         rows = ["a1"]*10 + ["a2"]*1 + ["a3"]*1
         cols = ["b1"]*10 + ["b2"]*1 + ["b3"]*1
         table = Table.from_list(Domain([a, b]), list(zip(rows, cols)))
-        
+
         self.send_signal(self.widget.Inputs.data, table)
         self.widget.attr_x, self.widget.attr_y = a, b
         self.widget.update_graph()
-        
+
         # Cochran’s rule should NOT be satisfied
         self.assertFalse(getattr(self.widget, "_cochran_ok", True))
 
