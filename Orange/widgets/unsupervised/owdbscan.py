@@ -167,9 +167,9 @@ class OWDBSCAN(widget.OWWidget):
         self.cut_point = int(DEFAULT_CUT_POINT * len(self.k_distances))
         self.eps = self.k_distances[self.cut_point]
 
-        mask = self.k_distances >= EPS_BOTTOM_LIMIT
-        if self.eps < EPS_BOTTOM_LIMIT and sum(mask):
-            self.eps = np.min(self.k_distances[mask])
+        if self.eps < EPS_BOTTOM_LIMIT:
+            mask = self.k_distances >= EPS_BOTTOM_LIMIT
+            self.eps = sum(mask) and np.min(self.k_distances[mask]) or EPS_BOTTOM_LIMIT
             self.cut_point = self._find_nearest_dist(self.eps)
 
     @Inputs.data
