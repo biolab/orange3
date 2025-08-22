@@ -110,43 +110,34 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         chi = ChiSqStats(table, 0, 1)
         self.assertFalse(isnan(chi.chisq))
 
-    def test_cochran_indicator_passes(self):
-        # Truly balanced 3x3: all expected frequencies >= 5
+    def test_cochran_indicator(self):
+        # 1) Data that PASS Cochran: balanced 3x3 (expected ~6.67)
         a = DiscreteVariable("A", values=("a1", "a2", "a3"))
         b = DiscreteVariable("B", values=("b1", "b2", "b3"))
+        rows_ok = ["a1"]*20 + ["a2"]*20 + ["a3"]*20
+        cols_ok = ["b1"]*20 + ["b2"]*20 + ["b3"]*20
+        table_ok = Table.from_list(Domain([a, b]), list(zip(rows_ok, cols_ok)))
 
-        # 60 cases total, balanced by rows and columns
-        # Row totals: 20, 20, 20
-        # Col totals: 20, 20, 20
-        # Expected per cell: (20*20)/60 = 6.666...  >= 5
-        rows = ["a1"] * 20 + ["a2"] * 20 + ["a3"] * 20
-        cols = ["b1"] * 20 + ["b2"] * 20 + ["b3"] * 20
+        self.send_signal(self.widget.Inputs.data, table_ok)
+        self.widget.attr_x, self.widget.attr_y = a, b
+        self.widget.update_graph()
+        # Ensure Cochran was actually evaluated
+        self.assertIsNotNone(getattr(self.widget, "_cochran_ok", None))
+        self.assertTrue(self.widget._cochran_ok)
 
-        table = Table.from_list(Domain([a, b]), list(zip(rows, cols)))
+        # 2) Data that FAIL Cochran: 3 expected cells < 5 (e.g. 10/20/30 vs 20/20/20)
+        rows_bad = ["a1"]*10 + ["a2"]*20 + ["a3"]*30
+        cols_bad = ["b1"]*20 + ["b2"]*20 + ["b3"]*20
+        table_bad = Table.from_list(Table.from_list(Domain([a, b]), list(zip(rows_bad, cols_bad))).domain,
+                                    list(zip(rows_bad, cols_bad)))
 
-        self.send_signal(self.widget.Inputs.data, table)
-        # Force attributes and trigger computation
+        self.send_signal(self.widget.Inputs.data, table_bad)
+        # Re-assign attrs in case the widget resets them in handle signals
         self.widget.attr_x, self.widget.attr_y = a, b
         self.widget.update_graph()
 
-        # Cochran’s rule should be satisfied
-        self.assertTrue(getattr(self.widget, "_cochran_ok", None))
-
-    def test_cochran_indicator_fails(self):
-        # Highly unbalanced 3x3 contingency table -> many expected < 5, some near 0
-        a = DiscreteVariable("A", values=("a1", "a2", "a3"))
-        b = DiscreteVariable("B", values=("b1", "b2", "b3"))
-        # 12 cases in total, 10 concentrated in a single cell
-        rows = ["a1"]*10 + ["a2"]*1 + ["a3"]*1
-        cols = ["b1"]*10 + ["b2"]*1 + ["b3"]*1
-        table = Table.from_list(Domain([a, b]), list(zip(rows, cols)))
-
-        self.send_signal(self.widget.Inputs.data, table)
-        self.widget.attr_x, self.widget.attr_y = a, b
-        self.widget.update_graph()
-
-        # Cochran’s rule should NOT be satisfied
-        self.assertFalse(getattr(self.widget, "_cochran_ok", True))
+        self.assertIsNotNone(getattr(self.widget, "_cochran_ok", None))
+        self.assertFalse(self.widget._cochran_ok)
 
     def test_metadata(self):
         """
@@ -206,10 +197,23 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
     def test_input_features(self):
         self.assertTrue(self.widget.attr_box.isEnabled())
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.send_signal(self.widget.Inputs.features,
-                         AttributeList(self.iris.domain.attributes))
+
+        # Force a known initial state different from the incoming features
+        a0, a1, a2, a3 = self.iris.domain.attributes
+        self.widget.attr_x, self.widget.attr_y = a2, a3
+
+        # Send features -> triggers set_input_features -> resolve_shown_attributes
+        feats = AttributeList([a0, a1])
+        self.send_signal(self.widget.Inputs.features, feats)
+
+        # Attributes should now follow the provided features
+        self.assertEqual((self.widget.attr_x, self.widget.attr_y), (a0, a1))
+
+        # Existing checks
         self.assertFalse(self.widget.attr_box.isEnabled())
         self.assertFalse(self.widget.vizrank_button().isEnabled())
+
+        # Remove features -> widget returns to interactive mode
         self.send_signal(self.widget.Inputs.features, None)
         self.assertTrue(self.widget.attr_box.isEnabled())
         self.assertTrue(self.widget.vizrank_button().isEnabled())
