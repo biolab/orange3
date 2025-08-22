@@ -67,6 +67,7 @@ MetricDefs: Dict[int, MetricDef] = {
     )
 }
 
+MAX_ITEMS = 20_000
 
 class InterruptException(Exception):
     pass
@@ -120,6 +121,7 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
         distances_value_error = Msg("Problem in calculation:\n{}")
         data_too_large_for_mahalanobis = Msg(
             "Mahalanobis handles up to 1000 {}.")
+        data_too_large = Msg(f"Data is too large (> {MAX_ITEMS} items).")
 
     class Warning(OWWidget.Warning):
         ignoring_discrete = Msg("Ignoring categorical features")
@@ -241,6 +243,11 @@ class OWDistances(OWWidget, ConcurrentWidgetMixin):
                     if len(data.domain.attributes) > 1000:
                         self.Error.data_too_large_for_mahalanobis("columns")
                         return False
+            # pylint: disable=invalid-sequence-index
+            if (len(data), len(data.domain.attributes))[self.axis] > MAX_ITEMS:
+                self.Error.data_too_large()
+                return False
+
             return True
 
         def _check_no_features():
