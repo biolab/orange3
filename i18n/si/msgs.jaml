@@ -196,9 +196,7 @@ util.py:
         def `funcv`:
             unsafe: false
 version.py:
-    3.39.0: false
-    3.39.0.dev0+0a43fd4: false
-    0a43fd438e4e20613c4d9899c1781f874d33d921: false
+    3.40.0: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -384,8 +382,10 @@ canvas/config.py:
         Screencasts: false
         https://www.youtube.com/watch: false
         ?v=HXjnDIgGDuI&list=PLmNPvQr9Tf-ZSDLwOzxpvY-HrE0yv-8Fy&index=1: false
-        Feedback: false
-        https://orange.biolab.si/survey/long.html: false
+        Donate: Doniraj
+        https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=A76TAX87ZVR3J: false
+        FAQ: Pogosta vprašanja
+        https://orangedatamining.com/faq/: false
     def `init`:
         This is not the init you are looking for.: false
     def `data_dir`:
