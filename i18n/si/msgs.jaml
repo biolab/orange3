@@ -384,8 +384,10 @@ canvas/config.py:
         Screencasts: false
         https://www.youtube.com/watch: false
         ?v=HXjnDIgGDuI&list=PLmNPvQr9Tf-ZSDLwOzxpvY-HrE0yv-8Fy&index=1: false
-        Feedback: false
-        https://orange.biolab.si/survey/long.html: false
+        Donate: Doniraj
+        https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=A76TAX87ZVR3J: false
+        FAQ: Pogosta vprašanja
+        https://orangedatamining.com/faq/: false
     def `init`:
         This is not the init you are looking for.: false
     def `data_dir`:

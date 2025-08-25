@@ -196,6 +196,7 @@ class Config(config.Config):
         all_ep.sort(key=lambda x: x.name)
         return iter(all_ep)
 
+    # pylint: disable=line-too-long
     APPLICATION_URLS = {
         #: Submit a bug report action in the Help menu
         "Bug Report": "https://github.com/biolab/orange3/issues",
@@ -209,7 +210,8 @@ class Config(config.Config):
             "https://www.youtube.com/watch"
             "?v=HXjnDIgGDuI&list=PLmNPvQr9Tf-ZSDLwOzxpvY-HrE0yv-8Fy&index=1",
         #: Used for 'Submit Feedback' action in the help menu
-        "Feedback": "https://orange.biolab.si/survey/long.html",
+        "Donate": "https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=A76TAX87ZVR3J",
+        "FAQ": "https://orangedatamining.com/faq/",
     }
 
 
