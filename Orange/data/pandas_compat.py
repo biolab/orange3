@@ -352,6 +352,22 @@ def vars_from_df(df, role=None, force_nominal=False, variables=None):
 
 
 def table_from_frame(df, *, force_nominal=False, variables=None):
+    """
+    Convert pandas DataFrame to Orange.data.Table.
+
+    Parameters
+    ----------
+    df : pandas DataFrame
+
+    force_nominal : bool, (default=False)
+        Force all string variables to be nominal.
+
+    variables : list of Variable, optional
+
+    Returns
+    -------
+    Orange.data.Table
+    """
     XYM, domain = vars_from_df(df,
                                force_nominal=force_nominal,
                                variables=variables)
