@@ -77,7 +77,8 @@ class SharedComputeValue:
         if compute_shared is not None \
                 and not isinstance(compute_shared, (types.BuiltinFunctionType,
                                                    types.FunctionType)) \
-                and not redefines_eq_and_hash(compute_shared):
+                and not redefines_eq_and_hash(compute_shared) \
+                and not type(compute_shared).__dict__.get("InheritEq", False):
             warnings.warn(f"{type(compute_shared).__name__} should define "
                           f"__eq__ and __hash__ to be used for compute_shared",
                           stacklevel=2)
