@@ -8039,6 +8039,45 @@ widgets/data/owselectrows.py:
             %H:%M:%S: false
     __main__: false
     heart_disease: false
+widgets/data/owsplit.py:
+    class `OWSplit`:
+        Split: Razdeli
+        Split text or categorical variables into indicator variables: Razdeli besedilne ali kategorične spremenljivke na spremenljivke.
+        Transform: Predelava podatkov
+        icons/Split.svg: false
+        text to columns: besedilo v stolpce
+        word encoding: kodiranje besed
+        questionnaire: vprašalniki
+        survey: ankete
+        term: pojmi
+        word presence: prisotnost besed
+        word counts: število besed
+        categorical encoding: kodiranje kategorij
+        indicator variables: indikatorske spremenljivke
+        orangecontrib.prototypes.widgets.owsplit.OWSplit: false
+        orangecontrib.prototypes.widgets.owsplit.OWTextToColumn: false
+        class `Inputs`:
+            Data: Podatki
+        class `Outputs`:
+            Data: Podatki
+        class `Warning`:
+            Data contains only numeric variables.: Podatki vsebujejo samo številske spremenljivke.
+        Categorical (No, Yes): Kategorične (Ne, Da)
+        Numerical (0, 1): Številske (0, 1)
+        Counts: Števci
+        ;: true
+        def `__init__`:
+            Variable: Stolpec
+            attribute: false
+            delimiter: false
+            'Delimiter: ': 'Ločilo: '
+            output_type: false
+            Output Values: Izhodne vrednosti
+        def `_get_new_columns`:
+            No: Ne
+            Yes: Da
+    __main__: false
+    tests/orange-in-education.tab: false
 widgets/data/owsql.py:
     def `is_postgres`:
         display_name: false
