@@ -196,9 +196,9 @@ util.py:
         def `funcv`:
             unsafe: false
 version.py:
-    3.39.0: false
-    3.39.0.dev0+0a43fd4: false
-    0a43fd438e4e20613c4d9899c1781f874d33d921: false
+    3.40.0: false
+    3.40.0.dev0+e7d811b: false
+    e7d811bac580723c707decd32c550a75874dc9c8: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -5124,6 +5124,7 @@ widgets/data/owcsvimport.py:
         qint64: false
     def `pandas_to_table`:
         str: false
+        UTC: false
         M8[ns]: false
         "Column '{}' with dtype: {} skipped.": false
     __main__: false
