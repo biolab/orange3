@@ -410,30 +410,35 @@ class OWCorrelations(OWWidget):
                 else:
                     self.cont_data = cont_data
         self.set_actual_data()
-        self.set_feature_model()
-        self.openContext(self.actual_data)
-        self.apply()
-        self.vizrank.button.setEnabled(self.actual_data is not None)
 
-    def set_feature_model(self):
-        self.feature_model.set_domain(
-            self.actual_data.domain if self.actual_data else None)
-        data = self.data
         if self.actual_data and data.domain.has_continuous_class:
             self.feature = self.actual_data.domain[data.domain.class_var.name]
         else:
             self.feature = None
+        self.openContext(self.actual_data)
+        self.apply()
+        self.vizrank.button.setEnabled(self.actual_data is not None)
 
     def set_actual_data(self):
         if self.cont_data is None:
             self.actual_data = None
+            self.feature_model.set_domain(None)
+            self.feature = None
             self.vizrank.setEnabled(False)
             return
-        if self.cont_data.has_missing_attribute() and self.impute_missing:
+
+        if self.impute_missing and self.cont_data.has_missing_attribute():
             imputer = SklImpute(strategy="mean")
             self.actual_data = imputer(self.cont_data)
         else:
             self.actual_data = self.cont_data
+
+        feature_name = self.feature and self.feature.name
+        self.feature_model.set_domain(self.actual_data.domain)
+        if feature_name and feature_name in self.actual_data.domain:
+            self.feature = self.actual_data.domain[feature_name]
+        else:
+            self.feature = None
 
     def apply(self):
         self.vizrank.initialize()
