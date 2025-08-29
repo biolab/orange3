@@ -110,34 +110,29 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         chi = ChiSqStats(table, 0, 1)
         self.assertFalse(isnan(chi.chisq))
 
-    def test_cochran_indicator(self):
-        # 1) Data that PASS Cochran: balanced 3x3 (expected ~6.67)
-        a = DiscreteVariable("A", values=("a1", "a2", "a3"))
-        b = DiscreteVariable("B", values=("b1", "b2", "b3"))
+    def test_cochran_messages(self):
+        a = DiscreteVariable("A", values=("a1","a2","a3"))
+        b = DiscreteVariable("B", values=("b1","b2","b3"))
+
+        # PASS: 20/20/20 × 20/20/20
         rows_ok = ["a1"]*20 + ["a2"]*20 + ["a3"]*20
         cols_ok = ["b1"]*20 + ["b2"]*20 + ["b3"]*20
-        table_ok = Table.from_list(Domain([a, b]), list(zip(rows_ok, cols_ok)))
-
+        table_ok = Table.from_list(Domain([a,b]), list(zip(rows_ok, cols_ok)))
         self.send_signal(self.widget.Inputs.data, table_ok)
         self.widget.attr_x, self.widget.attr_y = a, b
         self.widget.update_graph()
-        # Ensure Cochran was actually evaluated
-        self.assertIsNotNone(getattr(self.widget, "_cochran_ok", None))
-        self.assertTrue(self.widget._cochran_ok)
+        assert self.widget.Information.cochran.is_shown()
+        assert not self.widget.Warning.cochran.is_shown()
 
-        # 2) Data that FAIL Cochran: 3 expected cells < 5 (e.g. 10/20/30 vs 20/20/20)
+        # FAIL: 10/20/30 × 20/20/20
         rows_bad = ["a1"]*10 + ["a2"]*20 + ["a3"]*30
         cols_bad = ["b1"]*20 + ["b2"]*20 + ["b3"]*20
-        table_bad = Table.from_list(Table.from_list(Domain([a, b]), list(zip(rows_bad, cols_bad))).domain,
-                                    list(zip(rows_bad, cols_bad)))
-
+        table_bad = Table.from_list(Domain([a,b]), list(zip(rows_bad, cols_bad)))
         self.send_signal(self.widget.Inputs.data, table_bad)
-        # Re-assign attrs in case the widget resets them in handle signals
         self.widget.attr_x, self.widget.attr_y = a, b
         self.widget.update_graph()
-
-        self.assertIsNotNone(getattr(self.widget, "_cochran_ok", None))
-        self.assertFalse(self.widget._cochran_ok)
+        assert not self.widget.Information.cochran.is_shown()
+        assert self.widget.Warning.cochran.is_shown()
 
     def test_metadata(self):
         """
