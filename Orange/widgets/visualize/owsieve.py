@@ -24,7 +24,8 @@ from Orange.widgets.visualize.utils.vizrank import VizRankDialogAttrPair, \
     VizRankMixin
 from Orange.widgets.visualize.utils import (
     CanvasText, CanvasRectangle, ViewWithPress)
-from Orange.widgets.widget import OWWidget, AttributeList, Input, Output
+from Orange.widgets.widget import OWWidget, AttributeList, Input, Output, \
+    Msg
 
 
 class ChiSqStats:
@@ -83,6 +84,12 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
 
     graph_name = "canvas"  # QGraphicsScene
 
+    class Information(OWWidget.Information):
+        cochran = Msg("Meets Cochran's rule")
+
+    class Warning(OWWidget.Warning):
+        cochran = Msg("Does not meet Cochran's rule")
+
     want_control_area = False
 
     settings_version = 1
@@ -123,8 +130,6 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         self.mainArea.layout().addWidget(self.canvasView)
         self.canvasView.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.canvasView.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self._cochran_ok = None
-        self._cochran_label = None
 
     def sizeHint(self):
         return QSize(450, 550)
@@ -445,7 +450,6 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
             self.canvas.removeItem(item)
         if self.data is None or len(self.data) == 0 or \
                 self.attr_x is None or self.attr_y is None:
-            self._cochran_ok = None
             return
 
         ddomain = self.discrete_data.domain
@@ -458,7 +462,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         max_ylabel_w = min(max_ylabel_w, 200)
         x_off = height(attr_y.name) + max_ylabel_w
         y_off = 15
-        square_size = min(view.width() - x_off - 35, view.height() - y_off - 105)
+        square_size = min(view.width() - x_off - 35, view.height() - y_off - 80)
         square_size = max(square_size, 10)
         self.canvasView.setSceneRect(0, 0, view.width(), view.height())
         if not disc_x.values or not disc_y.values:
@@ -471,7 +475,6 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
                         disc_x if not disc_x.values else disc_y)
             text(text_, view.width() / 2 + 70, view.height() / 2,
                  Qt.AlignRight | Qt.AlignVCenter)
-            self._cochran_ok = None
             return
         n = chi.n
         curr_x = x_off
@@ -519,64 +522,23 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
                   0, bottom)
         # Assume similar height for both lines
         text("N = " + fmt(chi.n), 0, bottom - xl.boundingRect().height())
+        cochran_ok = self._cochran_ok(chi)
+        self.Information.cochran(shown=cochran_ok)
+        self.Warning.cochran(shown= not cochran_ok)
 
-        # Draw Cochran indicator (returns updated bottom with spacing applied)
-        bottom = self._draw_cochran_indicator(chi, bottom, text)
-
-    def _draw_cochran_indicator(self, chi, bottom: int, text_fn) -> int:
+    def _cochran_ok(self, chi):
         """
-        Draw Cochran indicator (label + colored square) and set self._cochran_ok.
-        Returns updated bottom (with spacing applied).
+        Return True if Cochran's rule is met; otherwise return False.
         """
-        # --- Evaluate Cochran’s rule ---
-        expected = np.array(chi.expected, dtype=float)
+        expected = np.asarray(chi.expected, dtype=float)
         cells = int(expected.size)
         if cells == 0:
-            self._cochran_ok = None
-            return bottom
-
-        num_lt1 = int((expected < 1.0).sum())
-        num_lt5 = int((expected < 5.0).sum())
-        self._cochran_ok = (num_lt1 == 0) and (num_lt5 <= 0.2 * cells)
-
-        # --- Spacing before the indicator line ---
-        bottom += 35
-
-        if getattr(self, "_cochran_label", None) is not None:
-            sc = self._cochran_label.scene()
-            if sc is not None:
-                sc.removeItem(self._cochran_label)
-            self._cochran_label = None
-
-        scene = self.canvas
-        srect = scene.sceneRect()
-        scene_w, scene_h = int(srect.width()), int(srect.height())
-        if scene_w <= 0 or scene_h <= 0:
-            return bottom
-
-        # 1) Draw the label
-        label_item = text_fn("Cochran:", 0, bottom, Qt.AlignLeft | Qt.AlignVCenter)
-        self._cochran_label = label_item  # keep a handle for next redraw
-
-        # 2) Create the colored square
-        rect_size = 10
-        color = QColor(Qt.green) if self._cochran_ok else QColor(Qt.red)
-        pen = QPen(color, 1)
-        pen.setCosmetic(True)
-        brush = QBrush(color)
-
-        square = CanvasRectangle(scene, 0, 0, rect_size, rect_size, z=0)
-        square.setPen(pen)
-        square.setBrush(brush)
-        square.setParentItem(label_item)
-
-        # Position it to the right of the label, vertically centered
-        lrect = label_item.boundingRect()
-        x_local = lrect.right() + 6
-        y_local = lrect.center().y() - rect_size / 2
-        square.setPos(int(x_local), int(y_local))
-
-        return bottom
+            return False
+        eps = 1e-12
+        num_lt1 = int((expected < 1.0 - eps).sum())
+        num_lt5 = int((expected < 5.0 - eps).sum())
+        ok = (num_lt1 == 0) and (num_lt5 <= 0.2 * cells)
+        return ok
 
     def get_widget_name_extension(self):
         if self.data is not None:
