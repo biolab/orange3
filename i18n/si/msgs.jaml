@@ -4700,6 +4700,9 @@ widgets/data/owcorrelations.py:
         def `items`:
             Pearson correlation: Pearsonova korelacija
             Spearman correlation: Spearmanova korelacija
+    class `KMeansCorrelationHeuristic`:
+        def `_impute_means`:
+            ignore: false
     class `CorrelationRank`:
         def `row_for_state`:
             name: false

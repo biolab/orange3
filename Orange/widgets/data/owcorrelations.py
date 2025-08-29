@@ -1,6 +1,7 @@
 """
 Correlations widget
 """
+import warnings
 from enum import IntEnum
 from operator import attrgetter
 from types import SimpleNamespace
@@ -64,17 +65,32 @@ class KMeansCorrelationHeuristic:
 
     def get_clusters_of_attributes(self):
         """
-        Generates groupes of attribute IDs, grouped by cluster. Clusters are
+        Generates groups of attribute IDs, grouped by cluster. Clusters are
         obtained by KMeans algorithm.
 
         :return: generator of attributes grouped by cluster
         """
         data = Normalize()(self.data).X.T
+        if data.base is not None:
+            data = data.copy()
+        self._impute_means(data)
+
         kmeans = KMeans(n_clusters=self.n_clusters, random_state=0, n_init=1).fit(data)
         labels_attrs = sorted([(l, i) for i, l in enumerate(kmeans.labels_)])
         return [Cluster(instances=list(pair[1] for pair in group),
                         centroid=kmeans.cluster_centers_[l])
                 for l, group in groupby(labels_attrs, key=lambda x: x[0])]
+
+    @staticmethod
+    def _impute_means(arr):
+        nans = np.isnan(arr)
+        if np.any(nans):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                means = np.nanmean(arr, axis=1)
+            means = np.nan_to_num(means)
+            inds = np.where(nans)
+            arr[inds] = means[inds[0]]
 
     def get_states(self, initial_state):
         """

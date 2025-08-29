@@ -468,6 +468,28 @@ class TestKMeansCorrelationHeuristic(unittest.TestCase):
         self.assertEqual(len(states), 1)
         self.assertSetEqual(states, {(0, 1)})
 
+    def test_impute_means(self):
+        arr = np.array([[1, 2, np.nan, 3, 4, np.nan],
+                        [5, 7, np.nan, np.nan, np.nan, np.nan],
+                        [1, 2, 3, 4, 5, 6],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]])
+        exp = np.array([[1, 2, 2.5, 3, 4, 2.5],
+                        [5, 7, 6, 6, 6, 6],
+                        [1, 2, 3, 4, 5, 6],
+                        [0, 0, 0, 0, 0, 0]])
+        KMeansCorrelationHeuristic._impute_means(arr)
+        np.testing.assert_almost_equal(arr, exp)
+
+    def test_nans(self):
+        data = Table("iris")
+        with data.unlocked(data.X):
+            data.X[0, 0] = np.nan
+            data.X[:, 1] = np.nan
+        heuristic = KMeansCorrelationHeuristic(data)
+        clusters = heuristic.get_clusters_of_attributes()
+        result = sorted([c.instances for c in clusters])
+        self.assertListEqual(result, [[0, 2, 3], [1]]),
+
 
 if __name__ == "__main__":
     unittest.main()
