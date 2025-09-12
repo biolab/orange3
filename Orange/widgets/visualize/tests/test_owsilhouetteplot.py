@@ -302,6 +302,18 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(context.values["cluster_var"], ("cfoo", 101))
         self.assertNotIn("annotation_var_idx", values)
 
+    def test_average_silhouette_score(self):
+        data = Table("brown-selected")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertEqual(self.widget.avg_silhouette_label.text(),
+                        "<b>Silhouette:</b> 0.4692")
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertEqual(self.widget.avg_silhouette_label.text(),
+                        "<b>Silhouette:</b> N/A")
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertEqual(self.widget.avg_silhouette_label.text(), 
+                        "<b>Silhouette:</b> 0.4692")
+
 
 if __name__ == "__main__":
     unittest.main()
