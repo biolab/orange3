@@ -1,5 +1,5 @@
 import warnings
-from itertools import chain
+from typing import Optional
 
 import numpy as np
 
@@ -197,7 +197,7 @@ class OWManifoldLearning(OWWidget):
         data = Input("Data", Table)
 
     class Outputs:
-        transformed_data = Output("Transformed Data", Table, dynamic=False,
+        transformed_data = Output("Transformed Data", Table,
                                   replaces=["Transformed data"])
 
     MANIFOLD_METHODS = (TSNE, MDS, Isomap, LocallyLinearEmbedding,
@@ -303,7 +303,7 @@ class OWManifoldLearning(OWWidget):
             else:
                 builtin_warn(msg, *args, **kwargs)
 
-        out = None
+        embedding = None
         data = self.data
         method = self.MANIFOLD_METHODS[self.manifold_method_index]
         have_data = data is not None and len(data)
@@ -313,22 +313,14 @@ class OWManifoldLearning(OWWidget):
         if have_data and data.is_sparse():
             self.Error.sparse_not_supported()
         elif have_data:
-            names = [var.name for var in chain(data.domain.class_vars,
-                                               data.domain.metas) if var]
-            proposed = ["C{}".format(i) for i in range(self.n_components)]
-            unique = get_unique_names(names, proposed)
-            domain = Domain([ContinuousVariable(name) for name in unique],
-                            data.domain.class_vars,
-                            data.domain.metas)
             try:
                 warnings.warn = _handle_disconnected_graph_warning
-                projector = method(**self.get_method_parameters(data, method))
+                projector = method(**self.get_method_parameters())
                 model = projector(data)
                 if isinstance(model, TSNEModel):
-                    out = model.embedding
+                    embedding = model.embedding.X
                 else:
-                    X = model.embedding_
-                    out = Table(domain, X, data.Y, data.metas)
+                    embedding = model.embedding_
             except ValueError as e:
                 if e.args[0] == "for method='hessian', n_neighbors " \
                                 "must be greater than [n_components" \
@@ -344,9 +336,26 @@ class OWManifoldLearning(OWWidget):
             finally:
                 warnings.warn = builtin_warn
 
-        self.Outputs.transformed_data.send(out)
+        output = self._create_output_table(embedding)
+        self.Outputs.transformed_data.send(output)
 
-    def get_method_parameters(self, data, method):
+    def _create_output_table(self, embedding: np.ndarray) -> Optional[Table]:
+        if embedding is None:
+            return None
+
+        data = self.data
+        metas = list(data.domain.metas)
+        names = [v.name for v in data.domain.variables + data.domain.metas]
+        proposed = ["C{}".format(i) for i in range(self.n_components)]
+        unique = get_unique_names(names, proposed)
+        domain = Domain(data.domain.attributes, data.domain.class_vars,
+                        metas + [ContinuousVariable(name) for name in unique])
+        table = data.transform(domain)
+        with table.unlocked(table.metas):
+            table.metas[:, len(metas):] = embedding
+        return table
+
+    def get_method_parameters(self):
         parameters = dict(n_components=self.n_components)
         parameters.update(self.params_widget.get_parameters())
         return parameters
