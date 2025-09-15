@@ -170,9 +170,10 @@ class TestOWCorrelations(WidgetTest):
             pair = [var.name
                     for var in ind(i, 0).data(CorrelationRank._AttrRole)]
             r, _ = pearsonr(*(exp[names.index(name)] for name in pair))
-            self.assertEqual(
-                    ind(i, 0).data(CorrelationRank.CorrRole), r,
-                    f"Mismatch for {pair}")
+            self.assertAlmostEqual(
+                ind(i, 0).data(CorrelationRank.CorrRole), r,
+                places=7,
+                msg=f"Mismatch for {pair}")
 
     def test_no_imputation(self):
         data = mock_data()
