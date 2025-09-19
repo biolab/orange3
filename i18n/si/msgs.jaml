@@ -13236,6 +13236,7 @@ widgets/utils/textimport.py:
             separator: false
             Ignore: Izpusti
             The column will not be loaded: Stolpca ni mogoče naložiti
+            'Hint: right click on the row or column header for additional options.': Namig: desni klik na glavo vrstice ali stolpca pokaže dodatne možnosti.
             Column type: Vrsta podatka
             -error-overlay: false
             -error-text-label: false
