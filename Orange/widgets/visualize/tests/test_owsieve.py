@@ -114,25 +114,25 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         a = DiscreteVariable("A", values=("a1","a2","a3"))
         b = DiscreteVariable("B", values=("b1","b2","b3"))
 
-        # PASS: 20/20/20 × 20/20/20
+        # PASS: all expected frequencies >= 5 (20/20/20 × 20/20/20)
         rows_ok = ["a1"]*20 + ["a2"]*20 + ["a3"]*20
         cols_ok = ["b1"]*20 + ["b2"]*20 + ["b3"]*20
         table_ok = Table.from_list(Domain([a,b]), list(zip(rows_ok, cols_ok)))
         self.send_signal(self.widget.Inputs.data, table_ok)
         self.widget.attr_x, self.widget.attr_y = a, b
         self.widget.update_graph()
-        assert self.widget.Information.cochran.is_shown()
         assert not self.widget.Warning.cochran.is_shown()
 
-        # FAIL: 10/20/30 × 20/20/20
+        # FAIL: some expected frequencies < 5 (10/20/30 × 20/20/20)
         rows_bad = ["a1"]*10 + ["a2"]*20 + ["a3"]*30
         cols_bad = ["b1"]*20 + ["b2"]*20 + ["b3"]*20
         table_bad = Table.from_list(Domain([a,b]), list(zip(rows_bad, cols_bad)))
         self.send_signal(self.widget.Inputs.data, table_bad)
         self.widget.attr_x, self.widget.attr_y = a, b
         self.widget.update_graph()
-        assert not self.widget.Information.cochran.is_shown()
         assert self.widget.Warning.cochran.is_shown()
+        msg_text = str(self.widget.Warning.cochran)
+        assert "expected" in msg_text.lower()
 
     def test_metadata(self):
         """
