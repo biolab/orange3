@@ -84,11 +84,8 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
 
     graph_name = "canvas"  # QGraphicsScene
 
-    class Information(OWWidget.Information):
-        cochran = Msg("Meets Cochran's rule")
-
     class Warning(OWWidget.Warning):
-        cochran = Msg("Does not meet Cochran's rule")
+        cochran = Msg("Does not meet Cochran's rule\n{}")
 
     want_control_area = False
 
@@ -522,23 +519,29 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
                   0, bottom)
         # Assume similar height for both lines
         text("N = " + fmt(chi.n), 0, bottom - xl.boundingRect().height())
-        cochran_ok = self._cochran_ok(chi)
-        self.Information.cochran(shown=cochran_ok)
-        self.Warning.cochran(shown= not cochran_ok)
+        msg = self._check_cochran(chi)
+        if msg is None:
+            self.Warning.cochran.clear()
+        else:
+            self.Warning.cochran(msg)
 
-    def _cochran_ok(self, chi):
+    def _check_cochran(self, chi):
         """
-        Return True if Cochran's rule is met; otherwise return False.
+        Check Cochran's rule.
+        Return None if it is met, a string describing the problem.
         """
         expected = np.asarray(chi.expected, dtype=float)
         cells = int(expected.size)
         if cells == 0:
-            return False
+            return "no cells in contingency table"
         eps = 1e-12
         num_lt1 = int((expected < 1.0 - eps).sum())
         num_lt5 = int((expected < 5.0 - eps).sum())
-        ok = (num_lt1 == 0) and (num_lt5 <= 0.2 * cells)
-        return ok
+        if num_lt1 > 0:
+            return "some expected frequencies < 1"
+        if num_lt5 > 0.2 * cells:
+            return "more than 20% of expected frequencies < 5"
+        return None
 
     def get_widget_name_extension(self):
         if self.data is not None:
