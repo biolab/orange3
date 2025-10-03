@@ -11793,6 +11793,8 @@ widgets/unsupervised/owmanifoldlearning.py:
             must be greater than [n_components: false
             ' * (n_components + 3) / 2]': false
             {}: false
+        def `_create_output_table`:
+            C{}: false
         def `send_report`:
             Method: Metoda
             Number of components: Število komponent
