@@ -11,23 +11,23 @@ class InteractiveInfiniteLine(InfiniteLine):
     """
     A subclass of InfiniteLine that provides custom hover behavior.
     """
-    
-    def __init__(self, angle=90, pos=None, movable=False, bounds=None, **kwargs):
+
+    def __init__(self, angle=90, pos=None, movable=False, bounds=None,
+                 normal_pen=None, highlight_pen=None, **kwargs):
         super().__init__(angle=angle, pos=pos, movable=movable, bounds=bounds, **kwargs)
-        self._normal_pen = None
-        self._highlight_pen = None
-        
+        self._normal_pen = normal_pen
+        self._highlight_pen = highlight_pen
+        self.setPen(normal_pen)
+
     def hoverEvent(self, ev):
         """
         Override hoverEvent to provide custom hover behavior.
-        
+
         Parameters
         ----------
         ev : HoverEvent
             The hover event from pyqtgraph
         """
-        if not hasattr(ev, 'isEnter'):
-            return
 
         if ev.isEnter() and self._highlight_pen is not None:
             self.setPen(self._highlight_pen)
@@ -164,36 +164,29 @@ class SliderGraph(PlotWidget):
             self._line = None
             return
         if self._line is None:
-            # plot interactive vertical line
+            normal_pen = mkPen(
+                self.palette().text().color(), width=4,
+                style=Qt.SolidLine, capStyle=Qt.RoundCap
+            )
+            highlight_pen = mkPen(
+                self.palette().link().color(), width=4,
+                style=Qt.SolidLine, capStyle=Qt.RoundCap
+            )
+
             self._line = InteractiveInfiniteLine(
                 angle=90, pos=x, movable=True,
                 bounds=self.selection_limit if self.selection_limit is not None
-                else (self.x.min(), self.x.max())
+                    else (self.x.min(), self.x.max()),
+                normal_pen=normal_pen,
+                highlight_pen=highlight_pen
             )
             self._line.setCursor(Qt.SizeHorCursor)
-
-            # Create normal and highlight pens
-            normal_pen = mkPen(self.palette().text().color(), width=4, style=Qt.SolidLine, capStyle=Qt.RoundCap)
-            highlight_color = self.palette().highlight().color()
-            highlight_color.setHsv(
-                highlight_color.hue(),
-                min(highlight_color.saturation() + 30, 255),
-                max(highlight_color.value() - 20, 0)
-            )
-            highlight_pen = mkPen(highlight_color, width=10, style=Qt.SolidLine, capStyle=Qt.RoundCap)
-            
-            # Set pens directly
-            self._line._normal_pen = normal_pen
-            self._line._highlight_pen = highlight_pen
-            self._line.setPen(normal_pen)
             self._line.sigPositionChanged.connect(self._on_cut_changed)
             self.addItem(self._line)
         else:
             self._line.setValue(x)
 
         self._update_horizontal_lines()
-
-
 
     def _plot_horizontal_lines(self):
         """
