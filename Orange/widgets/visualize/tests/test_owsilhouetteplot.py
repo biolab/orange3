@@ -306,13 +306,13 @@ class TestOWSilhouettePlot(WidgetTest, WidgetOutputsTestMixin):
         data = Table("brown-selected")
         self.send_signal(self.widget.Inputs.data, data)
         self.assertEqual(self.widget.avg_silhouette_label.text(),
-                        "<b>Silhouette:</b> 0.4692")
+                        "Average Silhouette: 0.4692")
         self.send_signal(self.widget.Inputs.data, None)
         self.assertEqual(self.widget.avg_silhouette_label.text(),
-                        "<b>Silhouette:</b> N/A")
+                        "Average Silhouette: N/A")
         self.send_signal(self.widget.Inputs.data, data)
         self.assertEqual(self.widget.avg_silhouette_label.text(), 
-                        "<b>Silhouette:</b> 0.4692")
+                        "Average Silhouette: 0.4692")
 
 
 if __name__ == "__main__":
