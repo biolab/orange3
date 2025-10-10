@@ -7,7 +7,7 @@ from AnyQt.QtCore import Qt
 from Orange.widgets.visualize.utils.plotutils import PlotWidget
 
 
-class InteractiveInfiniteLine(InfiniteLine):
+class InteractiveInfiniteLine(InfiniteLine):  # pylint: disable=abstract-method
     """
     A subclass of InfiniteLine that provides custom hover behavior.
     """
