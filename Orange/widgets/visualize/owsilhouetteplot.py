@@ -136,16 +136,17 @@ class OWSilhouettePlot(widget.OWWidget):
         self._silhouette = None  # type: Optional[np.ndarray]
         self._silplot = None     # type: Optional[SilhouettePlot]
 
-        controllayout = self.controlArea.layout()
-        assert isinstance(controllayout, QVBoxLayout)
+        info_box = gui.vBox(self.controlArea, "Info")
+        self.avg_silhouette_label = gui.widgetLabel(info_box, "")
+        self._update_avg_silhouette()
+
         self._distances_gui_box = distbox = gui.widgetBox(
-            None, "Distance"
+            self.controlArea, "Distance"
         )
         self._distances_gui_cb = gui.comboBox(
             distbox, self, "distance_idx",
             items=[name for name, _ in OWSilhouettePlot.Distances],
             orientation=Qt.Horizontal, callback=self._invalidate_distances)
-        controllayout.addWidget(distbox)
 
         box = gui.vBox(self.controlArea, "Grouping")
         self.cluster_var_model = itemmodels.VariableListModel(
@@ -177,10 +178,6 @@ class OWSilhouettePlot(widget.OWWidget):
         ibox.setFixedWidth(ibox.sizeHint().width())
         warning.setVisible(False)
 
-        # box displaying the average silhouette score
-        avg_box = gui.vBox(self.controlArea, "Average Silhouette Score")
-        self.avg_silhouette_label = gui.widgetLabel(avg_box, "")
-        self._update_avg_silhouette()
 
         gui.rubber(self.controlArea)
 
@@ -347,13 +344,12 @@ class OWSilhouettePlot(widget.OWWidget):
                 assert False, "invalid state"
 
     def _update_avg_silhouette(self):
-        # update the average silhouette score
         if self._silhouette is not None and len(self._silhouette) > 0:
             avg_score = np.mean(self._silhouette)
             self.avg_silhouette_label.setText(
-                f"<b>Silhouette:</b> {avg_score:.4f}")
+                f"Average Silhouette: {avg_score:.4f}")
         else:
-            self.avg_silhouette_label.setText("<b>Silhouette:</b> N/A")
+            self.avg_silhouette_label.setText("Average Silhouette: N/A")
 
     def _update(self):
         # Update/recompute the effective distances and scores as required.
