@@ -15347,6 +15347,7 @@ widgets/visualize/owsilhouetteplot.py:
             {} instance{s} omitted (undefined distances): {} primer(ov) je izpuščenih (nedefinirana razdalja)
             Ignoring categorical features: Ignoriram kategorične spremenljivke
         def `__init__`:
+            Info: Podatki
             Distance: Razdalja
             distance_idx: false
             Grouping: Skupine
@@ -15366,6 +15367,9 @@ widgets/visualize/owsilhouetteplot.py:
             Input matrix does not have associated data: Matrika razdalj ne vsebuje podatkov.
         def `_ensure_matrix`:
             invalid state: false
+        def `_update_avg_silhouette`:
+            'Average Silhouette: {avg_score:.4f}': 'Povprečna silhueta: {avg_score:.4f}'
+            'Average Silhouette: N/A': 'Povprečna silhueta:'
         def `_update`:
             precomputed: false
             s: false
