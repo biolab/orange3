@@ -64,8 +64,8 @@ conda install orange3-<addon name>
 
 We recommend using our [standalone installer](https://orange.biolab.si/download) or conda, but Orange is also installable with pip. You will need a C/C++ compiler (on Windows we suggest using Microsoft Visual Studio Build Tools).
 Orange needs PyQt to run. Install either:
-- PyQt5 and PyQtWebEngine: `pip install -r requirements-pyqt.txt` 
-- PyQt6 and PyQt6-WebEngine: `pip install PyQt6 PyQt6-WebEngine`
+- PyQt6 and PyQt6-WebEngine: `pip install PyQt6 PyQt6-WebEngine` (suggested)
+- PyQt5 and PyQtWebEngine: `pip install PyQt5 PyQtWebEngine`
 
 ### Installing with winget (Windows only)
 
@@ -139,7 +139,7 @@ conda activate orange3
 
 git clone ssh://git@github.com/$MY_GITHUB_USERNAME/orange3
 
-# Install PyQT and PyQtWebEngine. You can also use PyQt6
+# Install PyQt. This will install PyQt6; you can also use PyQt5
 pip install -r orange3/requirements-pyqt.txt
 pip install -e orange3
 ```
