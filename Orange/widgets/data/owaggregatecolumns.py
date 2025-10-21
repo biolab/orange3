@@ -25,6 +25,10 @@ class OpDesc(NamedTuple):
     time_preserving: bool = False
 
 
+def nancount_nonzero(a, axis=None):
+    return np.count_nonzero(np.nan_to_num(a), axis=axis)
+
+
 class OWAggregateColumns(widget.OWWidget):
     name = "Aggregate Columns"
     description = "Compute a sum, max, min ... of selected columns."
@@ -52,7 +56,8 @@ class OWAggregateColumns(widget.OWWidget):
                   "Max": OpDesc("Maximal value", np.nanmax, True),
                   "Mean": OpDesc("Mean value", np.nanmean, True),
                   "Variance": OpDesc("Variance", np.nanvar),
-                  "Median": OpDesc("Median", np.nanmedian, True)}
+                  "Median": OpDesc("Median", np.nanmedian, True),
+                  "Count non-zero": OpDesc("Count non-zero", nancount_nonzero)}
     KeyFromDesc = {op.name: key for key, op in Operations.items()}
 
     SelectAll, SelectAllAndMeta, InputFeatures, SelectManually = range(4)
