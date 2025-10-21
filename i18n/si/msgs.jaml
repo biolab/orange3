@@ -4394,6 +4394,7 @@ widgets/data/owaggregatecolumns.py:
         Mean value: Povprečna vrednost
         Variance: Varianca
         Median: Mediana
+        Count non-zero: Preštej neničelne
         agg: false
         def `__init__`:
             Variable selection: Izbor spremenljivk
@@ -8069,8 +8070,6 @@ widgets/data/owsplit.py:
         word counts: število besed
         categorical encoding: kodiranje kategorij
         indicator variables: indikatorske spremenljivke
-        orangecontrib.prototypes.widgets.owsplit.OWSplit: false
-        orangecontrib.prototypes.widgets.owsplit.OWTextToColumn: false
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -11788,7 +11787,6 @@ widgets/unsupervised/owmanifoldlearning.py:
         def `commit`:
             def `_handle_disconnected_graph_warning`:
                 Graph is not fully connected: Graf ni povsem povezan
-            C{}: false
             "for method='hessian', n_neighbors ": false
             must be greater than [n_components: false
             ' * (n_components + 3) / 2]': false
