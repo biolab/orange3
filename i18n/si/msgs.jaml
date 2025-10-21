@@ -4398,6 +4398,7 @@ widgets/data/owaggregatecolumns.py:
         Mean value: Povprečna vrednost
         Variance: Varianca
         Median: Mediana
+        Count non-zero: Preštej neničelne
         agg: false
         def `__init__`:
             Variable selection: Izbor spremenljivk
