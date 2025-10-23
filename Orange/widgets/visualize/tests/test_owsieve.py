@@ -110,6 +110,33 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
         chi = ChiSqStats(table, 0, 1)
         self.assertFalse(isnan(chi.chisq))
 
+    def test_cochran_messages(self):
+        a = DiscreteVariable("A", values=("a1", "a2", "a3"))
+        b = DiscreteVariable("B", values=("b1", "b2", "b3"))
+
+        # PASS: all expected frequencies >= 5 (20/20/20 × 20/20/20)
+        rows_ok = ["a1"] * 20 + ["a2"] * 20 + ["a3"] * 20
+        cols_ok = ["b1"] * 20 + ["b2"] * 20 + ["b3"] * 20
+        table_ok = Table.from_list(Domain([a,b]), list(zip(rows_ok, cols_ok)))
+        self.send_signal(self.widget.Inputs.data, table_ok)
+        self.widget.attr_x, self.widget.attr_y = a, b
+        self.widget.update_graph()
+        self.assertFalse(self.widget.Warning.cochran.is_shown())
+
+        # FAIL: some expected frequencies < 5 (10/20/30 × 20/20/20)
+        rows_bad = ["a1"] * 10 + ["a2"] * 20 + ["a3"] * 30
+        cols_bad = ["b1"] * 20 + ["b2"] * 20 + ["b3"] * 20
+        table_bad = Table.from_list(Domain([a,b]), list(zip(rows_bad, cols_bad)))
+        self.send_signal(self.widget.Inputs.data, table_bad)
+        self.widget.attr_x, self.widget.attr_y = a, b
+        self.widget.update_graph()
+        self.assertTrue(self.widget.Warning.cochran.is_shown())
+        msg_text = str(self.widget.Warning.cochran)
+        self.assertIn("expected", msg_text.lower())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(self.widget.Warning.cochran.is_shown())
+
     def test_metadata(self):
         """
         Widget should interpret meta data which are continuous or discrete in
@@ -168,10 +195,22 @@ class TestOWSieveDiagram(WidgetTest, WidgetOutputsTestMixin):
     def test_input_features(self):
         self.assertTrue(self.widget.attr_box.isEnabled())
         self.send_signal(self.widget.Inputs.data, self.iris)
-        self.send_signal(self.widget.Inputs.features,
-                         AttributeList(self.iris.domain.attributes))
+
+        # Force a known initial state different from the incoming features
+        a0, a1, a2, a3 = self.iris.domain.attributes
+        self.widget.attr_x, self.widget.attr_y = a2, a3
+
+        # Send features -> triggers set_input_features -> resolve_shown_attributes
+        feats = AttributeList([a0, a1])
+        self.send_signal(self.widget.Inputs.features, feats)
+
+        # Attributes should now follow the provided features
+        self.assertEqual((self.widget.attr_x, self.widget.attr_y), (a0, a1))
+
         self.assertFalse(self.widget.attr_box.isEnabled())
         self.assertFalse(self.widget.vizrank_button().isEnabled())
+
+        # Remove features -> widget returns to interactive mode
         self.send_signal(self.widget.Inputs.features, None)
         self.assertTrue(self.widget.attr_box.isEnabled())
         self.assertTrue(self.widget.vizrank_button().isEnabled())
