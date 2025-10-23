@@ -1,7 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
 import os
-import pickle
 import shutil
 import tempfile
 import unittest
@@ -11,7 +10,6 @@ from unittest.mock import Mock, patch
 from Orange import data
 
 from Orange.data.io import FileFormat, TabReader, CSVReader, PickleReader, ExcelReader
-from Orange.data.io_base import PICKLE_PROTOCOL
 from Orange.data.table import get_sample_datasets_dir
 from Orange.data import Table, StringVariable, Domain
 from Orange.tests import test_dirname
@@ -190,20 +188,6 @@ class TestReader(unittest.TestCase):
             self.assertEqual(attributes_count, len(data2.domain.attributes))
             self.assertEqual(attributes_count, len(data3.domain.attributes))
             self.assertEqual(attributes_count, len(data4.domain.attributes))
-
-    def test_pickle_version(self):
-        """
-        Orange uses a fixed PICKLE_PROTOCOL (currently set to 4)
-        for pickling data files and possibly elsewhere for consistent
-        behaviour across different python versions (e.g. 3.6 - 3.8).
-        When the default protocol is increased in a future version of python
-        we should consider increasing this constant to match it as well.
-        """
-        # we should use a version that is at least as high as the default.
-        # it could be higher for older (but supported) python versions
-        self.assertGreaterEqual(PICKLE_PROTOCOL, pickle.DEFAULT_PROTOCOL)
-        # we should not use a version that is not supported
-        self.assertLessEqual(PICKLE_PROTOCOL, pickle.HIGHEST_PROTOCOL)
 
     def test_update_origin(self):
         """

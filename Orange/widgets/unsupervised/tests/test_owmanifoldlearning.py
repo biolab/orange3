@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring, protected-access
+import unittest
 from unittest import skip
 from unittest.mock import patch, Mock
 
@@ -43,6 +44,40 @@ class TestOWManifoldLearning(WidgetTest):
         self.click_apply()
         self.assertIsNone(self.get_output(self.widget.Outputs.transformed_data))
 
+    def test_output_parts(self):
+        data = Table("zoo")
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.transformed_data)
+
+        # X
+        self.assertEqual(data.domain.attributes, output.domain.attributes)
+        np.testing.assert_array_equal(data.X, output.X)
+
+        # Y
+        self.assertEqual(data.domain.class_vars, output.domain.class_vars)
+        np.testing.assert_array_equal(data.Y, output.Y)
+
+        # metas
+        self.assertEqual(data.domain.metas, output.domain.metas[:-2])
+        np.testing.assert_array_equal(data.metas, output.metas[:, :-2])
+        self.assertFalse(np.isnan(output.metas[:, -2:].astype(float)).any())
+
+    def test_output_type(self):
+        class DummyTable(Table):
+            @classmethod
+            def from_file(cls, filename, sheet=None):
+                table = super().from_file(filename, sheet)
+                table = cls.from_numpy(table.domain, table.X, table.Y,
+                                       table.metas)
+                table.name = filename
+                return table
+
+        data = DummyTable("zoo")
+        self.assertIsInstance(data, DummyTable)
+        self.send_signal(self.widget.Inputs.data, data)
+        output = self.get_output(self.widget.Outputs.transformed_data)
+        self.assertIsInstance(output, DummyTable)
+
     def test_n_components(self):
         """Check the output for various numbers of components"""
         self.send_signal(self.widget.Inputs.data, self.iris)
@@ -66,9 +101,9 @@ class TestOWManifoldLearning(WidgetTest):
 
     def _compare_tables(self, _output, n_components):
         """Helper function for table comparison"""
-        self.assertEqual((len(self.iris), n_components), _output.X.shape)
+        np.testing.assert_array_equal(self.iris.X, _output.X)
         np.testing.assert_array_equal(self.iris.Y, _output.Y)
-        np.testing.assert_array_equal(self.iris.metas, _output.metas)
+        self.assertEqual((len(self.iris), n_components), _output.metas.shape)
 
     def test_sparse_data(self):
         data = Table("iris").to_sparse()
@@ -177,3 +212,7 @@ class TestOWManifoldLearning(WidgetTest):
             self.widget.send_report()
             self.assertEqual(mocked_report.call_count, 2)
             mocked_report.reset_mock()
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -197,8 +197,8 @@ util.py:
             unsafe: false
 version.py:
     3.40.0: false
-    3.40.0.dev0+e599b5b: false
-    e599b5bcc1999b32954f7a5693c9d7011fcabab7: false
+    3.40.0.dev0+e7d811b: false
+    e7d811bac580723c707decd32c550a75874dc9c8: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -384,8 +384,10 @@ canvas/config.py:
         Screencasts: false
         https://www.youtube.com/watch: false
         ?v=HXjnDIgGDuI&list=PLmNPvQr9Tf-ZSDLwOzxpvY-HrE0yv-8Fy&index=1: false
-        Feedback: false
-        https://orange.biolab.si/survey/long.html: false
+        Donate: Doniraj
+        https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=A76TAX87ZVR3J: false
+        FAQ: Pogosta vprašanja
+        https://orangedatamining.com/faq/: false
     def `init`:
         This is not the init you are looking for.: false
     def `data_dir`:
@@ -1546,6 +1548,7 @@ data/util.py:
         dim must be greater than max(values): false
     class `SharedComputeValue`:
         def `__init__`:
+            InheritEq: false
             '{type(compute_shared).__name__} should define ': false
             __eq__ and __hash__ to be used for compute_shared: false
     def `get_unique_names`:
@@ -4700,11 +4703,15 @@ widgets/data/owcorrelations.py:
         def `items`:
             Pearson correlation: Pearsonova korelacija
             Spearman correlation: Spearmanova korelacija
+    class `KMeansCorrelationHeuristic`:
+        def `_impute_means`:
+            ignore: false
     class `CorrelationRank`:
         def `row_for_state`:
             name: false
             :: true
-            {:+.3f}: false
+            N/A: ?
+            {score[1]:+.3f}: false
     class `OWCorrelations`:
         Correlations: Korelacije
         Compute all pairwise attribute correlations.: Izračuna korelacije med vsemi pari spremenljivk.
@@ -4718,15 +4725,22 @@ widgets/data/owcorrelations.py:
             Correlations: Korelacije
         class `Information`:
             Constant features have been removed.: Konstantne spremenljivke so odstranjene.
-        class `Warning`:
+        class `Error`:
             At least two numeric features are needed.: Potrebni sta vsaj dve številski spremenljivki.
             At least two instances are needed.: Potrebna sta vsaj dva primera.
         def `__init__`:
             correlation_type: false
             (All combinations): (Vse kombinacije)
             feature: false
+            impute_missing: false
+            Impute missing values: Nadomesti manjkajoče vrednosti
+            Replace missing values with means;\n: Nadomesti manjkajoče vrednosti s povprečji;\n
+            if disabled, rows with missing values for the corre: v nasprotnem primeru so vrstice z manjkajočimi vrednos
+            sponding variables are ignored: tmi teh spremenljivk izključene
         def `set_data`:
             removed: false
+        def `set_actual_data`:
+            mean: false
         def `commit`:
             Correlation: Korelacije
             uncorrected p: nepopravljen p
@@ -4736,6 +4750,10 @@ widgets/data/owcorrelations.py:
             Correlations: Korelacije
         def `migrate_context`:
             selection: false
+    def `mock_data`:
+        a: false
+        abc: false
+        defghij: false
     __main__: false
     iris: false
 widgets/data/owcreateclass.py:
@@ -5123,6 +5141,7 @@ widgets/data/owcsvimport.py:
         qint64: false
     def `pandas_to_table`:
         str: false
+        UTC: false
         M8[ns]: false
         "Column '{}' with dtype: {} skipped.": false
     __main__: false
@@ -8035,6 +8054,45 @@ widgets/data/owselectrows.py:
             %H:%M:%S: false
     __main__: false
     heart_disease: false
+widgets/data/owsplit.py:
+    class `OWSplit`:
+        Split: Razdeli
+        Split text or categorical variables into indicator variables: Razdeli besedilne ali kategorične spremenljivke na spremenljivke.
+        Transform: Predelava podatkov
+        icons/Split.svg: false
+        text to columns: besedilo v stolpce
+        word encoding: kodiranje besed
+        questionnaire: vprašalniki
+        survey: ankete
+        term: pojmi
+        word presence: prisotnost besed
+        word counts: število besed
+        categorical encoding: kodiranje kategorij
+        indicator variables: indikatorske spremenljivke
+        orangecontrib.prototypes.widgets.owsplit.OWSplit: false
+        orangecontrib.prototypes.widgets.owsplit.OWTextToColumn: false
+        class `Inputs`:
+            Data: Podatki
+        class `Outputs`:
+            Data: Podatki
+        class `Warning`:
+            Data contains only numeric variables.: Podatki vsebujejo samo številske spremenljivke.
+        Categorical (No, Yes): Kategorične (Ne, Da)
+        Numerical (0, 1): Številske (0, 1)
+        Counts: Števci
+        ;: true
+        def `__init__`:
+            Variable: Stolpec
+            attribute: false
+            delimiter: false
+            'Delimiter: ': 'Ločilo: '
+            output_type: false
+            Output Values: Izhodne vrednosti
+        def `_get_new_columns`:
+            No: Ne
+            Yes: Da
+    __main__: false
+    tests/orange-in-education.tab: false
 widgets/data/owsql.py:
     def `is_postgres`:
         display_name: false
@@ -11262,6 +11320,7 @@ widgets/unsupervised/owdistances.py:
             Not enough memory: Premalo pomnilnika
             Problem in calculation:\n{}: Težava pri izračunu:\n{}
             Mahalanobis handles up to 1000 {}.: Mahalanobisova razdalja zmore do 1000 {}.
+            Data is too large (> {MAX_ITEMS} items).: Podatki so preveliki (> {MAX_ITEMS} primerov).
         class `Warning`:
             Ignoring categorical features: Kategoričnih spremenljivk ne upoštevam
             Ignoring non-binary features: Ne-binarnih spremenljivk ne upoštevam
@@ -11734,6 +11793,8 @@ widgets/unsupervised/owmanifoldlearning.py:
             must be greater than [n_components: false
             ' * (n_components + 3) / 2]': false
             {}: false
+        def `_create_output_table`:
+            C{}: false
         def `send_report`:
             Method: Metoda
             Number of components: Število komponent

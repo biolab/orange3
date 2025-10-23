@@ -7,12 +7,13 @@ import numpy as np
 import numpy.testing as npt
 
 from AnyQt.QtCore import Qt
+from scipy.stats import pearsonr
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.tests import test_filename
 from Orange.widgets.data.owcorrelations import (
     OWCorrelations, KMeansCorrelationHeuristic, CorrelationRank,
-    CorrelationType
+    CorrelationType, mock_data
 )
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate
@@ -48,9 +49,9 @@ class TestOWCorrelations(WidgetTest):
     def test_input_data_disc(self):
         """Check correlation table for dataset with discrete attributes"""
         self.send_signal(self.widget.Inputs.data, self.data_disc)
-        self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
+        self.assertTrue(self.widget.Error.not_enough_vars.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Warning.not_enough_vars.is_shown())
+        self.assertFalse(self.widget.Error.not_enough_vars.is_shown())
 
     def test_input_data_mixed(self):
         """Check correlation table for dataset with continuous and discrete
@@ -70,9 +71,9 @@ class TestOWCorrelations(WidgetTest):
         self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
-        self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
+        self.assertTrue(self.widget.Error.not_enough_vars.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Warning.not_enough_vars.is_shown())
+        self.assertFalse(self.widget.Error.not_enough_vars.is_shown())
 
     def test_input_data_one_instance(self):
         """Check correlation table for dataset with one instance"""
@@ -81,9 +82,9 @@ class TestOWCorrelations(WidgetTest):
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
         self.assertFalse(self.widget.Information.removed_cons_feat.is_shown())
-        self.assertTrue(self.widget.Warning.not_enough_inst.is_shown())
+        self.assertTrue(self.widget.Error.not_enough_inst.is_shown())
         self.send_signal(self.widget.Inputs.data, None)
-        self.assertFalse(self.widget.Warning.not_enough_inst.is_shown())
+        self.assertFalse(self.widget.Error.not_enough_inst.is_shown())
 
     def test_input_data_with_constant_features(self):
         """Check correlation table for dataset with constant columns"""
@@ -112,7 +113,7 @@ class TestOWCorrelations(WidgetTest):
         self.wait_until_finished()
         self.process_events()
         self.assertEqual(self.widget.vizrank.rank_model.columnCount(), 0)
-        self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
+        self.assertTrue(self.widget.Error.not_enough_vars.is_shown())
         self.assertTrue(self.widget.Information.removed_cons_feat.is_shown())
 
         self.send_signal(self.widget.Inputs.data, None)
@@ -130,7 +131,60 @@ class TestOWCorrelations(WidgetTest):
 
         data = self.housing[:5, 13:]
         self.send_signal(self.widget.Inputs.data, data)
-        self.assertTrue(self.widget.Warning.not_enough_vars.is_shown())
+        self.assertTrue(self.widget.Error.not_enough_vars.is_shown())
+
+    def test_feature_model_imputation(self):
+        data = mock_data()
+        attributes = data.domain.attributes[:-1]
+        class_var = data.domain.attributes[-1]
+        data = data.transform(Domain(attributes, class_var))
+        self.send_signal(data)
+        assert self.widget.feature is not class_var, "No imputation?"
+        self.assertEqual(self.widget.feature.name, class_var.name)
+
+        self.widget.feature = self.widget.actual_data.domain.attributes[-1]
+        assert self.widget.feature is not attributes[-1], "No imputation?"
+        self.assertEqual(self.widget.feature.name, attributes[-1].name)
+
+    def test_imputation(self):
+        self.send_signal(mock_data())
+        self.wait_until_finished()
+        self.process_events()
+        s = 1 / 2
+        t = 1 / 3
+        exp = np.array(
+            [[1, 0, 0, 1, 0, 0],  # d 0
+             [0, 1, 1, 0, 1, 1],  # e 1
+             [1, 0, 0, 1, 0, 0],  # f 2
+             [1, 0, s, 1, 0, s],  # g 3
+             [1, 0, s, 1, 0, s],  # h 4
+             [t, 0, t, 1, 0, t],  # i 5
+             [0, s, s, s, s, 1]]  # j 6
+        )
+        names = "defghij"
+        npt.assert_almost_equal(self.widget.actual_data.X, exp.T)
+
+        model = self.widget.vizrank.rank_model
+        ind = model.index
+        for i in range(model.rowCount()):
+            pair = [var.name
+                    for var in ind(i, 0).data(CorrelationRank._AttrRole)]
+            r, _ = pearsonr(*(exp[names.index(name)] for name in pair))
+            self.assertAlmostEqual(
+                ind(i, 0).data(CorrelationRank.CorrRole), r,
+                places=7,
+                msg=f"Mismatch for {pair}")
+
+    def test_no_imputation(self):
+        data = mock_data()
+        self.send_signal(data)
+        self.assertFalse(np.any(np.isnan(self.widget.actual_data.X)))
+
+        self.widget.controls.impute_missing.setChecked(False)
+        npt.assert_almost_equal(self.widget.actual_data.X, data.X[:, 1:])
+
+        self.widget.controls.impute_missing.setChecked(True)
+        self.assertFalse(np.any(np.isnan(self.widget.actual_data.X)))
 
     def test_output_data(self):
         """Check dataset on output"""
@@ -160,12 +214,13 @@ class TestOWCorrelations(WidgetTest):
         self.assertEqual(len(correlations.domain.metas), 2)
         self.assertListEqual(["Correlation", "uncorrected p", "FDR"],
                              [m.name for m in correlations.domain.attributes])
-        array = np.array([[0.963, 0, 0],
-                          [0.872, 0, 0],
-                          [0.818, 0, 0],
-                          [-0.421, 0, 0],
-                          [-0.357, 7.52e-6, 0.000009],
-                          [-0.109, 0.1827652, 0.1827652]])
+        array = np.array(
+            [[ 9.62757097e-01, 5.77666099e-86, 3.46599659e-85],
+             [ 8.71754157e-01, 1.03845406e-47, 3.11536219e-47],
+             [ 8.17953633e-01, 2.31484915e-37, 4.62969830e-37],
+             [-4.20516096e-01, 8.42936639e-08, 1.26440496e-07],
+             [-3.56544090e-01, 7.52389096e-06, 9.02866915e-06],
+             [-1.09369250e-01, 1.82765215e-01, 1.82765215e-01]])
         npt.assert_almost_equal(correlations.X, array)
 
     def test_input_changed(self):
@@ -316,12 +371,48 @@ class TestCorrelationRank(WidgetTest):
         self.vizrank = CorrelationRank(None)
         self.vizrank.attrs = self.attrs
 
-    def test_compute_score(self):
+    def test_compute_score_iris(self):
         self.vizrank.master = Mock()
-        self.vizrank.master.cont_data = self.iris
+        self.vizrank.master.actual_data = self.iris
         self.vizrank.master.correlation_type = CorrelationType.PEARSON
         npt.assert_almost_equal(self.vizrank.compute_score((1, 0)),
                                 [-0.1094, -0.1094, 0.1828], 4)
+
+    def test_compute_score_nans(self):
+        self.vizrank.master = Mock()
+        data = mock_data()[:, 1:]
+        self.vizrank.master.actual_data = data
+        self.vizrank.attrs = data.domain.attributes
+        self.vizrank.master.correlation_type = CorrelationType.PEARSON
+        npt.assert_almost_equal(
+            self.vizrank.compute_score((1, 0)), [-1, -1, 0])
+        npt.assert_almost_equal(
+            self.vizrank.compute_score((2, 0)), [-1, 1, 0])
+
+        col0, col3 = data.X[:, 0], data.X[:, 3]
+        r, p = pearsonr(col0, col3)
+        npt.assert_almost_equal(
+            self.vizrank.compute_score((3, 0)), [-abs(r), r, p])
+
+        npt.assert_almost_equal(
+            self.vizrank.compute_score((4, 0)), [-1, 1, 0])
+
+        npt.assert_almost_equal(
+            self.vizrank.compute_score((5, 4)), [-1, 1, 0])
+
+        # Test that we return inf and nan if there are less than 2 values
+        npt.assert_almost_equal(
+            self.vizrank.compute_score((6, 4)), [np.inf, np.nan, np.nan])
+
+        npt.assert_almost_equal(
+            self.vizrank.compute_score((6, 5)), [np.inf, np.nan, np.nan])
+
+        # I suppose that p-value is 1 because we have only two samples,
+        # and B(0, 0) = 1. This is good because it distinguishes this case
+        # from the one above
+        npt.assert_almost_equal(
+            self.vizrank.compute_score((6, 0)), [-1, -1, 1])
+
 
     def test_row_for_state(self):
         row = self.vizrank.row_for_state((-0.2, 0.2, 0.1), (1, 0))
@@ -377,6 +468,28 @@ class TestKMeansCorrelationHeuristic(unittest.TestCase):
         states = set(heuristic.get_states(None))
         self.assertEqual(len(states), 1)
         self.assertSetEqual(states, {(0, 1)})
+
+    def test_impute_means(self):
+        arr = np.array([[1, 2, np.nan, 3, 4, np.nan],
+                        [5, 7, np.nan, np.nan, np.nan, np.nan],
+                        [1, 2, 3, 4, 5, 6],
+                        [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan]])
+        exp = np.array([[1, 2, 2.5, 3, 4, 2.5],
+                        [5, 7, 6, 6, 6, 6],
+                        [1, 2, 3, 4, 5, 6],
+                        [0, 0, 0, 0, 0, 0]])
+        KMeansCorrelationHeuristic._impute_means(arr)
+        np.testing.assert_almost_equal(arr, exp)
+
+    def test_nans(self):
+        data = Table("iris")
+        with data.unlocked(data.X):
+            data.X[0, 0] = np.nan
+            data.X[:, 1] = np.nan
+        heuristic = KMeansCorrelationHeuristic(data)
+        clusters = heuristic.get_clusters_of_attributes()
+        result = sorted([c.instances for c in clusters])
+        self.assertListEqual(result, [[0, 2, 3], [1]]),
 
 
 if __name__ == "__main__":

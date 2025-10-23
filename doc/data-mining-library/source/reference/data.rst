@@ -59,5 +59,6 @@ represented by whole numbers.
     data.instance
     data.filters
     data.io
+    data.pandas
 
 .. index:: Data

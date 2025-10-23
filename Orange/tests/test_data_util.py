@@ -145,3 +145,20 @@ class TestSharedComputeValue(unittest.TestCase):
 
         self.assertNotEqual(c1, e)
         self.assertNotEqual(hash(c1), hash(e))
+
+    def test_eq_hash_inheritance(self):
+        class NoFlag:
+            pass
+
+        class WithFlag:
+            InheritEq = True
+
+        x = Orange.data.ContinuousVariable("x")
+        self.assertWarnsRegex(
+            UserWarning, ".*define __eq__ and __hash__.*",
+            SharedComputeValue, NoFlag(), x)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            SharedComputeValue(WithFlag(), x)
+            self.assertEqual(len(w), 0)
