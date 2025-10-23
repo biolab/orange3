@@ -85,7 +85,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
     graph_name = "canvas"  # QGraphicsScene
 
     class Warning(OWWidget.Warning):
-        cochran = Msg("Does not meet Cochran's rule\n{}")
+        cochran = Msg("Data does not meet the Cochran's rule\n{}")
 
     want_control_area = False
 
@@ -108,10 +108,10 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         self.mainArea.layout().setSpacing(0)
         self.attr_box = gui.hBox(self.mainArea, margin=0)
         self.domain_model = DomainModel(valid_types=DomainModel.PRIMITIVE)
-        combo_args = {
-            "widget":self.attr_box, "master":self, "contentsLength":12,
-            "searchable":True, "sendSelectedValue":True,
-            "callback":self.attr_changed, "model":self.domain_model}
+        combo_args = dict(
+            widget=self.attr_box, master=self, contentsLength=12,
+            searchable=True, sendSelectedValue=True,
+            callback=self.attr_changed, model=self.domain_model)
         fixed_size = (QSizePolicy.Fixed, QSizePolicy.Fixed)
         gui.comboBox(value="attr_x", **combo_args)
         gui.widgetLabel(self.attr_box, "\u2717", sizePolicy=fixed_size)
@@ -442,7 +442,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
 
             return f"{xt}<br/>{yt}<hr/>{ct}"
 
-
+        self.Warning.cochran.clear()
         for item in self.canvas.items():
             self.canvas.removeItem(item)
         if self.data is None or len(self.data) == 0 or \
@@ -520,27 +520,26 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         # Assume similar height for both lines
         text("N = " + fmt(chi.n), 0, bottom - xl.boundingRect().height())
         msg = self._check_cochran(chi)
-        if msg is None:
-            self.Warning.cochran.clear()
-        else:
+        if msg is not None:
             self.Warning.cochran(msg)
 
-    def _check_cochran(self, chi):
+    @staticmethod
+    def _check_cochran(chi):
         """
         Check Cochran's rule.
-        Return None if it is met, a string describing the problem.
+        Return None if it is met, otherwise a string describing the problem.
         """
         expected = np.asarray(chi.expected, dtype=float)
-        cells = int(expected.size)
+        cells = expected.size
         if cells == 0:
             return "no cells in contingency table"
         eps = 1e-12
-        num_lt1 = int((expected < 1.0 - eps).sum())
-        num_lt5 = int((expected < 5.0 - eps).sum())
+        num_lt1 = (expected < 1.0 - eps).sum()
+        num_lt5 = (expected < 5.0 - eps).sum()
         if num_lt1 > 0:
-            return "some expected frequencies < 1"
+            return "some expected frequencies are below 1"
         if num_lt5 > 0.2 * cells:
-            return "more than 20% of expected frequencies < 5"
+            return "more than 20% of expected frequencies are below 5"
         return None
 
     def get_widget_name_extension(self):

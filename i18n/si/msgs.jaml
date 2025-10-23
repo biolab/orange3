@@ -196,9 +196,9 @@ util.py:
         def `funcv`:
             unsafe: false
 version.py:
-    3.39.0: false
-    3.39.0.dev0+0a43fd4: false
-    0a43fd438e4e20613c4d9899c1781f874d33d921: false
+    3.40.0: false
+    3.40.0.dev0+e599b5b: false
+    e599b5bcc1999b32954f7a5693c9d7011fcabab7: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -14942,6 +14942,8 @@ widgets/visualize/owsieve.py:
         class `Outputs`:
             Selected Data: Izbrani podatki
         canvas: false
+        class `Warning`:
+            Data does not meet the Cochran's rule\n{}: Podatki ne ustrezajo Cochranovemu pravilu\n{}
         def `__init__`:
             attr_x: false
             \u2717: true
@@ -14980,6 +14982,10 @@ widgets/visualize/owsieve.py:
             Feature {} has no values: Spremenljivka {} nima znanih vrednosti.
             χ²={:.2f}, p={:.3f}: true
             'N = ': true
+        def `_check_cochran`:
+            no cells in contingency table: kontingenčna tabela nima celic
+            some expected frequencies are below 1: nekatere pričakovane pogostosti so manjše od 1
+            more than 20% of expected frequencies are below 5: več kot 20 % pričakovanih pogostosti je manjših od 5
         def `get_widget_name_extension`:
             {} vs {}: {} in {}
     __main__: false
