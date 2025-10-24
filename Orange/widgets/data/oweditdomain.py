@@ -1567,18 +1567,28 @@ class TimeVariableEditor(VariableEditor):
         form.insertRow(2, "Format:", self.format_cb)
         form.insertRow(3, "Custom format:", self.custom_edit)
 
+    def _set_format_enable(self, enable: bool):
+        self.format_cb.setEnabled(enable)
+        self.custom_edit.setEnabled(enable)
+
     def set_data(self, var, transform=()):
         super().set_data(var, transform)
         if self.parent() is not None and isinstance(self.parent().var, (Time, Real)):
             # when transforming from time to time disable format selection combo
-            self.format_cb.setEnabled(False)
+            self._set_format_enable(False)
         else:
             # select the format from StrpTime transform
             for tr in transform:
                 if isinstance(tr, StrpTime):
-                    index = self.format_cb.findText(tr.label)
-                    self.format_cb.setCurrentIndex(index)
-            self.format_cb.setEnabled(True)
+                    if tr.label is not None:
+                        index = self.format_cb.findText(tr.label)
+                        self.format_cb.setCurrentIndex(index)
+                    elif tr.formats and tr.formats[0] is not None:
+                        self.custom_edit.setText(tr.formats[0])
+                        self.format_cb.setCurrentIndex(self.format_cb.count() - 1)
+                    else:
+                        self.format_cb.setCurrentIndex(0)
+            self._set_format_enable(True)
 
     def get_data(self):
         var, tr = super().get_data()
@@ -1592,11 +1602,9 @@ class TimeVariableEditor(VariableEditor):
                 have_time = int(bool(re.search(time_pat, custom_text)))
                 # this is done to ensure that the custom format is correct
                 if not have_date and not have_time:
-                    trf = StrpTime(self.CUSTOM_FORMAT_LABEL, (None,),
-                                   have_date, have_time)
+                    trf = StrpTime(None, (None,), have_date, have_time)
                 else:
-                    trf = StrpTime(self.CUSTOM_FORMAT_LABEL, (custom_text,),
-                                                          have_date, have_time)
+                    trf = StrpTime(None, (custom_text,), have_date, have_time)
             else:
                 trf = self.format_cb.currentData()
             tr.insert(0, trf)
