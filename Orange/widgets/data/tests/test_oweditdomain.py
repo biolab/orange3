@@ -101,6 +101,13 @@ class TestReport(TestCase):
             self.assertIn("→ (", t)
 
 
+def enter_text(widget: QLineEdit, text: str):
+    widget.selectAll()
+    QTest.keyClick(widget, Qt.Key.Key_Delete)
+    QTest.keyClicks(widget, text)
+    QTest.keyClick(widget, Qt.Key.Key_Return)
+
+
 class TestOWEditDomain(WidgetTest):
     def setUp(self):
         self.widget = self.create_widget(OWEditDomain)
@@ -258,13 +265,6 @@ class TestOWEditDomain(WidgetTest):
         self.widget.domain_view.setCurrentIndex(idx)
         editor = self.widget.findChild(ContinuousVariableEditor)
 
-        def enter_text(widget, text):
-            # type: (QLineEdit, str) -> None
-            widget.selectAll()
-            QTest.keyClick(widget, Qt.Key_Delete)
-            QTest.keyClicks(widget, text)
-            QTest.keyClick(widget, Qt.Key_Return)
-
         enter_text(editor.name_edit, "iris")
         self.widget.commit()
         self.assertTrue(self.widget.Error.duplicate_var_name.is_shown())
@@ -359,16 +359,13 @@ class TestOWEditDomain(WidgetTest):
         editor = self.widget.findChild(VariableEditor)
         tc = editor.layout().currentWidget().findChild(QComboBox,
                                                        name="type-combo")
-        tc.setCurrentIndex(3)  # time variable
-        tc.activated.emit(3)
-
-        # le = editor.layout().currentWidget().findChild(QLineEdit)
-        # le.setText("%Y-%j")
-        # le.editingFinished.emit()
+        # time variable editor
+        simulate.combobox_activate_item(tc, Time, Qt.ItemDataRole.UserRole)
+        le = editor.layout().currentWidget().findChild(QLineEdit, name="custom-format-line-edit")
+        enter_text(le, "%Y-%j")
 
         self.widget.commit()
         output = self.get_output(self.widget.Outputs.data)
-        print(output)
         self.assertEqual(table.metas[0, 0], "2024-001")
         self.assertEqual(output.metas[0, 0],
                          datetime.strptime("2024-001",

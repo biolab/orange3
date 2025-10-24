@@ -1560,10 +1560,10 @@ class TimeVariableEditor(VariableEditor):
             self.format_cb.addItem(item, StrpTime(item, *data))
         self.format_cb.addItem(self.CUSTOM_FORMAT_LABEL)
         self.format_cb.currentIndexChanged.connect(self.variable_changed)
-        self.custom_edit = QLineEdit()
+        self.custom_edit = QLineEdit(objectName="custom-format-line-edit")
         self.custom_edit.setPlaceholderText("%Y-%m-%d %H:%M:%S")
         self.custom_edit.setToolTip(CUSTOM_TOOLTIP)
-        self.custom_edit.textChanged.connect(self._on_custom_change)
+        self.custom_edit.editingFinished.connect(self._on_custom_change)
         form.insertRow(2, "Format:", self.format_cb)
         form.insertRow(3, "Custom format:", self.custom_edit)
 
