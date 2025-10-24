@@ -52,7 +52,9 @@ class OWAggregateColumns(widget.OWWidget):
                   "Max": OpDesc("Maximal value", np.nanmax, True),
                   "Mean": OpDesc("Mean value", np.nanmean, True),
                   "Variance": OpDesc("Variance", np.nanvar),
-                  "Median": OpDesc("Median", np.nanmedian, True)}
+                  "Median": OpDesc("Median", np.nanmedian, True),
+                  "Count non-zero": OpDesc("Count non-zero",
+                                           np.count_nonzero)}
     KeyFromDesc = {op.name: key for key, op in Operations.items()}
 
     SelectAll, SelectAllAndMeta, InputFeatures, SelectManually = range(4)
