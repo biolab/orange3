@@ -136,16 +136,17 @@ class OWSilhouettePlot(widget.OWWidget):
         self._silhouette = None  # type: Optional[np.ndarray]
         self._silplot = None     # type: Optional[SilhouettePlot]
 
-        controllayout = self.controlArea.layout()
-        assert isinstance(controllayout, QVBoxLayout)
+        info_box = gui.vBox(self.controlArea, "Info")
+        self.avg_silhouette_label = gui.widgetLabel(info_box, "")
+        self._update_avg_silhouette()
+
         self._distances_gui_box = distbox = gui.widgetBox(
-            None, "Distance"
+            self.controlArea, "Distance"
         )
         self._distances_gui_cb = gui.comboBox(
             distbox, self, "distance_idx",
             items=[name for name, _ in OWSilhouettePlot.Distances],
             orientation=Qt.Horizontal, callback=self._invalidate_distances)
-        controllayout.addWidget(distbox)
 
         box = gui.vBox(self.controlArea, "Grouping")
         self.cluster_var_model = itemmodels.VariableListModel(
@@ -176,6 +177,7 @@ class OWSilhouettePlot(widget.OWWidget):
             ibox, "(increase the width to show)")
         ibox.setFixedWidth(ibox.sizeHint().width())
         warning.setVisible(False)
+
 
         gui.rubber(self.controlArea)
 
@@ -292,6 +294,7 @@ class OWSilhouettePlot(widget.OWWidget):
         self._clear_scene()
         self.Error.clear()
         self.Warning.clear()
+        self._update_avg_silhouette()  # Update the average silhouette display
 
     def _clear_scene(self):
         # Clear the graphics scene and associated objects
@@ -340,6 +343,14 @@ class OWSilhouettePlot(widget.OWWidget):
             else:
                 assert False, "invalid state"
 
+    def _update_avg_silhouette(self):
+        if self._silhouette is not None and len(self._silhouette) > 0:
+            avg_score = np.mean(self._silhouette)
+            self.avg_silhouette_label.setText(
+                f"Average Silhouette: {avg_score:.4f}")
+        else:
+            self.avg_silhouette_label.setText("Average Silhouette: N/A")
+
     def _update(self):
         # Update/recompute the effective distances and scores as required.
         self._clear_messages()
@@ -383,6 +394,8 @@ class OWSilhouettePlot(widget.OWWidget):
             if count_nandist:
                 self.Warning.nan_distances(
                     count_nandist, s="s" if count_nandist > 1 else "")
+
+        self._update_avg_silhouette()  # Update the average silhouette display
 
     def _reset_all(self):
         self._mask = None
