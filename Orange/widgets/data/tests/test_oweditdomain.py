@@ -1184,6 +1184,14 @@ class TestEditors(GuiTest):
         w._set_unlink(False)
         self.assertFalse(cbox.isChecked())
 
+    def test_reinterpret_time_format_restore(self):
+        w = ReinterpretVariableEditor()
+        transforms = [AsTime(), Rename("Time"),
+                      StrpTime(TimeVariableEditor.CUSTOM_FORMAT_LABEL, ("%Y",), 1, 0)]
+        w.set_data([self.DataVectors[3]], [transforms])
+        _, [t] = w.get_data()
+        self.assertEqual(sorted(t), sorted(transforms))
+
 
 class TestModels(GuiTest):
     def test_variable_model(self):

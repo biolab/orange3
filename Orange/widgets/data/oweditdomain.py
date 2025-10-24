@@ -1547,7 +1547,7 @@ class ContinuousVariableEditor(VariableEditor):
 
 
 class TimeVariableEditor(VariableEditor):
-    CUSTOM_FORMAT_LABEL = "Custom format"
+    CUSTOM_FORMAT_LABEL = "Custom format"  # non translatable
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         form = self.layout().itemAt(0)
@@ -1557,7 +1557,7 @@ class TimeVariableEditor(VariableEditor):
             Orange.data.TimeVariable.ADDITIONAL_FORMATS.items()
         ):
             self.format_cb.addItem(item, StrpTime(item, *data))
-        self.format_cb.addItem(self.CUSTOM_FORMAT_LABEL)
+        self.format_cb.addItem("Custom format", self.CUSTOM_FORMAT_LABEL)
         self.format_cb.currentIndexChanged.connect(self.variable_changed)
         self.custom_edit = QLineEdit(objectName="custom-format-line-edit")
         self.custom_edit.setPlaceholderText("%Y-%m-%d %H:%M:%S")
@@ -1566,24 +1566,30 @@ class TimeVariableEditor(VariableEditor):
         form.insertRow(2, "Format:", self.format_cb)
         form.insertRow(3, "Custom format:", self.custom_edit)
 
+    def _set_format_enable(self, enable: bool):
+        self.format_cb.setEnabled(enable)
+        self.custom_edit.setEnabled(enable)
+
     def set_data(self, var, transform=()):
         super().set_data(var, transform)
         if self.parent() is not None and isinstance(self.parent().var, (Time, Real)):
             # when transforming from time to time disable format selection combo
-            self.format_cb.setEnabled(False)
+            self._set_format_enable(False)
         else:
             # select the format from StrpTime transform
             for tr in transform:
                 if isinstance(tr, StrpTime):
                     index = self.format_cb.findText(tr.label)
                     self.format_cb.setCurrentIndex(index)
-            self.format_cb.setEnabled(True)
+                    if tr.label == self.CUSTOM_FORMAT_LABEL:
+                        self.custom_edit.setText(tr.formats[0])
+            self._set_format_enable(True)
 
     def get_data(self):
         var, tr = super().get_data()
         if var is not None and (self.parent() is None or not isinstance(self.parent().var, Time)):
             # do not add StrpTime when transforming from time to time
-            if self.format_cb.currentText() == self.CUSTOM_FORMAT_LABEL:
+            if self.format_cb.currentData() == self.CUSTOM_FORMAT_LABEL:
                 custom_text = self.custom_edit.text()
                 date_pat = r"%(-?)d|%(b|B)|%(-?)m|%(y|Y)|%(-?)j|%(-?)U|%(-?)W|%(a|A)|%w"
                 time_pat = r"%(-?)H|%(-?)I|%p|%(-?)M|%(-?)S|%f"
@@ -1595,14 +1601,14 @@ class TimeVariableEditor(VariableEditor):
                                    have_date, have_time)
                 else:
                     trf = StrpTime(self.CUSTOM_FORMAT_LABEL, (custom_text,),
-                                                          have_date, have_time)
+                                   have_date, have_time)
             else:
                 trf = self.format_cb.currentData()
             tr.insert(0, trf)
         return var, tr
 
     def _on_custom_change(self):
-        if self.format_cb.currentText() != self.CUSTOM_FORMAT_LABEL:
+        if self.format_cb.currentData() != self.CUSTOM_FORMAT_LABEL:
             self.format_cb.setCurrentIndex(self.format_cb.count() - 1)
         else:
             self.variable_changed.emit()
