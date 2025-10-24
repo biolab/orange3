@@ -1,5 +1,5 @@
 # Test methods with long descriptive names can omit docstrings
-# pylint: disable=missing-docstring,protected-access
+# pylint: disable=missing-docstring,protected-access,too-many-public-methods
 from os import path, remove, getcwd
 from os.path import dirname
 import unittest
@@ -41,7 +41,9 @@ class FailedSheetsFormat(FileFormat):
     def read(self):
         pass
 
+    @property
     def sheets(self):
+        # pylint: disable=broad-exception-raised
         raise Exception("Not working")
 
 
@@ -137,6 +139,7 @@ class TestOWFile(WidgetTest):
     def test_check_file_size(self):
         self.assertFalse(self.widget.Warning.file_too_big.is_shown())
         self.widget.SIZE_LIMIT = 4000
+        # We're avoiding __new__, pylint: disable=unnecessary-dunder-call
         self.widget.__init__()
         self.assertTrue(self.widget.Warning.file_too_big.is_shown())
 
@@ -337,7 +340,9 @@ a
         with named_file(dat, suffix=".tab") as filename:
             self.open_dataset(filename)
             domain_editor = self.widget.domain_editor
-            idx = lambda x: self.widget.domain_editor.model().createIndex(x, 1)
+
+            def idx(x):
+                return self.widget.domain_editor.model().createIndex(x, 1)
 
             qcombobox = QComboBox()
             combo = ComboDelegate(domain_editor,
@@ -361,13 +366,13 @@ a
         outdata = self.get_output(self.widget.Outputs.data)
         self.assertEqual(len(outdata), 150)  # loaded iris
 
-    def test_no_reader_extension(self):
+    def test_unknown_extension(self):
         with named_file("", suffix=".xyz_unknown") as fn:
             no_reader = RecentPath(fn, None, None)
             self.widget = self.create_widget(OWFile,
                                              stored_settings={"recent_paths": [no_reader]})
             self.widget.load_data()
-        self.assertTrue(self.widget.Error.missing_reader.is_shown())
+        self.assertTrue(self.widget.Error.select_file_type.is_shown())
 
     def test_fail_sheets(self):
         with named_file("", suffix=".failed_sheet") as fn:
@@ -418,6 +423,22 @@ a
         self.assertTrue(self.widget.Error.missing_reader.is_shown())
         self.assertEqual(self.widget.reader_combo.currentText(), "not.a.file.reader.class")
 
+
+    def _select_reader(self, name):
+        reader_combo = self.widget.reader_combo
+        len_with_qname = len(reader_combo)
+        for i in range(len_with_qname):
+            text = reader_combo.itemText(i)
+            if text.startswith(name):
+                break
+        else:
+            assert f"No reader starts with {name!r}"
+        reader_combo.setCurrentIndex(i)
+        reader_combo.activated.emit(i)
+
+    def _select_tab_reader(self):
+        self._select_reader("Tab-separated")
+
     def test_select_reader(self):
         filename = FileFormat.locate("iris.tab", dataset_dirs)
 
@@ -436,12 +457,7 @@ a
         self.assertEqual(self.widget.reader_combo.currentText(), "not.a.file.reader.class")
         self.assertEqual(self.widget.reader, None)
 
-        # select the tab reader
-        for i in range(len_with_qname):
-            text = self.widget.reader_combo.itemText(i)
-            if text.startswith("Tab-separated"):
-                break
-        self.widget.reader_combo.activated.emit(i)
+        self._select_tab_reader()
         self.assertEqual(len(self.widget.reader_combo), len_with_qname - 1)
         self.assertTrue(self.widget.reader_combo.currentText().startswith("Tab-separated"))
         self.assertIsInstance(self.widget.reader, TabReader)
@@ -451,6 +467,106 @@ a
         self.assertEqual(len(self.widget.reader_combo), len_with_qname - 1)
         self.assertEqual(self.widget.reader_combo.currentText(), DEFAULT_READER_TEXT)
         self.assertIsInstance(self.widget.reader, TabReader)
+
+    def test_auto_detect_and_override(self):
+        tab_as_xlsx = FileFormat.locate("actually-a-tab-file.xlsx",
+                                        [dirname(__file__)])
+        iris = FileFormat.locate("iris", dataset_dirs)
+
+        reader_combo = self.widget.reader_combo
+
+        reader_combo.setCurrentIndex(0)
+        reader_combo.activated.emit(0)
+        assert (self.widget.reader_combo.currentText()
+                == "Determine type from the file extension")
+
+        def open_file(_a, _b, _c, filters, _e):
+            return filename, filters.split(";;")[0]
+
+        with patch("AnyQt.QtWidgets.QFileDialog.getOpenFileName",
+                   open_file):
+
+            # Loading a tab file with extension xlsx fails with auto-detect
+            filename = tab_as_xlsx
+            self.widget.browse_file()
+
+            self.assertEqual(self.widget.reader_combo.currentText(),
+                             "Determine type from the file extension")
+            self.assertTrue(self.widget.Error.unknown_select.is_shown())
+            self.assertIsNone(self.get_output(self.widget.Outputs.data))
+
+            # Select the tab reader: it should work
+            self._select_tab_reader()
+            assert "Tab-separated" in self.widget.reader_combo.currentText()
+
+            self.assertFalse(self.widget.Error.unknown_select.is_shown())
+            self.assertIsInstance(self.widget.reader, TabReader)
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
+
+            # Switching to iris resets the combo to auto-detect
+            filename = iris
+            self.widget.browse_file()
+            self.assertEqual(self.widget.reader_combo.currentText(),
+                             "Determine type from the file extension")
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
+
+            # Taking the tab-as-xlsx file from recent paths should restore
+            # the file type for that file
+            self.widget.file_combo.setCurrentIndex(1)
+            self.widget.file_combo.activated.emit(1)
+            self.assertIn("Tab-separated", self.widget.reader_combo.currentText())
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
+
+            # Reloading should work
+            self.widget.load_data()
+            self.assertIn("Tab-separated", self.widget.reader_combo.currentText())
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
+
+            # Loading this file - not from history - should fail
+            filename = tab_as_xlsx
+            self.widget.browse_file()
+            self.assertTrue(self.widget.Error.unknown_select.is_shown())
+            self.assertIsNone(self.get_output(self.widget.Outputs.data))
+
+            # Set the correct type again (preparation for the next text block)
+            self._select_tab_reader()
+            assert not self.widget.Error.unknown_select.is_shown()
+            assert isinstance(self.widget.reader, TabReader)
+            assert self.get_output(self.widget.Outputs.data) is not None
+
+            # Now load a real Excel file: this is a known excention so the combo
+            # should return to auto-detect
+            filename = FileFormat.locate("an_excel_file.xlsx", [dirname(__file__)])
+            self.widget.browse_file()
+            self.assertEqual(self.widget.reader_combo.currentText(),
+                             "Determine type from the file extension")
+            self.assertFalse(self.widget.Error.unknown_select.is_shown())
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
+
+            # Load iris to prepare for the next test block
+            filename = iris
+            self.widget.browse_file()
+            assert (self.widget.reader_combo.currentText()
+                    == "Determine type from the file extension")
+            assert self.get_output(self.widget.Outputs.data) is not None
+
+            # Files with unknown extensions require manual selection
+            filename = FileFormat.locate("an_excel_file.foo", [dirname(__file__)])
+            self.widget.browse_file()
+            self.assertTrue(self.widget.Error.select_file_type.is_shown())
+            self.assertIsNone(self.get_output(self.widget.Outputs.data))
+
+            self._select_reader("Excel")
+            self.assertFalse(self.widget.Error.unknown_select.is_shown())
+            self.assertFalse(self.widget.Error.select_file_type.is_shown())
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
+
+            # Consecutive loading of files with the same extension keeps selection
+            filename = FileFormat.locate("an_excel_file-too.foo", [dirname(__file__)])
+            self.widget.browse_file()
+            self.assertFalse(self.widget.Error.unknown_select.is_shown())
+            self.assertFalse(self.widget.Error.select_file_type.is_shown())
+            self.assertIsNotNone(self.get_output(self.widget.Outputs.data))
 
     def test_select_reader_errors(self):
         filename = FileFormat.locate("iris.tab", dataset_dirs)
