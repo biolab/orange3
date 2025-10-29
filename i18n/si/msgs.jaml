@@ -2166,6 +2166,10 @@ evaluation/scoring.py:
             abstract: false
             name: false
             long_name: false
+    class `Score`:
+        def `from_predicted`:
+            def `as_scalar`:
+                len(e) > 1: false
     class `CA`:
         CA: Točnost
         Classification accuracy: Klasifikacijska točnost
