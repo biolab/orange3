@@ -114,9 +114,20 @@ class Score(metaclass=ScoreMetaType):
 
     @staticmethod
     def from_predicted(results, score_function, **kwargs):
+        def as_scalar(e):
+            if np.isscalar(e):
+                return e
+            elif len(e) == 1:
+                return e[0]
+            else:
+                raise ValueError("len(e) > 1")
+
+        scores = (score_function(results.actual, predicted, **kwargs)
+                  for predicted in results.predicted)
+        # np.fromiter needs flat iter of scalars, some scoring function calls
+        # return array of single element
         return np.fromiter(
-            (score_function(results.actual, predicted, **kwargs)
-             for predicted in results.predicted),
+            map(as_scalar, scores),
             dtype=np.float64, count=len(results.predicted))
 
     @staticmethod
