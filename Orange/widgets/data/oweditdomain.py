@@ -3182,5 +3182,4 @@ def column_str_repr_string(
 
 
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWEditDomain).run(Orange.data.Table(
-        "/Users/ajda/Desktop/test.csv"))
+    WidgetPreview(OWEditDomain).run(Orange.data.Table("iris"))
