@@ -197,8 +197,8 @@ util.py:
             unsafe: false
 version.py:
     3.40.0: false
-    3.40.0.dev0+e7d811b: false
-    e7d811bac580723c707decd32c550a75874dc9c8: false
+    3.40.0.dev0+518d430: false
+    518d4303824b02791f0b7eaff6ec90fc9d421e68: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -6152,7 +6152,7 @@ widgets/data/owfeaturestatistics.py:
     class `FeatureStatisticsTableModel`:
         class `Columns`:
             def `name`:
-                Name: Ime
+                Column: Stolpec
                 Distribution: Porazdelitev
                 Mean: Srednja vrednost
                 Mode: Najpogostejša
@@ -6166,9 +6166,9 @@ widgets/data/owfeaturestatistics.py:
                 C: false
         def `get_statistics_table`:
             Entropy: Entropija
-            Feature: Spremenljivka
+            Column: Stolpec
             Mode: Najpogostejša
-            {self.table.name} (Feature Statistics): {self.table.name} (Statistika spremenljivk)
+            {self.table.name} (Column Statistics): {self.table.name} (Statistika stolpcev)
         def `_sortColumnData`:
             Data should be at most 2-dimensional: false
         def `_argsortData`:
@@ -6186,9 +6186,10 @@ widgets/data/owfeaturestatistics.py:
                 {self._dispersion[row]:.3g}: false
                 {missing} ({perc} %): false
     class `OWFeatureStatistics`:
-        Feature Statistics: Statistika spremenljivk
-        Show basic statistics for data features.: Pokaže osnovno statistiko spremenljivk.
+        Column Statistics: Statistika stolpcev
+        Show basic statistics for columns.: Osnovna statistika stolpcev.
         icons/FeatureStatistics.svg: false
+        feature, variable: spremenljivka, stolpec
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -8072,8 +8073,6 @@ widgets/data/owsplit.py:
         word counts: število besed
         categorical encoding: kodiranje kategorij
         indicator variables: indikatorske spremenljivke
-        orangecontrib.prototypes.widgets.owsplit.OWSplit: false
-        orangecontrib.prototypes.widgets.owsplit.OWTextToColumn: false
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -11791,7 +11790,6 @@ widgets/unsupervised/owmanifoldlearning.py:
         def `commit`:
             def `_handle_disconnected_graph_warning`:
                 Graph is not fully connected: Graf ni povsem povezan
-            C{}: false
             "for method='hessian', n_neighbors ": false
             must be greater than [n_components: false
             ' * (n_components + 3) / 2]': false

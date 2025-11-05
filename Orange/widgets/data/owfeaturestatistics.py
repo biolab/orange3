@@ -119,7 +119,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         @property
         def name(self):
             return {self.ICON: '',
-                    self.NAME: 'Name',
+                    self.NAME: 'Column',
                     self.DISTRIBUTION: 'Distribution',
                     self.CENTER: 'Mean',
                     self.MODE: 'Mode',
@@ -330,11 +330,11 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
         modes = [var.str_val(val)
                  for var, val in zip(self.variables, self._mode)]
         metas = np.vstack((names, modes)).T
-        meta_attrs = [StringVariable('Feature'), StringVariable('Mode')]
+        meta_attrs = [StringVariable('Column'), StringVariable('Mode')]
 
         domain = Domain(attributes=attrs, metas=meta_attrs)
         statistics = Table.from_numpy(domain, x, metas=metas)
-        statistics.name = f'{self.table.name} (Feature Statistics)'
+        statistics.name = f'{self.table.name} (Column Statistics)'
         return statistics
 
     def __compute_stat(self, matrices, discrete_f=None, continuous_f=None,
@@ -733,9 +733,10 @@ class DistributionDelegate(NoFocusRectDelegate):
 
 
 class OWFeatureStatistics(widget.OWWidget):
-    name = 'Feature Statistics'
-    description = 'Show basic statistics for data features.'
+    name = 'Column Statistics'
+    description = 'Show basic statistics for columns.'
     icon = 'icons/FeatureStatistics.svg'
+    keywords = 'feature, variable'
 
     class Inputs:
         data = Input('Data', Table, default=True)
