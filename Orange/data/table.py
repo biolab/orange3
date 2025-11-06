@@ -1320,6 +1320,9 @@ class Table(Sequence, Storage):
     def __len__(self):
         return self.X.shape[0]
 
+    def __bool__(self):
+        return bool(self.X.size or self._Y.size or self.metas.size)
+
     def __str__(self):
         return "[" + ",\n ".join(str(ex) for ex in self) + "]"
 
