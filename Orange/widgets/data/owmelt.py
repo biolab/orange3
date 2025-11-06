@@ -71,6 +71,9 @@ class OWMelt(widget.OWWidget):
     class Outputs:
         data = widget.Output("Data", Table, dynamic=False)
 
+    class Error(widget.OWWidget.Error):
+        nothing_to_melt = Msg("No features to melt")
+
     class Information(widget.OWWidget.Information):
         no_suitable_features = Msg(
             "No columns with unique values\n"
@@ -169,11 +172,14 @@ class OWMelt(widget.OWWidget):
         self.Error.clear()
         if self.data:
             output = self._reshape_to_long()
-            self.Outputs.data.send(output)
-            self._store_output_desc(output)
-        else:
-            self.Outputs.data.send(None)
-            self._output_desc = None
+            if output is not None:
+                self.Outputs.data.send(output)
+                self._store_output_desc(output)
+                return
+            else:
+                self.Error.nothing_to_melt()
+        self.Outputs.data.send(None)
+        self._output_desc = None
 
     def send_report(self):
         self.report_items("Settings", (
@@ -194,6 +200,8 @@ class OWMelt(widget.OWWidget):
     def _reshape_to_long(self):
         # Get a mask with columns used for data
         useful_vars = self._get_useful_vars()
+        if not np.any(useful_vars):
+            return None
         item_names = self._get_item_names(useful_vars)
         n_useful = len(item_names)
 

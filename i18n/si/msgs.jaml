@@ -6579,6 +6579,8 @@ widgets/data/owmelt.py:
             Data: Podatki
         class `Outputs`:
             Data: Podatki
+        class `Error`:
+            No features to melt: Ni stolpcev za raztapljanje
         class `Information`:
             No columns with unique values\n: Ni stolpcev z neponovljenimi vrednostmi.\n
             Only columns with unique valules are useful for row identifiers.: Kot identifikator vrstice so uporabni le stolpci, v katerih se vrednosti ne ponavljajo.
