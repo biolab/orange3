@@ -32,6 +32,7 @@ from AnyQt.QtWidgets import (
 from AnyQt.QtGui import QKeySequence
 from AnyQt.QtCore import Qt, pyqtSignal as Signal, pyqtProperty as Property
 
+from orangecanvas.localization import pl
 from orangewidget.utils.combobox import ComboBoxSearch
 
 import Orange
@@ -44,7 +45,6 @@ from Orange.widgets.utils import (
     itemmodels, vartype, ftry, unique_everseen as unique
 )
 from Orange.widgets.utils.sql import check_sql_input
-from Orange.widgets import report
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import OWWidget, Msg, Input, Output
 from Orange.widgets.utils.concurrent import ConcurrentWidgetMixin, TaskState
@@ -822,8 +822,7 @@ class OWFeatureConstructor(OWWidget, ConcurrentWidgetMixin):
             else:
                 desc = "text"
             items[feature.name] = f"{feature.expression} ({desc})"
-        self.report_items(
-            report.plural("Constructed feature{s}", len(items)), items)
+        self.report_items(f"Constructed {pl(len(items), 'feature')}", items)
 
     def fix_expressions(self):
         dlg = QMessageBox(

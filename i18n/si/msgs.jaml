@@ -6016,7 +6016,7 @@ Categorical features are passed as strings
             date/time: datum/čas
             text: besedilna
             {feature.expression} ({desc}): false
-            Constructed feature{s}: Sestavljene spremenljivke
+            Constructed {pl(len(items), 'feature')}: {plsi(len(items), "Sestavljena spremenljivka|Sestavljeni spremenljivki|Sestavljene spremenljivke")}
         def `fix_expressions`:
             Fix Expressions: Popravi izraze
             "This widget's behaviour has changed. Values of categorical ": true
