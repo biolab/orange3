@@ -113,11 +113,14 @@
     "keywords": []
    },
    {
-    "text": "Feature Statistics",
+    "text": "Column Statistics",
     "doc": "visual-programming/source/widgets/data/featurestatistics.md",
     "icon": "../Orange/widgets/data/icons/FeatureStatistics.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "feature",
+     "variable"
+    ]
    },
    {
     "text": "Save Data",
