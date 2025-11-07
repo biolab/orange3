@@ -252,7 +252,7 @@ class SelectEncodingsWidget(QWidget):
         model = self.__model
         for i in range(model.rowCount()):
             item = model.item(i)
-            item.setCheckState(Qt.Checked)
+            item.setCheckState(Qt.Unchecked)
 
     @Slot()
     def reset(self):
