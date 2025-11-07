@@ -3103,10 +3103,7 @@ class ToStringTransform(Transformation):
     def transform(self, c):
         if self.variable.is_string:
             return c
-        elif self.variable.is_discrete or self.variable.is_time:
-            r = column_str_repr(self.variable, c)
-        elif self.variable.is_continuous:
-            r = as_string(c)
+        r = column_str_repr(self.variable, c)
         mask = orange_isna(self.variable, c)
         return np.where(mask, "", r)
 
