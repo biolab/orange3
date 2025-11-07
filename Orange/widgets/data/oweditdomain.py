@@ -46,6 +46,8 @@ from orangewidget.utils.listview import ListViewSearch
 
 import Orange.data
 
+from Orange.data import to_datetime
+from Orange.data.io_util import first_non_natstr, guess_datetime_format
 from Orange.preprocess.transformation import (
     Transformation, Identity, Lookup, MappingTransform
 )
@@ -3127,13 +3129,17 @@ class ToContinuousTransform(Transformation):
             raise TypeError
 
 
-def datetime_to_epoch(dti: pd.DatetimeIndex, only_time) -> np.ndarray:
-    """Convert datetime to epoch"""
-    # when dti has timezone info also the subtracted timestamp must have it
-    # otherwise subtracting fails
-    initial_ts = pd.Timestamp("1970-01-01", tz=None if dti.tz is None else "UTC")
-    delta = dti - (dti.normalize() if only_time else initial_ts)
-    return (delta / pd.Timedelta("1s")).values
+def datetime64_to_epoch(dt: np.ndarray,  only_time) -> np.ndarray:
+    """Convert datetime64 to seconds from epoch"""
+    data = dt.astype("M8[us]")
+    mask = np.isnat(data)
+    if only_time:
+        days = data.astype("M8[D]")
+        delta = data - days
+        data = np.datetime64("1970-01-01") + delta
+    data = data.astype(np.float64) / 1e6
+    data[mask] = np.nan
+    return data
 
 
 class ReparseTimeTransform(Transformation):
@@ -3148,9 +3154,15 @@ class ReparseTimeTransform(Transformation):
         # if self.formats is none guess format option is selected
         formats = list(self.tr.formats) if self.tr.formats is not None else []
         for f in formats + [None]:
-            d = pd.to_datetime(c, errors="coerce", format=f)
-            if pd.notnull(d).any():
-                return datetime_to_epoch(d, only_time=not self.tr.have_date)
+            if f is None:
+                idx = first_non_natstr(c)
+                if idx is not None:
+                    f = guess_datetime_format(c[idx])
+            if f is None:
+                continue
+            d = to_datetime(c, f, errors="coerce")
+            if (~np.isnat(d)).any():
+                return datetime64_to_epoch(d, only_time=not self.tr.have_date)
         return np.nan
 
 

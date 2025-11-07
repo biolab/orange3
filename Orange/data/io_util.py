@@ -1,11 +1,17 @@
 import codecs
 import os.path
 import subprocess
+from datetime import datetime
 from collections import defaultdict
-from typing import Tuple, Optional
+from typing import Tuple, Optional, Literal, Sequence
 
 import numpy as np
 import pandas as pd
+try:
+    from pandas.tseries.api import guess_datetime_format
+except ImportError:  # pandas < 2.2.0
+    from pandas.core.tools.datetimes import guess_datetime_format
+
 from chardet.universaldetector import UniversalDetector
 
 from Orange.data import (
@@ -13,6 +19,7 @@ from Orange.data import (
     DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable, Table,
 )
 from Orange.misc.collections import natural_sorted
+from Orange.util import ftry, frompyfunc
 
 __all__ = [
     "Compression",
@@ -22,6 +29,10 @@ __all__ = [
     "guess_data_type",
     "sanitize_variable",
     "update_origin",
+    "isnatstr",
+    "array_strptime",
+    "parse_datetime",
+    "to_datetime",
 ]
 
 
@@ -300,3 +311,92 @@ def update_origin(table: Table, file_path: str):
             new_orig = _extract_new_origin(attr, table, lookup_dirs)
             if new_orig:
                 attr.attributes["origin"] = new_orig
+
+
+isnatstr = frompyfunc(
+    (MISSING_VALUES | {"nat", "Nat", "NaT", "NAT"}).__contains__,
+    1, 1, dtype=bool,
+)
+
+
+def array_strptime(
+        values: Sequence[str],
+        format: str,
+        errors: Literal["raise", "coerce"] = "raise",
+        dtype=np.dtype("M8[us]"),
+) -> 'np.ndarray[np.datetime64]':
+    """
+    Parse an array `values` of date/time strings.
+
+    Parameters
+    ----------
+    values: Sequence[str]
+    format: str
+        A `time.strptime` date/time format string.
+    dtype: np.dtype
+        The return dtype
+    errors: Literal["raise", "coerce"]
+        How to treat parse errors.
+    """
+    values = np.asarray(values, dtype=object)
+    out = np.full(values.shape, np.datetime64("NaT"), dtype=dtype)
+    if errors == "raise":
+        f = np.frompyfunc(datetime.strptime, 2, 1)
+    elif errors == "coerce":
+        f = np.frompyfunc(ftry(datetime.strptime, ValueError, np.datetime64("NaT")), 2, 1)
+    else: # pragma: no cover
+        raise TypeError(f"Invalid 'errors' argument {errors}")
+    na_mask = isnatstr(values)
+    return f(values, format, where=~na_mask, out=out, casting="unsafe")
+
+
+def first_non_natstr(c: Sequence[str]) -> int | None:
+    """Return first element of `c` that is not a NaT string."""
+    mask = isnatstr(c)
+    idxs = np.flatnonzero(~mask)
+    if idxs.size:
+        return int(idxs[0])
+    return None
+
+
+def parse_datetime(
+        values: Sequence[str],
+        format: str | None = None,
+        errors: Literal["raise", "coerce"] = "raise",
+        dtype=np.dtype("M8[us]"),
+) -> 'np.ndarray[np.datetime64]':
+    values = np.asarray(values, dtype=object)
+    if format is None:
+        idx = first_non_natstr(values)
+        if idx is not None:
+            format = guess_datetime_format(values[idx])
+        if format is None:  # pragma: no cover
+            raise ValueError("Cannot guess date/time format")
+    return array_strptime(values, format, errors=errors, dtype=dtype)
+
+
+def to_datetime(
+        values: Sequence[str],
+        format: str | None = None,
+        errors: Literal["raise", "coerce"] = "raise",
+) -> "np.ndarray[np.datetime64]":
+    """
+    Similar to `pandas.to_datetime` but support parsing years before 1677
+    and after 2262.
+
+    https://pandas.pydata.org/pandas-docs/stable/user_guide/timeseries.html#timeseries-timestamp-limits
+    """
+    try:
+        # try with errors="raise" to catch OutOfBoundsDatetime, even if errors was
+        # "coerce"
+        return (pd.to_datetime(values, format=format, errors="raise", utc=True)
+                .values.astype("M8[us]"))
+    except pd.errors.OutOfBoundsDatetime:
+        # slower path
+        return parse_datetime(values, format, errors=errors)
+    except Exception:  # pylint: disable=broad-except
+        if errors != "raise":
+            return (pd.to_datetime(values, format=format, errors=errors, utc=True)
+                    .values.astype("M8[us]"))
+        else:
+            raise
