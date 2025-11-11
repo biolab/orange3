@@ -14,10 +14,11 @@ from AnyQt.QtCore import pyqtSlot as Slot
 
 DEFAULT_ENCODINGS = [
     "utf-8", "utf-16", "utf-32",
-    "iso8859-1",  # latin 1
-    "shift_jis", "iso2022_jp",
-    "gb18030",
-    "euc_kr",
+    "iso8859-1", "cp1252",  # W Europe
+    "iso8859-2", "cp1250",  # CE Europe
+    "shift_jis", "iso2022_jp",  # Japanese
+    "gb18030",  # Chinese
+    "euc_kr",  # Korean
 ]
 
 ENCODING_DISPLAY_NAME = (
