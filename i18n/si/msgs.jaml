@@ -197,8 +197,8 @@ util.py:
             unsafe: false
 version.py:
     3.40.0: false
-    3.40.0.dev0+518d430: false
-    518d4303824b02791f0b7eaff6ec90fc9d421e68: false
+    3.40.0.dev0+e7d811b: null
+    e7d811bac580723c707decd32c550a75874dc9c8: null
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -5554,6 +5554,29 @@ widgets/data/owdiscretize.py:
 widgets/data/oweditdomain.py:
     V: false
     H: false
+    "%a  Weekday abbreviated name
+%A  Weekday full name
+%w  Weekday as a number (0=Sunday, 6=Saturday)
+%d  Day of the month (01-31)
+%b  Month abbreviated name
+%B  Month full name
+%m  Month as a number (01-12)
+%y  Year without century (00-99)
+%Y  Year with century
+%H  Hour (00-23)
+%I  Hour (01-12)
+%p  AM or PM
+%M  Minute (00-59)
+%S  Second (00-59)
+%f  Microsecond (000000-999999)
+%z  UTC offset in the form +HHMM or -HHMM
+%Z  Time zone name
+%j  Day of the year (001-366)
+%U  Week number of the year (Sunday as the first day of the week)
+%W  Week number of the year (Monday as the first day of the week)
+%c  Locale's appropriate date and time representation
+%x  Locale's appropriate date representation
+%X  Locale's appropriate time representation": false
     class `Categorical`:
         Categorical: false
         name: false
@@ -5733,9 +5756,16 @@ widgets/data/oweditdomain.py:
         def `_merge_categories`:
             Import Options: Združevanje
     class `TimeVariableEditor`:
+        Custom format: false
         def `__init__`:
             Detect automatically: Zaznaj samodejno
+            custom-format-line-edit: false
+            %Y-%m-%d %H:%M:%S: false
             Format:: Oblika:
+            Custom format:: Prilagojen format:
+        def `get_data`:
+            %(-?)d|%(b|B)|%(-?)m|%(y|Y)|%(-?)j|%(-?)U|%(-?)W|%(a|A)|%w: false
+            %(-?)H|%(-?)I|%p|%(-?)M|%(-?)S|%f: false
     class `VariableEditDelegate`:
         categorical: kategorično
         numeric: številsko

@@ -2,6 +2,7 @@
 # pylint: disable=all
 import pickle
 import unittest
+from datetime import datetime, timezone
 from functools import partial
 from itertools import product, chain
 from unittest import TestCase
@@ -98,6 +99,13 @@ class TestReport(TestCase):
         for tr in (AsContinuous(), AsCategorical(), AsTime()):
             t = report_transform(var, [tr])
             self.assertIn("→ (", t)
+
+
+def enter_text(widget: QLineEdit, text: str):
+    widget.selectAll()
+    QTest.keyClick(widget, Qt.Key.Key_Delete)
+    QTest.keyClicks(widget, text)
+    QTest.keyClick(widget, Qt.Key.Key_Return)
 
 
 class TestOWEditDomain(WidgetTest):
@@ -257,13 +265,6 @@ class TestOWEditDomain(WidgetTest):
         self.widget.domain_view.setCurrentIndex(idx)
         editor = self.widget.findChild(ContinuousVariableEditor)
 
-        def enter_text(widget, text):
-            # type: (QLineEdit, str) -> None
-            widget.selectAll()
-            QTest.keyClick(widget, Qt.Key_Delete)
-            QTest.keyClicks(widget, text)
-            QTest.keyClick(widget, Qt.Key_Return)
-
         enter_text(editor.name_edit, "iris")
         self.widget.commit()
         self.assertTrue(self.widget.Error.duplicate_var_name.is_shown())
@@ -341,6 +342,35 @@ class TestOWEditDomain(WidgetTest):
         self.widget.commit()
         output = self.get_output(self.widget.Outputs.data)
         self.assertEqual(str(table[0, 4]), str(output[0, 4]))
+
+    def test_custom_format(self):
+        time_variable = StringVariable("Date")
+        data = [
+            ["2024-001"],
+            ["2024-032"],
+            ["2024-150"],
+            ["2024-365"]
+        ]
+        table = Table.from_list(Domain([], metas=[time_variable]), data)
+        self.send_signal(self.widget.Inputs.data, table)
+        index = self.widget.variables_view.model().index
+        self.widget.variables_view.setCurrentIndex(index(0))
+
+        editor = self.widget.findChild(VariableEditor)
+        tc = editor.layout().currentWidget().findChild(QComboBox,
+                                                       name="type-combo")
+        # time variable editor
+        simulate.combobox_activate_item(tc, Time, Qt.ItemDataRole.UserRole)
+        le = editor.layout().currentWidget().findChild(QLineEdit, name="custom-format-line-edit")
+        enter_text(le, "%Y-%j")
+
+        self.widget.commit()
+        output = self.get_output(self.widget.Outputs.data)
+        self.assertEqual(table.metas[0, 0], "2024-001")
+        self.assertEqual(output.metas[0, 0],
+                         datetime.strptime("2024-001",
+                                           "%Y-%j").replace(
+                             tzinfo=timezone.utc).timestamp())
 
     def test_restore(self):
         iris = self.iris
@@ -1165,6 +1195,15 @@ class TestEditors(GuiTest):
         self.assertTrue(cbox.isChecked())
         w._set_unlink(False)
         self.assertFalse(cbox.isChecked())
+
+    def test_reinterpret_time_format_restore(self):
+        w = ReinterpretVariableEditor()
+        transforms = [AsTime(),
+                      StrpTime(None, ("%Y",), 1, 0),
+                      Rename("Time"),]
+        w.set_data([self.DataVectors[3]], [transforms])
+        _, [t] = w.get_data()
+        self.assertEqual(t, transforms)
 
 
 class TestModels(GuiTest):
