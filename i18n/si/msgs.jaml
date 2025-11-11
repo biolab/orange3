@@ -8212,6 +8212,7 @@ widgets/data/owtable.py:
             color_by_class: false
             Color by instance classes: Obarvaj primere glede na razred
             Selection: Izbor
+            Clear Selection: Počisti izbor
             select_rows: false
             Select full rows: Izbiraj cele vrstice
             Restore Original Order: Izvirni vrstni red
