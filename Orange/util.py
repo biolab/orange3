@@ -9,7 +9,7 @@ import functools
 import importlib.resources
 from contextlib import contextmanager
 from importlib.metadata import distribution
-from typing import TYPE_CHECKING, Callable, Union, Optional
+from typing import TYPE_CHECKING, Callable, Union, Optional, TypeVar
 from weakref import WeakKeyDictionary
 from enum import Enum as _Enum
 from functools import wraps, partial
@@ -393,6 +393,27 @@ def try_(func, default=None):
         return func()
     except Exception:  # pylint: disable=broad-except
         return default
+
+
+A = TypeVar("A")
+B = TypeVar("B")
+
+
+def ftry(
+        func: Callable[..., A],
+        error: type[BaseException] | tuple[type[BaseException]],
+        default: B
+) -> Callable[..., A | B]:
+    """
+    Wrap a `func` such that if `errors` occur `default` is returned instead.
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except error:
+            return default
+    return wrapper
 
 
 def flatten(lst):

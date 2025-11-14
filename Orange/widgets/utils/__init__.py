@@ -4,14 +4,14 @@ from collections import deque
 from contextlib import contextmanager
 from enum import Enum, IntEnum
 from typing import (
-    TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union, Tuple
+    TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union
 )
 from xml.sax.saxutils import escape
 
 from AnyQt.QtCore import QObject, Qt
 
 from Orange.data.variable import TimeVariable
-from Orange.util import deepgetattr
+from Orange.util import deepgetattr, ftry  # pylint: disable=unused-import
 
 
 def vartype(var):
@@ -102,22 +102,6 @@ def apply_all(seq, op):
     """Apply `op` on all elements of `seq`."""
     # from itertools recipes `consume`
     deque(map(op, seq), maxlen=0)
-
-
-def ftry(
-        func: Callable[..., _A],
-        error: Union[Type[BaseException], Tuple[Type[BaseException]]],
-        default: _B
-) -> Callable[..., Union[_A, _B]]:
-    """
-    Wrap a `func` such that if `errors` occur `default` is returned instead.
-    """
-    def wrapper(*args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except error:
-            return default
-    return wrapper
 
 
 def unique_everseen(iterable, key=None):

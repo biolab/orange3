@@ -156,6 +156,8 @@ util.py:
     false: false
     def `requirementsSatisfied`:
         'Invalid requirement specification: %s': false
+    A: false
+    B: false
     class `Registry`:
         def `__new__`:
             registry: false
@@ -1246,6 +1248,10 @@ data/io_util.py:
     guess_data_type: false
     sanitize_variable: false
     update_origin: false
+    isnatstr: false
+    array_strptime: false
+    parse_datetime: false
+    to_datetime: false
     class `Compression`:
         .gz: false
         .bz2: false
@@ -1285,6 +1291,29 @@ data/io_util.py:
         origin: false
     def `update_origin`:
         origin: false
+    nat: false
+    Nat: false
+    NaT: false
+    NAT: false
+    def `array_strptime`:
+        raise: false
+        coerce: false
+        M8[us]: false
+        np.ndarray[np.datetime64]: false
+        NaT: false
+        Invalid 'errors' argument {errors}: false
+        unsafe: false
+    def `parse_datetime`:
+        raise: false
+        coerce: false
+        M8[us]: false
+        np.ndarray[np.datetime64]: false
+        Cannot guess date/time format: false
+    def `to_datetime`:
+        raise: false
+        coerce: false
+        np.ndarray[np.datetime64]: false
+        M8[us]: false
 data/pandas_compat.py:
     table_from_frame: false
     table_to_frame: false
@@ -5898,10 +5927,10 @@ widgets/data/oweditdomain.py:
     nan: false
     def `as_float_or_nan`:
         unsafe: false
-    def `datetime_to_epoch`:
+    def `datetime64_to_epoch`:
+        M8[us]: false
+        M8[D]: false
         1970-01-01: false
-        UTC: false
-        1s: false
     class `ReparseTimeTransform`:
         def `transform`:
             coerce: false
@@ -11310,7 +11339,7 @@ widgets/unsupervised/owdistancematrix.py:
             </tr>: false
             </table>: false
     __main__: false
-    zoo: falaseg
+    zoo: false
 widgets/unsupervised/owdistances.py:
     Euclidean (normalized): Evklidska (normalizirana)
     Square root of summed difference between normalized values: Kvadratni koren vsote razlik med normaliziranimi vrednostmi
@@ -12583,6 +12612,9 @@ widgets/utils/encodings.py:
     utf-16: false
     utf-32: false
     iso8859-1: false
+    cp1252: false
+    iso8859-2: false
+    cp1250: false
     shift_jis: false
     iso2022_jp: false
     gb18030: false
@@ -12605,13 +12637,10 @@ widgets/utils/encodings.py:
     Western Europe (ISO Latin 1): false
     iso8859-15: false
     Western Europe (ISO-8859-15): false
-    cp1252: false
     Western Europe (Windows-1252): false
     mac_roman: false
     Western Europe (Mac OS Roman): false
-    iso8859-2: false
     Central and Eastern Europe (ISO Latin 2): false
-    cp1250: false
     Central and Eastern Europe (Windows-1250): false
     mac_latin2: false
     Central and Eastern Europe (Mac Latin-2): false
@@ -15033,7 +15062,7 @@ widgets/visualize/owsieve.py:
         Sieve Diagram: Sievov diagram
         'Visualize the observed and expected frequencies ': 'Prikaz pričakovanih in opaženih pogostosti '
         for a combination of values.: za kombinacije spremenljivk.
-        icons/SieveDiagram.svg: falase
+        icons/SieveDiagram.svg: false
         sieve diagram: sieve diagram, grafikon
         class `Inputs`:
             Data: Podatki

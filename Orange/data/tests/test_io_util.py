@@ -1,8 +1,10 @@
 import os.path
 import unittest
+from datetime import datetime
 from tempfile import TemporaryDirectory
 
 import numpy as np
+from numpy.testing import assert_array_equal
 
 from Orange.data import (
     ContinuousVariable,
@@ -12,7 +14,7 @@ from Orange.data import (
     StringVariable,
     DiscreteVariable,
 )
-from Orange.data.io_util import update_origin
+from Orange.data.io_util import update_origin, array_strptime, to_datetime
 
 
 class TestIoUtil(unittest.TestCase):
@@ -20,6 +22,51 @@ class TestIoUtil(unittest.TestCase):
         self.assertIs(
             guess_data_type(["9", "", "98", "?", "98", "98", "98"])[2],
             ContinuousVariable)
+
+    def test_array_strptime(self):
+        a = array_strptime(["NaT", "2015"], "%Y").astype(object)
+        assert_array_equal(a, [None, datetime(2015, 1, 1)])
+        a = array_strptime(["nan", "1402-04-06"], "%Y-%d-%m").astype(object)
+        assert_array_equal(a, [None, datetime(1402, 6, 4)])
+        with self.assertRaises(ValueError):
+            array_strptime(["this is not a date"], "%Y")
+        assert_array_equal(
+            array_strptime(["this is not a date"], "%Y", errors="coerce").astype(object),
+            [None]
+        )
+
+    def test_to_datetime(self):
+        def assert_equal(a, b):
+            # convert to array of datetime objects
+            a = a.astype(object)
+            assert_array_equal(a, b)
+        assert_equal(
+            to_datetime(["1/1/2020", "2/1/2020"]),
+            [datetime(2020, 1, 1), datetime(2020, 2, 1)]
+        )
+
+        assert_equal(
+            to_datetime(["NaT", "1/1/2020", "2/1/2020"]),
+            [None, datetime(2020, 1, 1), datetime(2020, 2, 1)]
+        )
+
+        assert_equal(
+            to_datetime(["1/1/2020", "2/1/2020", "1/1/1400"]),
+            [datetime(2020, 1, 1), datetime(2020, 2, 1), datetime(1400, 1, 1)]
+        )
+
+        assert_equal(
+            to_datetime(["1|12|7000"], format="%d|%m|%Y"),
+            [datetime(7000, 12, 1)]
+        )
+
+        with self.assertRaises(ValueError):
+            to_datetime(["1012l0awd7"], format="%d|%m|%Y", errors="raise"),
+
+        assert_equal(
+            to_datetime(["1012l0awd7"], format="%d|%m|%Y", errors="coerce"),
+            [None]
+        )
 
 
 class TestUpdateOrigin(unittest.TestCase):
