@@ -742,7 +742,7 @@ class OWPivot(OWWidget):
         renamed_vars = Msg("Some variables have been renamed in some tables"
                            "to avoid duplicates.\n{}")
         too_many_values = Msg("Selected variable has too many values.")
-        no_variables = Msg("At least 1 primitive variable is required.")
+        no_variables = Msg("At least one variable is required.")
 
     settingsHandler = DomainContextHandler()
     settings_version = 2
