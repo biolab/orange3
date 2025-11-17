@@ -247,7 +247,14 @@ class TestOWDBSCAN(WidgetTest):
     def test_missing_data(self):
         w = self.widget
         with self.iris.unlocked():
-            self.iris[1:5, 1] = np.nan
+            self.iris[:5, 1] = np.nan
+        self.send_signal(w.Inputs.data, self.iris)
+        output = self.get_output(w.Outputs.annotated_data)
+        self.assertTupleEqual((150, 1), output[:, "Cluster"].metas.shape)
+
+        self.send_signal(w.Inputs.data, None)
+        with self.iris.unlocked():
+            self.iris[5:, 2] = np.nan
         self.send_signal(w.Inputs.data, self.iris)
         output = self.get_output(w.Outputs.annotated_data)
         self.assertTupleEqual((150, 1), output[:, "Cluster"].metas.shape)
