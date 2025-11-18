@@ -11882,6 +11882,8 @@ widgets/unsupervised/owmanifoldlearning.py:
             Out of memory: Premalo pomnilnika
         class `Warning`:
             Disconnected graph, embedding may not work: Graf je nepovezan, vložitev morda ne bo delovala.
+            Creating {} components\n: Računam {} komponent.\n
+            The number of components is limited by the number of variables.: Število komponent je omejeno s številom spremenljivk.
         def `migrate_settings`:
             tsne_editor: false
             init_index: false
@@ -11900,7 +11902,6 @@ widgets/unsupervised/owmanifoldlearning.py:
             "for method='hessian', n_neighbors ": false
             must be greater than [n_components: false
             ' * (n_components + 3) / 2]': false
-            {}: false
         def `_create_output_table`:
             C{}: false
         def `send_report`:

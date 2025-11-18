@@ -81,13 +81,52 @@ class TestOWManifoldLearning(WidgetTest):
     def test_n_components(self):
         """Check the output for various numbers of components"""
         self.send_signal(self.widget.Inputs.data, self.iris)
-        for i in range(self.widget.n_components_spin.minimum(),
-                       self.widget.n_components_spin.maximum()):
+        for i in range(1, 5):
             self.assertEqual(self.widget.data, self.iris)
-            self.widget.n_components_spin.setValue(i)
-            self.widget.n_components_spin.onEnter()
+            self.widget.controls.n_components.setValue(i)
             self.click_apply()
             self._compare_tables(self.get_output(self.widget.Outputs.transformed_data), i)
+
+    def test_too_few_attributes(self):
+        widget = self.widget
+        widget.auto_apply = True
+        spin = widget.controls.n_components
+        widget.n_components = 3
+
+        self.send_signal(self.iris)
+        self.assertFalse(widget.Warning.less_components.is_shown())
+        self.assertEqual(self.get_output().metas.shape[1], 3)
+        self.assertEqual(widget.act_components, 3)
+
+        self.send_signal(self.iris[:, :2])
+        self.assertTrue(widget.Warning.less_components.is_shown())
+        self.assertEqual(self.get_output().metas.shape[1], 2)
+        self.assertEqual(widget.act_components, 2)
+
+        self.send_signal(None)
+        self.assertFalse(widget.Warning.less_components.is_shown())
+        self.assertIsNone(self.get_output())
+
+        self.send_signal(self.iris[:, :2])
+        self.assertTrue(widget.Warning.less_components.is_shown())
+        self.assertEqual(self.get_output().metas.shape[1], 2)
+        self.assertEqual(widget.act_components, 2)
+
+        self.send_signal(self.iris)
+        self.assertFalse(widget.Warning.less_components.is_shown())
+        self.assertEqual(self.get_output().metas.shape[1], 3)
+        self.assertEqual(widget.act_components, 3)
+
+        spin.setValue(6)
+        assert widget.n_components == 6
+        self.assertTrue(widget.Warning.less_components.is_shown())
+        self.assertEqual(self.get_output().metas.shape[1], 4)
+        self.assertEqual(widget.act_components, 4)
+
+        spin.setValue(4)
+        self.assertFalse(widget.Warning.less_components.is_shown())
+        self.assertEqual(self.get_output().metas.shape[1], 4)
+        self.assertEqual(widget.act_components, 4)
 
     def test_manifold_methods(self):
         """Check output for various manifold methods"""
