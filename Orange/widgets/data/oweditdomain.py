@@ -2738,10 +2738,9 @@ def table_column_data(
 
     if dtype is None:
         if isinstance(var, Orange.data.TimeVariable):
-            dtype = np.dtype("M8[us]")
-            col = col * 1e6
+            dtype = np.dtype(float, metadata={"__formatter": var.repr_val})
         elif isinstance(var, Orange.data.ContinuousVariable):
-            dtype = np.dtype(float)
+            dtype = np.dtype(float, metadata={"__formatter": var.repr_val})
         elif isinstance(var, Orange.data.DiscreteVariable):
             _values = tuple(var.values)
             _n_values = len(_values)
@@ -2753,9 +2752,7 @@ def table_column_data(
         else:
             assert False
     mask = orange_isna(var, col)
-
-    if dtype != col.dtype:
-        col = col.astype(dtype)
+    col = col.astype(dtype)
 
     if col.base is not None:
         col = col.copy()
@@ -3168,13 +3165,12 @@ def apply_reinterpret_s(var: Orange.data.StringVariable, tr, data: MArray):
 @apply_reinterpret.register(Orange.data.TimeVariable)
 def apply_reinterpret_t(var: Orange.data.TimeVariable, tr, data):
     if isinstance(tr, AsCategorical):
+        _, names = categorical_from_vector(data)
         values, _ = categorize_unique(data)
-        or_values = values.astype(float) / 1e6
-        mapping = {v: i for i, v in enumerate(or_values)}
+        mapping = {v: i for i, v in enumerate(values)}
         tr = LookupMappingTransform(var, mapping)
-        values = tuple(as_string(values))
         rvar = Orange.data.DiscreteVariable(
-            name=var.name, values=values, compute_value=tr
+            name=var.name, values=names, compute_value=tr
         )
     elif isinstance(tr, AsContinuous):
         rvar = Orange.data.TimeVariable(
