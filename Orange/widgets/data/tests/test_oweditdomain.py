@@ -37,7 +37,7 @@ from Orange.widgets.data.oweditdomain import (
     RealVector, TimeVector, StringVector, make_dict_mapper,
     LookupMappingTransform, as_float_or_nan, column_str_repr,
     GroupItemsDialog, VariableListModel, StrpTime, RestoreOriginal, BaseEditor,
-    RestoreWarningRole
+    RestoreWarningRole, TimeUnit
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
@@ -959,7 +959,7 @@ class TestEditors(GuiTest):
     ]
     ReinterpretTransforms = {
         Categorical: [AsCategorical], Real: [AsContinuous],
-        Time: [AsTime, partial(StrpTime, 'Detect automatically', None, 1, 1)],
+        Time: [AsTime],
         String: [AsString]
     }
 
@@ -1205,6 +1205,13 @@ class TestEditors(GuiTest):
         _, [t] = w.get_data()
         self.assertEqual(t, transforms)
 
+    def test_reinterpret_time_unit_restore(self):
+        w = ReinterpretVariableEditor()
+        transforms = [AsTime(TimeUnit("Year", "Y0")),
+                      Rename("Time"), ]
+        w.set_data([self.DataVectors[1]], [transforms])
+        _, [t] = w.get_data()
+        self.assertEqual(t, transforms)
 
 class TestModels(GuiTest):
     def test_variable_model(self):
@@ -1489,13 +1496,12 @@ class TestReinterpretTransforms(TestCase):
         metas = [t for t in times] + [list(range(len(x))) for x in times]
         table = Table(domain, np.empty((len(times[0]), 0)), metas=np.array(metas).transpose())
 
-        tr = AsTime()
+        # tr = AsTime()
         dtr = []
         for v, f in zip(domain.metas, chain(formats, formats)):
             strp = StrpTime(f, *TimeVariable.ADDITIONAL_FORMATS[f])
-            vtr = apply_transform_var(
-                apply_reinterpret(v, tr, table_column_data(table, v)), [strp]
-            )
+            tr = AsTime(strp)
+            vtr = apply_reinterpret(v, tr, table_column_data(table, v))
             dtr.append(vtr)
 
         ttable = table.transform(Domain([], metas=dtr))
@@ -1510,14 +1516,11 @@ class TestReinterpretTransforms(TestCase):
         tvars = []
         for v in domain.metas:
             for i, tr in enumerate(
-                [AsContinuous(), AsCategorical(), AsTime(), AsString()]
+                [AsContinuous(), AsCategorical(), AsTime(StrpTime("Detect automatically", None, 1, 1)), AsString()]
             ):
                 vtr = apply_reinterpret(v, tr, table_column_data(table, v)).renamed(
                     f"{v.name}_{i}"
                 )
-                if isinstance(tr, AsTime):
-                    strp = StrpTime("Detect automatically", None, 1, 1)
-                    vtr = apply_transform_var(vtr, [strp])
                 tvars.append(vtr)
         tdomain = Domain([], metas=tvars)
         ttable = table.transform(tdomain)
@@ -1564,13 +1567,10 @@ class TestReinterpretTransforms(TestCase):
 
     def test_to_time_variable(self):
         table = self.data
-        tr = AsTime()
+        tr = AsTime(None)
         dtr = []
         for v in table.domain:
-            strp = StrpTime("Detect automatically", None, 1, 1)
-            vtr = apply_transform_var(
-                apply_reinterpret(v, tr, table_column_data(table, v)), [strp]
-            )
+            vtr = apply_reinterpret(v, tr, table_column_data(table, v))
             dtr.append(vtr)
         ttable = table.transform(Domain([], metas=dtr))
         for var in ttable.domain:
