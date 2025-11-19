@@ -3210,6 +3210,7 @@ class ToStringTransform(Transformation):
     """
     Transform a variable to string.
     """
+    InheritEq = True
     def transform(self, c):
         if self.variable.is_string:
             return c
@@ -3219,6 +3220,7 @@ class ToStringTransform(Transformation):
 
 
 class ToContinuousTransform(Transformation):
+    InheritEq = True
     def transform(self, c):
         if self.variable.is_time:
             return c
