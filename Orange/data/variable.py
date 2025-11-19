@@ -1123,9 +1123,15 @@ class TimeVariable(ContinuousVariable):
         if val < 0:
             if microseconds:
                 seconds, microseconds = seconds - 1, int(1e6) + microseconds
-            date = datetime.fromtimestamp(0, tz=self.timezone) + timedelta(seconds=seconds)
+            try:
+                date = datetime.fromtimestamp(0, tz=self.timezone) + timedelta(seconds=seconds)
+            except (OverflowError, ValueError):
+                return "?"
         else:
-            date = datetime.fromtimestamp(seconds, tz=self.timezone)
+            try:
+                date = datetime.fromtimestamp(seconds, tz=self.timezone)
+            except (OverflowError, ValueError):
+                return "?"
         date = str(date.replace(microsecond=microseconds))
 
         if self.have_date and not self.have_time:

@@ -756,6 +756,11 @@ class TestTimeVariable(VariableTest):
         var = TimeVariable('time')
         self.assertEqual(var.repr_val(Value(var, 416.3)), '416.3')
 
+    def test_repr_value_out_of_bounds(self):
+        var = TimeVariable("T", have_date=True, have_time=True)
+        self.assertEqual(var.repr_val(1e300), "?")
+        self.assertEqual(var.repr_val(-1e300), "?")
+
     def test_have_date_have_time_in_construct(self):
         """Test if have_time and have_date is correctly set"""
         var = TimeVariable('time', have_date=1)
