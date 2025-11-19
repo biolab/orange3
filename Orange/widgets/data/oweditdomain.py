@@ -2188,7 +2188,7 @@ class OWEditDomain(widget.OWWidget):
             "Categories mapping for {} does not apply to current input"
         )
 
-    settings_version = 4
+    settings_version = 5
 
     _domain_change_hints: dict = Setting({}, schema_only=True)
     _merge_dialog_settings = Setting({}, schema_only=True)
@@ -2696,6 +2696,19 @@ class OWEditDomain(widget.OWWidget):
                 (name, desc[:-1]): trs
                 for (name, desc), trs in settings["_domain_change_hints"].items()
             }
+        if version < 5 and "_domain_change_hints" in settings:
+            hints = settings["_domain_change_hints"]
+            for k, trs in list(hints.items()):
+                r = findf(enumerate(trs), lambda tr: tr[1][0] == "StrpTime")
+                if r is None:
+                    continue
+                i, strp = r
+                trs.pop(i)
+                r = findf(enumerate(trs), lambda tr: tr[1][0] == "AsTime")
+                if r is None:
+                    continue
+                i, _ = r
+                trs[i] = ("AsTime", (strp,))
 
 
 def enumerate_columns(

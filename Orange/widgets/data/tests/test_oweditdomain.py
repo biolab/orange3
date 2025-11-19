@@ -651,8 +651,8 @@ class TestOWEditDomain(WidgetTest):
             {('Real', ('sepal length', (1, 'f'), ())):
                  [('AsString', ())],
              ('Real', ('sepal width', (1, 'f'), ())):
-                 [('AsTime', ()),
-                  ('StrpTime', ('Detect automatically', None, 1, 1))],
+                 [('AsTime', (('StrpTime',
+                               ('Detect automatically', None, 1, 1)),))],
              ('Real', ('petal width', (1, 'f'), ())):
                  [('Annotate', ((('a', 'b'),),))]}
         )
@@ -707,6 +707,22 @@ class TestOWEditDomain(WidgetTest):
                     [('AsString', ())]}
         )
 
+    def test_migrate_settings_4_to_5(self):
+        settings = {
+            '__version__': 4,
+            '_domain_change_hints': {
+                ('String', (), False):
+                    [('AsTime', ()), ('StrpTime', ('2021', ('%Y',), 1, 0))],
+            },
+            '_merge_dialog_settings': {},
+            'controlAreaVisible': True}
+        widget = self.create_widget(OWEditDomain, stored_settings=settings)
+        self.assertEqual(
+            widget._domain_change_hints,
+            {('String', (), False):
+                [('AsTime', (('StrpTime', ('2021', ('%Y',), 1, 0)),))],
+            },
+        )
 
 class TestEditors(GuiTest):
     def test_variable_editor(self):
@@ -1198,8 +1214,7 @@ class TestEditors(GuiTest):
 
     def test_reinterpret_time_format_restore(self):
         w = ReinterpretVariableEditor()
-        transforms = [AsTime(),
-                      StrpTime(None, ("%Y",), 1, 0),
+        transforms = [AsTime(StrpTime(None, ("%Y",), 1, 0)),
                       Rename("Time"),]
         w.set_data([self.DataVectors[3]], [transforms])
         _, [t] = w.get_data()
