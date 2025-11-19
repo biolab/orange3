@@ -1575,6 +1575,14 @@ class ContinuousVariableEditor(VariableEditor):
     pass
 
 
+class ComboBox(QComboBox):
+    # QComboBox.findData does not work for (named)tuples?
+    def findData(self, data, role=Qt.ItemDataRole.UserRole) -> int:
+        idx = findf(range(self.count()), lambda i: self.itemData(i, role) == data)
+        if idx is None:
+            idx = -1
+        return idx
+
 class TimeVariableEditor(VariableEditor):
     CUSTOM_FORMAT_LABEL = "Custom format"
     FORMATS = [("Detect automatically", (None, 1, 1))] + list(
@@ -1598,7 +1606,7 @@ class TimeVariableEditor(VariableEditor):
         super().__init__(parent, **kwargs)
         form = self.layout().itemAt(0)
 
-        self.format_cb = QComboBox()
+        self.format_cb = ComboBox()
         self._formats_model = create_list_model([
             {Qt.DisplayRole: name, Qt.UserRole: StrpTime(name, *data)}
             for name, data in self.FORMATS
@@ -1682,6 +1690,7 @@ class TimeVariableEditor(VariableEditor):
                     trf = StrpTime(None, (custom_text,), have_date, have_time)
             else:
                 trf = self.format_cb.currentData()
+                assert trf is not None
             trs.insert(0, trf)
         return var, trs
 

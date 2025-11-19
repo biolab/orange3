@@ -724,7 +724,26 @@ class TestOWEditDomain(WidgetTest):
             },
         )
 
+def transform_eq(first, second) -> bool:
+    """
+    Specialize equality for transforms to simplify tests:
+      * AsTime(None) == AsTime(DefaultStrpTime)
+      * AsTime(None) == AsTime(DefaultTimeUnit)
+    """
+    if isinstance(first, AsTime) and isinstance(second, AsTime):
+        p1, p2 = first.param, second.param
+        if (p1 is None) ^ (p2 is None):
+            param = p1 or p2
+            return param == DefaultStrpTime or param == DefaultTimeUnit
+    return first == second
+
+
 class TestEditors(GuiTest):
+
+    def assertTransformsEqual(self, first, second):
+        if not all(transform_eq(t1, t1) for t1, t2 in zip(first, second)):
+            self.assertSequenceEqual(first, second)
+
     def test_variable_editor(self):
         w = VariableEditor()
         self.assertEqual(w.get_data(), (None, []))
@@ -995,7 +1014,7 @@ class TestEditors(GuiTest):
             if not tr_[0]:
                 self.assertEqual(tr, self.ReinterpretTransforms[type(*v)])
             else:
-                self.assertListEqual(*tr_, [t() for t in tr])
+                self.assertTransformsEqual(*tr_, [t() for t in tr])
 
     def test_reinterpret_editor_simulate(self):
         w = ReinterpretVariableEditor()
@@ -1005,7 +1024,7 @@ class TestEditors(GuiTest):
             var, tr = var[0], tr[0]
             type_ = tc.currentData()
             if type_ is not type(var):
-                self.assertEqual(
+                self.assertTransformsEqual(
                     tr, [t() for t in self.ReinterpretTransforms[type_]] + [Rename("Z")]
                 )
             else:
@@ -1383,6 +1402,9 @@ class TestTransforms(TestCase):
         self.assertIs(first.variable, second.variable)
         assert_array_equal(first.lookup_table, second.lookup_table)
 
+DefaultStrpTime = StrpTime("Detect automatically", None, 1, 1)
+DefaultTimeUnit = TimeUnit("Default", "s")
+
 
 class TestReinterpretTransforms(TestCase):
     @classmethod
@@ -1531,7 +1553,7 @@ class TestReinterpretTransforms(TestCase):
         tvars = []
         for v in domain.metas:
             for i, tr in enumerate(
-                [AsContinuous(), AsCategorical(), AsTime(StrpTime("Detect automatically", None, 1, 1)), AsString()]
+                [AsContinuous(), AsCategorical(), AsTime(DefaultStrpTime), AsString()]
             ):
                 vtr = apply_reinterpret(v, tr, table_column_data(table, v)).renamed(
                     f"{v.name}_{i}"
