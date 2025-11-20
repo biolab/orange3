@@ -11581,7 +11581,7 @@ widgets/unsupervised/owlouvainclustering.py:
         class `Outputs`:
             Network: Mreža
         class `Information`:
-            Press commit to recompute clusters and send new data: Pritisnite Uveljavi za izračun novih gruč in pošiljanje podatkov
+            Press Apply to recompute clusters and send new data: Pritisnite Uveljavi za izračun novih gruč in pošiljanje podatkov
         class `Error`:
             No features in data: Podatki ne vsebujejo spremenljivk
         def `__init__`:

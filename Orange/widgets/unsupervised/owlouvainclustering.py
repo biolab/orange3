@@ -73,7 +73,7 @@ class OWLouvainClustering(widget.OWWidget):
     auto_commit = Setting(False)
 
     class Information(widget.OWWidget.Information):
-        modified = Msg("Press commit to recompute clusters and send new data")
+        modified = Msg("Press Apply to recompute clusters and send new data")
 
     class Error(widget.OWWidget.Error):
         empty_dataset = Msg("No features in data")
