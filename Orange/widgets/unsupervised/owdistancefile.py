@@ -100,7 +100,9 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
 
         filename, _ = QFileDialog.getOpenFileName(
             self, 'Open Distance File', start_file,
-            "Excel File (*.xlsx);;Distance File (*.dst)")
+            "All Readable Files (*.xlsx *.dst);;"
+            "Excel File (*.xlsx);;"
+            "Distance File (*.dst)")
         if not filename:
             return
         self.add_path(filename)
