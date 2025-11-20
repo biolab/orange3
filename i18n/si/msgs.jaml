@@ -13642,6 +13642,8 @@ widgets/utils/plot/owplotgui_obsolete.py:
             Dark: false
 widgets/utils/save/owsavebase.py:
     ~{os.sep}: false
+    darwin: false
+    win32: false
     class `OWSaveBase`:
         class `Information`:
             Empty input; nothing was saved.: Ni podatkov.
@@ -13678,8 +13680,6 @@ widgets/utils/save/owsavebase.py:
             stored_path: false
             filename: false
             stored_name: false
-        darwin: false
-        win32: false
         def `get_save_filename`:
             Save File: Shrani datoteko
             ;;: false
