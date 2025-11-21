@@ -53,7 +53,6 @@ from pandas import CategoricalDtype
 from pandas.api import types as pdtypes
 
 from orangecanvas.utils import assocf
-from orangecanvas.utils.qobjref import qobjref_weak
 from orangewidget.utils import enum_as_int
 
 import Orange.data
@@ -978,8 +977,8 @@ class OWCSVFileImport(OWUrlDropBase):
         path = item.path()
         options = item.options()
 
-        def onfinished(dlg: CSVImportDialog):
-            if dlg.result() != QDialog.Accepted:
+        def onfinished(result: int):
+            if result != QDialog.Accepted:
                 return
             newoptions = dlg.options()
             item.setData(newoptions, ImportItem.OptionsRole)
@@ -988,11 +987,12 @@ class OWCSVFileImport(OWUrlDropBase):
             if newoptions != options:
                 self._invalidate()
 
-        self._activate_import_dialog_for_item(item, finished=onfinished)
+        dlg = self._activate_import_dialog_for_item(item)
+        dlg.finished.connect(onfinished)
 
     def _activate_import_dialog_for_item(
-            self, item: ImportItem, finished: Callable[[CSVImportDialog], None]
-    ):
+            self, item: ImportItem,
+    ) -> CSVImportDialog:
         dlg = CSVImportDialog(
             self, windowTitle="Import Options", sizeGripEnabled=True,
         )
@@ -1010,15 +1010,12 @@ class OWCSVFileImport(OWUrlDropBase):
         if isinstance(options, Options):
             dlg.setOptions(options)
 
-        dialog_ref = qobjref_weak(dlg)
-
         def onfinished():
-            dlg = dialog_ref()
             settings.setValue("size", dlg.size())
-            finished(dlg)
 
         dlg.finished.connect(onfinished)
         dlg.show()
+        return dlg
 
     def set_selected_file(self, filename, options=None):
         """
@@ -1357,12 +1354,13 @@ class OWCSVFileImport(OWUrlDropBase):
         item.setPath(path)
         item.setOptions(options)
 
-        def finished(dlg: CSVImportDialog):
-            if dlg.result() != QDialog.Accepted:
+        def finished(result: int):
+            if result != QDialog.Accepted:
                 return
             self.set_selected_file(path, dlg.options())
 
-        self._activate_import_dialog_for_item(item, finished)
+        dlg = self._activate_import_dialog_for_item(item)
+        dlg.finished.connect(finished)
 
     @classmethod
     def migrate_settings(cls, settings, version):
