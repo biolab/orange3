@@ -2617,12 +2617,11 @@ modelling/linear.py:
         classification: false
         regression: false
         def `_change_kwargs`:
+            classification: false
+            regression: false
+            {pref}_{attr}: false
             loss: false
-            classification_loss: false
             epsilon: false
-            classification_epsilon: false
-            regression_loss: false
-            regression_epsilon: false
 modelling/neural_network.py:
     NNLearner: false
     class `NNLearner`:
@@ -10789,6 +10788,9 @@ widgets/model/owstack.py:
         class `Inputs`:
             Learners: Modeli
             Aggregate: Združevalnik
+        def `create_learner`:
+            preprocessors: false
+            aggregate: false
         def `get_learner_parameters`:
             Base learners: Osnovni modeli
             Aggregator: Združevalnik
