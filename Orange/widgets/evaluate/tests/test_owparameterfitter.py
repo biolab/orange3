@@ -33,11 +33,11 @@ class TestOWParameterFitter(WidgetTest):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls._heart = Table("heart_disease")
-        cls._housing = Table("housing")
+        cls._heart = Table("heart_disease")[::10]
+        cls._housing = Table("housing")[::10]
         cls._naive_bayes = NaiveBayesLearner()
         cls._pls = PLSRegressionLearner()
-        cls._rf = RandomForestLearner()
+        cls._rf = RandomForestLearner(n_estimators=3)
         cls._dummy = DummyLearner()
 
     def setUp(self):
@@ -359,10 +359,10 @@ class TestOWParameterFitter(WidgetTest):
         self.assertEqual(controls.parameter_index.currentText(),
                          "Number of trees")
         self.assertEqual(controls.minimum.value(), 1)
-        self.assertEqual(controls.maximum.value(), 10)
+        self.assertEqual(controls.maximum.value(), 3)
         self.assertEqual(self.widget.parameter_index, 0)
         self.assertEqual(self.widget.minimum, 1)
-        self.assertEqual(self.widget.maximum, 10)
+        self.assertEqual(self.widget.maximum, 3)
 
     def test_visual_settings(self):
         graph = self.widget.graph
