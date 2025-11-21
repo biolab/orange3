@@ -11234,7 +11234,9 @@ widgets/unsupervised/owdistancefile.py:
             Cannot find the directory with documentation datasets: Ne najdem imenika z datotekami iz dokumentacije
             ~/: false
             Open Distance File: Odpri datoteko razdalj
-            Excel File (*.xlsx);;Distance File (*.dst): Excelova datoteka (*.xlsx); Razdalje (*.dst)
+            All Readable Files (*.xlsx *.dst);;: Vse berljive datoteke (*.xlsx *.dst);;
+            Excel File (*.xlsx);;: Excelova datoteka (*.xlsx);;
+            Distance File (*.dst): Razdalje (*.dst)
         def `open_file`:
             .: false
             (none): (prazno)
