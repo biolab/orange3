@@ -6738,7 +6738,7 @@ widgets/data/owneighbors.py:
             Neighbors: Sosedi
         class `Info`:
             Input data includes reference instance(s).\n: Vhodni podatki vključujejo referenčne primere.\n
-            Reference instances are excluded from the output.: Referenčni primeri niso vključeni med izhodne.
+            Reference instances are not considered as neighbours.: Referenčni primeri niso šteti za sosede.
         class `Warning`:
             Every data instance is same as some reference: Vsi podatki se pojavijo tudi med referenčnimi.
         class `Error`:
@@ -6749,6 +6749,8 @@ widgets/data/owneighbors.py:
             n_neighbors: false
             Limit number of neighbors to:: Omeji število sosedov na:
             limit_neighbors: false
+            include_reference: false
+            Include reference example: Vključi referenčni primer
         def `commit`:
             ' (neighbors)': ' (sosedi)'
         def `_data_with_similarity`:

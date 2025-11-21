@@ -1348,7 +1348,7 @@ class Table(Sequence, Storage):
           appears in multiple dictionaries, the earlier are used.
 
         Args:
-            tables (Table): tables to be joined
+            tables (list of Table): tables to be joined
 
         Returns:
             table (Table)
