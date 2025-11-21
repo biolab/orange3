@@ -10685,7 +10685,6 @@ widgets/model/owsgd.py:
         Perceptron: true
         perceptron: false
         None: Brez
-        none: false
         Lasso (L1): true
         l1: false
         Ridge (L2): true

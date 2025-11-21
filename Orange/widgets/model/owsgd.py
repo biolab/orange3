@@ -49,7 +49,7 @@ class OWSGD(OWBaseLearner):
 
     #: Regularization methods
     penalties = (
-        ('None', 'none'),
+        ('None', None),
         ('Lasso (L1)', 'l1'),
         ('Ridge (L2)', 'l2'),
         ('Elastic Net', 'elasticnet'))
