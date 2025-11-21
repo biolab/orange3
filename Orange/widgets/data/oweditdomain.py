@@ -20,7 +20,6 @@ from typing import (
 )
 
 import numpy as np
-import pandas as pd
 
 from AnyQt.QtWidgets import (
     QWidget, QListView, QTreeView, QVBoxLayout, QHBoxLayout, QFormLayout,
@@ -28,7 +27,7 @@ from AnyQt.QtWidgets import (
     QStyledItemDelegate, QStyleOptionViewItem, QStyle, QSizePolicy,
     QDialogButtonBox, QPushButton, QCheckBox, QComboBox, QStackedLayout,
     QDialog, QRadioButton, QLabel, QSpinBox, QDoubleSpinBox,
-    QAbstractItemView, QMenu, QToolTip
+    QAbstractItemView, QMenu, QToolTip, QStackedWidget
 )
 from AnyQt.QtGui import (
     QStandardItemModel, QStandardItem, QKeySequence, QIcon, QBrush, QPalette,
@@ -41,7 +40,7 @@ from AnyQt.QtCore import (
 from AnyQt.QtCore import pyqtSignal as Signal, pyqtSlot as Slot
 
 from orangecanvas.gui.utils import luminance
-from orangecanvas.utils import assocf
+from orangecanvas.utils import assocf, findf
 from orangewidget.utils.listview import ListViewSearch
 
 import Orange.data
@@ -57,7 +56,7 @@ from Orange.widgets import widget, gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils import itemmodels, ftry, disconnected, unique_everseen as unique
 from Orange.widgets.utils.buttons import FixedSizeButton
-from Orange.widgets.utils.itemmodels import signal_blocking
+from Orange.widgets.utils.itemmodels import signal_blocking, create_list_model
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Input, Output
 
@@ -206,12 +205,9 @@ class Unlink(_DataType, namedtuple("Unlink", [])):
     """Unlink variable from its source, that is, remove compute_value"""
 
 
-class StrpTime(_DataType, namedtuple("StrpTime", ["label", "formats", "have_date", "have_time"])):
-    """Use format on variable interpreted as time"""
 
-
-Transform = Union[Rename, CategoriesMapping, Annotate, Unlink, StrpTime]
-TransformTypes = (Rename, CategoriesMapping, Annotate, Unlink, StrpTime)
+Transform = Union[Rename, CategoriesMapping, Annotate, Unlink]
+TransformTypes = (Rename, CategoriesMapping, Annotate, Unlink)
 
 
 # Reinterpret vector transformations.
@@ -308,31 +304,61 @@ class AsCategorical(_DataType, namedtuple("AsCategorical", [])):
         raise AssertionError
 
 
-class AsTime(_DataType, namedtuple("AsTime", [])):
+class StrpTime(_DataType, namedtuple("StrpTime", ["label", "formats", "have_date", "have_time"])):
+    """Use format on variable interpreted as time"""
+
+
+class TimeUnit(_DataType, namedtuple("TimeUnit", ["label", "unit"])):
+    pass
+
+
+class _AsTime(NamedTuple):
+    param: StrpTime | TimeUnit | None = None
+
+
+class AsTime(_DataType, _AsTime):
     """Reinterpret as a datetime vector"""
+    @property
+    def unit(self):
+        if self.param is None:
+            return "s"
+        return self.param.unit
+
+    @property
+    def formats(self):
+        if self.param is None:
+            return None  # default is guess
+        return self.param.formats
+
     def __call__(self, vector: DataVector) -> TimeVector:
         var, _ = vector
         if isinstance(var, Time):
             return vector
         elif isinstance(var, Real):
+            unit = self.param.unit if isinstance(self.param, TimeUnit) else "us"
+            if unit == "Y0":
+                def data():
+                    return (vector.data() - 1970).astype("M8[Y]").astype("us")
+            else:
+                def data():
+                    return vector.data().astype(f"M8[{unit}]").astype("us")
             return TimeVector(
-                Time(var.name, var.annotations),
-                lambda: vector.data().astype("M8[us]")
+                Time(var.name, var.annotations), data
             )
         elif isinstance(var, Categorical):
             def data():
                 d = vector.data()
                 s = categorical_to_string_vector(d, var.values)
-                dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
-                return MArray(dt, mask=d.mask)
+                a = to_datetime(s, errors="coerce")
+                return MArray(a, mask=d.mask)
             return TimeVector(
                 Time(var.name, var.annotations), data
             )
         elif isinstance(var, String):
             def data():
                 s = vector.data()
-                dt = pd.to_datetime(s, errors="coerce").values.astype("M8[us]")
-                return MArray(dt, mask=s.mask)
+                a = to_datetime(s, errors="coerce")
+                return MArray(a, mask=s.mask)
             return TimeVector(
                 Time(var.name, var.annotations), data
             )
@@ -1549,52 +1575,107 @@ class ContinuousVariableEditor(VariableEditor):
     pass
 
 
+class ComboBox(QComboBox):
+    # QComboBox.findData does not work for (named)tuples?
+    def findData(self, data, role=Qt.ItemDataRole.UserRole) -> int:
+        idx = findf(range(self.count()), lambda i: self.itemData(i, role) == data)
+        if idx is None:
+            idx = -1
+        return idx
+
 class TimeVariableEditor(VariableEditor):
     CUSTOM_FORMAT_LABEL = "Custom format"
+    FORMATS = [("Detect automatically", (None, 1, 1))] + list(
+        Orange.data.TimeVariable.ADDITIONAL_FORMATS.items()
+    )
+    UNITS = [
+        ("Default", "s"),
+        ("Nanosecond", "ns"),
+        ("Microsecond", "us"),
+        ("Millisecond", "ms"),
+        ("Second", "s"),
+        ("Minute", "m"),
+        ("Hour", "h"),
+        ("Day", "D"),
+        ("Month", "M"),
+        ("Year", "Y0"),  # Since 0AD, others are since Unix epoch
+        ("Years since 1970", "Y"),
+    ]
+
     def __init__(self, parent=None, **kwargs):
         super().__init__(parent, **kwargs)
         form = self.layout().itemAt(0)
 
-        self.format_cb = QComboBox()
-        for item, data in [("Detect automatically", (None, 1, 1))] + list(
-            Orange.data.TimeVariable.ADDITIONAL_FORMATS.items()
-        ):
-            self.format_cb.addItem(item, StrpTime(item, *data))
-        self.format_cb.addItem(self.CUSTOM_FORMAT_LABEL)
+        self.format_cb = ComboBox()
+        self._formats_model = create_list_model([
+            {Qt.DisplayRole: name, Qt.UserRole: StrpTime(name, *data)}
+            for name, data in self.FORMATS
+        ] + [{Qt.DisplayRole: self.CUSTOM_FORMAT_LABEL}]
+        )
+        self._units_model = create_list_model([
+            {Qt.DisplayRole: name, Qt.UserRole: TimeUnit(name, data)}
+            for name, data in self.UNITS
+        ])
+        self.format_cb.setModel(self._formats_model)
         self.format_cb.currentIndexChanged.connect(self.variable_changed)
         self.custom_edit = QLineEdit(objectName="custom-format-line-edit")
         self.custom_edit.setPlaceholderText("%Y-%m-%d %H:%M:%S")
         self.custom_edit.setToolTip(CUSTOM_TOOLTIP)
         self.custom_edit.editingFinished.connect(self._on_custom_change)
-        form.insertRow(2, "Format:", self.format_cb)
+
+        # Format/Unit label switches at runtime
+        self._label_stack = QStackedWidget(frameShape=QStackedWidget.NoFrame)
+        self._label_stack.addWidget(QLabel("Format:", alignment=Qt.AlignRight | Qt.AlignVCenter))
+        self._label_stack.addWidget(QLabel("Unit:", alignment=Qt.AlignRight | Qt.AlignVCenter))
+
+        form.insertRow(2, self._label_stack, self.format_cb)
         form.insertRow(3, "Custom format:", self.custom_edit)
 
-    def _set_format_enable(self, enable: bool):
+    def _set_format_enable(self, enable: bool, enable_custom:bool):
         self.format_cb.setEnabled(enable)
-        self.custom_edit.setEnabled(enable)
+        self.custom_edit.setEnabled(enable_custom)
+
+    def _orig_var(self) -> Variable | None:
+        return self.parent().var if self.parent() is not None else None
 
     def set_data(self, var, transform=()):
         super().set_data(var, transform)
-        if self.parent() is not None and isinstance(self.parent().var, (Time, Real)):
-            # when transforming from time to time disable format selection combo
-            self._set_format_enable(False)
+        # This is bad
+        orig_var = self._orig_var()
+        enabled = True, True
+        tr = None
+        if isinstance(orig_var, Time):
+            enabled = False, False
+            model = self._formats_model
+        elif isinstance(orig_var, Real):
+            enabled = True, False
+            model = self._units_model
+            tr = findf(transform, lambda tr: isinstance(tr, TimeUnit))
         else:
-            # select the format from StrpTime transform
-            for tr in transform:
-                if isinstance(tr, StrpTime):
-                    if tr.label is not None:
-                        index = self.format_cb.findText(tr.label)
-                        self.format_cb.setCurrentIndex(index)
-                    elif tr.formats and tr.formats[0] is not None:
-                        self.custom_edit.setText(tr.formats[0])
-                        self.format_cb.setCurrentIndex(self.format_cb.count() - 1)
-                    else:
-                        self.format_cb.setCurrentIndex(0)
-            self._set_format_enable(True)
+            model = self._formats_model
+            tr = findf(transform, lambda tr: isinstance(tr, StrpTime))
+        self.format_cb.setModel(model)
+        self._label_stack.setCurrentIndex(0 if model is self._formats_model else 1)
+        self._set_format_enable(*enabled)
+        if tr is not None:
+            if isinstance(tr, StrpTime):
+                if tr.label is not None:
+                    index = self.format_cb.findText(tr.label)
+                    self.format_cb.setCurrentIndex(index)
+                elif tr.formats and tr.formats[0] is not None:
+                    self.custom_edit.setText(tr.formats[0])
+                    self.format_cb.setCurrentIndex(self.format_cb.count() - 1)
+                else:
+                    self.format_cb.setCurrentIndex(0)
+            elif isinstance(tr, TimeUnit):
+                index = self.format_cb.findData(tr)
+                index = 0 if index < 0 else index
+                self.format_cb.setCurrentIndex(index)
 
     def get_data(self):
-        var, tr = super().get_data()
-        if var is not None and (self.parent() is None or not isinstance(self.parent().var, Time)):
+        var, trs = super().get_data()
+        orig_var = self._orig_var()
+        if var is not None and not isinstance(orig_var, Time):
             # do not add StrpTime when transforming from time to time
             if self.format_cb.currentText() == self.CUSTOM_FORMAT_LABEL:
                 custom_text = self.custom_edit.text()
@@ -1609,8 +1690,9 @@ class TimeVariableEditor(VariableEditor):
                     trf = StrpTime(None, (custom_text,), have_date, have_time)
             else:
                 trf = self.format_cb.currentData()
-            tr.insert(0, trf)
-        return var, tr
+                assert trf is not None
+            trs.insert(0, trf)
+        return var, trs
 
     def _on_custom_change(self):
         if self.format_cb.currentText() != self.CUSTOM_FORMAT_LABEL:
@@ -1878,7 +1960,8 @@ class ReinterpretVariableEditor(VariableEditor):
             _tr = transform[0]
             if isinstance(_tr, ReinterpretTransformTypes):
                 type_transform = _tr
-                transform = transform[1:]
+                # Extend type_transform's parameters
+                transform = list(type_transform) + transform[1:]
             assert not any(isinstance(t, ReinterpretTransformTypes)
                            for t in transform)
         self.__transform = type_transform
@@ -1940,6 +2023,15 @@ class ReinterpretVariableEditor(VariableEditor):
         else:
             return self._get_data_multi()
 
+    @staticmethod
+    def _contract_transform(rtrs: ReinterpretTransform, trs: list[Transform]):
+        if isinstance(rtrs, AsTime):
+            needle = findf(trs, lambda tr: isinstance(tr, (StrpTime, TimeUnit)))
+            if needle is not None:
+                trs.remove(needle)
+            return AsTime(needle), trs
+        return rtrs, trs
+
     def _get_data_single(self):
         # type: () -> Tuple[Variable, Sequence[Transform]]
         editor = self.layout().currentWidget()  # type: VariableEditor
@@ -1947,7 +2039,8 @@ class ReinterpretVariableEditor(VariableEditor):
         if type(var) is not type(self.var):
             assert self.__transform is not None
             var = self.var
-            tr = [self.__transform, *tr]
+            rtr, tr = self._contract_transform(self.__transform, tr)
+            tr = [rtr, *tr]
         return (var, ), (tr, )
 
     def _get_data_multi(self):
@@ -2104,7 +2197,7 @@ class OWEditDomain(widget.OWWidget):
             "Categories mapping for {} does not apply to current input"
         )
 
-    settings_version = 4
+    settings_version = 5
 
     _domain_change_hints: dict = Setting({}, schema_only=True)
     _merge_dialog_settings = Setting({}, schema_only=True)
@@ -2612,6 +2705,19 @@ class OWEditDomain(widget.OWWidget):
                 (name, desc[:-1]): trs
                 for (name, desc), trs in settings["_domain_change_hints"].items()
             }
+        if version < 5 and "_domain_change_hints" in settings:
+            hints = settings["_domain_change_hints"]
+            for k, trs in list(hints.items()):
+                r = findf(enumerate(trs), lambda tr: tr[1][0] == "StrpTime")
+                if r is None:
+                    continue
+                i, strp = r
+                trs.pop(i)
+                r = findf(enumerate(trs), lambda tr: tr[1][0] == "AsTime")
+                if r is None:
+                    continue
+                i, _ = r
+                trs[i] = ("AsTime", (strp,))
 
 
 def enumerate_columns(
@@ -2641,10 +2747,9 @@ def table_column_data(
 
     if dtype is None:
         if isinstance(var, Orange.data.TimeVariable):
-            dtype = np.dtype("M8[us]")
-            col = col * 1e6
+            dtype = np.dtype(float, metadata={"__formatter": var.repr_val})
         elif isinstance(var, Orange.data.ContinuousVariable):
-            dtype = np.dtype(float)
+            dtype = np.dtype(float, metadata={"__formatter": var.repr_val})
         elif isinstance(var, Orange.data.DiscreteVariable):
             _values = tuple(var.values)
             _n_values = len(_values)
@@ -2656,9 +2761,7 @@ def table_column_data(
         else:
             assert False
     mask = orange_isna(var, col)
-
-    if dtype != col.dtype:
-        col = col.astype(dtype)
+    col = col.astype(dtype)
 
     if col.base is not None:
         col = col.copy()
@@ -2917,19 +3020,14 @@ def apply_transform_time(var, trs):
 def apply_transform_string(var, trs):
     # type: (Orange.data.StringVariable, List[Transform]) -> Orange.data.Variable
     name, annotations = var.name, var.attributes
-    out_type = Orange.data.StringVariable
-    compute_value = Identity
     for tr in trs:
         if isinstance(tr, Rename):
             name = tr.name
         elif isinstance(tr, Annotate):
             annotations = _parse_attributes(tr.annotations)
-        elif isinstance(tr, StrpTime):
-            out_type = partial(
-                Orange.data.TimeVariable, have_date=tr.have_date, have_time=tr.have_time
-            )
-            compute_value = partial(ReparseTimeTransform, tr=tr)
-    variable = out_type(name=name, compute_value=compute_value(var))
+    variable = Orange.data.StringVariable(
+        name=name, compute_value=Identity(var)
+    )
     variable.attributes.update(annotations)
     return variable
 
@@ -2992,10 +3090,16 @@ def apply_reinterpret_d(var, tr, data):
     # type: (Orange.data.DiscreteVariable, ReinterpretTransform, ndarray) -> Orange.data.Variable
     if isinstance(tr, AsCategorical):
         return var
-    elif isinstance(tr, (AsString, AsTime)):
-        # TimeVar will be interpreted by StrpTime later
+    elif isinstance(tr, AsString):
         f = Lookup(var, np.array(var.values, dtype=object), unknown="")
         rvar = Orange.data.StringVariable(name=var.name, compute_value=f)
+    elif isinstance(tr, AsTime):
+        f1 = Lookup(var, np.array(var.values, dtype=object), unknown="")
+        f2 = ReparseTimeTransform(var, tr.param)
+        rvar = Orange.data.TimeVariable(
+            name=var.name, compute_value=ChainTransform(var, (f1, f2)),
+            have_date=f2.tr.have_date, have_time=f2.tr.have_time
+        )
     elif isinstance(tr, AsContinuous):
         f = Lookup(var, np.array(list(map(parse_float, var.values))),
                    unknown=np.nan)
@@ -3028,9 +3132,11 @@ def apply_reinterpret_c(var, tr, data: MArray):
         tstr = ToStringTransform(var)
         rvar = Orange.data.StringVariable(name=var.name, compute_value=tstr)
     elif isinstance(tr, AsTime):
-        # continuous variable is always transformed to time as UNIX epoch
+        trs = ReinterpretTimeWithUnit(var, tr.unit)
         rvar = Orange.data.TimeVariable(
-            name=var.name, compute_value=Identity(var), have_time=1, have_date=1
+            name=var.name, compute_value=trs,
+            have_time=tr.unit in ("ns", "us", "ms", "s", "m", "h"),
+            have_date=True,
         )
     else:
         assert False
@@ -3052,8 +3158,13 @@ def apply_reinterpret_s(var: Orange.data.StringVariable, tr, data: MArray):
         rvar = Orange.data.ContinuousVariable(
             var.name, compute_value=ToContinuousTransform(var)
         )
-    elif isinstance(tr, (AsString, AsTime)):
-        # TimeVar will be interpreted by StrpTime later
+    elif isinstance(tr, AsTime):
+        f = ReparseTimeTransform(var, tr.param)
+        rvar = Orange.data.TimeVariable(
+            name=var.name, compute_value=f,
+            have_time=f.tr.have_time, have_date=f.tr.have_date
+        )
+    elif isinstance(tr, AsString):
         return var
     else:
         assert False
@@ -3063,13 +3174,12 @@ def apply_reinterpret_s(var: Orange.data.StringVariable, tr, data: MArray):
 @apply_reinterpret.register(Orange.data.TimeVariable)
 def apply_reinterpret_t(var: Orange.data.TimeVariable, tr, data):
     if isinstance(tr, AsCategorical):
+        _, names = categorical_from_vector(data)
         values, _ = categorize_unique(data)
-        or_values = values.astype(float) / 1e6
-        mapping = {v: i for i, v in enumerate(or_values)}
+        mapping = {v: i for i, v in enumerate(values)}
         tr = LookupMappingTransform(var, mapping)
-        values = tuple(as_string(values))
         rvar = Orange.data.DiscreteVariable(
-            name=var.name, values=values, compute_value=tr
+            name=var.name, values=names, compute_value=tr
         )
     elif isinstance(tr, AsContinuous):
         rvar = Orange.data.TimeVariable(
@@ -3100,6 +3210,7 @@ class ToStringTransform(Transformation):
     """
     Transform a variable to string.
     """
+    InheritEq = True
     def transform(self, c):
         if self.variable.is_string:
             return c
@@ -3109,6 +3220,7 @@ class ToStringTransform(Transformation):
 
 
 class ToContinuousTransform(Transformation):
+    InheritEq = True
     def transform(self, c):
         if self.variable.is_time:
             return c
@@ -3143,9 +3255,9 @@ class ReparseTimeTransform(Transformation):
     """
     Re-parse the column's string repr as datetime.
     """
-    def __init__(self, variable, tr):
+    def __init__(self, variable, tr: StrpTime | None):
         super().__init__(variable)
-        self.tr = tr
+        self.tr = tr if tr is not None else StrpTime("", None, 1, 1)
 
     def transform(self, c):
         # if self.formats is none guess format option is selected
@@ -3162,6 +3274,48 @@ class ReparseTimeTransform(Transformation):
                 return datetime64_to_epoch(d, only_time=not self.tr.have_date)
         return np.nan
 
+    def __eq__(self, other):
+        return super().__eq__(other) and self.tr == other.tr
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.tr))
+
+
+class ReinterpretTimeWithUnit(Transformation):
+    def __init__(self, variable, unit: str):
+        super().__init__(variable)
+        self.unit = unit
+
+    def transform(self, c):
+        if self.unit == "Y0":  # Year since 0 AD
+            r = (c - 1970).astype("M8[Y]")
+        else:  # {unit} since Unix epoch
+            r = c.astype(f"M8[{self.unit}]")
+        return datetime64_to_epoch(r, only_time=False)
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.unit == other.unit
+
+    def __hash__(self):
+        return hash((super().__hash__(), self.unit))
+
+
+class ChainTransform(Transformation):
+    """Apply a sequence of transformations."""
+    def __init__(self, variable, transforms: Sequence[Transformation]):
+        super().__init__(variable)
+        self.transforms = transforms
+
+    def transform(self, c):
+        for tr in self.transforms:
+            c = tr.transform(c)
+        return c
+
+    def __eq__(self, other):
+        return super().__eq__(other) and self.transforms == other.transforms
+
+    def __hash__(self):
+        return hash((super().__hash__(), *self.transforms))
 
 # Alias for back compatibility (unpickling transforms)
 LookupMappingTransform = MappingTransform

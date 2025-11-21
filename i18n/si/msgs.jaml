@@ -5635,12 +5635,6 @@ widgets/data/oweditdomain.py:
         annotations: false
     class `Unlink`:
         Unlink: false
-    class `StrpTime`:
-        StrpTime: false
-        label: false
-        formats: false
-        have_date: false
-        have_time: false
     class `CategoricalVector`:
         CategoricalVector: false
         vtype: false
@@ -5665,13 +5659,24 @@ widgets/data/oweditdomain.py:
             g: false
     class `AsCategorical`:
         AsCategorical: false
+    class `StrpTime`:
+        StrpTime: false
+        label: false
+        formats: false
+        have_date: false
+        have_time: false
+    class `TimeUnit`:
+        TimeUnit: false
+        label: false
+        unit: false
     class `AsTime`:
-        AsTime: false
+        def `unit`:
+            s: false
         def `__call__`:
-            M8[us]: false
+            us: false
+            Y0: false
             def `data`:
                 coerce: false
-                M8[us]: false
     def `formatter_for_dtype`:
         __formatter: false
     def `masked_unique`:
@@ -5786,11 +5791,33 @@ widgets/data/oweditdomain.py:
             Import Options: Združevanje
     class `TimeVariableEditor`:
         Custom format: false
+        Detect automatically: Zaznaj samodejno
+        Default: Privzeto
+        s: false
+        Nanosecond: Nanosekunda
+        ns: false
+        Microsecond: Mikrosekunda
+        us: false
+        Millisecond: Milisekunda
+        ms: false
+        Second: Sekunda
+        Minute: Minuta
+        m: false
+        Hour: Ura
+        h: false
+        Day: Dan
+        D: false
+        Month: Mesec
+        M: false
+        Year: Leto
+        Y0: false
+        Years since 1970: Leto od 1970
+        Y: false
         def `__init__`:
-            Detect automatically: Zaznaj samodejno
             custom-format-line-edit: false
             %Y-%m-%d %H:%M:%S: false
             Format:: Oblika:
+            Unit:: Enota:
             Custom format:: Prilagojen format:
         def `get_data`:
             %(-?)d|%(b|B)|%(-?)m|%(y|Y)|%(-?)j|%(-?)U|%(-?)W|%(a|A)|%w: false
@@ -5880,12 +5907,13 @@ widgets/data/oweditdomain.py:
             _domain_change_store: false
             output_table_name: false
             _domain_change_hints: false
+            StrpTime: false
+            AsTime: false
     def `enumerate_columns`:
         x: false
         y: false
         m: false
     def `table_column_data`:
-        M8[us]: false
         __formatter: false
         ?: false
     def `report_transform`:
@@ -5927,6 +5955,13 @@ widgets/data/oweditdomain.py:
     nan: false
     def `as_float_or_nan`:
         unsafe: false
+    def `apply_reinterpret_c`:
+        ns: false
+        us: false
+        ms: false
+        s: false
+        m: false
+        h: false
     def `datetime64_to_epoch`:
         M8[us]: false
         M8[D]: false
@@ -5934,6 +5969,11 @@ widgets/data/oweditdomain.py:
     class `ReparseTimeTransform`:
         def `transform`:
             coerce: false
+    class `ReinterpretTimeWithUnit`:
+        def `transform`:
+            Y0: false
+            M8[Y]: false
+            M8[{self.unit}]: false
     def `column_str_repr_discrete`:
         ?: false
     def `column_str_repr_string`:
@@ -12832,6 +12872,7 @@ widgets/utils/itemmodels.py:
     select_row: false
     select_rows: false
     signal_blocking: false
+    create_list_model: false
     def `_as_contiguous_range`:
         Non-contiguous range.: false
     class `AbstractSortTableModel`:

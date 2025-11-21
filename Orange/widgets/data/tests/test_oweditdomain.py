@@ -37,7 +37,7 @@ from Orange.widgets.data.oweditdomain import (
     RealVector, TimeVector, StringVector, make_dict_mapper,
     LookupMappingTransform, as_float_or_nan, column_str_repr,
     GroupItemsDialog, VariableListModel, StrpTime, RestoreOriginal, BaseEditor,
-    RestoreWarningRole
+    RestoreWarningRole, TimeUnit
 )
 from Orange.widgets.data.owcolor import OWColor, ColorRole
 from Orange.widgets.tests.base import WidgetTest, GuiTest
@@ -651,8 +651,8 @@ class TestOWEditDomain(WidgetTest):
             {('Real', ('sepal length', (1, 'f'), ())):
                  [('AsString', ())],
              ('Real', ('sepal width', (1, 'f'), ())):
-                 [('AsTime', ()),
-                  ('StrpTime', ('Detect automatically', None, 1, 1))],
+                 [('AsTime', (('StrpTime',
+                               ('Detect automatically', None, 1, 1)),))],
              ('Real', ('petal width', (1, 'f'), ())):
                  [('Annotate', ((('a', 'b'),),))]}
         )
@@ -707,8 +707,43 @@ class TestOWEditDomain(WidgetTest):
                     [('AsString', ())]}
         )
 
+    def test_migrate_settings_4_to_5(self):
+        settings = {
+            '__version__': 4,
+            '_domain_change_hints': {
+                ('String', (), False):
+                    [('AsTime', ()), ('StrpTime', ('2021', ('%Y',), 1, 0))],
+            },
+            '_merge_dialog_settings': {},
+            'controlAreaVisible': True}
+        widget = self.create_widget(OWEditDomain, stored_settings=settings)
+        self.assertEqual(
+            widget._domain_change_hints,
+            {('String', (), False):
+                [('AsTime', (('StrpTime', ('2021', ('%Y',), 1, 0)),))],
+            },
+        )
+
+def transform_eq(first, second) -> bool:
+    """
+    Specialize equality for transforms to simplify tests:
+      * AsTime(None) == AsTime(DefaultStrpTime)
+      * AsTime(None) == AsTime(DefaultTimeUnit)
+    """
+    if isinstance(first, AsTime) and isinstance(second, AsTime):
+        p1, p2 = first.param, second.param
+        if (p1 is None) ^ (p2 is None):
+            param = p1 or p2
+            return param == DefaultStrpTime or param == DefaultTimeUnit
+    return first == second
+
 
 class TestEditors(GuiTest):
+
+    def assertTransformsEqual(self, first, second):
+        if not all(transform_eq(t1, t1) for t1, t2 in zip(first, second)):
+            self.assertSequenceEqual(first, second)
+
     def test_variable_editor(self):
         w = VariableEditor()
         self.assertEqual(w.get_data(), (None, []))
@@ -959,7 +994,7 @@ class TestEditors(GuiTest):
     ]
     ReinterpretTransforms = {
         Categorical: [AsCategorical], Real: [AsContinuous],
-        Time: [AsTime, partial(StrpTime, 'Detect automatically', None, 1, 1)],
+        Time: [AsTime],
         String: [AsString]
     }
 
@@ -979,7 +1014,7 @@ class TestEditors(GuiTest):
             if not tr_[0]:
                 self.assertEqual(tr, self.ReinterpretTransforms[type(*v)])
             else:
-                self.assertListEqual(*tr_, [t() for t in tr])
+                self.assertTransformsEqual(*tr_, [t() for t in tr])
 
     def test_reinterpret_editor_simulate(self):
         w = ReinterpretVariableEditor()
@@ -989,7 +1024,7 @@ class TestEditors(GuiTest):
             var, tr = var[0], tr[0]
             type_ = tc.currentData()
             if type_ is not type(var):
-                self.assertEqual(
+                self.assertTransformsEqual(
                     tr, [t() for t in self.ReinterpretTransforms[type_]] + [Rename("Z")]
                 )
             else:
@@ -1198,13 +1233,19 @@ class TestEditors(GuiTest):
 
     def test_reinterpret_time_format_restore(self):
         w = ReinterpretVariableEditor()
-        transforms = [AsTime(),
-                      StrpTime(None, ("%Y",), 1, 0),
+        transforms = [AsTime(StrpTime(None, ("%Y",), 1, 0)),
                       Rename("Time"),]
         w.set_data([self.DataVectors[3]], [transforms])
         _, [t] = w.get_data()
         self.assertEqual(t, transforms)
 
+    def test_reinterpret_time_unit_restore(self):
+        w = ReinterpretVariableEditor()
+        transforms = [AsTime(TimeUnit("Year", "Y0")),
+                      Rename("Time"), ]
+        w.set_data([self.DataVectors[1]], [transforms])
+        _, [t] = w.get_data()
+        self.assertEqual(t, transforms)
 
 class TestModels(GuiTest):
     def test_variable_model(self):
@@ -1361,6 +1402,9 @@ class TestTransforms(TestCase):
         self.assertIs(first.variable, second.variable)
         assert_array_equal(first.lookup_table, second.lookup_table)
 
+DefaultStrpTime = StrpTime("Detect automatically", None, 1, 1)
+DefaultTimeUnit = TimeUnit("Default", "s")
+
 
 class TestReinterpretTransforms(TestCase):
     @classmethod
@@ -1437,8 +1481,8 @@ class TestReinterpretTransforms(TestCase):
         self.assertEqual(tdomain["C"].values, ("0.0", "0.2", "0.25", "1.25"))
         self.assertEqual(
             tdomain["D"].values,
-            ("1970-01-01 00:00:00", "1970-01-01 00:03:00",
-             "1970-01-01 00:06:00", "1970-01-01 00:12:00")
+            ("00:00:00", "00:03:00",
+             "00:06:00", "00:12:00")
         )
 
     def test_as_continuous(self):
@@ -1489,13 +1533,12 @@ class TestReinterpretTransforms(TestCase):
         metas = [t for t in times] + [list(range(len(x))) for x in times]
         table = Table(domain, np.empty((len(times[0]), 0)), metas=np.array(metas).transpose())
 
-        tr = AsTime()
+        # tr = AsTime()
         dtr = []
         for v, f in zip(domain.metas, chain(formats, formats)):
             strp = StrpTime(f, *TimeVariable.ADDITIONAL_FORMATS[f])
-            vtr = apply_transform_var(
-                apply_reinterpret(v, tr, table_column_data(table, v)), [strp]
-            )
+            tr = AsTime(strp)
+            vtr = apply_reinterpret(v, tr, table_column_data(table, v))
             dtr.append(vtr)
 
         ttable = table.transform(Domain([], metas=dtr))
@@ -1510,14 +1553,11 @@ class TestReinterpretTransforms(TestCase):
         tvars = []
         for v in domain.metas:
             for i, tr in enumerate(
-                [AsContinuous(), AsCategorical(), AsTime(), AsString()]
+                [AsContinuous(), AsCategorical(), AsTime(DefaultStrpTime), AsString()]
             ):
                 vtr = apply_reinterpret(v, tr, table_column_data(table, v)).renamed(
                     f"{v.name}_{i}"
                 )
-                if isinstance(tr, AsTime):
-                    strp = StrpTime("Detect automatically", None, 1, 1)
-                    vtr = apply_transform_var(vtr, [strp])
                 tvars.append(vtr)
         tdomain = Domain([], metas=tvars)
         ttable = table.transform(tdomain)
@@ -1564,13 +1604,10 @@ class TestReinterpretTransforms(TestCase):
 
     def test_to_time_variable(self):
         table = self.data
-        tr = AsTime()
+        tr = AsTime(None)
         dtr = []
         for v in table.domain:
-            strp = StrpTime("Detect automatically", None, 1, 1)
-            vtr = apply_transform_var(
-                apply_reinterpret(v, tr, table_column_data(table, v)), [strp]
-            )
+            vtr = apply_reinterpret(v, tr, table_column_data(table, v))
             dtr.append(vtr)
         ttable = table.transform(Domain([], metas=dtr))
         for var in ttable.domain:
