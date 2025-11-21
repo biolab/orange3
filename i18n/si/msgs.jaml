@@ -5973,7 +5973,7 @@ Categorical features are passed as strings
             Name...: Ime...
             Meta attribute: Meta atribut
             Expression...: Izraz...
-            Select Feature: Izberi spremenljivko
+            Select Column: Izberi stolpec
             Select Function: Izberi funkcijo
         def `setEditorData`:
             Select Feature: Izberi spremenljivko

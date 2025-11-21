@@ -151,7 +151,7 @@ Categorical features are passed as strings
             toolTip=self.ExpressionTooltip)
 
         self.attrs_model = itemmodels.VariableListModel(
-            ["Select Feature"], parent=self)
+            ["Select Column"], parent=self)
         self.attributescb = ComboBoxSearch(
             minimumContentsLength=16,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon,
