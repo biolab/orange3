@@ -29,7 +29,8 @@ from Orange.widgets.utils.sql import check_sql_input
 from Orange.widgets.visualize.owboxplot import SortProxyModel
 from Orange.widgets.visualize.utils.customizableplot import \
     CommonParameterSetter, Updater
-from Orange.widgets.visualize.utils.plotutils import AxisItem, PlotWidget
+from Orange.widgets.visualize.utils.plotutils import PlotWidget
+from Orange.widgets.visualize.owscatterplotgraph import AxisItem
 from Orange.widgets.widget import OWWidget, Input, Output, Msg
 
 # scaling types
@@ -555,14 +556,19 @@ class ViolinPlot(PlotWidget):
     def _set_axes(self):
         if self.__value_var is None:
             return
-        value_title = self.__value_var.name
-        group_title = self.__group_var.name if self.__group_var else ""
         vertical = self.__orientation == Qt.Vertical
-        self.getAxis("left" if vertical else "bottom").setLabel(value_title)
-        self.getAxis("bottom" if vertical else "left").setLabel(group_title)
 
-        if self.__group_var is None:
-            self.getAxis("bottom" if vertical else "left").setTicks([])
+        value_axis = self.getAxis("left" if vertical else "bottom")
+        value_axis.setLabel(self.__value_var.name)
+        value_axis.use_time(self.__value_var.is_time)
+
+        group_axis = self.getAxis("bottom" if vertical else "left")
+        group_axis.use_time(False)
+        if self.__group_var:
+            group_axis.setLabel(self.__group_var.name)
+        else:
+            group_axis.setLabel("")
+            group_axis.setTicks([])
 
     def _plot_data(self):
         # save selection ranges
