@@ -2186,6 +2186,7 @@ evaluation/scoring.py:
     RMSE: false
     MAE: false
     MAPE: false
+    SMAPE: false
     R2: false
     LogLoss: false
     MatthewsCorrCoefficient: false
@@ -2254,6 +2255,9 @@ evaluation/scoring.py:
     class `MAPE`:
         MAPE: true
         Mean absolute percentage error: Povprečna absolutna odstotna napaka
+    class `SMAPE`:
+        sMAPE: true
+        Symmetric mean absolute percentage error: Simetrična povprečna absolutna odstotna napaka
     class `R2`:
         R2: true
         # Je to OK?
