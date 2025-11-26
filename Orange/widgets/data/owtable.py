@@ -284,7 +284,7 @@ class OWTable(OWWidget):
     @Inputs.data
     def set_dataset(self, data: Optional[Table]):
         """Set the input dataset."""
-        if data is not None:
+        if data:
             summary = tsummary.table_summary(data)
             self.input = InputData(
                 table=data,

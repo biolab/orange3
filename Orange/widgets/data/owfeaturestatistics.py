@@ -818,6 +818,8 @@ class OWFeatureStatistics(widget.OWWidget):
         self.Outputs.statistics.send(None)
 
         # Setup widget state for new data and restore settings
+        if not data:
+            data = None
         self.data = data
 
         if data is not None:

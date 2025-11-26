@@ -176,6 +176,38 @@ class TestOWMeltFunctional(TestOWMeltBase):
         self.assertIsNone(widget.idvar)
         self.assertSequenceEqual(widget.idvar_model, [None])
 
+    def test_nothing_to_melt(self):
+        widget = self.widget
+        widget.only_numeric = False
+        zoo = Table("zoo")
+        heart = Table("heart_disease")
+
+        self.send_signal(self.widget.Inputs.data, zoo)
+        self.assertFalse(widget.Error.nothing_to_melt.is_shown())
+
+        widget.controls.only_numeric.click()
+        assert widget.only_numeric
+        self.assertTrue(widget.Error.nothing_to_melt.is_shown())
+
+        self.send_signal(widget.Inputs.data, heart)
+        assert widget.only_numeric
+        self.assertFalse(widget.Error.nothing_to_melt.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, zoo)
+        assert widget.only_numeric
+        self.assertTrue(widget.Error.nothing_to_melt.is_shown())
+
+        widget.controls.only_numeric.click()
+        assert not widget.only_numeric
+        self.assertFalse(widget.Error.nothing_to_melt.is_shown())
+
+        widget.controls.only_numeric.click()
+        assert widget.only_numeric
+        self.assertTrue(widget.Error.nothing_to_melt.is_shown())
+
+        self.send_signal(self.widget.Inputs.data, None)
+        self.assertFalse(widget.Error.nothing_to_melt.is_shown())
+
     def test_invalidates(self):
         widget = self.widget
         mock_return = Table("heart_disease")

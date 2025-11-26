@@ -6579,6 +6579,8 @@ widgets/data/owmelt.py:
             Data: Podatki
         class `Outputs`:
             Data: Podatki
+        class `Error`:
+            No features to melt: Ni stolpcev za raztapljanje
         class `Information`:
             No columns with unique values\n: Ni stolpcev z neponovljenimi vrednostmi.\n
             Only columns with unique valules are useful for row identifiers.: Kot identifikator vrstice so uporabni le stolpci, v katerih se vrednosti ne ponavljajo.
@@ -7090,7 +7092,7 @@ widgets/data/owpivot.py:
             Some variables have been renamed in some tables: Spremenljivke s podvojenimi imeni so
             to avoid duplicates.\n{}: preimenovane.\n{}
             Selected variable has too many values.: Izbrana spremenljivka ima preveč različnih vrednosti.
-            At least 1 primitive variable is required.: Podatki morajo vsebovati vsaj eno nebesedilno spremenljivko.
+            At least one variable is required.: Potrebna je vsaj ena spremenljivka.
         def `_add_control_area_controls`:
             Rows: Vrstice
             row_feature: false
@@ -11010,6 +11012,27 @@ widgets/tests/__init__.py:
         _in_load_tests: false
         test*.py: false
 widgets/tests/base.py:
+    class `WidgetTest`:
+        data with just nans: false
+        abc: false
+        y: false
+        m: false
+        data without rows: false
+        data with just attributes: false
+        no data (after having attributes): false
+        data with just class: false
+        data with just continouos outcome: false
+        no data (after having class): false
+        data with just metas: false
+        x: false
+        with without attributes, class or metas: false
+        no data (after seeing a ghost): false
+        def `__init_subclass__`:
+            test_zero_size_data: false
+            def `test_zero_size_data`:
+                widget: false
+                not tested because .widget is not set: false
+                inputs: false
     class `BaseParameterMapping`:
         def `__init__`:
             both: false
@@ -11215,7 +11238,7 @@ widgets/unsupervised/owdbscan.py:
             Data: Podatki
         class `Error`:
             'Not enough unique data instances. ': 'Ni dovolj primerov. '
-            At least two are required.: Potrebna sta vsaj dva.
+            At least two rows (with any defined values) are required.: Potrebna sta vsaj dva, ki imata vsaj eno nemanjkajočo vrednost.
             The data does not contain any features.: Podatki ne vsebujejo nobenih spremenljivk.
         Euclidean: Evklidska
         euclidean: false

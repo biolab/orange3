@@ -831,12 +831,12 @@ class OWLinePlot(OWWidget):
     @check_sql_input
     def set_data(self, data):
         self.closeContext()
-        self.data = data
+        self.data = data or None
         self.clear()
         self.check_data()
         self.check_display_options()
 
-        if self.data is not None:
+        if self.data:
             self.group_vars.set_domain(self.data.domain)
             self.group_view.setEnabled(len(self.group_vars) > 1)
             self.group_var = self.data.domain.class_var \
