@@ -77,7 +77,7 @@ class OWMelt(widget.OWWidget):
     class Information(widget.OWWidget.Information):
         no_suitable_features = Msg(
             "No columns with unique values\n"
-            "Only columns with unique valules are useful for row identifiers.")
+            "Only columns with unique values are useful for row identifiers.")
 
     want_main_area = False
     resizing_enabled = False
