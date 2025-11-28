@@ -42,7 +42,7 @@ class OWNeighbors(OWWidget):
     class Info(OWWidget.Warning):
         removed_references = \
             Msg("Input data includes reference instance(s).\n"
-                "Reference instances are excluded from the output.")
+                "Reference instances are not considered as neighbours.")
 
     class Warning(OWWidget.Warning):
         all_data_as_reference = \
@@ -57,6 +57,7 @@ class OWNeighbors(OWWidget):
     n_neighbors = Setting(10)
     limit_neighbors = Setting(True)
     distance_index = Setting(0)
+    include_reference = Setting(False)
     auto_apply = Setting(True)
 
     want_main_area = False
@@ -80,6 +81,10 @@ class OWNeighbors(OWWidget):
             # call apply by gui.auto_commit, pylint: disable=unnecessary-lambda
             checkCallback=self.commit.deferred,
             callback=self.commit.deferred)
+        gui.checkBox(
+            box, self, "include_reference", label="Include reference example",
+            callback=self.commit.deferred
+        )
 
         self.apply_button = gui.auto_apply(self.buttonsArea, self)
 
@@ -168,6 +173,13 @@ class OWNeighbors(OWWidget):
         domain = Domain(domain.attributes, domain.class_vars, metas)
         neighbours = self.data.from_table(domain, self.data, row_indices=indices)
         distances = self.distances[indices]
+        if self.include_reference:
+            neighbours = Table.concatenate(
+                [neighbours,
+                 self.reference.transform(neighbours.domain)])
+            distances = np.hstack(
+                (distances,
+                 [np.nan] * len(self.reference)))
         with neighbours.unlocked(neighbours.metas):
             if distances.size > 0:
                 neighbours.set_column(dist_var, distances)
