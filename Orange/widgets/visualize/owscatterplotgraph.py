@@ -273,6 +273,9 @@ class AxisItem(AxisItem):
         self._use_time = enable
         self.enableAutoSIPrefix(not enable)
 
+    def is_time(self):
+        return self._use_time
+
     def tickValues(self, minVal, maxVal, size):
         """Find appropriate tick locations."""
         if not self._use_time:
