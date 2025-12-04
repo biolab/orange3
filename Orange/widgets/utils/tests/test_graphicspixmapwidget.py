@@ -18,6 +18,7 @@ class TestGraphicsPixmapWidget(GuiTest):
         self.view.deleteLater()
         del self.scene
         del self.view
+        super().tearDown()
 
     def test_graphicspixmapwidget(self):
         w = GraphicsPixmapWidget()

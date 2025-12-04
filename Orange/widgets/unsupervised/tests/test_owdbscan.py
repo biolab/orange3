@@ -21,6 +21,7 @@ class TestOWDBSCAN(WidgetTest):
         self.widgets.remove(self.widget)
         self.widget.onDeleteWidget()
         self.widget = None
+        super().tearDown()
 
     def test_cluster(self):
         w = self.widget

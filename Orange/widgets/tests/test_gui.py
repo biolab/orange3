@@ -35,6 +35,7 @@ class TestListModel(GuiTest):
     def tearDown(self) -> None:
         self.widget.deleteLater()
         del self.widget
+        super().tearDown()
 
     def test_select_callback(self):
         widget = self.widget
