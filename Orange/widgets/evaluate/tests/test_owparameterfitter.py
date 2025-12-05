@@ -48,34 +48,38 @@ class TestOWParameterFitter(WidgetTest):
         self.widget.controls.maximum.setValue(6)
 
         self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.widget.cancel()
         self.assertEqual(self.widget.controls.parameter_index.currentText(),
                          "Components")
         self.assertEqual(self.widget.minimum, 3)
         self.assertEqual(self.widget.maximum, 6)
 
         self.send_signal(self.widget.Inputs.learner, None)
+        self.widget.cancel()
         self.assertEqual(self.widget.controls.parameter_index.currentText(),
                          "")
 
     def test_input(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
         self.send_signal(self.widget.Inputs.learner, self._pls)
-        self.wait_until_finished()
+        self.widget.cancel()
 
         self.send_signal(self.widget.Inputs.data, self._heart)
-        self.wait_until_finished()
+        self.widget.cancel()
         self.assertTrue(self.widget.Error.incompatible_learner.is_shown())
 
         self.send_signal(self.widget.Inputs.learner, None)
+        self.widget.cancel()
         self.assertFalse(self.widget.Error.incompatible_learner.is_shown())
 
     def test_input_no_params(self):
         self.send_signal(self.widget.Inputs.data, self._heart)
         self.send_signal(self.widget.Inputs.learner, self._naive_bayes)
-        self.wait_until_finished()
+        self.widget.cancel()
         self.assertTrue(self.widget.Warning.no_parameters.is_shown())
 
         self.send_signal(self.widget.Inputs.learner, None)
+        self.widget.cancel()
         self.assertFalse(self.widget.Warning.no_parameters.is_shown())
 
     def test_random_forest(self):
@@ -83,18 +87,21 @@ class TestOWParameterFitter(WidgetTest):
         learner = self.get_output(rf_widget.Outputs.learner)
 
         self.send_signal(self.widget.Inputs.learner, learner)
+        self.widget.cancel()
         self.assertFalse(self.widget.Warning.no_parameters.is_shown())
         self.assertFalse(self.widget.Error.unknown_err.is_shown())
         self.assertFalse(self.widget.Error.not_enough_data.is_shown())
         self.assertFalse(self.widget.Error.incompatible_learner.is_shown())
 
         self.send_signal(self.widget.Inputs.data, self._heart)
+        self.widget.cancel()
         self.assertFalse(self.widget.Warning.no_parameters.is_shown())
         self.assertFalse(self.widget.Error.unknown_err.is_shown())
         self.assertFalse(self.widget.Error.not_enough_data.is_shown())
         self.assertFalse(self.widget.Error.incompatible_learner.is_shown())
 
         self.send_signal(self.widget.Inputs.data, self._housing)
+        self.widget.cancel()
         self.assertFalse(self.widget.Warning.no_parameters.is_shown())
         self.assertFalse(self.widget.Error.unknown_err.is_shown())
         self.assertFalse(self.widget.Error.not_enough_data.is_shown())
@@ -106,11 +113,11 @@ class TestOWParameterFitter(WidgetTest):
 
         self.send_signal(self.widget.Inputs.learner, self._pls)
         self.send_signal(self.widget.Inputs.data, classless_data)
-        self.wait_until_finished()
+        self.widget.cancel()
         self.assertTrue(self.widget.Error.missing_target.is_shown())
 
         self.send_signal(self.widget.Inputs.data, data)
-        self.wait_until_finished()
+        self.widget.cancel()
         self.assertFalse(self.widget.Error.missing_target.is_shown())
 
     def test_multiclass_data(self):
@@ -120,11 +127,11 @@ class TestOWParameterFitter(WidgetTest):
 
         self.send_signal(self.widget.Inputs.learner, self._pls)
         self.send_signal(self.widget.Inputs.data, multiclass_data)
-        self.wait_until_finished()
+        self.widget.cancel()
         self.assertTrue(self.widget.Error.multiple_targets_data.is_shown())
 
         self.send_signal(self.widget.Inputs.data, data)
-        self.wait_until_finished()
+        self.widget.cancel()
         self.assertFalse(self.widget.Error.multiple_targets_data.is_shown())
 
     def test_plot(self):
@@ -164,8 +171,6 @@ class TestOWParameterFitter(WidgetTest):
     def test_manual_steps(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
         self.send_signal(self.widget.Inputs.learner, self._pls)
-        self.wait_until_finished()
-
         self.widget.controls.manual_steps.setText("1, 2, 3")
         self.widget.controls.type.buttons[1].click()
         self.wait_until_finished()
@@ -188,11 +193,9 @@ class TestOWParameterFitter(WidgetTest):
 
         self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
-        self.wait_until_finished()
 
         # 5 to None
         simulate.combobox_activate_index(w.controls.parameter_index, 0)
-        self.wait_until_finished()
         check([("6, 9, 7", (6, 7, 9)),
                ("6, 9, 7, 3", ()),
                ("6, 9, 7", (6, 7, 9)),
@@ -200,7 +203,6 @@ class TestOWParameterFitter(WidgetTest):
 
         # None to 10
         simulate.combobox_activate_index(w.controls.parameter_index, 2)
-        self.wait_until_finished()
         self.assertFalse(w.Error.manual_steps_error.is_shown())
 
         check([("12, 1, 3, -5", ()),
@@ -209,14 +211,12 @@ class TestOWParameterFitter(WidgetTest):
 
         # No limits
         simulate.combobox_activate_index(w.controls.parameter_index, 3)
-        self.wait_until_finished()
 
         self.assertEqual(w.steps, (-5, 1, 3, 12))
         self.assertFalse(w.Error.manual_steps_error.is_shown())
 
         # 5 to 10
         simulate.combobox_activate_index(w.controls.parameter_index, 1)
-        self.wait_until_finished()
 
         self.assertEqual(w.steps, ())
         self.assertTrue(w.Error.manual_steps_error.is_shown())
@@ -224,6 +224,7 @@ class TestOWParameterFitter(WidgetTest):
         check([("12, 8, 7, 5", ()),
                ("8, 7, -5", ()),
                ("8, 7, 5", (5, 7, 8))])
+        self.widget.cancel()
 
     def test_steps_preview(self):
         self.send_signal(self.widget.Inputs.data, self._housing)
@@ -272,8 +273,8 @@ class TestOWParameterFitter(WidgetTest):
         self.assertEqual(self.widget.fitted_parameters, [])
 
         self.send_signal(self.widget.Inputs.learner, self._pls)
+        self.widget.cancel()
         self.assertEqual(len(self.widget.fitted_parameters), 1)
-        self.wait_until_finished()
 
     def test_initial_parameters(self):
         self.assertEqual(self.widget.initial_parameters, {})
@@ -363,6 +364,7 @@ class TestOWParameterFitter(WidgetTest):
         self.assertEqual(self.widget.parameter_index, 0)
         self.assertEqual(self.widget.minimum, 1)
         self.assertEqual(self.widget.maximum, 3)
+        self.widget.cancel()
 
     def test_visual_settings(self):
         graph = self.widget.graph
@@ -406,6 +408,7 @@ class TestOWParameterFitter(WidgetTest):
 
         self.send_signal(self.widget.Inputs.learner, self._pls)
         self.send_signal(self.widget.Inputs.data, self._heart[:10])
+        self.widget.cancel()
         test_settings()
 
         self.send_signal(self.widget.Inputs.data, None)
@@ -413,6 +416,7 @@ class TestOWParameterFitter(WidgetTest):
 
         self.send_signal(self.widget.Inputs.learner, self._pls)
         self.send_signal(self.widget.Inputs.data, self._heart[:10])
+        self.widget.cancel()
         test_settings()
 
     def assertFontEqual(self, font1: QFont, font2: QFont):
@@ -437,6 +441,7 @@ class TestOWParameterFitter(WidgetTest):
         w: OWParameterFitter = self.widget
         self.send_signal(w.Inputs.data, self._heart)
         self.send_signal(w.Inputs.learner, self._dummy)
+        self.widget.cancel()
         w.type = w.FROM_RANGE
 
         w.minimum = 10
@@ -460,6 +465,7 @@ class TestOWParameterFitter(WidgetTest):
         w: OWParameterFitter = self.widget
         self.send_signal(w.Inputs.data, self._heart)
         self.send_signal(w.Inputs.learner, self._dummy)
+        self.widget.cancel()
         w.type = w.FROM_RANGE
 
         for mini, maxi, exp in [
@@ -491,7 +497,7 @@ class TestOWParameterFitter(WidgetTest):
         w: OWParameterFitter = self.widget
         self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
-        self.wait_until_finished()
+        self.widget.cancel()
         simulate.combobox_activate_index(w.controls.parameter_index, 3)
         w.type = w.MANUAL
 
@@ -514,7 +520,7 @@ class TestOWParameterFitter(WidgetTest):
         w: OWParameterFitter = self.widget
         self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
-        self.wait_until_finished()
+        self.widget.cancel()
         simulate.combobox_activate_index(w.controls.parameter_index, 3)
         w.type = w.MANUAL
 
@@ -595,12 +601,12 @@ class TestOWParameterFitter(WidgetTest):
         w: OWParameterFitter = self.widget
         self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
-        self.wait_until_finished()
+        self.widget.cancel()
         w.type = w.MANUAL
 
         # 5 to 10
         simulate.combobox_activate_index(w.controls.parameter_index, 1)
-        self.wait_until_finished()
+        self.widget.cancel()
 
         for settings, steps in [
             ("5, 6..., 8", (5, 6, 7, 8)),
@@ -628,7 +634,7 @@ class TestOWParameterFitter(WidgetTest):
         w: OWParameterFitter = self.widget
         self.send_signal(w.Inputs.data, self._housing)
         self.send_signal(w.Inputs.learner, self._dummy)
-        self.wait_until_finished()
+        self.widget.cancel()
 
         simulate.combobox_activate_index(w.controls.parameter_index, 0)
         self.assertIn("greater or equal to 5", w.edit.toolTip())
