@@ -107,10 +107,10 @@ class TestOWROCAnalysis(EvaluateTest):
         )  # type: OWROCAnalysis
 
     def tearDown(self):
-        super().tearDown()
         self.widget.onDeleteWidget()
         self.widgets.remove(self.widget)
         self.widget = None
+        super().tearDown()
 
     @staticmethod
     def _set_list_selection(listview, selection):

@@ -76,6 +76,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         )
 
     def setUp(self):
+        super().setUp()
         # For almost all the tests, we won't need to verify t-SNE validity and
         # the tests will run much faster if we dummy them out
         self.tsne = patch("Orange.projection.manifold.TSNE", new=DummyTSNE)
@@ -102,6 +103,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         except RuntimeError as e:
             if str(e) != "stop called on unstarted patcher":
                 raise e
+        super().tearDown()
 
     def restore_mocked_functions(self):
         self.tsne.stop()
