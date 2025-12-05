@@ -521,13 +521,7 @@ classification/logistic_regression.py:
         def `__init__`:
             l2: false
             auto: false
-            deprecated: false
-            'The multi_class parameter was ': false
-            'deprecated in scikit-learn 1.5. Using it with ': false
-            scikit-learn 1.7 will lead to a crash.: false
         def `_initialize_wrapped`:
-            multi_class: false
-            deprecated: false
             solver: false
             penalty: false
             auto: false
@@ -6586,7 +6580,7 @@ widgets/data/owmelt.py:
             No features to melt: Ni stolpcev za raztapljanje
         class `Information`:
             No columns with unique values\n: Ni stolpcev z neponovljenimi vrednostmi.\n
-            Only columns with unique valules are useful for row identifiers.: Kot identifikator vrstice so uporabni le stolpci, v katerih se vrednosti ne ponavljajo.
+            Only columns with unique values are useful for row identifiers.: Samo stolpci z neponovljenimi vrednostmi so uporabni kot identifikatorji vrstic.
         def `__init__`:
             Unique Row Identifier: Identifikator vrstice
             Row number: Številka vrstice
@@ -10676,7 +10670,7 @@ widgets/model/owsgd.py:
         Hinge: Rob (Hinge)
         hinge: false
         Logistic regression: Logistična regresija
-        log: false
+        log_loss: false
         Modified Huber: Modificirana Huberjeva
         modified_huber: false
         Squared Hinge: Kvadrat roba (Squared Hinge)
