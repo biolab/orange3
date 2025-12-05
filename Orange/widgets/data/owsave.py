@@ -128,14 +128,13 @@ class OWSave(OWSaveBase):
 
     def initial_start_dir(self):
         if self.filename and os.path.exists(os.path.split(self.filename)[0]):
-            return self.filename
+            return os.path.splitext(self.filename)[0]
         else:
             data_name = getattr(self.data, 'name', '')
             if data_name:
                 if self.writer is None:
                     self.filter = self.default_filter()
                 assert self.writer is not None
-                data_name += self.writer.EXTENSIONS[0]
             return os.path.join(self.last_dir or _userhome, data_name)
 
     def valid_filters(self):
