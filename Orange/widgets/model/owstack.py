@@ -57,9 +57,10 @@ class OWStackedLearner(OWBaseLearner):
     def create_learner(self):
         if not self.learners:
             return None
-        return self.LEARNER(
-            tuple(self.learners), aggregate=self.aggregate,
-            preprocessors=self.preprocessors)
+        params = {"preprocessors": self.preprocessors}
+        if self.aggregate:
+            params["aggregate"] = self.aggregate
+        return self.LEARNER(tuple(self.learners), **params)
 
     def get_learner_parameters(self):
         return (("Base learners", [l.name for l in self.learners]),

@@ -158,9 +158,11 @@ class FitterTest(unittest.TestCase):
 
             def _change_kwargs(self, kwargs, problem_type):
                 if problem_type == self.CLASSIFICATION:
-                    kwargs['param'] = kwargs.get('classification_param')
+                    if 'classification_param' in kwargs:
+                        kwargs['param'] = kwargs['classification_param']
                 else:
-                    kwargs['param'] = kwargs.get('regression_param')
+                    if 'regression_param' in kwargs:
+                        kwargs['param'] = kwargs['regression_param']
                 return kwargs
 
         learner = DummyFitter()
