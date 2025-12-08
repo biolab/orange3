@@ -252,8 +252,8 @@ class ParameterMapping(BaseParameterMapping):
         elif isinstance(gui_element, QComboBox):
             def fun(val):
                 value = values.index(val)
-                gui_element.activated.emit(value)
                 gui_element.setCurrentIndex(value)
+                gui_element.activated.emit(value)
 
             return fun
         else:
