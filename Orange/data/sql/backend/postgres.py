@@ -21,7 +21,7 @@ class Psycopg2Backend(Backend):
 
     display_name = "PostgreSQL"
     connection_pool = None
-    auto_create_extensions = True
+    auto_create_extensions = False
 
     def __init__(self, connection_params):
         super().__init__(connection_params)

@@ -56,16 +56,12 @@ class OWSql(OWBaseSql):
     table = Setting(None)
     sql = Setting("")
     guess_values = Setting(True)
-    download = Setting(False)
 
     materialize = Setting(False)
     materialize_table_name = Setting("")
 
     class Information(OWBaseSql.Information):
         data_sampled = Msg("Data description was generated from a sample.")
-
-    class Warning(OWBaseSql.Warning):
-        missing_extension = Msg("Database is missing extensions: {}")
 
     class Error(OWBaseSql.Error):
         no_backends = Msg("Please install a backend to use this widget.")
@@ -78,7 +74,6 @@ class OWSql(OWBaseSql):
         self.tablecombo = None
         self.sqltext = None
         self.custom_sql = None
-        self.downloadcb = None
         super().__init__()
 
     def _setup_gui(self):
@@ -139,10 +134,6 @@ class OWSql(OWBaseSql):
                      "Auto-discover categorical variables",
                      callback=self.open_table)
 
-        self.downloadcb = gui.checkBox(box, self, "download",
-                                       "Download data to local memory",
-                                       callback=self.open_table)
-
     def highlight_error(self, text=""):
         err = ['', 'QLineEdit {border: 2px solid red;}']
         self.servertext.setStyleSheet(err['server' in text or 'host' in text])
@@ -155,14 +146,6 @@ class OWSql(OWBaseSql):
         return self.backends[self.backendcombo.currentIndex()]
 
     def on_connection_success(self):
-        if getattr(self.backend, 'missing_extension', False):
-            self.Warning.missing_extension(
-                ", ".join(self.backend.missing_extension))
-            self.download = True
-            self.downloadcb.setEnabled(False)
-        if not is_postgres(self.backend):
-            self.download = True
-            self.downloadcb.setEnabled(False)
         super().on_connection_success()
         self.refresh_tables()
         self.select_table()
@@ -173,8 +156,6 @@ class OWSql(OWBaseSql):
 
     def clear(self):
         super().clear()
-        self.Warning.missing_extension.clear()
-        self.downloadcb.setEnabled(True)
         self.highlight_error()
         self.tablecombo.clear()
         self.tablecombo.repaint()
@@ -290,45 +271,44 @@ class OWSql(OWBaseSql):
             QApplication.restoreOverrideCursor()
             table.domain = domain
 
-        if self.download:
-            if table.approx_len() > AUTO_DL_LIMIT:
-                if is_postgres(self.backend):
-                    confirm = QMessageBox(self)
-                    confirm.setIcon(QMessageBox.Warning)
-                    confirm.setText("Data appears to be big. Do you really "
-                                    "want to download it to local memory?\n"
-                                    "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT))
+        if table.approx_len() > AUTO_DL_LIMIT:
+            if is_postgres(self.backend):
+                confirm = QMessageBox(self)
+                confirm.setIcon(QMessageBox.Warning)
+                confirm.setText("Data appears to be big. Do you really "
+                                "want to download it to local memory?\n"
+                                "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT))
 
-                    if table.approx_len() <= MAX_DL_LIMIT:
-                        confirm.addButton("Yes", QMessageBox.YesRole)
-                    no_button = confirm.addButton("No", QMessageBox.NoRole)
-                    sample_button = confirm.addButton("Yes, a sample",
-                                                      QMessageBox.YesRole)
-                    confirm.exec()
-                    if confirm.clickedButton() == no_button:
-                        return None
-                    elif confirm.clickedButton() == sample_button:
-                        table = table.sample_percentage(
-                            AUTO_DL_LIMIT / table.approx_len() * 100)
+                if table.approx_len() <= MAX_DL_LIMIT:
+                    confirm.addButton("Yes", QMessageBox.YesRole)
+                no_button = confirm.addButton("No", QMessageBox.NoRole)
+                sample_button = confirm.addButton("Yes, a sample",
+                                                  QMessageBox.YesRole)
+                confirm.exec()
+                if confirm.clickedButton() == no_button:
+                    return None
+                elif confirm.clickedButton() == sample_button:
+                    table = table.sample_percentage(
+                        AUTO_DL_LIMIT / table.approx_len() * 100)
+            else:
+                if table.approx_len() > MAX_DL_LIMIT:
+                    QMessageBox.warning(
+                        self, 'Warning',
+                        "Data is too big to download.\n"
+                        "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT)
+                    )
+                    return None
                 else:
-                    if table.approx_len() > MAX_DL_LIMIT:
-                        QMessageBox.warning(
-                            self, 'Warning',
-                            "Data is too big to download.\n"
-                            "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT)
-                        )
+                    confirm = QMessageBox.question(
+                        self, 'Question',
+                        "Data appears to be big. Do you really "
+                        "want to download it to local memory?",
+                        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                    if confirm == QMessageBox.No:
                         return None
-                    else:
-                        confirm = QMessageBox.question(
-                            self, 'Question',
-                            "Data appears to be big. Do you really "
-                            "want to download it to local memory?",
-                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-                        if confirm == QMessageBox.No:
-                            return None
 
-            table.download_data(MAX_DL_LIMIT)
-            table = Table(table)
+        table.download_data(MAX_DL_LIMIT)
+        table = Table(table)
 
         return table
 
