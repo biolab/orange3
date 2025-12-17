@@ -3,6 +3,8 @@ from AnyQt.QtWidgets import QComboBox, QTextEdit, QMessageBox, QApplication, \
 from AnyQt.QtGui import QCursor
 from AnyQt.QtCore import Qt
 
+from orangewidget.utils.combobox import ComboBoxSearch
+
 from Orange.data import Table
 from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import BackendError
@@ -116,7 +118,7 @@ class OWSql(OWBaseSql):
 
         self.tables = TableModel()
 
-        self.tablecombo = QComboBox(
+        self.tablecombo = ComboBoxSearch(
             minimumContentsLength=35,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
