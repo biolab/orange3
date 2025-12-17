@@ -43,6 +43,9 @@ class PymssqlBackend(Backend):
       ORDER BY [TABLE_NAME]
         """
 
+    def n_tables_query(self, _=None) -> str:
+        return "SELECT COUNT(*) FROM information_schema.tables"
+
     def quote_identifier(self, name):
         return "[{}]".format(name)
 

@@ -1,5 +1,5 @@
 from AnyQt.QtWidgets import QComboBox, QTextEdit, QMessageBox, QApplication, \
-    QGridLayout
+    QGridLayout, QLineEdit
 from AnyQt.QtGui import QCursor
 from AnyQt.QtCore import Qt
 
@@ -17,6 +17,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
 
 MAX_DL_LIMIT = 1000000
+MAX_TABLES = 1000
 
 
 def is_postgres(backend):
@@ -77,6 +78,7 @@ class OWSql(OWBaseSql):
         self.backendcombo = None
         self.tables = None
         self.tablecombo = None
+        self.tabletext = None
         self.sqltext = None
         self.custom_sql = None
         super().__init__()
@@ -126,6 +128,11 @@ class OWSql(OWBaseSql):
         self.tablecombo.setToolTip('table')
         self.tablecombo.activated[int].connect(self.select_table)
 
+        self.tabletext = QLineEdit(placeholderText='TABLE_NAME')
+        self.tabletext.setToolTip('table')
+        self.tabletext.editingFinished.connect(self.select_table)
+        self.tabletext.setVisible(False)
+
         self.custom_sql = gui.vBox(box)
         self.custom_sql.setVisible(self.data_source == self.CUSTOM_SQL)
         self.sqltext = QTextEdit(self.custom_sql)
@@ -142,6 +149,7 @@ class OWSql(OWBaseSql):
 
         form.addWidget(radio_table, 1, 0, Qt.AlignLeft)
         form.addWidget(self.tablecombo, 1, 1)
+        form.addWidget(self.tabletext, 1, 1)
         form.addWidget(radio_custom_sql, 2, 0, Qt.AlignLeft)
 
         gui.checkBox(box, self, "guess_values",
@@ -185,9 +193,15 @@ class OWSql(OWBaseSql):
             return
 
         self.tables.append("Select a table")
-        self.tables.extend(self.backend.list_tables(self.schema))
-        index = self.tablecombo.findText(str(self.table))
-        self.tablecombo.setCurrentIndex(index if index != -1 else 0)
+        if self.backend.n_tables(self.schema) <= MAX_TABLES:
+            self.tables.extend(self.backend.list_tables(self.schema))
+            index = self.tablecombo.findText(str(self.table))
+            self.tablecombo.setCurrentIndex(index if index != -1 else 0)
+            self.tablecombo.setVisible(True)
+            self.tabletext.setVisible(False)
+        else:
+            self.tablecombo.setVisible(False)
+            self.tabletext.setVisible(True)
         self.tablecombo.repaint()
 
     # Called on tablecombo selection change:
@@ -207,14 +221,16 @@ class OWSql(OWBaseSql):
         if self.backend is None:
             return None
         curIdx = self.tablecombo.currentIndex()
-        if self.data_source == self.TABLE and curIdx <= 0:
+        if self.data_source == self.TABLE and curIdx <= 0 and \
+                self.tabletext.text() == "":
             if self.database_desc:
                 self.database_desc["Table"] = "(None)"
             self.data_desc_table = None
             return None
 
         if self.data_source == self.TABLE:
-            self.table = self.tables[curIdx]
+            self.table = self.tables[curIdx] if curIdx > 0 else \
+                self.tabletext.text()
             self.database_desc["Table"] = self.table
             if "Query" in self.database_desc:
                 del self.database_desc["Query"]
@@ -294,7 +310,8 @@ class OWSql(OWBaseSql):
                 confirm.setIcon(QMessageBox.Warning)
                 confirm.setText("Data appears to be big. Do you really "
                                 "want to download it to local memory?\n"
-                                "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT))
+                                "Table length: {:,}. Limit {:,}".format(
+                    table.approx_len(), MAX_DL_LIMIT))
 
                 if table.approx_len() <= MAX_DL_LIMIT:
                     confirm.addButton("Yes", QMessageBox.YesRole)

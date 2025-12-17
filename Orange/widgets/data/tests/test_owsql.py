@@ -10,6 +10,13 @@ from Orange.widgets.tests.base import WidgetTest, simulate
 from Orange.tests.sql.base import DataBaseTest as dbt
 
 
+def mock_sqltable(*args, **_):
+    table = Table(args[1])
+    table.get_domain = lambda **_: table.domain
+    table.download_data = lambda *_: 1
+    return table
+
+
 class TestOWSqlConnected(WidgetTest, dbt):
     def setUpDB(self):
         # pylint: disable=attribute-defined-outside-init
@@ -72,6 +79,7 @@ class TestOWSql(WidgetTest):
         backend().display_name = "database"
         del backend().missing_extension
         backend().list_tables.return_value = ["a", "b", "c"]
+        backend().n_tables.return_value = 3
         mock_backends.available_backends.return_value = [backend]
         mock_sqltable().approx_len.return_value = 100
 
@@ -116,26 +124,54 @@ class TestOWSql(WidgetTest):
         backend = mock.Mock()
         backend().display_name = "Dummy Backend"
         backend().list_tables.return_value = ["a", "b", "c"]
+        backend().n_tables.return_value = 3
         mocked_backends.available_backends.return_value = [backend]
 
         settings = {"selected_backend": "Dummy Backend",
                     "host": "host", "port": "port", "database": "DB",
                     "schema": "", "username": "username",
-                    "password": "password", "data_source": OWSql.TABLE}
+                    "password": "password"}
         widget: OWSql = self.create_widget(OWSql, stored_settings=settings)
         self.assertEqual(widget.tablecombo.currentText(), "Select a table")
         self.assertFalse(widget.tablecombo.isHidden())
+        self.assertTrue(widget.tabletext.isHidden())
         self.assertTrue(widget.custom_sql.isHidden())
 
         widget.controls.data_source.buttons[OWSql.CUSTOM_SQL].click()
         self.assertEqual(widget.tablecombo.currentText(), "Select a table")
         self.assertFalse(widget.tablecombo.isHidden())
+        self.assertTrue(widget.tabletext.isHidden())
         self.assertFalse(widget.custom_sql.isHidden())
 
         widget.controls.data_source.buttons[OWSql.TABLE].click()
         self.assertEqual(widget.tablecombo.currentText(), "Select a table")
         self.assertFalse(widget.tablecombo.isHidden())
+        self.assertTrue(widget.tabletext.isHidden())
         self.assertTrue(widget.custom_sql.isHidden())
+
+    @mock.patch('Orange.widgets.data.owsql.MAX_TABLES', 2)
+    @mock.patch('Orange.widgets.data.owsql.SqlTable',
+                mock.Mock(side_effect=mock_sqltable))
+    @mock.patch('Orange.widgets.data.owsql.Backend')
+    def test_table_text(self, mocked_backends: mock.Mock):
+        backend = mock.Mock()
+        backend().display_name = "Dummy Backend"
+        backend().list_tables.return_value = ["iris", "zoo", "titanic"]
+        backend().n_tables.return_value = 3
+        mocked_backends.available_backends.return_value = [backend]
+
+        settings = {"selected_backend": "Dummy Backend",
+                    "host": "host", "port": "port", "database": "DB",
+                    "schema": "", "username": "username",
+                    "password": "password"}
+        widget: OWSql = self.create_widget(OWSql, stored_settings=settings)
+        self.assertTrue(widget.tablecombo.isHidden())
+        self.assertFalse(widget.tabletext.isHidden())
+        widget.tabletext.setText("zoo")
+        widget.select_table()
+        output = self.get_output(widget.Outputs.data, widget=widget)
+        self.assertIsInstance(output, Table)
+        self.assertEqual(len(output), 101)
 
 
 if __name__ == "__main__":
