@@ -28,7 +28,7 @@ class TestOWSqlConnected(WidgetTest, dbt):
 
         self.assertFalse(self.widget.Error.connection.is_shown())
         self.assertIsNotNone(self.widget.database_desc)
-        tables = ["Select a table", "Custom SQL"]
+        tables = ["Select a table"]
         self.assertTrue(set(self.widget.tables).issuperset(set(tables)))
 
     @dbt.run_on(["postgres"])
@@ -107,6 +107,35 @@ class TestOWSql(WidgetTest):
         settings = widget.settingsHandler.pack_data(widget)
         widget = self.create_widget(OWSql, stored_settings=settings)
         self.assertEqual(widget.backendcombo.currentText(), "")
+
+    @mock.patch('Orange.widgets.data.owsql.Backend')
+    def test_data_source(self, mocked_backends: mock.Mock):
+        widget: OWSql = self.create_widget(OWSql)
+        widget.controls.data_source.buttons[OWSql.CUSTOM_SQL].click()
+
+        backend = mock.Mock()
+        backend().display_name = "Dummy Backend"
+        backend().list_tables.return_value = ["a", "b", "c"]
+        mocked_backends.available_backends.return_value = [backend]
+
+        settings = {"selected_backend": "Dummy Backend",
+                    "host": "host", "port": "port", "database": "DB",
+                    "schema": "", "username": "username",
+                    "password": "password", "data_source": OWSql.TABLE}
+        widget: OWSql = self.create_widget(OWSql, stored_settings=settings)
+        self.assertEqual(widget.tablecombo.currentText(), "Select a table")
+        self.assertFalse(widget.tablecombo.isHidden())
+        self.assertTrue(widget.custom_sql.isHidden())
+
+        widget.controls.data_source.buttons[OWSql.CUSTOM_SQL].click()
+        self.assertEqual(widget.tablecombo.currentText(), "Select a table")
+        self.assertFalse(widget.tablecombo.isHidden())
+        self.assertFalse(widget.custom_sql.isHidden())
+
+        widget.controls.data_source.buttons[OWSql.TABLE].click()
+        self.assertEqual(widget.tablecombo.currentText(), "Select a table")
+        self.assertFalse(widget.tablecombo.isHidden())
+        self.assertTrue(widget.custom_sql.isHidden())
 
 
 if __name__ == "__main__":

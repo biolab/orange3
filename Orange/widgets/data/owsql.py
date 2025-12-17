@@ -1,4 +1,5 @@
-from AnyQt.QtWidgets import QComboBox, QTextEdit, QMessageBox, QApplication
+from AnyQt.QtWidgets import QComboBox, QTextEdit, QMessageBox, QApplication, \
+    QGridLayout
 from AnyQt.QtGui import QCursor
 from AnyQt.QtCore import Qt
 
@@ -52,7 +53,9 @@ class OWSql(OWBaseSql):
 
     buttons_area_orientation = None
 
+    TABLE, CUSTOM_SQL = range(2)
     selected_backend = Setting(None)
+    data_source = Setting(TABLE)
     table = Setting(None)
     sql = Setting("")
     guess_values = Setting(True)
@@ -101,8 +104,16 @@ class OWSql(OWBaseSql):
         self.selected_backend = backend.display_name if backend else None
 
     def _add_tables_controls(self):
-        vbox = gui.vBox(self.controlArea, "Tables")
-        box = gui.vBox(vbox)
+        box = gui.vBox(self.controlArea, 'Data Selection')
+        form = QGridLayout()
+        radio_buttons = gui.radioButtons(
+            box, self, 'data_source', orientation=form,
+            callback=self.__on_data_source_changed)
+        radio_table = gui.appendRadioButton(
+            radio_buttons, 'Table:', addToLayout=False)
+        radio_custom_sql = gui.appendRadioButton(
+            radio_buttons, 'Custom SQL:', addToLayout=False)
+
         self.tables = TableModel()
 
         self.tablecombo = QComboBox(
@@ -112,10 +123,9 @@ class OWSql(OWBaseSql):
         self.tablecombo.setModel(self.tables)
         self.tablecombo.setToolTip('table')
         self.tablecombo.activated[int].connect(self.select_table)
-        box.layout().addWidget(self.tablecombo)
 
         self.custom_sql = gui.vBox(box)
-        self.custom_sql.setVisible(False)
+        self.custom_sql.setVisible(self.data_source == self.CUSTOM_SQL)
         self.sqltext = QTextEdit(self.custom_sql)
         self.sqltext.setPlainText(self.sql)
         self.custom_sql.layout().addWidget(self.sqltext)
@@ -128,11 +138,17 @@ class OWSql(OWBaseSql):
 
         gui.button(self.custom_sql, self, 'Execute', callback=self.open_table)
 
-        box.layout().addWidget(self.custom_sql)
+        form.addWidget(radio_table, 1, 0, Qt.AlignLeft)
+        form.addWidget(self.tablecombo, 1, 1)
+        form.addWidget(radio_custom_sql, 2, 0, Qt.AlignLeft)
 
         gui.checkBox(box, self, "guess_values",
                      "Auto-discover categorical variables",
                      callback=self.open_table)
+
+    def __on_data_source_changed(self):
+        self.custom_sql.setVisible(self.data_source == self.CUSTOM_SQL)
+        self.select_table()
 
     def highlight_error(self, text=""):
         err = ['', 'QLineEdit {border: 2px solid red;}']
@@ -167,7 +183,6 @@ class OWSql(OWBaseSql):
             return
 
         self.tables.append("Select a table")
-        self.tables.append("Custom SQL")
         self.tables.extend(self.backend.list_tables(self.schema))
         index = self.tablecombo.findText(str(self.table))
         self.tablecombo.setCurrentIndex(index if index != -1 else 0)
@@ -175,29 +190,29 @@ class OWSql(OWBaseSql):
 
     # Called on tablecombo selection change:
     def select_table(self):
-        curIdx = self.tablecombo.currentIndex()
-        if self.tablecombo.itemText(curIdx) != "Custom SQL":
-            self.custom_sql.setVisible(False)
+        if self.data_source == self.TABLE:
             return self.open_table()
         else:
-            self.custom_sql.setVisible(True)
             self.data_desc_table = None
-            self.database_desc["Table"] = "(None)"
+            if self.database_desc:
+                self.database_desc["Table"] = "(None)"
             self.table = None
             if len(str(self.sql)) > 14:
                 return self.open_table()
         return None
 
     def get_table(self):
+        if self.backend is None:
+            return None
         curIdx = self.tablecombo.currentIndex()
-        if curIdx <= 0:
+        if self.data_source == self.TABLE and curIdx <= 0:
             if self.database_desc:
                 self.database_desc["Table"] = "(None)"
             self.data_desc_table = None
             return None
 
-        if self.tablecombo.itemText(curIdx) != "Custom SQL":
-            self.table = self.tables[self.tablecombo.currentIndex()]
+        if self.data_source == self.TABLE:
+            self.table = self.tables[curIdx]
             self.database_desc["Table"] = self.table
             if "Query" in self.database_desc:
                 del self.database_desc["Query"]
