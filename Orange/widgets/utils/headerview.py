@@ -70,6 +70,9 @@ class HeaderView(QHeaderView):
         is used (isSectionSelected will scan the entire model column/row
         when the whole column/row is selected).
         """
+        model = self.model()
+        if model is None:
+            return
         hover = self.logicalIndexAt(self.mapFromGlobal(QCursor.pos()))
         pressed = self.__pressed
 
@@ -100,7 +103,6 @@ class HeaderView(QHeaderView):
             )
 
         style = self.style()
-        model = self.model()
         orientation = self.orientation()
         textAlignment = model.headerData(logicalIndex, self.orientation(),
                                          Qt.TextAlignmentRole)
