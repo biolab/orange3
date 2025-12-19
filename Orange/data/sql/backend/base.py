@@ -68,6 +68,37 @@ class Backend(metaclass=Registry):
                 tables.append(TableDesc(name, schema, sql))
             return tables
 
+    def n_tables_query(self, schema=None) -> str:
+        """Return a query to count tables in database.
+
+        Parameters
+        ----------
+        schema : Optional[str]
+            If set, only tables from schema should be listed
+
+        Returns
+        -------
+        Query string.
+        """
+        raise NotImplementedError
+
+    def n_tables(self, schema=None) -> int:
+        """Return number of tables in database.
+
+        Parameters
+        ----------
+        schema : Optional[str]
+            If set, only tables from given schema will be listed.
+
+        Returns
+        -------
+        Number of tables in the database.
+        """
+        query = self.n_tables_query(schema)
+        with self.execute_sql_query(query) as cur:
+            res = cur.fetchone()
+        return res[0]
+
     def get_fields(self, table_name):
         """Return a list of field names and metadata in the given table
 

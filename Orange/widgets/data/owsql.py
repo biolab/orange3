@@ -1,6 +1,9 @@
-from AnyQt.QtWidgets import QComboBox, QTextEdit, QMessageBox, QApplication
+from AnyQt.QtWidgets import QComboBox, QTextEdit, QMessageBox, QApplication, \
+    QGridLayout, QLineEdit
 from AnyQt.QtGui import QCursor
 from AnyQt.QtCore import Qt
+
+from orangewidget.utils.combobox import ComboBoxSearch
 
 from Orange.data import Table
 from Orange.data.sql.backend import Backend
@@ -14,6 +17,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
 
 MAX_DL_LIMIT = 1000000
+MAX_TABLES = 1000
 
 
 def is_postgres(backend):
@@ -52,20 +56,18 @@ class OWSql(OWBaseSql):
 
     buttons_area_orientation = None
 
+    TABLE, CUSTOM_SQL = range(2)
     selected_backend = Setting(None)
+    data_source = Setting(TABLE)
     table = Setting(None)
     sql = Setting("")
     guess_values = Setting(True)
-    download = Setting(False)
 
     materialize = Setting(False)
     materialize_table_name = Setting("")
 
     class Information(OWBaseSql.Information):
         data_sampled = Msg("Data description was generated from a sample.")
-
-    class Warning(OWBaseSql.Warning):
-        missing_extension = Msg("Database is missing extensions: {}")
 
     class Error(OWBaseSql.Error):
         no_backends = Msg("Please install a backend to use this widget.")
@@ -76,9 +78,9 @@ class OWSql(OWBaseSql):
         self.backendcombo = None
         self.tables = None
         self.tablecombo = None
+        self.tabletext = None
         self.sqltext = None
         self.custom_sql = None
-        self.downloadcb = None
         super().__init__()
 
     def _setup_gui(self):
@@ -106,21 +108,33 @@ class OWSql(OWBaseSql):
         self.selected_backend = backend.display_name if backend else None
 
     def _add_tables_controls(self):
-        vbox = gui.vBox(self.controlArea, "Tables")
-        box = gui.vBox(vbox)
+        box = gui.vBox(self.controlArea, 'Data Selection')
+        form = QGridLayout()
+        radio_buttons = gui.radioButtons(
+            box, self, 'data_source', orientation=form,
+            callback=self.__on_data_source_changed)
+        radio_table = gui.appendRadioButton(
+            radio_buttons, 'Table:', addToLayout=False)
+        radio_custom_sql = gui.appendRadioButton(
+            radio_buttons, 'Custom SQL:', addToLayout=False)
+
         self.tables = TableModel()
 
-        self.tablecombo = QComboBox(
+        self.tablecombo = ComboBoxSearch(
             minimumContentsLength=35,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon
         )
         self.tablecombo.setModel(self.tables)
         self.tablecombo.setToolTip('table')
         self.tablecombo.activated[int].connect(self.select_table)
-        box.layout().addWidget(self.tablecombo)
+
+        self.tabletext = QLineEdit(placeholderText='TABLE_NAME')
+        self.tabletext.setToolTip('table')
+        self.tabletext.editingFinished.connect(self.select_table)
+        self.tabletext.setVisible(False)
 
         self.custom_sql = gui.vBox(box)
-        self.custom_sql.setVisible(False)
+        self.custom_sql.setVisible(self.data_source == self.CUSTOM_SQL)
         self.sqltext = QTextEdit(self.custom_sql)
         self.sqltext.setPlainText(self.sql)
         self.custom_sql.layout().addWidget(self.sqltext)
@@ -133,15 +147,18 @@ class OWSql(OWBaseSql):
 
         gui.button(self.custom_sql, self, 'Execute', callback=self.open_table)
 
-        box.layout().addWidget(self.custom_sql)
+        form.addWidget(radio_table, 1, 0, Qt.AlignLeft)
+        form.addWidget(self.tablecombo, 1, 1)
+        form.addWidget(self.tabletext, 1, 1)
+        form.addWidget(radio_custom_sql, 2, 0, Qt.AlignLeft)
 
         gui.checkBox(box, self, "guess_values",
                      "Auto-discover categorical variables",
                      callback=self.open_table)
 
-        self.downloadcb = gui.checkBox(box, self, "download",
-                                       "Download data to local memory",
-                                       callback=self.open_table)
+    def __on_data_source_changed(self):
+        self.custom_sql.setVisible(self.data_source == self.CUSTOM_SQL)
+        self.select_table()
 
     def highlight_error(self, text=""):
         err = ['', 'QLineEdit {border: 2px solid red;}']
@@ -155,14 +172,6 @@ class OWSql(OWBaseSql):
         return self.backends[self.backendcombo.currentIndex()]
 
     def on_connection_success(self):
-        if getattr(self.backend, 'missing_extension', False):
-            self.Warning.missing_extension(
-                ", ".join(self.backend.missing_extension))
-            self.download = True
-            self.downloadcb.setEnabled(False)
-        if not is_postgres(self.backend):
-            self.download = True
-            self.downloadcb.setEnabled(False)
         super().on_connection_success()
         self.refresh_tables()
         self.select_table()
@@ -173,8 +182,6 @@ class OWSql(OWBaseSql):
 
     def clear(self):
         super().clear()
-        self.Warning.missing_extension.clear()
-        self.downloadcb.setEnabled(True)
         self.highlight_error()
         self.tablecombo.clear()
         self.tablecombo.repaint()
@@ -186,37 +193,44 @@ class OWSql(OWBaseSql):
             return
 
         self.tables.append("Select a table")
-        self.tables.append("Custom SQL")
-        self.tables.extend(self.backend.list_tables(self.schema))
-        index = self.tablecombo.findText(str(self.table))
-        self.tablecombo.setCurrentIndex(index if index != -1 else 0)
+        if self.backend.n_tables(self.schema) <= MAX_TABLES:
+            self.tables.extend(self.backend.list_tables(self.schema))
+            index = self.tablecombo.findText(str(self.table))
+            self.tablecombo.setCurrentIndex(index if index != -1 else 0)
+            self.tablecombo.setVisible(True)
+            self.tabletext.setVisible(False)
+        else:
+            self.tablecombo.setVisible(False)
+            self.tabletext.setVisible(True)
         self.tablecombo.repaint()
 
     # Called on tablecombo selection change:
     def select_table(self):
-        curIdx = self.tablecombo.currentIndex()
-        if self.tablecombo.itemText(curIdx) != "Custom SQL":
-            self.custom_sql.setVisible(False)
+        if self.data_source == self.TABLE:
             return self.open_table()
         else:
-            self.custom_sql.setVisible(True)
             self.data_desc_table = None
-            self.database_desc["Table"] = "(None)"
+            if self.database_desc:
+                self.database_desc["Table"] = "(None)"
             self.table = None
             if len(str(self.sql)) > 14:
                 return self.open_table()
         return None
 
     def get_table(self):
+        if self.backend is None:
+            return None
         curIdx = self.tablecombo.currentIndex()
-        if curIdx <= 0:
+        if self.data_source == self.TABLE and curIdx <= 0 and \
+                self.tabletext.text() == "":
             if self.database_desc:
                 self.database_desc["Table"] = "(None)"
             self.data_desc_table = None
             return None
 
-        if self.tablecombo.itemText(curIdx) != "Custom SQL":
-            self.table = self.tables[self.tablecombo.currentIndex()]
+        if self.data_source == self.TABLE:
+            self.table = self.tables[curIdx] if curIdx > 0 else \
+                self.tabletext.text()
             self.database_desc["Table"] = self.table
             if "Query" in self.database_desc:
                 del self.database_desc["Query"]
@@ -290,45 +304,45 @@ class OWSql(OWBaseSql):
             QApplication.restoreOverrideCursor()
             table.domain = domain
 
-        if self.download:
-            if table.approx_len() > AUTO_DL_LIMIT:
-                if is_postgres(self.backend):
-                    confirm = QMessageBox(self)
-                    confirm.setIcon(QMessageBox.Warning)
-                    confirm.setText("Data appears to be big. Do you really "
-                                    "want to download it to local memory?\n"
-                                    "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT))
+        if table.approx_len() > AUTO_DL_LIMIT:
+            if is_postgres(self.backend):
+                confirm = QMessageBox(self)
+                confirm.setIcon(QMessageBox.Warning)
+                confirm.setText("Data appears to be big. Do you really "
+                                "want to download it to local memory?\n"
+                                "Table length: {:,}. Limit {:,}".format(
+                    table.approx_len(), MAX_DL_LIMIT))
 
-                    if table.approx_len() <= MAX_DL_LIMIT:
-                        confirm.addButton("Yes", QMessageBox.YesRole)
-                    no_button = confirm.addButton("No", QMessageBox.NoRole)
-                    sample_button = confirm.addButton("Yes, a sample",
-                                                      QMessageBox.YesRole)
-                    confirm.exec()
-                    if confirm.clickedButton() == no_button:
-                        return None
-                    elif confirm.clickedButton() == sample_button:
-                        table = table.sample_percentage(
-                            AUTO_DL_LIMIT / table.approx_len() * 100)
+                if table.approx_len() <= MAX_DL_LIMIT:
+                    confirm.addButton("Yes", QMessageBox.YesRole)
+                no_button = confirm.addButton("No", QMessageBox.NoRole)
+                sample_button = confirm.addButton("Yes, a sample",
+                                                  QMessageBox.YesRole)
+                confirm.exec()
+                if confirm.clickedButton() == no_button:
+                    return None
+                elif confirm.clickedButton() == sample_button:
+                    table = table.sample_percentage(
+                        AUTO_DL_LIMIT / table.approx_len() * 100)
+            else:
+                if table.approx_len() > MAX_DL_LIMIT:
+                    QMessageBox.warning(
+                        self, 'Warning',
+                        "Data is too big to download.\n"
+                        "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT)
+                    )
+                    return None
                 else:
-                    if table.approx_len() > MAX_DL_LIMIT:
-                        QMessageBox.warning(
-                            self, 'Warning',
-                            "Data is too big to download.\n"
-                            "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT)
-                        )
+                    confirm = QMessageBox.question(
+                        self, 'Question',
+                        "Data appears to be big. Do you really "
+                        "want to download it to local memory?",
+                        QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+                    if confirm == QMessageBox.No:
                         return None
-                    else:
-                        confirm = QMessageBox.question(
-                            self, 'Question',
-                            "Data appears to be big. Do you really "
-                            "want to download it to local memory?",
-                            QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-                        if confirm == QMessageBox.No:
-                            return None
 
-            table.download_data(MAX_DL_LIMIT)
-            table = Table(table)
+        table.download_data(MAX_DL_LIMIT)
+        table = Table(table)
 
         return table
 

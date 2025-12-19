@@ -21,7 +21,7 @@ class Psycopg2Backend(Backend):
 
     display_name = "PostgreSQL"
     connection_pool = None
-    auto_create_extensions = True
+    auto_create_extensions = False
 
     def __init__(self, connection_params):
         super().__init__(connection_params)
@@ -112,6 +112,12 @@ class Psycopg2Backend(Backend):
                         {}
                         AND NOT c.relname LIKE '\\_\\_%'
                    ORDER BY 1,2;""".format(schema_clause)
+
+    def n_tables_query(self, schema=None) -> str:
+        query = "SELECT COUNT(*) FROM information_schema.tables"
+        if schema:
+            query += f" WHERE table_schema = '{schema}'"
+        return query
 
     def create_variable(self, field_name, field_metadata,
                         type_hints, inspect_table=None):

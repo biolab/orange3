@@ -1952,6 +1952,8 @@ data/sql/backend/mssql.py:
          WHERE TABLE_TYPE in ('VIEW' ,'BASE TABLE')
       ORDER BY [TABLE_NAME]
         ": false
+        def `n_tables_query`:
+            SELECT COUNT(*) FROM information_schema.tables: false
         def `quote_identifier`:
             [{}]: false
         def `create_sql_query`:
@@ -2024,6 +2026,9 @@ data/sql/backend/postgres.py:
                         {}
                         AND NOT c.relname LIKE '\\_\\_%'
                    ORDER BY 1,2;": false
+        def `n_tables_query`:
+            SELECT COUNT(*) FROM information_schema.tables: false
+            " WHERE table_schema = '{schema}'": false
         def `create_variable`:
             extract(epoch from {}): false
             ({})::double precision: false
@@ -8216,13 +8221,15 @@ widgets/data/owsql.py:
             Attribute-valued dataset read from the input file.: Podatki prebrani iz baze
         class `Information`:
             Data description was generated from a sample.: Podatki vsebujejo samo vzorec.
-        class `Warning`:
-            'Database is missing extensions: {}': Podatkovna baza nima razširitev: {}
         class `Error`:
             Please install a backend to use this widget.: Namestite knjižnico za podatkovno bazo.
         def `_add_tables_controls`:
-            Tables: Tabele
+            Data Selection: Podatki
+            data_source: false
+            Table:: Tabela
+            Custom SQL:: Prikrojen SQL
             table: tabela
+            TABLE_NAME: IME_TABELE
             materialize: false
             'Materialize to table ': 'Materializiraj v tabelo '
             Save results of the query in a table: Shrani podatke poizvedbe v tabelo
@@ -8230,24 +8237,17 @@ widgets/data/owsql.py:
             Execute: Izvedi
             guess_values: false
             Auto-discover categorical variables: Samodejno zaznaj kategorične spremenljivke
-            download: false
-            Download data to local memory: Shrani podatke v pomnilnik
         def `highlight_error`:
             'QLineEdit {border: 2px solid red;}': false
             server: false
             host: false
             role: false
             database: false
-        def `on_connection_success`:
-            missing_extension: false
-            ', ': true
         def `on_connection_error`:
             \n: false
         def `refresh_tables`:
             Select a table: Izberi tabelo
-            Custom SQL: Prikrojen SQL
         def `select_table`:
-            Custom SQL: Prikrojen SQL
             Table: Tabela
             (None): (Brez)
         def `get_table`:
