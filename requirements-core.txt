@@ -12,7 +12,7 @@ numpy>=1.21.0,<2.4
 openpyxl>=3.1.3
 openTSNE>=0.6.2,!=0.7.0  # 0.7.0 segfaults
 packaging
-pandas>=2.0.1
+pandas>=2.0.1,<3
 python-louvain>=0.13
 pyyaml
 requests
