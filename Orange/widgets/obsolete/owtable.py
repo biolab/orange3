@@ -58,7 +58,7 @@ class OWDataTable(OWWidget):
     description = "View the dataset in a spreadsheet."
     icon = "../data/icons/Table.svg"
     priority = 50
-    keywords = []
+    keywords = "_keywords"
 
     class Inputs:
         data = MultiInput("Data", Table, auto_summary=False, filter_none=True)

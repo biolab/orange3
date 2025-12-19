@@ -36,6 +36,7 @@ class OWSaveTestBase(WidgetTest, SaveWidgetsTestBaseMixin):
     def setUp(self):
         with open_widget_classes():
             class OWSaveMockWriter(OWSave):
+                keywords = "_keywords"
                 writer = Mock()
                 writer.EXTENSIONS = [".csv"]
                 writer.SUPPORT_COMPRESSED = True
