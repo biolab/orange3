@@ -5,6 +5,28 @@ Change Log
 ------------
 
 
+[3.40.0] - 2025-12-20
+--------------------
+##### Enhancements
+* SQL: Limit tables in dropdown ([#7214](../../pull/7214))
+* Neighbors: Add an option to retain reference example(s) ([#7199](../../pull/7199))
+* File: Allow selecting files with arbitrary extensions ([#6894](../../pull/6894))
+* SliderGraph: thicker threshold line ([#7091](../../pull/7091))
+* Tree Viewer: correctly show the first category (escape class values) ([#7124](../../pull/7124))
+* CN2 Rules: prefer equality (with optional restriction) for categorical variables ([#7128](../../pull/7128))
+
+##### Bugfixes
+* Manifold Learning: Fix reseting of selected number of components ([#7191](../../pull/7191))
+* HeaderView: Do nothing in initStyleOptionForIndex if model is None ([#7216](../../pull/7216))
+* Save dialogs: Avoid weird behavior with extensions on macOS ([#7195](../../pull/7195))
+* requirements-core.txt: Raise minimum pandas version to 2.0.* ([#7203](../../pull/7203))
+* CSV Import: Fix non-functioning encodings selection ([#7181](../../pull/7181))
+* CSV Import timezone aware ([#7140](../../pull/7140))
+* Projections: When the number of colors equals the limit, do not introduce 'other' ([#7130](../../pull/7130))
+* Predictions: allow loading of workflows saved in a localized version (target class setting fix) ([#7123](../../pull/7123))
+* OWDBSCAN: handle empty X ([#7107](../../pull/7107))
+
+
 [3.39.0] - 2025-06-13
 --------------------
 ##### Enhancements
@@ -1936,7 +1958,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.39.0..HEAD
+[next]: https://github.com/biolab/orange3/compare/3.40.0..HEAD
+[3.40.0]: https://github.com/biolab/orange3/compare/3.39.0...3.40.0
 [3.39.0]: https://github.com/biolab/orange3/compare/3.38.1...3.39.0
 [3.38.1]: https://github.com/biolab/orange3/compare/3.38.0...3.38.1
 [3.38.0]: https://github.com/biolab/orange3/compare/3.37.0...3.38.0
