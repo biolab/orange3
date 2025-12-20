@@ -4,7 +4,7 @@ import unittest
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix
 
-from Orange.data import Table
+from Orange.data import Table, Domain
 from Orange.clustering import DBSCAN
 from Orange.preprocess import Normalize, Continuize, SklImpute
 from Orange.widgets.tests.base import WidgetTest
@@ -21,6 +21,7 @@ class TestOWDBSCAN(WidgetTest):
         self.widgets.remove(self.widget)
         self.widget.onDeleteWidget()
         self.widget = None
+        super().tearDown()
 
     def test_cluster(self):
         w = self.widget
@@ -36,6 +37,21 @@ class TestOWDBSCAN(WidgetTest):
 
         self.assertEqual("Cluster", str(output.domain.metas[0]))
         self.assertEqual("DBSCAN Core", str(output.domain.metas[1]))
+
+        # one feature only
+        np_array = np.round(np.random.random((20, 1)), 0)
+        one_feature_table = Table.from_numpy(None, X=np_array)
+
+        self.send_signal(w.Inputs.data, one_feature_table)
+        output = self.get_output(w.Outputs.annotated_data)
+
+        self.assertIsNotNone(output)
+        self.assertEqual(len(one_feature_table), len(output))
+        self.assertTupleEqual(one_feature_table.X.shape, output.X.shape)
+        self.assertEqual(2, output.metas.shape[1])
+        self.assertEqual("Cluster", str(output.domain.metas[0]))
+        self.assertEqual("DBSCAN Core", str(output.domain.metas[1]))
+
 
     def test_unique_domain(self):
         w = self.widget
@@ -55,6 +71,16 @@ class TestOWDBSCAN(WidgetTest):
 
         self.send_signal(w.Inputs.data, self.iris)
         self.assertFalse(w.Error.not_enough_instances.is_shown())
+
+        new_domain = Domain([], self.iris.domain.class_vars,
+                            metas=self.iris.domain.attributes)
+        iris_all_metas = self.iris.transform(new_domain)
+        self.send_signal(w.Inputs.data, iris_all_metas)
+        self.assertTrue(w.Error.no_features.is_shown())
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertFalse(w.Error.no_features.is_shown())
+
 
     def test_data_none(self):
         w = self.widget
@@ -222,7 +248,14 @@ class TestOWDBSCAN(WidgetTest):
     def test_missing_data(self):
         w = self.widget
         with self.iris.unlocked():
-            self.iris[1:5, 1] = np.nan
+            self.iris[:5, 1] = np.nan
+        self.send_signal(w.Inputs.data, self.iris)
+        output = self.get_output(w.Outputs.annotated_data)
+        self.assertTupleEqual((150, 1), output[:, "Cluster"].metas.shape)
+
+        self.send_signal(w.Inputs.data, None)
+        with self.iris.unlocked():
+            self.iris[5:, 2] = np.nan
         self.send_signal(w.Inputs.data, self.iris)
         output = self.get_output(w.Outputs.annotated_data)
         self.assertTupleEqual((150, 1), output[:, "Cluster"].metas.shape)

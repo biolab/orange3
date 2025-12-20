@@ -105,6 +105,8 @@ class TestOWSaveBaseWithWriters(WidgetTest):
 
     @patch("os.path.exists",
            lambda name: name in ["/home/u/orange/a/b", "/foo/bar"])
+    @patch("os.path.isabs",
+           lambda name: name in ["/a/d", "/foo/bar"])  # Python 3.13+ made that False on Windows
     def test_open_moved_workflow(self):
         """Stored relative paths are properly changed on load"""
         home = _userhome
@@ -258,6 +260,8 @@ class TestOWSaveBaseWithWriters(WidgetTest):
             self.assertPathEqual(w.stored_path, ".")
             self.assertEqual(w.stored_name, "c.foo")
 
+    @patch("os.path.isabs",
+           lambda name: name in ["/a/b"])  # Python 3.13+ made that False on Windows
     def test_migrate_pre_relative_settings(self):
         with patch("os.path.exists", lambda name: name == "/a/b"):
             w = self.create_widget(
@@ -391,6 +395,7 @@ class TestOWSaveBase(WidgetTest):
             widget.filename = filename
             self.assertTrue(os.path.isabs(widget.stored_path))
 
+    @unittest.skipIf(sys.platform.startswith("win"), "unix path tests")
     def test_paths_unix(self):
         class OWSave(OWSaveBase):
             name = "Mock save"

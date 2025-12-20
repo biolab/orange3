@@ -72,17 +72,16 @@ that appear in Data Subset, based on row identity and not actual data.
 
     def commit(self):
         self.Warning.instances_not_matching.clear()
-        subset_ids = []
-        if self.data_subset:
-            subset_ids = self.data_subset.ids
         if not self.data:
             matching_output = None
             non_matching_output = None
             annotated_output = None
         else:
-            if self.data_subset and \
-                    not np.intersect1d(subset_ids, self.data.ids).size:
-                self.Warning.instances_not_matching()
+            subset_ids = []
+            if self.data_subset is not None:
+                subset_ids = self.data_subset.ids
+                if not np.intersect1d(subset_ids, self.data.ids).size:
+                    self.Warning.instances_not_matching()
             row_sel = np.isin(self.data.ids, subset_ids)
             matching_output = self.data[row_sel]
             non_matching_output = self.data[~row_sel]

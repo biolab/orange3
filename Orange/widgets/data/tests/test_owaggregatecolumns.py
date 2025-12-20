@@ -111,7 +111,8 @@ class TestOWAggregateColumn(WidgetTest):
                 "Mean": [m1, m2],
                 "Variance": [(m1 ** 2 + (m1 - 1) ** 2 + (m1 - 3) ** 2) / 3,
                              ((m2 - 3) ** 2 + (m2 - 1) ** 2 + (m2 - 4) ** 2) / 3],
-                "Median": [1, 3]}.items():
+                "Median": [1, 3],
+                "Count non-zero": [2, 3]}.items():
             np.testing.assert_equal(
                 self.widget._compute_column(variables), expected,
                 err_msg=f"error in '{self.widget.operation}'")
@@ -130,7 +131,8 @@ class TestOWAggregateColumn(WidgetTest):
                 "Mean": [m1, m2],
                 "Variance": [(m1 ** 2 + (m1 - 1) ** 2 + (m1 - 3) ** 2) / 3,
                              ((m2 - 1) ** 2 + (m2 - 4) ** 2) / 2],
-                "Median": [1, 2.5]}.items():
+                "Median": [1, 2.5],
+                "Count non-zero": [2, 2]}.items():
             np.testing.assert_equal(
                 self.widget._compute_column(variables), expected,
                 err_msg=f"error in '{self.widget.operation}'")

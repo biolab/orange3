@@ -202,8 +202,8 @@ class OWVennDiagram(widget.OWWidget):
     def setData(self, index: int, data: Optional[Table]):
         item = self._data_inputs[index]
         item = item._replace(
-            name=data.name if data is not None else "",
-            table=data
+            name=data.name if data else "",
+            table=data or None
         )
         self._data_inputs[index] = item
         self.__data = None  # invalidate self.data

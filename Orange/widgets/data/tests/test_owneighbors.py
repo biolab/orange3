@@ -77,17 +77,26 @@ class TestOWNeighbors(WidgetTest):
                         and widget.n_neighbors != 0:
                     self.assertIsNotNone(self.get_output())
 
-    def test_exclude_reference(self):
-        """Check neighbors when reference is excluded"""
+    def test_include_reference(self):
         widget = self.widget
+        widget.n_neighbors = 10
+        self.widget.include_reference = False
         reference = self.iris[:5]
         self.send_signal(widget.Inputs.data, self.iris)
         self.send_signal(widget.Inputs.reference, reference)
-        self.widget.exclude_reference = True
-        widget.apply_button.button.click()
         neighbors = self.get_output(widget.Outputs.data)
+        self.assertEqual(len(neighbors), 10)
         for inst in reference:
             self.assertNotIn(inst, neighbors)
+
+        self.widget.include_reference = True
+        widget.commit.now()
+        neighbors = self.get_output(widget.Outputs.data)
+        self.assertEqual(len(neighbors), 15)
+        for inst in reference:
+            self.assertNotIn(inst, neighbors[:10])
+        for inst in reference:
+            self.assertIn(inst, neighbors[10:])
 
     def test_similarity(self):
         widget = self.widget

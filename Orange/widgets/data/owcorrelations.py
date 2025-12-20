@@ -1,6 +1,7 @@
 """
 Correlations widget
 """
+import warnings
 from enum import IntEnum
 from operator import attrgetter
 from types import SimpleNamespace
@@ -64,17 +65,32 @@ class KMeansCorrelationHeuristic:
 
     def get_clusters_of_attributes(self):
         """
-        Generates groupes of attribute IDs, grouped by cluster. Clusters are
+        Generates groups of attribute IDs, grouped by cluster. Clusters are
         obtained by KMeans algorithm.
 
         :return: generator of attributes grouped by cluster
         """
         data = Normalize()(self.data).X.T
+        if data.base is not None:
+            data = data.copy()
+        self._impute_means(data)
+
         kmeans = KMeans(n_clusters=self.n_clusters, random_state=0, n_init=1).fit(data)
         labels_attrs = sorted([(l, i) for i, l in enumerate(kmeans.labels_)])
         return [Cluster(instances=list(pair[1] for pair in group),
                         centroid=kmeans.cluster_centers_[l])
                 for l, group in groupby(labels_attrs, key=lambda x: x[0])]
+
+    @staticmethod
+    def _impute_means(arr):
+        nans = np.isnan(arr)
+        if np.any(nans):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                means = np.nanmean(arr, axis=1)
+            means = np.nan_to_num(means)
+            inds = np.where(nans)
+            arr[inds] = means[inds[0]]
 
     def get_states(self, initial_state):
         """
@@ -118,6 +134,7 @@ class CorrelationRank(VizRankDialogAttrPair):
     """
     threadStopped = Signal()
     PValRole = next(gui.OrangeUserRole)
+    CorrRole = next(gui.OrangeUserRole)
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -127,7 +144,7 @@ class CorrelationRank(VizRankDialogAttrPair):
 
     def initialize(self):
         super().initialize()
-        data = self.master.cont_data
+        data = self.master.actual_data
         self.attrs = data and data.domain.attributes
         self.model_proxy.setFilterKeyColumn(-1)
         self.heuristic = None
@@ -145,10 +162,15 @@ class CorrelationRank(VizRankDialogAttrPair):
 
     def compute_score(self, state):
         (attr1, attr2), corr_type = state, self.master.correlation_type
-        data = self.master.cont_data.X
+        data = self.master.actual_data.X
+        col1, col2 = data[:, attr1], data[:, attr2]
+        mask = ~np.isnan(col1) & ~np.isnan(col2)
+        if np.sum(mask) < 2:
+            return np.inf, np.nan, np.nan # no valid data
+        col1, col2 = col1[mask], col2[mask]
         corr = pearsonr if corr_type == CorrelationType.PEARSON else spearmanr
-        r, p_value = corr(data[:, attr1], data[:, attr2])
-        return -abs(r) if not np.isnan(r) else NAN, r, p_value
+        r, p_value = corr(col1, col2)
+        return -abs(r) if not np.isnan(r) else np.inf, r, p_value
 
     def row_for_state(self, score, state):
         attrs = sorted((self.attrs[x] for x in state), key=attrgetter("name"))
@@ -163,16 +185,20 @@ class CorrelationRank(VizRankDialogAttrPair):
                 colon = QStandardItem(":")
                 colon.setData(Qt.AlignCenter, Qt.TextAlignmentRole)
                 attr_items.append(colon)
-        correlation_item = QStandardItem("{:+.3f}".format(score[1]))
+        if np.isnan(score[1]):
+            correlation_item = QStandardItem("N/A")
+        else:
+            correlation_item = QStandardItem(f"{score[1]:+.3f}")
+            correlation_item.setData(
+                self.NEGATIVE_COLOR if score[1] < 0 else self.POSITIVE_COLOR,
+                gui.TableBarItem.BarColorRole)
+        correlation_item.setData(score[1], self.CorrRole)
         correlation_item.setData(score[2], self.PValRole)
         correlation_item.setData(attrs, self._AttrRole)
-        correlation_item.setData(
-            self.NEGATIVE_COLOR if score[1] < 0 else self.POSITIVE_COLOR,
-            gui.TableBarItem.BarColorRole)
         return [correlation_item] + attr_items
 
     def check_preconditions(self):
-        return self.master.cont_data is not None
+        return self.master.actual_data is not None
 
     def iterate_states(self, initial_state):
         if self.sel_feature_index is not None:
@@ -262,11 +288,12 @@ class OWCorrelations(OWWidget):
     selection = ContextSetting([])
     feature = ContextSetting(None)
     correlation_type = Setting(0)
+    impute_missing = Setting(True)
 
     class Information(OWWidget.Information):
         removed_cons_feat = Msg("Constant features have been removed.")
 
-    class Warning(OWWidget.Warning):
+    class Error(OWWidget.Error):
         not_enough_vars = Msg("At least two numeric features are needed.")
         not_enough_inst = Msg("At least two instances are needed.")
 
@@ -274,6 +301,7 @@ class OWCorrelations(OWWidget):
         super().__init__()
         self.data = None  # type: Table
         self.cont_data = None  # type: Table
+        self.actual_data = None  # type: Table
 
         # GUI
         box = gui.vBox(self.controlArea)
@@ -288,6 +316,14 @@ class OWCorrelations(OWWidget):
         gui.comboBox(
             box, self, "feature", callback=self._feature_combo_changed,
             model=self.feature_model, searchable=True
+        )
+
+        gui.checkBox(
+            box, self, "impute_missing", "Impute missing values",
+            toolTip="Replace missing values with means;\n"
+                    "if disabled, rows with missing values for the corre"
+                    "sponding variables are ignored",
+            callback=self._impute_missing_changed
         )
 
         self.vizrank, _ = CorrelationRank.add_vizrank(
@@ -310,6 +346,10 @@ class OWCorrelations(OWWidget):
         self.apply()
 
     def _feature_combo_changed(self):
+        self.apply()
+
+    def _impute_missing_changed(self):
+        self.set_actual_data()
         self.apply()
 
     def _vizrank_selection_changed(self, *args):
@@ -351,10 +391,11 @@ class OWCorrelations(OWWidget):
         self.clear_messages()
         self.data = data
         self.cont_data = None
+        self.actual_data = None
         self.selection = []
         if data is not None:
             if len(data) < 2:
-                self.Warning.not_enough_inst()
+                self.Error.not_enough_inst()
             else:
                 domain = data.domain
                 cont_vars = [a for a in domain.class_vars + domain.metas +
@@ -365,26 +406,43 @@ class OWCorrelations(OWWidget):
                 if remover.attr_results["removed"]:
                     self.Information.removed_cons_feat()
                 if len(cont_data.domain.attributes) < 2:
-                    self.Warning.not_enough_vars()
+                    self.Error.not_enough_vars()
                 else:
-                    self.cont_data = SklImpute()(cont_data)
-        self.set_feature_model()
-        self.openContext(self.cont_data)
-        self.apply()
-        self.vizrank.button.setEnabled(self.cont_data is not None)
+                    self.cont_data = cont_data
+        self.set_actual_data()
 
-    def set_feature_model(self):
-        self.feature_model.set_domain(
-            self.cont_data.domain if self.cont_data else None)
-        data = self.data
-        if self.cont_data and data.domain.has_continuous_class:
-            self.feature = self.cont_data.domain[data.domain.class_var.name]
+        if self.actual_data and data.domain.has_continuous_class:
+            self.feature = self.actual_data.domain[data.domain.class_var.name]
+        else:
+            self.feature = None
+        self.openContext(self.actual_data)
+        self.apply()
+        self.vizrank.button.setEnabled(self.actual_data is not None)
+
+    def set_actual_data(self):
+        if self.cont_data is None:
+            self.actual_data = None
+            self.feature_model.set_domain(None)
+            self.feature = None
+            self.vizrank.setEnabled(False)
+            return
+
+        if self.impute_missing and self.cont_data.has_missing_attribute():
+            imputer = SklImpute(strategy="mean")
+            self.actual_data = imputer(self.cont_data)
+        else:
+            self.actual_data = self.cont_data
+
+        feature_name = self.feature and self.feature.name
+        self.feature_model.set_domain(self.actual_data.domain)
+        if feature_name and feature_name in self.actual_data.domain:
+            self.feature = self.actual_data.domain[feature_name]
         else:
             self.feature = None
 
     def apply(self):
         self.vizrank.initialize()
-        if self.cont_data is not None:
+        if self.actual_data is not None:
             # this triggers self.commit() by changing vizrank selection
             self.vizrank.toggle()
         else:
@@ -406,12 +464,12 @@ class OWCorrelations(OWWidget):
         model = self.vizrank.rank_model
         count = model.rowCount()
         index = model.index
-        corr = np.array([float(index(row, 0).data())
-                         for row in range(count)])
-        p = np.array([index(row, 0).data(CorrelationRank.PValRole)
-                      for row in range(count)])
-        fdr = FDR(p)
-        x = np.vstack((corr, p, fdr)).T
+        corr_p = np.array([
+            [d(CorrelationRank.CorrRole), d(CorrelationRank.PValRole)]
+            for d in (index(row, 0).data for row in range(count))
+        ])
+        fdr = FDR(corr_p[:, 1])
+        x = np.hstack((corr_p, fdr[:, np.newaxis]))
         # pylint: disable=protected-access
         m = np.array([[a.name
                        for a in index(row, 0).data(CorrelationRank._AttrRole)]
@@ -440,5 +498,29 @@ class OWCorrelations(OWWidget):
                                             for name, vtype in sel], -3)
 
 
+def mock_data():
+    # pylint: disable=import-outside-toplevel
+    from Orange.data import DiscreteVariable
+    domain = Domain([DiscreteVariable("a", values="abc")]
+                    + [ContinuousVariable(x) for x in "defghij"])
+    n = np.nan
+    s = 1 / 2
+    return Table.from_numpy(
+        domain,
+        np.array([[0, 0, 0, 0, 1, 0],  # a
+                  [1, 0, 0, 1, 0, 0],  # d 0
+                  [0, 1, 1, 0, 1, 1],  # e 1
+                  [1, 0, 0, 1, 0, 0],  # f 2
+                  [1, 0, s, 1, 0, s],  # g 3
+                  [1, 0, n, 1, 0, n],  # h 4
+                  [n, 0, n, 1, 0, n],  # i 5
+                  [0, n, n, n, n, 1]]  # j 6
+                  ).T
+    )
+
+
 if __name__ == "__main__":  # pragma: no cover
-    WidgetPreview(OWCorrelations).run(Table("iris"))
+    WidgetPreview(OWCorrelations).run(
+        Table("iris")
+        # mock_data()
+    )

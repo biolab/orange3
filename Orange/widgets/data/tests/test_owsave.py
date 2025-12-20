@@ -73,7 +73,7 @@ class TestOWSave(OWSaveTestBase):
 
         with patch("os.path.exists", return_value=True):
             widget.filename = _w("/usr/foo/bar.csv")
-            self.assertEqual(widget.initial_start_dir(), widget.filename)
+            self.assertEqual(widget.initial_start_dir(), widget.filename[:-4])
 
             widget.filename = ""
             widget.last_dir = _w("/usr/bar")
@@ -81,12 +81,11 @@ class TestOWSave(OWSaveTestBase):
 
             widget.last_dir = _w("/usr/bar")
             self.send_signal(widget.Inputs.data, self.iris)
-            self.assertEqual(widget.initial_start_dir(),
-                             _w("/usr/bar/iris.csv"))
+            self.assertEqual(widget.initial_start_dir(), _w("/usr/bar/iris"))
 
             widget.last_dir = ""
             self.assertEqual(widget.initial_start_dir(),
-                             os.path.expanduser(_w("~/iris.csv")))
+                             os.path.expanduser(_w("~/iris")))
 
     @patch("Orange.widgets.utils.save.owsavebase.QFileDialog.getSaveFileName")
     def test_save_file_sets_name(self, _filedialog):
@@ -521,15 +520,6 @@ class TestOWSaveLinuxDialog(OWSaveTestBase):
 @unittest.skipUnless(sys.platform in ("darwin", "win32"),
                      "Test for native dialog on Windows and macOS")
 class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
-    if sys.platform == "darwin":
-        @staticmethod
-        def remove_star(filt):
-            return filt.replace(" (*.", " (.")
-    else:
-        @staticmethod
-        def remove_star(filt):
-            return filt
-
     @patch("Orange.widgets.utils.save.owsavebase.QFileDialog")
     def test_get_save_filename_darwin(self, dlg):
         widget = self.widget
@@ -540,14 +530,11 @@ class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
         instance = dlg.return_value
         instance.exec.return_value = dlg.Accepted = QFileDialog.Accepted
         instance.selectedFiles.return_value = ["foo"]
-        instance.selectedNameFilter.return_value = self.remove_star("aa (*.a)")
+        instance.selectedNameFilter.return_value = "aa (*.a)"
         self.assertEqual(widget.get_save_filename(), ("foo.a", "aa (*.a)"))
         self.assertEqual(dlg.call_args[0][2], "baz")
-        self.assertEqual(
-            dlg.call_args[0][3],
-            self.remove_star("aa (*.a);;bb (*.b);;cc (*.c)"))
-        instance.selectNameFilter.assert_called_with(
-            self.remove_star("bb (*.b)"))
+        self.assertEqual(dlg.call_args[0][3], "aa (*.a);;bb (*.b);;cc (*.c)")
+        instance.selectNameFilter.assert_called_with("bb (*.b)")
 
         instance.exec.return_value = dlg.Rejected = QFileDialog.Rejected
         self.assertEqual(widget.get_save_filename(), ("", ""))
@@ -567,7 +554,7 @@ class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
         instance = dlg.return_value
         instance.exec.return_value = QFileDialog.Accepted
 
-        instance.selectedNameFilter.return_value = self.remove_star(filter1)
+        instance.selectedNameFilter.return_value = filter1
         instance.selectedFiles.return_value = ["foo"]
         self.assertEqual(widget.get_save_filename()[0], "foo.tab")
         instance.selectedFiles.return_value = ["foo.pkl"]
@@ -579,7 +566,7 @@ class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
         instance.selectedFiles.return_value = ["foo.bar"]
         self.assertEqual(widget.get_save_filename()[0], "foo.bar.tab")
 
-        instance.selectedNameFilter.return_value = self.remove_star(filter2)
+        instance.selectedNameFilter.return_value = filter2
         instance.selectedFiles.return_value = ["foo"]
         self.assertEqual(widget.get_save_filename()[0], "foo.csv.gz")
         instance.selectedFiles.return_value = ["foo.pkl"]
@@ -592,36 +579,6 @@ class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
         self.assertEqual(widget.get_save_filename()[0], "foo.bar.csv.gz")
 
     @patch("Orange.widgets.utils.save.owsavebase.QFileDialog")
-    @patch("os.path.exists", new=lambda x: x == "old.tab")
-    @patch("Orange.widgets.utils.save.owsavebase.QMessageBox")
-    def test_save_file_dialog_asks_for_overwrite_darwin(self, msgbox, dlg):
-        def selected_files():
-            nonlocal attempts
-            attempts += 1
-            return [["old.tab", "new.tab"][attempts]]
-
-        widget = self.widget
-        widget.initial_start_dir = lambda: "baz"
-        filter1 = ""  # prevent pylint warning 'undefined-loop-variable'
-        for filter1 in widget.get_filters():
-            if OWSaveBase._extension_from_filter(filter1) == ".tab":
-                break
-
-        widget.filter = filter1
-        instance = dlg.return_value
-        instance.exec.return_value = QFileDialog.Accepted
-        instance.selectedFiles = selected_files
-        instance.selectedNameFilter.return_value = self.remove_star(filter1)
-
-        attempts = -1
-        msgbox.question.return_value = msgbox.Yes = 1
-        self.assertEqual(widget.get_save_filename()[0], "old.tab")
-
-        attempts = -1
-        msgbox.question.return_value = msgbox.No = 0
-        self.assertEqual(widget.get_save_filename()[0], "new.tab")
-
-    @patch("Orange.widgets.utils.save.owsavebase.QFileDialog")
     def test_save_file_dialog_uses_valid_filters_darwin(self, dlg):
         widget = self.widget
         widget.valid_filters = lambda: ["aa (*.a)", "bb (*.b)"]
@@ -629,10 +586,8 @@ class TestOWSaveDarwinDialog(OWSaveTestBase):  # pragma: no cover
         instance = dlg.return_value
         instance.exec.return_value = dlg.Rejected = QFileDialog.Rejected
         widget.get_save_filename()
-        self.assertEqual(
-            dlg.call_args[0][3], self.remove_star("aa (*.a);;bb (*.b)"))
-        instance.selectNameFilter.assert_called_with(
-            self.remove_star("aa (*.a)"))
+        self.assertEqual(dlg.call_args[0][3], "aa (*.a);;bb (*.b)")
+        instance.selectNameFilter.assert_called_with("aa (*.a)")
 
 
 if __name__ == "__main__":

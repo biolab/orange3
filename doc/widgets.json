@@ -113,11 +113,14 @@
     "keywords": []
    },
    {
-    "text": "Feature Statistics",
+    "text": "Column Statistics",
     "doc": "visual-programming/source/widgets/data/featurestatistics.md",
     "icon": "../Orange/widgets/data/icons/FeatureStatistics.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "feature",
+     "variable"
+    ]
    },
    {
     "text": "Save Data",
@@ -174,6 +177,23 @@
     "background": "#FF9D5E",
     "keywords": [
      "transpose"
+    ]
+   },
+   {
+    "text": "Split",
+    "doc": null,
+    "icon": "../Orange/widgets/data/icons/Split.svg",
+    "background": "#FF9D5E",
+    "keywords": [
+     "text to columns",
+     "word encoding",
+     "questionnaire",
+     "survey",
+     "term",
+     "word presence",
+     "word counts",
+     "categorical encoding",
+     "indicator variables"
     ]
    },
    {
@@ -838,7 +858,7 @@
    },
    {
     "text": "Feature as Predictor",
-    "doc": null,
+    "doc": "visual-programming/source/widgets/evaluate/featureaspredictor.md",
     "icon": "../Orange/widgets/evaluate/icons/FeatureAsPredictor.svg",
     "background": "#C3F3F3",
     "keywords": [
@@ -943,7 +963,7 @@
    },
    {
     "text": "Correlations",
-    "doc": "visual-programming/source/widgets/data/correlations.md",
+    "doc": "visual-programming/source/widgets/unsupervised/correlations.md",
     "icon": "../Orange/widgets/data/icons/Correlations.svg",
     "background": "#CAE1EF",
     "keywords": []
@@ -1026,7 +1046,7 @@
    },
    {
     "text": "Neighbors",
-    "doc": "visual-programming/source/widgets/data/neighbors.md",
+    "doc": "visual-programming/source/widgets/unsupervised/neighbors.md",
     "icon": "../Orange/widgets/data/icons/Neighbors.svg",
     "background": "#CAE1EF",
     "keywords": []

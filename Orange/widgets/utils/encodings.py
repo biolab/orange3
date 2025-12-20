@@ -14,10 +14,11 @@ from AnyQt.QtCore import pyqtSlot as Slot
 
 DEFAULT_ENCODINGS = [
     "utf-8", "utf-16", "utf-32",
-    "iso8859-1",  # latin 1
-    "shift_jis", "iso2022_jp",
-    "gb18030",
-    "euc_kr",
+    "iso8859-1", "cp1252",  # W Europe
+    "iso8859-2", "cp1250",  # CE Europe
+    "shift_jis", "iso2022_jp",  # Japanese
+    "gb18030",  # Chinese
+    "euc_kr",  # Korean
 ]
 
 ENCODING_DISPLAY_NAME = (
@@ -228,7 +229,8 @@ class SelectEncodingsWidget(QWidget):
         res = []
         for i in range(model.rowCount()):
             data = model.itemData(model.index(i, 0))
-            if data.get(Qt.CheckStateRole) == Qt.Checked and \
+            if Qt.CheckStateRole in data  and \
+                    Qt.CheckState(data[Qt.CheckStateRole]) == Qt.Checked and \
                     EncodingNameRole in data:
                 res.append(data[EncodingNameRole])
         return res
@@ -251,7 +253,7 @@ class SelectEncodingsWidget(QWidget):
         model = self.__model
         for i in range(model.rowCount()):
             item = model.item(i)
-            item.setCheckState(Qt.Checked)
+            item.setCheckState(Qt.Unchecked)
 
     @Slot()
     def reset(self):
@@ -326,7 +328,7 @@ def encodings_model():
         # type: (QModelIndex) -> None
         # write back the selected state for index
         co = index.data(CodecInfoRole)
-        state = index.data(Qt.CheckStateRole)
+        state = Qt.CheckState(index.data(Qt.CheckStateRole))
         if isinstance(co, codecs.CodecInfo):
             settings.setValue(co.name, state == Qt.Checked)
 

@@ -156,11 +156,3 @@ class TestLogisticRegressionLearner(unittest.TestCase):
 
     def test_supports_weights(self):
         self.assertTrue(LogisticRegressionLearner().supports_weights)
-
-    def test_multi_class_deprecation(self):
-        with self.assertWarns(OrangeDeprecationWarning):
-            LogisticRegressionLearner(penalty="l1", multi_class="multinomial")
-        now = datetime.now()
-        if (now.year, now.month) >= (2026, 1):
-            raise Exception("If Orange depends on scikit-learn >= 1.7, remove this test "
-                            "and any mention of multi_class in LogisticRegressionLearner.")

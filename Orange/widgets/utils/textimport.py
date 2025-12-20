@@ -704,7 +704,16 @@ class CSVImportWidget(QWidget):
         self.column_type_edit_cb.setCurrentIndex(-1)
 
         form.addRow(QFrame(frameShape=QFrame.HLine))
-        form.addRow("Column type", self.column_type_edit_cb)
+        cb_hint = QHBoxLayout()
+        cb_hint.addWidget(self.column_type_edit_cb)
+        hint = QLabel(
+            "Hint: right click on the row or column header for additional options.")
+        font = hint.font()
+        font.setPointSizeF(0.9 * font.pointSizeF())
+        hint.setFont(font)
+        cb_hint.addWidget(hint)
+        form.addRow("Column type", cb_hint)
+
         layout.addWidget(self.dataview)
         # Overlay error message widget in the bottom left corner of the data
         # view

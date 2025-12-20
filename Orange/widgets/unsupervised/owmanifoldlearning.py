@@ -1,5 +1,5 @@
 import warnings
-from itertools import chain
+from typing import Optional
 
 import numpy as np
 
@@ -43,7 +43,7 @@ class ManifoldParametersEditor(QWidget, gui.OWComponent):
         width = QFontMetrics(self.font()).horizontalAdvance("0" * 10)
         control = gui.spin(
             self, self, name, minv, maxv,
-            alignment=Qt.AlignRight, callbackOnReturn=True,
+            alignment=Qt.AlignRight,
             addToLayout=False, controlWidth=width,
             callback=lambda f=self.__spin_parameter_update,
                             p=name: self.__parameter_changed(f, p))
@@ -197,7 +197,7 @@ class OWManifoldLearning(OWWidget):
         data = Input("Data", Table)
 
     class Outputs:
-        transformed_data = Output("Transformed Data", Table, dynamic=False,
+        transformed_data = Output("Transformed Data", Table,
                                   replaces=["Transformed data"])
 
     MANIFOLD_METHODS = (TSNE, MDS, Isomap, LocallyLinearEmbedding,
@@ -225,6 +225,9 @@ class OWManifoldLearning(OWWidget):
 
     class Warning(OWWidget.Warning):
         graph_not_connected = Msg("Disconnected graph, embedding may not work")
+        less_components = Msg(
+            "Creating {} components\n"
+            "The number of components is limited by the number of variables.")
 
     @classmethod
     def migrate_settings(cls, settings, version):
@@ -269,13 +272,17 @@ class OWManifoldLearning(OWWidget):
         self.params_widget.show()
 
         output_box = gui.vBox(self.controlArea, "Output")
-        self.n_components_spin = gui.spin(
+        gui.spin(
             output_box, self, "n_components", 1, 10, label="Components:",
             controlWidth=QFontMetrics(self.font()).horizontalAdvance("0" * 10),
-            alignment=Qt.AlignRight, callbackOnReturn=True,
+            alignment=Qt.AlignRight,
             callback=self.settings_changed)
-        gui.rubber(self.n_components_spin.box)
         self.apply_button = gui.auto_apply(self.buttonsArea, self)
+
+    @property
+    def act_components(self):
+        return min(self.n_components,
+                   len(self.data.domain.attributes) if self.data else 0)
 
     def manifold_method_changed(self):
         self.params_widget.hide()
@@ -289,8 +296,6 @@ class OWManifoldLearning(OWWidget):
     @Inputs.data
     def set_data(self, data):
         self.data = data
-        self.n_components_spin.setMaximum(len(self.data.domain.attributes)
-                                          if self.data else 10)
         self.commit.now()
 
     @gui.deferred
@@ -303,7 +308,7 @@ class OWManifoldLearning(OWWidget):
             else:
                 builtin_warn(msg, *args, **kwargs)
 
-        out = None
+        embedding = None
         data = self.data
         method = self.MANIFOLD_METHODS[self.manifold_method_index]
         have_data = data is not None and len(data)
@@ -313,28 +318,20 @@ class OWManifoldLearning(OWWidget):
         if have_data and data.is_sparse():
             self.Error.sparse_not_supported()
         elif have_data:
-            names = [var.name for var in chain(data.domain.class_vars,
-                                               data.domain.metas) if var]
-            proposed = ["C{}".format(i) for i in range(self.n_components)]
-            unique = get_unique_names(names, proposed)
-            domain = Domain([ContinuousVariable(name) for name in unique],
-                            data.domain.class_vars,
-                            data.domain.metas)
             try:
                 warnings.warn = _handle_disconnected_graph_warning
-                projector = method(**self.get_method_parameters(data, method))
+                projector = method(**self.get_method_parameters())
                 model = projector(data)
                 if isinstance(model, TSNEModel):
-                    out = model.embedding
+                    embedding = model.embedding.X
                 else:
-                    X = model.embedding_
-                    out = Table(domain, X, data.Y, data.metas)
+                    embedding = model.embedding_
             except ValueError as e:
                 if e.args[0] == "for method='hessian', n_neighbors " \
                                 "must be greater than [n_components" \
                                 " * (n_components + 3) / 2]":
-                    n = self.n_components * (self.n_components + 3) / 2
-                    self.Error.n_neighbors_too_small("{}".format(n))
+                    n = self.act_components * (self.act_components + 3) // 2
+                    self.Error.n_neighbors_too_small(n)
                 else:
                     self.Error.manifold_error(e.args[0])
             except MemoryError:
@@ -344,17 +341,36 @@ class OWManifoldLearning(OWWidget):
             finally:
                 warnings.warn = builtin_warn
 
-        self.Outputs.transformed_data.send(out)
+        output = self._create_output_table(embedding)
+        self.Outputs.transformed_data.send(output)
+        if output and self.n_components != self.act_components:
+            self.Warning.less_components(self.act_components)
 
-    def get_method_parameters(self, data, method):
-        parameters = dict(n_components=self.n_components)
+    def _create_output_table(self, embedding: np.ndarray) -> Optional[Table]:
+        if embedding is None:
+            return None
+
+        data = self.data
+        metas = list(data.domain.metas)
+        names = [v.name for v in data.domain.variables + data.domain.metas]
+        proposed = ["C{}".format(i) for i in range(self.act_components)]
+        unique = get_unique_names(names, proposed)
+        domain = Domain(data.domain.attributes, data.domain.class_vars,
+                        metas + [ContinuousVariable(name) for name in unique])
+        table = data.transform(domain)
+        with table.unlocked(table.metas):
+            table.metas[:, len(metas):] = embedding
+        return table
+
+    def get_method_parameters(self):
+        parameters = dict(n_components=self.act_components)
         parameters.update(self.params_widget.get_parameters())
         return parameters
 
     def send_report(self):
         method = self.MANIFOLD_METHODS[self.manifold_method_index]
         self.report_items((("Method", method.name),))
-        parameters = {"Number of components": self.n_components}
+        parameters = {"Number of components": self.act_components}
         parameters.update(self.params_widget.get_report_parameters())
         self.report_items("Method parameters", parameters)
         if self.data:

@@ -79,12 +79,6 @@ base.py:
         def `preprocess`:
             'Wrapped scikit-learn methods do not support ': false
             multinomial variables.: false
-        def `supports_weights`:
-            'SklLearner.supports_weights property is deprecated. All ': false
-            'subclasses should redefine the supports_weights attribute. ': false
-            The property will be removed in 3.39.: false
-            __wrapped__: false
-            sample_weight: false
     class `KNNBase`:
         def `__init__`:
             euclidean: false
@@ -162,6 +156,8 @@ util.py:
     false: false
     def `requirementsSatisfied`:
         'Invalid requirement specification: %s': false
+    A: false
+    B: false
     class `Registry`:
         def `__new__`:
             registry: false
@@ -202,9 +198,9 @@ util.py:
         def `funcv`:
             unsafe: false
 version.py:
-    3.39.0: false
-    3.39.0.dev0+0a43fd4: false
-    0a43fd438e4e20613c4d9899c1781f874d33d921: false
+    3.40.0: false
+    3.40.0.dev0+e7d811b: null
+    e7d811bac580723c707decd32c550a75874dc9c8: null
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -390,8 +386,10 @@ canvas/config.py:
         Screencasts: false
         https://www.youtube.com/watch: false
         ?v=HXjnDIgGDuI&list=PLmNPvQr9Tf-ZSDLwOzxpvY-HrE0yv-8Fy&index=1: false
-        Feedback: false
-        https://orange.biolab.si/survey/long.html: false
+        Donate: Doniraj
+        https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=A76TAX87ZVR3J: false
+        FAQ: Pogosta vprašanja
+        https://orangedatamining.com/faq/: false
     def `init`:
         This is not the init you are looking for.: false
     def `data_dir`:
@@ -523,13 +521,7 @@ classification/logistic_regression.py:
         def `__init__`:
             l2: false
             auto: false
-            deprecated: false
-            'The multi_class parameter was ': false
-            'deprecated in scikit-learn 1.5. Using it with ': false
-            scikit-learn 1.7 will lead to a crash.: false
         def `_initialize_wrapped`:
-            multi_class: false
-            deprecated: false
             solver: false
             penalty: false
             auto: false
@@ -1250,6 +1242,10 @@ data/io_util.py:
     guess_data_type: false
     sanitize_variable: false
     update_origin: false
+    isnatstr: false
+    array_strptime: false
+    parse_datetime: false
+    to_datetime: false
     class `Compression`:
         .gz: false
         .bz2: false
@@ -1289,6 +1285,29 @@ data/io_util.py:
         origin: false
     def `update_origin`:
         origin: false
+    nat: false
+    Nat: false
+    NaT: false
+    NAT: false
+    def `array_strptime`:
+        raise: false
+        coerce: false
+        M8[us]: false
+        np.ndarray[np.datetime64]: false
+        NaT: false
+        Invalid 'errors' argument {errors}: false
+        unsafe: false
+    def `parse_datetime`:
+        raise: false
+        coerce: false
+        M8[us]: false
+        np.ndarray[np.datetime64]: false
+        Cannot guess date/time format: false
+    def `to_datetime`:
+        raise: false
+        coerce: false
+        np.ndarray[np.datetime64]: false
+        M8[us]: false
 data/pandas_compat.py:
     table_from_frame: false
     table_to_frame: false
@@ -1552,6 +1571,7 @@ data/util.py:
         dim must be greater than max(values): false
     class `SharedComputeValue`:
         def `__init__`:
+            InheritEq: false
             '{type(compute_shared).__name__} should define ': false
             __eq__ and __hash__ to be used for compute_shared: false
     def `get_unique_names`:
@@ -1932,6 +1952,8 @@ data/sql/backend/mssql.py:
          WHERE TABLE_TYPE in ('VIEW' ,'BASE TABLE')
       ORDER BY [TABLE_NAME]
         ": false
+        def `n_tables_query`:
+            SELECT COUNT(*) FROM information_schema.tables: false
         def `quote_identifier`:
             [{}]: false
         def `create_sql_query`:
@@ -2004,6 +2026,9 @@ data/sql/backend/postgres.py:
                         {}
                         AND NOT c.relname LIKE '\\_\\_%'
                    ORDER BY 1,2;": false
+        def `n_tables_query`:
+            SELECT COUNT(*) FROM information_schema.tables: false
+            " WHERE table_schema = '{schema}'": false
         def `create_variable`:
             extract(epoch from {}): false
             ({})::double precision: false
@@ -2105,16 +2130,13 @@ distance/distance.py:
 ensembles/ada_boost.py:
     SklAdaBoostClassificationLearner: false
     SklAdaBoostRegressionLearner: false
-    def `base_estimator_deprecation`:
-        '`base_estimator` is deprecated (to be removed in 3.39): use `estimator` instead.': false
     class `SklAdaBoostClassificationLearner`:
         def `__init__`:
-            SAMME: false
             deprecated: false
+            `algorithm` is deprecated and has no effect (to be removed in 3.42).: false
     class `SklAdaBoostRegressionLearner`:
         def `__init__`:
             linear: false
-            deprecated: false
 ensembles/stack.py:
     StackedLearner: false
     StackedClassificationLearner: false
@@ -2163,6 +2185,7 @@ evaluation/scoring.py:
     RMSE: false
     MAE: false
     MAPE: false
+    SMAPE: false
     R2: false
     LogLoss: false
     MatthewsCorrCoefficient: false
@@ -2172,6 +2195,10 @@ evaluation/scoring.py:
             abstract: false
             name: false
             long_name: false
+    class `Score`:
+        def `from_predicted`:
+            def `as_scalar`:
+                len(e) > 1: false
     class `CA`:
         CA: Točnost
         Classification accuracy: Klasifikacijska točnost
@@ -2227,6 +2254,9 @@ evaluation/scoring.py:
     class `MAPE`:
         MAPE: true
         Mean absolute percentage error: Povprečna absolutna odstotna napaka
+    class `SMAPE`:
+        sMAPE: true
+        Symmetric mean absolute percentage error: Simetrična povprečna absolutna odstotna napaka
     class `R2`:
         R2: true
         # Je to OK?
@@ -2549,7 +2579,7 @@ modelling/column.py:
         variables: false
     class `ColumnLearner`:
         def `__init__`:
-            column '{column.name}': false
+            column '{column.name}': stolpec `{column.name}`
         def `fit_storage`:
             Class variable does not match the data: false
     class `ColumnModel`:
@@ -2586,12 +2616,11 @@ modelling/linear.py:
         classification: false
         regression: false
         def `_change_kwargs`:
+            classification: false
+            regression: false
+            {pref}_{attr}: false
             loss: false
-            classification_loss: false
             epsilon: false
-            classification_epsilon: false
-            regression_loss: false
-            regression_epsilon: false
 modelling/neural_network.py:
     NNLearner: false
     class `NNLearner`:
@@ -4400,6 +4429,7 @@ widgets/data/owaggregatecolumns.py:
         Mean value: Povprečna vrednost
         Variance: Varianca
         Median: Mediana
+        Count non-zero: Preštej neničelne
         agg: false
         def `__init__`:
             Variable selection: Izbor spremenljivk
@@ -4709,11 +4739,15 @@ widgets/data/owcorrelations.py:
         def `items`:
             Pearson correlation: Pearsonova korelacija
             Spearman correlation: Spearmanova korelacija
+    class `KMeansCorrelationHeuristic`:
+        def `_impute_means`:
+            ignore: false
     class `CorrelationRank`:
         def `row_for_state`:
             name: false
             :: true
-            {:+.3f}: false
+            N/A: ?
+            {score[1]:+.3f}: false
     class `OWCorrelations`:
         Correlations: Korelacije
         Compute all pairwise attribute correlations.: Izračuna korelacije med vsemi pari spremenljivk.
@@ -4727,15 +4761,22 @@ widgets/data/owcorrelations.py:
             Correlations: Korelacije
         class `Information`:
             Constant features have been removed.: Konstantne spremenljivke so odstranjene.
-        class `Warning`:
+        class `Error`:
             At least two numeric features are needed.: Potrebni sta vsaj dve številski spremenljivki.
             At least two instances are needed.: Potrebna sta vsaj dva primera.
         def `__init__`:
             correlation_type: false
             (All combinations): (Vse kombinacije)
             feature: false
+            impute_missing: false
+            Impute missing values: Nadomesti manjkajoče vrednosti
+            Replace missing values with means;\n: Nadomesti manjkajoče vrednosti s povprečji;\n
+            if disabled, rows with missing values for the corre: v nasprotnem primeru so vrstice z manjkajočimi vrednos
+            sponding variables are ignored: tmi teh spremenljivk izključene
         def `set_data`:
             removed: false
+        def `set_actual_data`:
+            mean: false
         def `commit`:
             Correlation: Korelacije
             uncorrected p: nepopravljen p
@@ -4745,6 +4786,10 @@ widgets/data/owcorrelations.py:
             Correlations: Korelacije
         def `migrate_context`:
             selection: false
+    def `mock_data`:
+        a: false
+        abc: false
+        defghij: false
     __main__: false
     iris: false
 widgets/data/owcreateclass.py:
@@ -5132,6 +5177,7 @@ widgets/data/owcsvimport.py:
         qint64: false
     def `pandas_to_table`:
         str: false
+        UTC: false
         M8[ns]: false
         "Column '{}' with dtype: {} skipped.": false
     __main__: false
@@ -5539,6 +5585,29 @@ widgets/data/owdiscretize.py:
 widgets/data/oweditdomain.py:
     V: false
     H: false
+    "%a  Weekday abbreviated name
+%A  Weekday full name
+%w  Weekday as a number (0=Sunday, 6=Saturday)
+%d  Day of the month (01-31)
+%b  Month abbreviated name
+%B  Month full name
+%m  Month as a number (01-12)
+%y  Year without century (00-99)
+%Y  Year with century
+%H  Hour (00-23)
+%I  Hour (01-12)
+%p  AM or PM
+%M  Minute (00-59)
+%S  Second (00-59)
+%f  Microsecond (000000-999999)
+%z  UTC offset in the form +HHMM or -HHMM
+%Z  Time zone name
+%j  Day of the year (001-366)
+%U  Week number of the year (Sunday as the first day of the week)
+%W  Week number of the year (Monday as the first day of the week)
+%c  Locale's appropriate date and time representation
+%x  Locale's appropriate date representation
+%X  Locale's appropriate time representation": false
     class `Categorical`:
         Categorical: false
         name: false
@@ -5568,12 +5637,6 @@ widgets/data/oweditdomain.py:
         annotations: false
     class `Unlink`:
         Unlink: false
-    class `StrpTime`:
-        StrpTime: false
-        label: false
-        formats: false
-        have_date: false
-        have_time: false
     class `CategoricalVector`:
         CategoricalVector: false
         vtype: false
@@ -5598,13 +5661,24 @@ widgets/data/oweditdomain.py:
             g: false
     class `AsCategorical`:
         AsCategorical: false
+    class `StrpTime`:
+        StrpTime: false
+        label: false
+        formats: false
+        have_date: false
+        have_time: false
+    class `TimeUnit`:
+        TimeUnit: false
+        label: false
+        unit: false
     class `AsTime`:
-        AsTime: false
+        def `unit`:
+            s: false
         def `__call__`:
-            M8[us]: false
+            us: false
+            Y0: false
             def `data`:
                 coerce: false
-                M8[us]: false
     def `formatter_for_dtype`:
         __formatter: false
     def `masked_unique`:
@@ -5718,9 +5792,38 @@ widgets/data/oweditdomain.py:
         def `_merge_categories`:
             Import Options: Združevanje
     class `TimeVariableEditor`:
+        Custom format: false
+        Detect automatically: Zaznaj samodejno
+        Default: Privzeto
+        s: false
+        Nanosecond: Nanosekunda
+        ns: false
+        Microsecond: Mikrosekunda
+        us: false
+        Millisecond: Milisekunda
+        ms: false
+        Second: Sekunda
+        Minute: Minuta
+        m: false
+        Hour: Ura
+        h: false
+        Day: Dan
+        D: false
+        Month: Mesec
+        M: false
+        Year: Leto
+        Y0: false
+        Years since 1970: Leto od 1970
+        Y: false
         def `__init__`:
-            Detect automatically: Zaznaj samodejno
+            custom-format-line-edit: false
+            %Y-%m-%d %H:%M:%S: false
             Format:: Oblika:
+            Unit:: Enota:
+            Custom format:: Prilagojen format:
+        def `get_data`:
+            %(-?)d|%(b|B)|%(-?)m|%(y|Y)|%(-?)j|%(-?)U|%(-?)W|%(a|A)|%w: false
+            %(-?)H|%(-?)I|%p|%(-?)M|%(-?)S|%f: false
     class `VariableEditDelegate`:
         categorical: kategorično
         numeric: številsko
@@ -5806,12 +5909,13 @@ widgets/data/oweditdomain.py:
             _domain_change_store: false
             output_table_name: false
             _domain_change_hints: false
+            StrpTime: false
+            AsTime: false
     def `enumerate_columns`:
         x: false
         y: false
         m: false
     def `table_column_data`:
-        M8[us]: false
         __formatter: false
         ?: false
     def `report_transform`:
@@ -5853,13 +5957,25 @@ widgets/data/oweditdomain.py:
     nan: false
     def `as_float_or_nan`:
         unsafe: false
-    def `datetime_to_epoch`:
+    def `apply_reinterpret_c`:
+        ns: false
+        us: false
+        ms: false
+        s: false
+        m: false
+        h: false
+    def `datetime64_to_epoch`:
+        M8[us]: false
+        M8[D]: false
         1970-01-01: false
-        UTC: false
-        1s: false
     class `ReparseTimeTransform`:
         def `transform`:
             coerce: false
+    class `ReinterpretTimeWithUnit`:
+        def `transform`:
+            Y0: false
+            M8[Y]: false
+            M8[{self.unit}]: false
     def `column_str_repr_discrete`:
         ?: false
     def `column_str_repr_string`:
@@ -5899,7 +6015,7 @@ Categorical features are passed as strings
             Name...: Ime...
             Meta attribute: Meta atribut
             Expression...: Izraz...
-            Select Feature: Izberi spremenljivko
+            Select Column: Izberi stolpec
             Select Function: Izberi funkcijo
         def `setEditorData`:
             Select Feature: Izberi spremenljivko
@@ -6002,7 +6118,7 @@ Categorical features are passed as strings
             date/time: datum/čas
             text: besedilna
             {feature.expression} ({desc}): false
-            Constructed feature{s}: Sestavljene spremenljivke
+            Constructed {pl(len(items), 'feature')}: {plsi(len(items), "Sestavljena spremenljivka|Sestavljeni spremenljivki|Sestavljene spremenljivke")}
         def `fix_expressions`:
             Fix Expressions: Popravi izraze
             "This widget's behaviour has changed. Values of categorical ": true
@@ -6142,7 +6258,7 @@ widgets/data/owfeaturestatistics.py:
     class `FeatureStatisticsTableModel`:
         class `Columns`:
             def `name`:
-                Name: Ime
+                Column: Stolpec
                 Distribution: Porazdelitev
                 Mean: Srednja vrednost
                 Mode: Najpogostejša
@@ -6156,9 +6272,9 @@ widgets/data/owfeaturestatistics.py:
                 C: false
         def `get_statistics_table`:
             Entropy: Entropija
-            Feature: Spremenljivka
+            Column: Stolpec
             Mode: Najpogostejša
-            {self.table.name} (Feature Statistics): {self.table.name} (Statistika spremenljivk)
+            {self.table.name} (Column Statistics): {self.table.name} (Statistika stolpcev)
         def `_sortColumnData`:
             Data should be at most 2-dimensional: false
         def `_argsortData`:
@@ -6176,9 +6292,10 @@ widgets/data/owfeaturestatistics.py:
                 {self._dispersion[row]:.3g}: false
                 {missing} ({perc} %): false
     class `OWFeatureStatistics`:
-        Feature Statistics: Statistika spremenljivk
-        Show basic statistics for data features.: Pokaže osnovno statistiko spremenljivk.
+        Column Statistics: Statistika stolpcev
+        Show basic statistics for columns.: Osnovna statistika stolpcev.
         icons/FeatureStatistics.svg: false
+        feature, variable: spremenljivka, stolpec
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -6195,7 +6312,7 @@ widgets/data/owfeaturestatistics.py:
     __main__: false
     iris: false
 widgets/data/owfile.py:
-    Automatically detect type: Samodejno zaznaj vrsto datoteke
+    Determine type from the file extension: Določi vrsto iz končnice datoteke
     def `add_origin`:
         type: false
         origin: false
@@ -6230,8 +6347,10 @@ widgets/data/owfile.py:
         class `Error`:
             File not found.: Datoteka ni najdena.
             Missing reader.: Bralnik za ta tip ne obstaja.
+            Select file type.: Izberite vrsto datoteke.
             Error listing available sheets.: Napaka ob ustvarjanju seznama listov.
             Read error:\n{}: Napaka ob branju:\n{}
+            Read error, possibly due to incorrect choice of file type:\n{}: Napaka ob branju, morda zaradi napačne izbire vrste datoteke:\n{}
         'Use CSV File Import widget for advanced options ': 'Uporabi Bralnik CSV za napredne možnosti '
         for comma-separated files: za datoteke ločene z vejico
         use-csv-file-import: falxe
@@ -6266,10 +6385,11 @@ widgets/data/owfile.py:
             File: Datoteka
             Cannot find the directory with documentation datasets: Ne najdem mape s podatki iz dokumentacije
             ~/: false
+            *: false
         def `load_data`:
             No data.: Ni podatkov.
         def `_get_reader`:
-            Can not find reader "{qname}": Bralnik "{qname}" ne obstaja.
+            Can not find reader "{qname}": Ne najdem bralnika "{qname}"
         def `_describe`:
             attributes: false
             Name: Ime
@@ -6461,9 +6581,11 @@ widgets/data/owmelt.py:
             Data: Podatki
         class `Outputs`:
             Data: Podatki
+        class `Error`:
+            No features to melt: Ni stolpcev za raztapljanje
         class `Information`:
             No columns with unique values\n: Ni stolpcev z neponovljenimi vrednostmi.\n
-            Only columns with unique valules are useful for row identifiers.: Kot identifikator vrstice so uporabni le stolpci, v katerih se vrednosti ne ponavljajo.
+            Only columns with unique values are useful for row identifiers.: Samo stolpci z neponovljenimi vrednostmi so uporabni kot identifikatorji vrstic.
         def `__init__`:
             Unique Row Identifier: Identifikator vrstice
             Row number: Številka vrstice
@@ -6620,7 +6742,7 @@ widgets/data/owneighbors.py:
             Neighbors: Sosedi
         class `Info`:
             Input data includes reference instance(s).\n: Vhodni podatki vključujejo referenčne primere.\n
-            Reference instances are excluded from the output.: Referenčni primeri niso vključeni med izhodne.
+            Reference instances are not considered as neighbours.: Referenčni primeri niso šteti za sosede.
         class `Warning`:
             Every data instance is same as some reference: Vsi podatki se pojavijo tudi med referenčnimi.
         class `Error`:
@@ -6631,6 +6753,8 @@ widgets/data/owneighbors.py:
             n_neighbors: false
             Limit number of neighbors to:: Omeji število sosedov na:
             limit_neighbors: false
+            include_reference: false
+            Include reference example: Vključi referenčni primer
         def `commit`:
             ' (neighbors)': ' (sosedi)'
         def `_data_with_similarity`:
@@ -6972,7 +7096,7 @@ widgets/data/owpivot.py:
             Some variables have been renamed in some tables: Spremenljivke s podvojenimi imeni so
             to avoid duplicates.\n{}: preimenovane.\n{}
             Selected variable has too many values.: Izbrana spremenljivka ima preveč različnih vrednosti.
-            At least 1 primitive variable is required.: Podatki morajo vsebovati vsaj eno nebesedilno spremenljivko.
+            At least one variable is required.: Potrebna je vsaj ena spremenljivka.
         def `_add_control_area_controls`:
             Rows: Vrstice
             row_feature: false
@@ -8044,6 +8168,43 @@ widgets/data/owselectrows.py:
             %H:%M:%S: false
     __main__: false
     heart_disease: false
+widgets/data/owsplit.py:
+    class `OWSplit`:
+        Split: Razdeli
+        Split text or categorical variables into indicator variables: Razdeli besedilne ali kategorične spremenljivke na spremenljivke.
+        Transform: Predelava podatkov
+        icons/Split.svg: false
+        text to columns: besedilo v stolpce
+        word encoding: kodiranje besed
+        questionnaire: vprašalniki
+        survey: ankete
+        term: pojmi
+        word presence: prisotnost besed
+        word counts: število besed
+        categorical encoding: kodiranje kategorij
+        indicator variables: indikatorske spremenljivke
+        class `Inputs`:
+            Data: Podatki
+        class `Outputs`:
+            Data: Podatki
+        class `Warning`:
+            Data contains only numeric variables.: Podatki vsebujejo samo številske spremenljivke.
+        Categorical (No, Yes): Kategorične (Ne, Da)
+        Numerical (0, 1): Številske (0, 1)
+        Counts: Števci
+        ;: true
+        def `__init__`:
+            Variable: Stolpec
+            attribute: false
+            delimiter: false
+            'Delimiter: ': 'Ločilo: '
+            output_type: false
+            Output Values: Izhodne vrednosti
+        def `_get_new_columns`:
+            No: Ne
+            Yes: Da
+    __main__: false
+    tests/orange-in-education.tab: false
 widgets/data/owsql.py:
     def `is_postgres`:
         display_name: false
@@ -8060,13 +8221,15 @@ widgets/data/owsql.py:
             Attribute-valued dataset read from the input file.: Podatki prebrani iz baze
         class `Information`:
             Data description was generated from a sample.: Podatki vsebujejo samo vzorec.
-        class `Warning`:
-            'Database is missing extensions: {}': Podatkovna baza nima razširitev: {}
         class `Error`:
             Please install a backend to use this widget.: Namestite knjižnico za podatkovno bazo.
         def `_add_tables_controls`:
-            Tables: Tabele
+            Data Selection: Podatki
+            data_source: false
+            Table:: Tabela
+            Custom SQL:: Prikrojen SQL
             table: tabela
+            TABLE_NAME: IME_TABELE
             materialize: false
             'Materialize to table ': 'Materializiraj v tabelo '
             Save results of the query in a table: Shrani podatke poizvedbe v tabelo
@@ -8074,24 +8237,17 @@ widgets/data/owsql.py:
             Execute: Izvedi
             guess_values: false
             Auto-discover categorical variables: Samodejno zaznaj kategorične spremenljivke
-            download: false
-            Download data to local memory: Shrani podatke v pomnilnik
         def `highlight_error`:
             'QLineEdit {border: 2px solid red;}': false
             server: false
             host: false
             role: false
             database: false
-        def `on_connection_success`:
-            missing_extension: false
-            ', ': true
         def `on_connection_error`:
             \n: false
         def `refresh_tables`:
             Select a table: Izberi tabelo
-            Custom SQL: Prikrojen SQL
         def `select_table`:
-            Custom SQL: Prikrojen SQL
             Table: Tabela
             (None): (Brez)
         def `get_table`:
@@ -8157,6 +8313,7 @@ widgets/data/owtable.py:
             color_by_class: false
             Color by instance classes: Obarvaj primere glede na razred
             Selection: Izbor
+            Clear Selection: Počisti izbor
             select_rows: false
             Select full rows: Izbiraj cele vrstice
             Restore Original Order: Izvirni vrstni red
@@ -9372,6 +9529,8 @@ widgets/evaluate/owpredictions.py:
             Target class: Ciljni razred
         def `migrate_settings`:
             score_table: false
+        def `migrate_context`:
+            target_class: false
     class `ClassificationItemDelegate`:
         def `__init__`:
             ' : ': false
@@ -10095,7 +10254,7 @@ widgets/model/owlinearregression.py:
             Coefficients: Koeficienti
         No regularization: Brez regularizacije
         Ridge regression (L2): Ridge (L2)
-        Lasso regression (L1): Lasso (L2)
+        Lasso regression (L1): Lasso (L1)
         Elastic net regression: Elastična mreža
         def `add_main_layout`:
             Parameters: Parametri
@@ -10381,6 +10540,7 @@ widgets/model/owrules.py:
             weighted: utežena
             Gamma: Gama
             Beam width: Širina snopa
+            Restrict to equality: Omejitev na enakost
             Evaluation measure: Ocena kvalitete pravila
             entropy: entropija
             laplace: Laplacova natančnost
@@ -10436,11 +10596,14 @@ widgets/model/owrules.py:
             parent_alpha: false
             Relative significance (parent α):: Relativna značilnost (predniko α):
             checked_parent_alpha: false
+            restrict_equality: false
+            Restrict operator for categorical values to equality: Omeji operator za kategorične vrednosti na enakost
         def `get_learner_parameters`:
             Rule ordering: Urejenost pravil
             Covering algorithm: Način prekrivanja
             Gamma: Gama
             Evaluation measure: Ocena kvalitete pravila
+            Restrict to equality: Omejitev na enakost
             Beam width: Širina snopa
             Minimum rule coverage: Najmanjše število pokritih primerov
             Maximum rule length: Največja dolžina pravila
@@ -10509,7 +10672,7 @@ widgets/model/owsgd.py:
         Hinge: Rob (Hinge)
         hinge: false
         Logistic regression: Logistična regresija
-        log: false
+        log_loss: false
         Modified Huber: Modificirana Huberjeva
         modified_huber: false
         Squared Hinge: Kvadrat roba (Squared Hinge)
@@ -10517,7 +10680,6 @@ widgets/model/owsgd.py:
         Perceptron: true
         perceptron: false
         None: Brez
-        none: false
         Lasso (L1): true
         l1: false
         Ridge (L2): true
@@ -10622,6 +10784,9 @@ widgets/model/owstack.py:
         class `Inputs`:
             Learners: Modeli
             Aggregate: Združevalnik
+        def `create_learner`:
+            preprocessors: false
+            aggregate: false
         def `get_learner_parameters`:
             Base learners: Osnovni modeli
             Aggregator: Združevalnik
@@ -10848,6 +11013,27 @@ widgets/tests/__init__.py:
         _in_load_tests: false
         test*.py: false
 widgets/tests/base.py:
+    class `WidgetTest`:
+        data with just nans: false
+        abc: false
+        y: false
+        m: false
+        data without rows: false
+        data with just attributes: false
+        no data (after having attributes): false
+        data with just class: false
+        data with just continouos outcome: false
+        no data (after having class): false
+        data with just metas: false
+        x: false
+        with without attributes, class or metas: false
+        no data (after seeing a ghost): false
+        def `__init_subclass__`:
+            test_zero_size_data: false
+            def `test_zero_size_data`:
+                widget: false
+                not tested because .widget is not set: false
+                inputs: false
     class `BaseParameterMapping`:
         def `__init__`:
             both: false
@@ -11053,7 +11239,8 @@ widgets/unsupervised/owdbscan.py:
             Data: Podatki
         class `Error`:
             'Not enough unique data instances. ': 'Ni dovolj primerov. '
-            At least two are required.: Potrebna sta vsaj dva.
+            At least two rows (with any defined values) are required.: Potrebna sta vsaj dva, ki imata vsaj eno nemanjkajočo vrednost.
+            The data does not contain any features.: Podatki ne vsebujejo nobenih spremenljivk.
         Euclidean: Evklidska
         euclidean: false
         Manhattan: Manhattanska
@@ -11111,7 +11298,9 @@ widgets/unsupervised/owdistancefile.py:
             Cannot find the directory with documentation datasets: Ne najdem imenika z datotekami iz dokumentacije
             ~/: false
             Open Distance File: Odpri datoteko razdalj
-            Excel File (*.xlsx);;Distance File (*.dst): Excelova datoteka (*.xlsx); Razdalje (*.dst)
+            All Readable Files (*.xlsx *.dst);;: Vse berljive datoteke (*.xlsx *.dst);;
+            Excel File (*.xlsx);;: Excelova datoteka (*.xlsx);;
+            Distance File (*.dst): Razdalje (*.dst)
         def `open_file`:
             .: false
             (none): (prazno)
@@ -11216,7 +11405,7 @@ widgets/unsupervised/owdistancematrix.py:
             </tr>: false
             </table>: false
     __main__: false
-    zoo: falaseg
+    zoo: false
 widgets/unsupervised/owdistances.py:
     Euclidean (normalized): Evklidska (normalizirana)
     Square root of summed difference between normalized values: Kvadratni koren vsote razlik med normaliziranimi vrednostmi
@@ -11264,6 +11453,7 @@ widgets/unsupervised/owdistances.py:
             Not enough memory: Premalo pomnilnika
             Problem in calculation:\n{}: Težava pri izračunu:\n{}
             Mahalanobis handles up to 1000 {}.: Mahalanobisova razdalja zmore do 1000 {}.
+            Data is too large (> {MAX_ITEMS} items).: Podatki so preveliki (> {MAX_ITEMS} primerov).
         class `Warning`:
             Ignoring categorical features: Kategoričnih spremenljivk ne upoštevam
             Ignoring non-binary features: Ne-binarnih spremenljivk ne upoštevam
@@ -11518,7 +11708,7 @@ widgets/unsupervised/owlouvainclustering.py:
         class `Outputs`:
             Network: Mreža
         class `Information`:
-            Press commit to recompute clusters and send new data: Pritisnite Uveljavi za izračun novih gruč in pošiljanje podatkov
+            Press Apply to recompute clusters and send new data: Pritisnite Uveljavi za izračun novih gruč in pošiljanje podatkov
         class `Error`:
             No features in data: Podatki ne vsebujejo spremenljivk
         def `__init__`:
@@ -11716,6 +11906,8 @@ widgets/unsupervised/owmanifoldlearning.py:
             Out of memory: Premalo pomnilnika
         class `Warning`:
             Disconnected graph, embedding may not work: Graf je nepovezan, vložitev morda ne bo delovala.
+            Creating {} components\n: Računam {} komponent.\n
+            The number of components is limited by the number of variables.: Število komponent je omejeno s številom spremenljivk.
         def `migrate_settings`:
             tsne_editor: false
             init_index: false
@@ -11731,11 +11923,11 @@ widgets/unsupervised/owmanifoldlearning.py:
         def `commit`:
             def `_handle_disconnected_graph_warning`:
                 Graph is not fully connected: Graf ni povsem povezan
-            C{}: false
             "for method='hessian', n_neighbors ": false
             must be greater than [n_components: false
             ' * (n_components + 3) / 2]': false
-            {}: false
+        def `_create_output_table`:
+            C{}: false
         def `send_report`:
             Method: Metoda
             Number of components: Število komponent
@@ -12487,6 +12679,9 @@ widgets/utils/encodings.py:
     utf-16: false
     utf-32: false
     iso8859-1: false
+    cp1252: false
+    iso8859-2: false
+    cp1250: false
     shift_jis: false
     iso2022_jp: false
     gb18030: false
@@ -12509,13 +12704,10 @@ widgets/utils/encodings.py:
     Western Europe (ISO Latin 1): false
     iso8859-15: false
     Western Europe (ISO-8859-15): false
-    cp1252: false
     Western Europe (Windows-1252): false
     mac_roman: false
     Western Europe (Mac OS Roman): false
-    iso8859-2: false
     Central and Eastern Europe (ISO Latin 2): false
-    cp1250: false
     Central and Eastern Europe (Windows-1250): false
     mac_latin2: false
     Central and Eastern Europe (Mac Latin-2): false
@@ -12705,6 +12897,7 @@ widgets/utils/itemmodels.py:
     select_row: false
     select_rows: false
     signal_blocking: false
+    create_list_model: false
     def `_as_contiguous_range`:
         Non-contiguous range.: false
     class `AbstractSortTableModel`:
@@ -13179,6 +13372,7 @@ widgets/utils/textimport.py:
             separator: false
             Ignore: Izpusti
             The column will not be loaded: Stolpca ni mogoče naložiti
+            'Hint: right click on the row or column header for additional options.': Namig: desni klik na glavo vrstice ali stolpca pokaže dodatne možnosti.
             Column type: Vrsta podatka
             -error-overlay: false
             -error-text-label: false
@@ -13577,6 +13771,8 @@ widgets/utils/plot/owplotgui_obsolete.py:
             Dark: false
 widgets/utils/save/owsavebase.py:
     ~{os.sep}: false
+    darwin: false
+    win32: false
     class `OWSaveBase`:
         class `Information`:
             Empty input; nothing was saved.: Ni podatkov.
@@ -13613,8 +13809,6 @@ widgets/utils/save/owsavebase.py:
             stored_path: false
             filename: false
             stored_name: false
-        darwin: false
-        win32: false
         def `get_save_filename`:
             Save File: Shrani datoteko
             ;;: false
@@ -13781,6 +13975,8 @@ widgets/visualize/owboxplot.py:
             ': ': true
         def `draw_axis`:
             ?: true
+        def `draw_axis_disc`:
+            the callee must ensure this!: false
         def `strudel`:
             missing '{attr.name}': (neznana vrednost)
             add_lpad: false
@@ -14934,7 +15130,7 @@ widgets/visualize/owsieve.py:
         Sieve Diagram: Sievov diagram
         'Visualize the observed and expected frequencies ': 'Prikaz pričakovanih in opaženih pogostosti '
         for a combination of values.: za kombinacije spremenljivk.
-        icons/SieveDiagram.svg: falase
+        icons/SieveDiagram.svg: false
         sieve diagram: sieve diagram, grafikon
         class `Inputs`:
             Data: Podatki
@@ -14942,6 +15138,8 @@ widgets/visualize/owsieve.py:
         class `Outputs`:
             Selected Data: Izbrani podatki
         canvas: false
+        class `Warning`:
+            Data does not meet the Cochran's rule\n{}: Podatki ne ustrezajo Cochranovemu pravilu\n{}
         def `__init__`:
             attr_x: false
             \u2717: true
@@ -14980,6 +15178,10 @@ widgets/visualize/owsieve.py:
             Feature {} has no values: Spremenljivka {} nima znanih vrednosti.
             χ²={:.2f}, p={:.3f}: true
             'N = ': true
+        def `_check_cochran`:
+            no cells in contingency table: kontingenčna tabela nima celic
+            some expected frequencies are below 1: nekatere pričakovane pogostosti so manjše od 1
+            more than 20% of expected frequencies are below 5: več kot 20 % pričakovanih pogostosti je manjših od 5
         def `get_widget_name_extension`:
             {} vs {}: {} in {}
     __main__: false
@@ -15146,7 +15348,7 @@ widgets/visualize/owtreeviewer.py:
             , …: true
             '<p style="line-height: 120%; margin-bottom: 0">{text}</p>': false
         def `node_content_cls`:
-            <b>{self.domain.class_vars[0].values[int(modus)]}</b><br/>: false
+            <b>{escape(self.domain.class_vars[0].values[int(modus)])}</b><br/>: false
             100%, {total}/{total}: false
             {100 * tabs:2.1f}%, {int(total * tabs)}/{total}: false
         def `node_content_reg`:

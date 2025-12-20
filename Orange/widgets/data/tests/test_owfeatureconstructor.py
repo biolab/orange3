@@ -1,7 +1,6 @@
 # pylint: disable=unsubscriptable-object
 import unittest
 import ast
-import sys
 import math
 import pickle
 import copy

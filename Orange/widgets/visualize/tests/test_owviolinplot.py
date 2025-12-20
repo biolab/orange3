@@ -9,7 +9,7 @@ from AnyQt.QtGui import QFont
 
 from pyqtgraph import ViewBox
 
-from Orange.data import Table
+from Orange.data import Table, Domain, ContinuousVariable, TimeVariable
 from Orange.widgets.tests.base import datasets, simulate, \
     WidgetOutputsTestMixin, WidgetTest
 from Orange.widgets.visualize.owviolinplot import OWViolinPlot, \
@@ -381,6 +381,37 @@ class TestOWViolinPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertEqual(font1.family(), font2.family())
         self.assertEqual(font1.pointSize(), font2.pointSize())
         self.assertEqual(font1.italic(), font2.italic())
+
+    def test_use_time(self):
+        widget = self.widget
+        widget.orientation_index = 1  # Vertical
+        left_axis = widget.graph.plotItem.getAxis("left")
+        bottom_axis = widget.graph.plotItem.getAxis("bottom")
+        x, y = TimeVariable("x"), ContinuousVariable("y")
+        domain = Domain([x, y], [])
+        data = Table.from_list(domain, [
+            ["2020-01-01", 1],
+            ["2020-01-02", 2],
+            ["2020-01-03", 3],
+            ["2020-01-04", 4],
+            ["2020-01-05", 5]])
+        self.send_signal(widget.Inputs.data, data)
+        self.__select_value(widget._value_var_view, "y")
+        self.assertFalse(left_axis.is_time())
+        self.assertFalse(bottom_axis.is_time())
+
+        self.__select_value(widget._value_var_view, "x")
+        self.assertTrue(left_axis.is_time())
+        self.assertFalse(bottom_axis.is_time())
+
+        widget.controls.orientation_index.buttons[0].click()
+        assert widget.orientation_index == 0  # Horizontal
+        self.assertFalse(left_axis.is_time())
+        self.assertTrue(bottom_axis.is_time())
+
+        self.__select_value(widget._value_var_view, "y")
+        self.assertFalse(left_axis.is_time())
+        self.assertFalse(bottom_axis.is_time())
 
     @staticmethod
     def __select_value(list_, value):

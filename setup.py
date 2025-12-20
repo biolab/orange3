@@ -34,7 +34,7 @@ except ImportError:
 
 NAME = 'Orange3'
 
-VERSION = '3.39.0'
+VERSION = '3.40.0'
 ISRELEASED = True
 # full version identifier including a git revision identifier for development
 # build/releases (this is filled/updated in `write_version_py`)
@@ -79,7 +79,7 @@ CLASSIFIERS = [
     'Intended Audience :: Developers',
 ]
 
-PYTHON_REQUIRES = ">=3.10"
+PYTHON_REQUIRES = ">=3.11"
 
 
 requirements = ['requirements-core.txt', 'requirements-gui.txt']
@@ -206,7 +206,7 @@ PACKAGE_DATA = {
                             "icons/paintdata/*.svg"],
     "Orange.widgets.data.tests": ["origin1/*.tab",
                                   "origin2/*.tab",
-                                  "*.txt", "*.tab"],
+                                  "*.txt", "*.tab", "*.foo", "*.xlsx"],
     "Orange.widgets.evaluate": ["icons/*.svg"],
     "Orange.widgets.model": ["icons/*.svg"],
     "Orange.widgets.visualize": ["icons/*.svg"],

@@ -31,7 +31,7 @@ class _LazyTSNE:  # pragma: no cover
         # Disable t-SNE user warnings
         openTSNE.tsne.log.setLevel(logging.ERROR)
         openTSNE.affinity.log.setLevel(logging.ERROR)
-        return openTSNE.__dict__[attr]
+        return getattr(openTSNE, attr)
 
 
 openTSNE = _LazyTSNE()

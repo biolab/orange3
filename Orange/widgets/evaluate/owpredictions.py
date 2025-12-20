@@ -67,7 +67,7 @@ class OWPredictions(OWWidget):
     description = "Display predictions of models for an input dataset."
     keywords = "predictions"
 
-    settings_version = 2
+    settings_version = 3
 
     want_control_area = False
 
@@ -105,13 +105,13 @@ class OWPredictions(OWWidget):
                      "Show probabilities for classes in data that are also\n"
                      "known to the model"
                      ]
+    TARGET_AVERAGE = "(Average over classes)"
 
     NO_PROBS, DATA_PROBS, MODEL_PROBS, BOTH_PROBS = range(4)
     shown_probs = settings.ContextSetting(NO_PROBS)
     selection = settings.Setting([], schema_only=True)
     show_scores = settings.Setting(True)
-    TARGET_AVERAGE = "(Average over classes)"
-    target_class = settings.ContextSetting(TARGET_AVERAGE)
+    target_class = settings.ContextSetting("")
     show_probability_errors = settings.ContextSetting(True)
     show_reg_errors = settings.ContextSetting(DIFF_ERROR)
 
@@ -174,7 +174,8 @@ class OWPredictions(OWWidget):
             gui.widgetLabel(scoreopts, "Target class:"),
             gui.comboBox(
             scoreopts, self, "target_class", items=[], contentsLength=30,
-            sendSelectedValue=True, callback=self._on_target_changed)
+            sendSelectedValue=True, callback=self._on_target_changed,
+            emptyString=self.TARGET_AVERAGE)
         ]
         gui.rubber(scoreopts)
 
@@ -311,7 +312,7 @@ class OWPredictions(OWWidget):
             for i, tip in enumerate(self.PROB_TOOLTIPS):
                 prob_combo.setItemData(i, tip, Qt.ToolTipRole)
             self.shown_probs = self.DATA_PROBS
-            self.target_class = self.TARGET_AVERAGE
+            self.target_class = ""
         else:
             self.shown_probs = self.NO_PROBS
             model = prob_combo.model()
@@ -433,7 +434,7 @@ class OWPredictions(OWWidget):
 
     def _update_scores(self):
         model = self.score_table.model
-        if self.is_discrete_class and self.target_class != self.TARGET_AVERAGE:
+        if self.is_discrete_class and self.target_class:
             target = self.class_var.values.index(self.target_class)
         else:
             target = None
@@ -971,7 +972,8 @@ class OWPredictions(OWWidget):
 
             self.report_name("Scores")
             if self.is_discrete_class:
-                self.report_items([("Target class", self.target_class)])
+                self.report_items([("Target class",
+                                    self.target_class or self.TARGET_AVERAGE)])
             self.report_table(self.score_table.view)
 
     def resizeEvent(self, event):
@@ -988,6 +990,19 @@ class OWPredictions(OWWidget):
             if "score_table" in settings:
                 ScoreTable.migrate_to_show_scores_hints(settings["score_table"])
 
+    @classmethod
+    def migrate_context(cls, context, version):
+        if version < 3:
+            target_class = context.values.get("target_class")
+            # The second condition is a workaround if the workflow is opened
+            # in a wrong language. Assuming that contexts (and other code) works
+            # target_class will always appear among values, and if it doesn't,
+            # it must be because of averaging.
+            # The first condition is also covered by the second, but let it
+            # be there for clarity.
+            if target_class == cls.TARGET_AVERAGE \
+                    or target_class not in context.classes:
+                context.values["target_class"] = ""
 
 class ItemDelegate(TableDataDelegate):
     def initStyleOption(self, option, index):

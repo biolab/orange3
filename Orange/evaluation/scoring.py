@@ -23,7 +23,8 @@ from Orange.util import OrangeDeprecationWarning
 
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
-           "MSE", "RMSE", "MAE", "MAPE", "R2", "LogLoss", "MatthewsCorrCoefficient"]
+           "MSE", "RMSE", "MAE", "MAPE", "SMAPE", "R2", "LogLoss",
+           "MatthewsCorrCoefficient"]
 
 
 class ScoreMetaType(WrapperMeta):
@@ -114,9 +115,20 @@ class Score(metaclass=ScoreMetaType):
 
     @staticmethod
     def from_predicted(results, score_function, **kwargs):
+        def as_scalar(e):
+            if np.isscalar(e):
+                return e
+            elif len(e) == 1:
+                return e[0]
+            else:
+                raise ValueError("len(e) > 1")
+
+        scores = (score_function(results.actual, predicted, **kwargs)
+                  for predicted in results.predicted)
+        # np.fromiter needs flat iter of scalars, some scoring function calls
+        # return array of single element
         return np.fromiter(
-            (score_function(results.actual, predicted, **kwargs)
-             for predicted in results.predicted),
+            map(as_scalar, scores),
             dtype=np.float64, count=len(results.predicted))
 
     @staticmethod
@@ -412,14 +424,30 @@ class MAE(RegressionScore):
 
 
 class MAPE(RegressionScore):
-    __wraps__ = skl_metrics.mean_absolute_percentage_error
     name = "MAPE"
     long_name = "Mean absolute percentage error"
     priority = 45
 
-    def compute_score(self, results):
-        res = super().compute_score(results)
-        return res * 100
+    @staticmethod
+    def __wraps__(actual, predicted):
+        if np.any(actual == 0):
+            return np.inf
+        return np.sum(np.abs((actual - predicted) / actual)) / len(actual) * 100
+
+
+class SMAPE(RegressionScore):
+    name = "sMAPE"
+    long_name = "Symmetric mean absolute percentage error"
+    priority = 45
+
+    @staticmethod
+    def __wraps__(actual, predicted):
+        diff = np.abs(actual - predicted)
+        summ = np.abs(actual) + np.abs(predicted)
+        # To avoid 0 / 0, set divisor to 1; error will be 0, as it should be
+        summ[summ == 0] = 1.0
+        error = diff / summ
+        return 2 * np.sum(error) / len(actual) * 100
 
 
 # pylint: disable=invalid-name

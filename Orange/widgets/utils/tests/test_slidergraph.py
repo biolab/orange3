@@ -1,3 +1,5 @@
+from unittest.mock import Mock
+
 import numpy as np
 from AnyQt.QtCore import Qt
 
@@ -105,3 +107,25 @@ class TestSliderGraph(WidgetTest):
         p.update(x, self.data, [Qt.red])
         # pylint: disable=protected-access
         self.assertIsNone(p._line)
+
+    def test_hover_event(self):
+        p = self.widget.plot
+        x = np.arange(len(self.data[0]))
+        p.update(x, self.data, [Qt.red], cutpoint_x=1)
+
+        # pylint: disable=protected-access
+        self.assertIsNotNone(p._line)
+
+        enter_event = Mock()
+        enter_event.isEnter.return_value = True
+        enter_event.isExit.return_value = False
+
+        p._line.hoverEvent(enter_event)
+        self.assertEqual(p._line.pen, p._line._highlight_pen)
+
+        exit_event = Mock()
+        exit_event.isEnter.return_value = False
+        exit_event.isExit.return_value = True
+
+        p._line.hoverEvent(exit_event)
+        self.assertEqual(p._line.pen, p._line._normal_pen)

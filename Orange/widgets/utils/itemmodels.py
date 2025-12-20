@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from contextlib import contextmanager
 from functools import reduce, partial, wraps
 from itertools import chain
+from typing import Iterable, Mapping, Any
 from warnings import warn
 from xml.sax.saxutils import escape
 
@@ -14,7 +15,7 @@ from AnyQt.QtCore import (
     Qt, QObject, QAbstractListModel, QModelIndex,
     QItemSelectionModel, QItemSelection)
 from AnyQt.QtCore import pyqtSignal as Signal
-from AnyQt.QtGui import QColor, QBrush
+from AnyQt.QtGui import QColor, QBrush, QStandardItem, QStandardItemModel
 from AnyQt.QtWidgets import (
     QWidget, QBoxLayout, QToolButton, QAbstractButton, QAction
 )
@@ -38,7 +39,7 @@ __all__ = [
     "PyListModel", "VariableListModel", "PyListModelTooltip", "DomainModel",
     "AbstractSortTableModel", "PyTableModel", "TableModel",
     "ModelActionsWidget", "ListSingleSelectionModel",
-    "select_row", "select_rows", "signal_blocking"
+    "select_row", "select_rows", "signal_blocking", "create_list_model",
 ]
 
 
@@ -1097,3 +1098,19 @@ class TableModel(AbstractSortTableModel):
             )
 
         return self.__stats[coldesc.var]
+
+
+def create_list_model(
+        items: Iterable[Mapping[Qt.ItemDataRole, Any]],
+        parent: QObject | None = None,
+) -> QStandardItemModel:
+    """
+    Create list model from an `items` iterable.
+    """
+    model = QStandardItemModel(parent)
+    for item in items:
+        sitem = QStandardItem()
+        for role, value in item.items():
+            sitem.setData(value, role)
+        model.appendRow([sitem])
+    return model

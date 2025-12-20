@@ -4,7 +4,9 @@ requires = [
     "numpy>=2.0",
     "recommonmark",
     "setuptools>=51.0",
-    "sphinx",
+    "sphinx>=4.2.0,<8",
+    "sphinx-multiproject",
+    "myst-parser",
     "wheel",
     "trubar>=0.3.4"
 ]

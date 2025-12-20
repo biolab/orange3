@@ -2,6 +2,7 @@ import sys
 from itertools import chain
 
 import numpy as np
+import scipy
 from AnyQt.QtWidgets import QApplication
 from AnyQt.QtGui import QColor
 from sklearn.metrics import pairwise_distances
@@ -67,7 +68,9 @@ class OWDBSCAN(widget.OWWidget):
 
     class Error(widget.OWWidget.Error):
         not_enough_instances = Msg("Not enough unique data instances. "
-                                   "At least two are required.")
+                                   "At least two rows (with any defined values) are required.")
+        no_features = Msg("The data does not contain any features.")
+
 
     METRICS = [
         ("Euclidean", "euclidean"),
@@ -122,7 +125,11 @@ class OWDBSCAN(widget.OWWidget):
     def check_data_size(self, data):
         if data is None:
             return False
-        if len(data) < 2:
+        # For sparse tables, we assume that there are no nans
+        # For dense, count rows that have at least one non-nan value
+        nrows = data.X.shape[0] if scipy.sparse.issparse(data.X) \
+            else np.sum(np.any(np.isfinite(data.X), axis=1))
+        if nrows < 2:
             self.Error.not_enough_instances()
             return False
         return True
@@ -165,23 +172,23 @@ class OWDBSCAN(widget.OWWidget):
         self.cut_point = int(DEFAULT_CUT_POINT * len(self.k_distances))
         self.eps = self.k_distances[self.cut_point]
 
-        mask = self.k_distances >= EPS_BOTTOM_LIMIT
-        if self.eps < EPS_BOTTOM_LIMIT and sum(mask):
-            self.eps = np.min(self.k_distances[mask])
+        if self.eps < EPS_BOTTOM_LIMIT:
+            mask = self.k_distances >= EPS_BOTTOM_LIMIT
+            self.eps = sum(mask) and np.min(self.k_distances[mask]) or EPS_BOTTOM_LIMIT
             self.cut_point = self._find_nearest_dist(self.eps)
 
     @Inputs.data
     def set_data(self, data):
         self.Error.clear()
+        if data is not None and data.X.shape[1] == 0:
+            data = None
+            self.Error.no_features()
         if not self.check_data_size(data):
             data = None
         self.data = self.data_normalized = data
         if self.data is None:
             self.Outputs.annotated_data.send(None)
             self.plot.clear_plot()
-            return
-
-        if self.data is None:
             return
 
         self._preprocess_data()

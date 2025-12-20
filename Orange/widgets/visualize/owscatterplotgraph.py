@@ -38,11 +38,13 @@ MAX_COLORS = 11
 
 
 class LegendItem(PgLegendItem):
+    items = []  # Accessed in changeEvent after delete in tests??
+
     def __init__(
             self, size=None, offset=None, pen=None, brush=None,
     ):
         super().__init__(size, offset)
-
+        self.items = []
         self.layout.setContentsMargins(5, 5, 5, 5)
         self.layout.setHorizontalSpacing(15)
         self.layout.setColumnAlignment(1, Qt.AlignLeft | Qt.AlignVCenter)
@@ -270,6 +272,9 @@ class AxisItem(AxisItem):
         """Enables axes to display ticks for time data."""
         self._use_time = enable
         self.enableAutoSIPrefix(not enable)
+
+    def is_time(self):
+        return self._use_time
 
     def tickValues(self, minVal, maxVal, size):
         """Find appropriate tick locations."""

@@ -3,15 +3,10 @@
 import pickle
 import unittest
 
-from packaging.version import Version
-
-import Orange
-
 from Orange.base import SklLearner, Learner, Model
 from Orange.data import Domain, Table
 from Orange.preprocess import Discretize, Randomize, Continuize
 from Orange.regression import LinearRegressionLearner
-from Orange.util import OrangeDeprecationWarning
 
 
 class DummyLearner(Learner):
@@ -96,29 +91,6 @@ class TestLearner(unittest.TestCase):
 
 
 class TestSklLearner(unittest.TestCase):
-    def test_sklearn_supports_weights(self):
-        """Check that the SklLearner correctly infers whether or not the
-        learner supports weights"""
-
-        class DummySklLearner:
-            def fit(self, X, y, sample_weight=None):
-                pass
-
-        class DummyLearner(SklLearner):
-            __wraps__ = DummySklLearner
-
-        with self.assertWarns(OrangeDeprecationWarning):
-            self.assertTrue(DummyLearner().supports_weights)
-
-        class DummySklLearner:
-            def fit(self, X, y):
-                pass
-
-        class DummyLearner(SklLearner):
-            __wraps__ = DummySklLearner
-
-        with self.assertWarns(OrangeDeprecationWarning):
-            self.assertFalse(DummyLearner().supports_weights)
 
     def test_linreg(self):
         self.assertTrue(
@@ -134,15 +106,6 @@ class TestSklLearner(unittest.TestCase):
         self.assertEqual(min(args), 0)
         self.assertEqual(max(args), 1)
         self.assertListEqual(args, sorted(args))
-
-    def test_supports_weights_property(self):
-        """This test is to be included in the 3.37 release and will fail in
-        version 3.39. This serves as a reminder."""
-        if Version(Orange.__version__) >= Version("3.39"):
-            self.fail(
-                "`SklLearner.supports_weights` as a property that parses fit() "
-                "was deprecated in 3.37. Replace it with `supports_weights = False`"
-            )
 
 
 class TestModel(unittest.TestCase):

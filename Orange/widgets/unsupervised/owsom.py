@@ -470,7 +470,7 @@ class OWSOM(OWWidget):
         self.closeContext()
         self.clear_messages()
 
-        if data is not None:
+        if data:
             cont_domain = self._cont_domain(data)
             if cont_domain is None:
                 self.Error.no_numeric_variables()

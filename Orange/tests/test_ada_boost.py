@@ -7,6 +7,7 @@ import numpy as np
 from packaging.version import Version
 
 import Orange
+
 from Orange.data import Table
 from Orange.classification import SklTreeLearner
 from Orange.regression import SklTreeRegressionLearner
@@ -110,13 +111,11 @@ class TestSklAdaBoostLearner(unittest.TestCase):
         self.assertRaises(ValueError, learner, self.iris)
 
     def test_remove_deprecation(self):
-        if Version(Orange.__version__) >= Version("3.39"):
+        if (Version(Orange.__version__).is_prerelease
+                and Version(Orange.__version__) >= Version("3.42")):
             self.fail(
-                "`base_estimator` was deprecated in "
-                "version 3.37. Please remove everything related to it."
+                "SklAdaBoostClassificationLearner: `algorithm` was deprecated in "
+                "version 3.40. Please remove everything related to it."
             )
-        stump_estimator = SklTreeLearner(max_depth=1)
         with self.assertWarns(OrangeDeprecationWarning):
-            SklAdaBoostClassificationLearner(base_estimator=stump_estimator)
-        with self.assertWarns(OrangeDeprecationWarning):
-            SklAdaBoostClassificationLearner(base_estimator=stump_estimator)
+            SklAdaBoostClassificationLearner(algorithm="invalid")(self.iris)

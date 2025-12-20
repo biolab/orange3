@@ -42,14 +42,14 @@ class OWSGD(OWBaseLearner):
 
     cls_losses = (
         ('Hinge', 'hinge'),
-        ('Logistic regression', 'log'),
+        ('Logistic regression', 'log_loss'),
         ('Modified Huber', 'modified_huber'),
         ('Squared Hinge', 'squared_hinge'),
         ('Perceptron', 'perceptron')) + reg_losses
 
     #: Regularization methods
     penalties = (
-        ('None', 'none'),
+        ('None', None),
         ('Lasso (L1)', 'l1'),
         ('Ridge (L2)', 'l2'),
         ('Elastic Net', 'elasticnet'))

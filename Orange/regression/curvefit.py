@@ -395,7 +395,7 @@ class _ReplaceVars(ast.NodeTransformer):
                 value=ast.Name(id=self.__name, ctx=ast.Load()),
                 slice=ast.ExtSlice(
                     dims=[ast.Slice(lower=None, upper=None, step=None),
-                          ast.Index(value=ast.Num(n=n))]),
+                          ast.Index(value=ast.Constant(n))]),
                 ctx=node.ctx
             )
 

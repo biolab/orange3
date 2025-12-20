@@ -350,6 +350,15 @@ class TestOWNomogram(WidgetTest):
         lr = LogisticRegressionLearner()(data)
         self.send_signal(self.widget.Inputs.classifier, lr)
 
+    def test_report_copy_save_graph(self):
+        # Test that reporting, copying to clipboard, and saving graph don't crash
+        self.send_signal(self.widget.Inputs.classifier, self.nb_cls)
+        self.widget.send_report()
+        self.widget.copy_to_clipboard()
+        with patch("orangewidget.utils.filedialogs.open_filename_dialog_save") as m:
+            m.return_value = (None, None, None)
+            self.widget.save_graph()
+
 
 if __name__ == "__main__":
     unittest.main()

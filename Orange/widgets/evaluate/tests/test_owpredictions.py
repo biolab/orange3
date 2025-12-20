@@ -13,6 +13,8 @@ import numpy as np
 from AnyQt.QtCore import QItemSelectionModel, QItemSelection, Qt, QRect
 from AnyQt.QtWidgets import QToolTip
 
+from orangewidget.settings import Context
+
 from Orange.base import Model
 from Orange.classification import LogisticRegressionLearner, NaiveBayesLearner
 from Orange.classification.majority import ConstantModel, MajorityLearner
@@ -1287,6 +1289,53 @@ class TestOWPredictions(WidgetTest):
         settings = {"score_table": {"shown_scores": {"Sensitivity"}}}
         self.widget.migrate_settings(settings, 1)
         self.assertTrue(settings["score_table"]["show_score_hints"]["Sensitivity"])
+
+    def test_migrate_context_2_3(self):
+        settings = {
+            'controlAreaVisible': True, 'selection': [],
+            'show_scores': True,
+            'score_table': {
+                'show_score_hints': {
+                    'Model_': True, 'Train_': False, 'Test_': False,
+                    'CA': True, 'PrecisionRecallFSupport': True,
+                    'TargetScore': True, 'Precision': True,
+                    'Recall': True, 'F1': True, 'AUC': True,
+                    'LogLoss': False, 'Specificity': False,
+                    'MatthewsCorrCoefficient': True, 'MSE': True,
+                    'RMSE': True, 'MAE': True, 'MAPE': True, 'R2': True,
+                    'CVRMSE': False, 'ClusteringScore': True,
+                    'Silhouette': True, 'AdjustedMutualInfoScore': True}},
+            'context_settings': [
+                Context(
+                    classes=('Iris-setosa',
+                             'Iris-versicolor',
+                             'Iris-virginica'),
+                    values={'show_probability_errors': True,
+                            'show_reg_errors': 1,
+                            'shown_probs': 1,
+                            'score_table': {},
+                            'target_class': '(Average over classes)',
+                            '__version__': 2})],
+            '__version__': 2,
+        }
+
+        widget = self.create_widget(OWPredictions, stored_settings=settings)
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertEqual(widget.target_class, "")
+
+        settings["context_settings"][0].values["target_class"] = "Iris-versicolor"
+        settings["__version__"] = 2
+        widget = self.create_widget(OWPredictions, stored_settings=settings)
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertEqual(widget.target_class, "Iris-versicolor")
+
+        # Test fallback for older workflows opened in wrong language
+        settings["context_settings"][0].values["target_class"] = "Povprečje"
+        settings["__version__"] = 2
+        widget = self.create_widget(OWPredictions, stored_settings=settings)
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertEqual(widget.target_class, "")
+
 
     def test_output_error_reg(self):
         data = self.housing

@@ -7,6 +7,34 @@ from AnyQt.QtCore import Qt
 from Orange.widgets.visualize.utils.plotutils import PlotWidget
 
 
+class InteractiveInfiniteLine(InfiniteLine):  # pylint: disable=abstract-method
+    """
+    A subclass of InfiniteLine that provides custom hover behavior.
+    """
+
+    def __init__(self, angle=90, pos=None, movable=False, bounds=None,
+                 normal_pen=None, highlight_pen=None, **kwargs):
+        super().__init__(angle=angle, pos=pos, movable=movable, bounds=bounds, **kwargs)
+        self._normal_pen = normal_pen
+        self._highlight_pen = highlight_pen
+        self.setPen(normal_pen)
+
+    def hoverEvent(self, ev):
+        """
+        Override hoverEvent to provide custom hover behavior.
+
+        Parameters
+        ----------
+        ev : HoverEvent
+            The hover event from pyqtgraph
+        """
+
+        if ev.isEnter() and self._highlight_pen is not None:
+            self.setPen(self._highlight_pen)
+        elif ev.isExit() and self._normal_pen is not None:
+            self.setPen(self._normal_pen)
+
+
 class SliderGraph(PlotWidget):
     """
     An widget graph element that shows a line plot with more sequences. It
@@ -136,14 +164,23 @@ class SliderGraph(PlotWidget):
             self._line = None
             return
         if self._line is None:
-            # plot interactive vertical line
-            self._line = InfiniteLine(
+            normal_pen = mkPen(
+                self.palette().text().color(), width=4,
+                style=Qt.SolidLine, capStyle=Qt.RoundCap
+            )
+            highlight_pen = mkPen(
+                self.palette().link().color(), width=4,
+                style=Qt.SolidLine, capStyle=Qt.RoundCap
+            )
+
+            self._line = InteractiveInfiniteLine(
                 angle=90, pos=x, movable=True,
                 bounds=self.selection_limit if self.selection_limit is not None
-                else (self.x.min(), self.x.max())
+                    else (self.x.min(), self.x.max()),
+                normal_pen=normal_pen,
+                highlight_pen=highlight_pen
             )
             self._line.setCursor(Qt.SizeHorCursor)
-            self._line.setPen(mkPen(self.palette().text().color(), width=2))
             self._line.sigPositionChanged.connect(self._on_cut_changed)
             self.addItem(self._line)
         else:

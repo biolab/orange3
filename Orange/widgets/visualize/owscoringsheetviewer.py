@@ -283,11 +283,11 @@ class RiskSlider(QWidget):
 
     def eventFilter(self, watched, event):
         """
-        Event filter to intercept hover events on the slider.
+        Event filter to intercept help events on the slider.
 
         This is needed to show the tooltip when the mouse is over the slider thumb.
         """
-        if watched == self.slider and isinstance(event, QtGui.QHoverEvent):
+        if watched == self.slider and isinstance(event, QtGui.QHelpEvent):
             # Handle the hover event when it's over the slider
             self.handle_hover_event(event.pos())
             return True

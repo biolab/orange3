@@ -73,7 +73,7 @@ class OWLouvainClustering(widget.OWWidget):
     auto_commit = Setting(False)
 
     class Information(widget.OWWidget.Information):
-        modified = Msg("Press commit to recompute clusters and send new data")
+        modified = Msg("Press Apply to recompute clusters and send new data")
 
     class Error(widget.OWWidget.Error):
         empty_dataset = Msg("No features in data")
@@ -396,9 +396,10 @@ class OWLouvainClustering(widget.OWWidget):
 
         if Network is not None:
             n_edges = self.graph.number_of_edges()
+            n_nodes = self.graph.number_of_nodes()
             edges = sp.coo_matrix(
                 (np.ones(n_edges), np.array(self.graph.edges()).T),
-                shape=(n_edges, n_edges))
+                shape=(n_nodes, n_nodes))
             graph = Network(new_table, edges)
             self.Outputs.graph.send(graph)
 

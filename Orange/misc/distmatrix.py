@@ -51,9 +51,10 @@ class DistMatrix(np.ndarray):
         self.col_items = getattr(obj, 'col_items', None)
         self.axis = getattr(obj, 'axis', 1)
 
-    def __array_wrap__(self, out_arr, context=None):
+    def __array_wrap__(self, out_arr, context=None, return_scalar=False):
         if out_arr.ndim == 0:  # a single scalar
             return out_arr[()]
+        del return_scalar  # added support for the argument due to a deprecation warning
         return np.ndarray.__array_wrap__(self, out_arr, context)
 
     # __reduce__() and __setstate__() ensure DistMatrix is picklable.
