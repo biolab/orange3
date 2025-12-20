@@ -269,6 +269,7 @@ class OWCorrelations(OWWidget):
     icon = "icons/Correlations.svg"
     priority = 1106
     category = "Unsupervised"
+    keywords = "pearson, spearman"
 
     class Inputs:
         data = Input("Data", Table)

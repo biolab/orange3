@@ -1,6 +1,8 @@
 # pylint: disable=protected-access,unused-import
 from contextlib import contextmanager
 import os
+import re
+import inspect
 import pickle
 from unittest.mock import Mock, patch
 
@@ -118,6 +120,55 @@ class WidgetTest(WidgetTestBase):
             if var1.is_discrete:
                 self.assertEqual(var1.values, var2.values)
 
+    def test_has_keywords(self):
+        # If there is no widget, this is probably not a (final) test class?
+        if not hasattr(self, "widget"):
+            return
+        widget_class = type(self.widget).__bases__[0]
+
+        # Only check widget classes that have a name and are final
+        if (not getattr(widget_class, "_final_class", False)
+                or not getattr(widget_class, "name", None)):
+            return
+
+        # Only check the opt-in add-ons
+        if not any(map(widget_class.__module__.startswith,
+                       self.has_keywords_optin_list)):
+            return
+
+        # With this line, IDE's will show a link to the class
+        file = inspect.getsourcefile(widget_class)
+        file_line = \
+            f'\nFile "{file}", line {inspect.getsourcelines(widget_class)[1]}.'
+
+        # Base widget class provides `keywords = []`; fail doesn't override this
+        if not widget_class.keywords:
+            self.fail(
+                f"Widget {widget_class.__name__} must define a 'keywords' class attribute.\n"
+                "If none are needed, set keywords='_keywords'." + file_line)
+
+        # Metaclass splits a string with keywords into a list.
+        # We check the sources to ensure this was originally a string.
+        try:
+            with open(file, encoding="utf-8") as f:
+                source = f.read()
+        except IOError:
+            pass
+        else:
+            if re.search(r"^\s+keywords\s*=\s*\[", source, re.MULTILINE):
+                self.fail(
+                    "'keywords' class attribute must be a comma-separated "
+                    "string, not a list." + file_line)
+
+    has_keywords_optin_list = []
+
+    @classmethod
+    def has_keywords_optin(cls, prefix):
+        cls.has_keywords_optin_list.append(prefix)
+
+
+WidgetTest.has_keywords_optin("Orange.")
+
 
 class TestWidgetTest(WidgetTest):
     """Meta tests for widget test helpers"""
@@ -128,6 +179,9 @@ class TestWidgetTest(WidgetTest):
 
     def test_minimum_size(self):
         return  # skip this test
+
+    def test_has_keywords(self):
+        pass  # skip this test
 
 
 class BaseParameterMapping:

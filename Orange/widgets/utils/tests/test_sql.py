@@ -12,6 +12,7 @@ from Orange.widgets.widget import OWWidget
 class TestSQLDecorator(WidgetTest):
     class MockWidget(OWWidget):
         name = "MockWidget"
+        keywords = "mockwidget"
 
         NotCalled = object()
 
