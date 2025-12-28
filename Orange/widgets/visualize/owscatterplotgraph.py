@@ -1,6 +1,7 @@
 import sys
 import itertools
 import warnings
+from collections import Counter
 from typing import Callable
 from xml.sax.saxutils import escape
 from datetime import datetime, timezone
@@ -9,11 +10,12 @@ import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
     QObject, QEvent
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainterPath, QTransform, \
-    QPainter, QPalette
+    QPainter, QPalette, QTextOption
 from AnyQt.QtWidgets import QApplication, QToolTip, QGraphicsTextItem, \
     QGraphicsRectItem, QGraphicsItemGroup
 
 import pyqtgraph as pg
+from pyqtgraph import functions as fn
 from pyqtgraph.graphicsItems.ScatterPlotItem import Symbols
 from pyqtgraph.graphicsItems.LegendItem import LegendItem as PgLegendItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
@@ -200,6 +202,47 @@ class ScatterPlotItem(pg.ScatterPlotItem):
 
     # pylint: disable=arguments-differ
     def paint(self, painter, option, widget=None):
+        # super().paint will reset painter.transform, so we must compute
+        # all transformations in advance
+        viewmask = self._maskAt(self.viewRect())
+        data = self.data[viewmask]
+        if len(data) == 0:
+            super().paint(painter, option, widget)
+            return
+        x, y = data["x"], data["y"]
+        xmi, xma = np.min(x), np.max(x)
+        ymi, yma = np.min(y), np.max(y)
+
+        tr = fn.transformCoordinates(
+            painter.transform(),
+            np.array([[xmi, ymi], [xma, yma]]).T).T
+        width = tr[1, 0] - tr[0, 0] or 1
+        height = tr[0, 1] - tr[1, 1] or 1
+
+        NX = int(width / 50) or 1
+        NY = int(height / 50) or 1
+        cellx = (xma - xmi) / NX or 1
+        celly = (yma - ymi) / NY or 1
+        xg = np.clip((x - xmi) // cellx, 0, NX - 1)
+        yg = np.clip((y - ymi) // celly, 0, NY - 1)
+        idx = (xg + NX * yg).astype(int)
+        counts = np.bincount(idx, minlength=NX * NY)
+
+        agg_pts = []
+        agg_colors = []
+        brushes = data["brush"]
+        for i, count in enumerate(counts):
+            if count < 10:
+                continue
+            mask = idx == i
+            agg_pts.append([np.mean(x[mask]), np.mean(y[mask])])
+            agg_colors.append(Counter(brush.color().getRgb() for brush in brushes[mask]))
+        if agg_pts:
+            agg_pts = fn.transformCoordinates(painter.transform(), np.array(agg_pts).T).T
+
+        visible = np.ones(len(self.data), dtype=bool)
+        visible[viewmask] = counts[idx] < 10
+        self.data["visible"] = visible
         try:
             if self._z_mapping is not None:
                 assert len(self._z_mapping) == len(self.data)
@@ -210,8 +253,47 @@ class ScatterPlotItem(pg.ScatterPlotItem):
             painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
             super().paint(painter, option, widget)
         finally:
+            self.data["visible"] = True
             if self._inv_mapping is not None:
                 self.data = self.data[self._inv_mapping]
+
+        if len(agg_pts) == 0:
+            return
+
+        countf = 8 / np.max(counts)
+        text_opt = QTextOption()
+        text_opt.setAlignment(Qt.AlignCenter)
+        for (pt, spot_colors) in zip(agg_pts, agg_colors):
+            painter.resetTransform()
+            painter.translate(*pt)
+            total = sum(spot_colors.values())
+            r = int(6 + countf * total)
+            if len(spot_colors) == 1:
+                color = QColor(*next(iter(spot_colors)))
+                painter.setBrush(fn.mkBrush(color))
+                painter.setPen(fn.mkPen(color))
+                painter.drawEllipse(-r, -r, 2 * r, 2 * r)
+                painter.setBrush(fn.mkBrush(None))
+                for r in (r + 3, r + 6):
+                    painter.setPen(fn.mkPen(color, width=5))
+                    painter.drawEllipse(-r, -r, 2 * r, 2 * r)
+            else:
+                start_angle = 0
+                for color, count in spot_colors.items():
+                    angle_span = 360 * count / total
+                    painter.setBrush(fn.mkBrush(color))
+                    painter.setPen(fn.mkPen(color))
+                    start = int(16 * start_angle)
+                    span = int(16 * angle_span)
+                    painter.drawPie(-r, -r, 2 * r, 2 * r, start, span)
+                    for nr in (r + 3, r + 6):
+                        painter.setPen(fn.mkPen(color, width=5))
+                        painter.drawArc(-nr, -nr, 2 * nr, 2 * nr, start, span)
+                    start_angle += angle_span
+
+            painter.setBrush(fn.mkBrush(QColor(0, 0, 0)))
+            painter.setPen(fn.mkPen(QColor(0, 0, 0)))
+            painter.drawText(QRectF(-15, -15, 30, 30), str(total), text_opt)
 
 
 def _define_symbols():
