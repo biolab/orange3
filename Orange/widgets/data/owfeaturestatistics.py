@@ -660,14 +660,13 @@ class FeatureStatisticsTableView(QTableView):
         # widget is not shown, size `sizeHint` is called on every row.
         hheader.setResizeContentsPrecision(5)
         # Set a nice default size so that headers have some space around titles
-        hheader.setDefaultSectionSize(100)
+        hheader.setMinimumSectionSize(100)
         # Set individual column behaviour in `set_data` since the logical
         # indices must be valid in the model, which requires data.
         hheader.setSectionResizeMode(QHeaderView.Interactive)
 
         columns = model.Columns
         hheader.setSectionResizeMode(columns.ICON.index, QHeaderView.ResizeToContents)
-        hheader.setSectionResizeMode(columns.DISTRIBUTION.index, QHeaderView.Stretch)
 
         vheader = self.verticalHeader()
         vheader.setVisible(False)
