@@ -164,6 +164,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
 
     def update_coordinates(self):
         super().update_coordinates()
+        self.set_aggregation()
         self.update_axes()
         self.update_error_bars()
         # Don't update_regression line here: update_coordinates is always
@@ -346,6 +347,20 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     def update_jittering(self):
         super().update_jittering()
         self.update_error_bars()
+
+    def allow_aggregation(self):
+        # Reimplement to allow aggregation when jittering is non-zero but
+        # disabled for continuous variables
+        return (
+            (self.selection is None or len(self.selection) == 0)
+            and not self.subset_is_shown
+            and (self.labels is None or len(self.labels) == 0)
+            and (self.jitter_size == 0
+                 or (self.master.attr_x.is_continuous
+                     and self.master.attr_y.is_continuous
+                     and not self.jitter_continuous)
+                 )
+        )
 
     def update_error_bars(self):
         for item in self.error_bars_items:
