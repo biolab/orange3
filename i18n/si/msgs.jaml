@@ -14642,6 +14642,11 @@ widgets/visualize/ownomogram.py:
             Log odds ratios: Razmerje logaritmov obetov
             Displayed features: Prikazane spremenljivke
             sort_index: false
+            Do not sort features, display them in original order: Pokaži spremenljivke v izvirnem vrstnem redu
+            Sort features alphabetically by name: Uredi spremenljivke abecedno po imenu
+            Sort features by absolute importance: Uredi spremenljivke po absolutni pomembnosti
+            Sort features by positive influence on the class: Uredi spremenljivke po pozitivnem vplivu na razred
+            Sort features by negative influence on the class: Uredi spremenljivke po negativnem vplivu na razred
             'Order: ': 'Vrstni red: '
             display_index: false
             All features: Vse značilke

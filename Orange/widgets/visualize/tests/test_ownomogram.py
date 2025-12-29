@@ -16,8 +16,8 @@ from Orange.tests import test_filename
 from Orange.widgets.tests.base import WidgetTest
 from Orange.widgets.tests.utils import simulate, qbuttongroup_emit_clicked
 from Orange.widgets.visualize.ownomogram import (
-    OWNomogram, DiscreteFeatureItem, ContinuousFeatureItem, ProbabilitiesDotItem,
-    MovableToolTip
+    OWNomogram, DiscreteFeatureItem, ContinuousFeatureItem,
+    ProbabilitiesDotItem, MovableToolTip, SortBy
 )
 
 
@@ -349,6 +349,30 @@ class TestOWNomogram(WidgetTest):
         data = iris.transform(domain)
         lr = LogisticRegressionLearner()(data)
         self.send_signal(self.widget.Inputs.classifier, lr)
+
+    def test_disable_sorting_pos_neg_for_logistic_regression(self):
+        w = self.widget
+        self.send_signal(w.Inputs.classifier, self.nb_cls)
+        combo = w.sort_combo
+        simulate.combobox_activate_index(combo, SortBy.POSITIVE)
+        assert w.sort_index == SortBy.POSITIVE
+
+        self.send_signal(self.widget.Inputs.classifier, self.lr_cls)
+        self.assertEqual(w.sort_index, SortBy.ABSOLUTE)
+        self.assertFalse(combo.model().item(SortBy.POSITIVE).isEnabled())
+        self.assertFalse(combo.model().item(SortBy.NEGATIVE).isEnabled())
+
+        self.send_signal(w.Inputs.classifier, self.nb_cls)
+        self.assertTrue(combo.model().item(SortBy.POSITIVE).isEnabled())
+        self.assertTrue(combo.model().item(SortBy.NEGATIVE).isEnabled())
+
+        simulate.combobox_activate_index(combo, SortBy.POSITIVE)
+        self.send_signal(self.widget.Inputs.classifier, self.lr_cls)
+        self.assertEqual(w.sort_index, SortBy.ABSOLUTE)
+
+        self.send_signal(w.Inputs.classifier, None)
+        self.assertTrue(combo.model().item(SortBy.POSITIVE).isEnabled())
+        self.assertTrue(combo.model().item(SortBy.NEGATIVE).isEnabled())
 
     def test_report_copy_save_graph(self):
         # Test that reporting, copying to clipboard, and saving graph don't crash
