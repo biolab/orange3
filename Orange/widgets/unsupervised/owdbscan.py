@@ -59,6 +59,7 @@ class OWDBSCAN(widget.OWWidget):
     description = "Density-based spatial clustering."
     icon = "icons/DBSCAN.svg"
     priority = 2150
+    keywords = "density based clustering, clustering"
 
     class Inputs:
         data = Input("Data", Table)

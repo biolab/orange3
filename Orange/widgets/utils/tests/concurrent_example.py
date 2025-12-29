@@ -43,6 +43,7 @@ def run(data: Table, embedding: Optional[np.ndarray], state: TaskState):
 
 class OWConcurrentWidget(OWDataProjectionWidget, ConcurrentWidgetMixin):
     name = "Projection"
+    keywords = "concurrent, projection, example"
     param = Setting(0)
 
     def __init__(self):

@@ -17,6 +17,7 @@ class OWUnique(widget.OWWidget):
     description = 'Filter instances unique by specified key attribute(s).'
     category = "Transform"
     priority = 1120
+    keywords = 'unique, distinct, remove, duplicates, filter'
 
     class Inputs:
         data = widget.Input("Data", Table)

@@ -49,6 +49,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
     # with with writers as keys in `filters`.
     class OWSaveMockWriter(OWSaveBase):
         name = "Mock save"
+        keywords = "mock save"
         writer = Mock()
         writer.EXTENSIONS = [".csv"]
         writer.SUPPORT_COMPRESSED = True
@@ -291,6 +292,7 @@ class TestOWSaveBaseWithWriters(WidgetTest):
 
         class OWSaveNoWriter(OWSaveBase):
             name = "Mock save"
+            keywords = "mock save"
             writers = {}
             filters = {"csv (*.csv)": writer}
 
@@ -327,6 +329,7 @@ class TestOWSaveBase(WidgetTest):
         class OWSaveMockWriter(OWSaveBase):
             name = "Mock save"
             filters = ["csv (*.csv)"]
+            keywords = "mock save"
 
             do_save = Mock()
 

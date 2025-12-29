@@ -16,6 +16,7 @@ class OWSelectByDataIndex(widget.OWWidget):
     category = "Transform"
     icon = "icons/SelectByDataIndex.svg"
     priority = 1112
+    keywords="_keywords"
 
     class Inputs:
         data = Input("Data", Table)
