@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import numpy as np
 
+from orangewidget.settings import Context
 from Orange.data import Table, StringVariable, DiscreteVariable, Domain
 from Orange.widgets.data.owcreateclass import (
     OWCreateClass,
@@ -503,7 +504,7 @@ class TestOWCreateClass(WidgetTest):
         np.testing.assert_equal(classes[fixed], 1)
         self.assertTrue(np.all(np.isnan(classes[~(reversable | fixed)])))
 
-    def test_flow_and_context_handling(self):
+    def test_flow(self):
         widget = self.widget
         self.send_signal(self.widget.Inputs.data, self.heart)
         self._test_default_rules()
@@ -543,27 +544,6 @@ class TestOWCreateClass(WidgetTest):
         np.testing.assert_equal(classes[~female], 1)
 
         self._set_attr(thal)
-        self._check_thal()
-
-        prev_rules = widget.rules
-        self.send_signal(self.widget.Inputs.data, self.zoo)
-        self.assertIsNot(widget.rules, prev_rules)
-
-        self.send_signal(self.widget.Inputs.data, self.heart)
-        self._check_thal()
-
-        # Check that sending None as data does not ruin the context, and that
-        # the empty context does not match the true one later
-        self.send_signal(self.widget.Inputs.data, None)
-        self.assertIsNot(widget.rules, prev_rules)
-
-        self.send_signal(self.widget.Inputs.data, self.heart)
-        self._check_thal()
-
-        self.send_signal(self.widget.Inputs.data, self.no_attributes)
-        self.assertIsNot(widget.rules, prev_rules)
-
-        self.send_signal(self.widget.Inputs.data, self.heart)
         self._check_thal()
 
     def test_add_remove_lines(self):
@@ -689,6 +669,25 @@ class TestOWCreateClass(WidgetTest):
             self.get_output(widget1.Outputs.data, widget=widget1).domain.class_var,
             self.get_output(widget2.Outputs.data, widget=widget2).domain.class_var
         )
+
+    def test_migrate_settings_1_2(self):
+        settings = {"__version__": 1, "context_settings": [Context(
+            values= {
+                'attribute': ('type', 101),
+                'case_sensitive': (True, -2),
+                'class_name': ('class', -2),
+                'match_beginning': (True, -2),
+                'regular_expressions': (False, -2),
+                'rules': ({'type': [['', 'am'], ['', 'er'], ['', '']]}, -2),
+                '__version__': 1},
+            attributes = {'hair': 1, 'feathers': 1, 'eggs': 1, 'type': 1},
+            metas = {'name': 3})]}
+        w = self.create_widget(OWCreateClass, stored_settings=settings)
+        self.assertTrue(w.case_sensitive)
+        self.assertTrue(w.match_beginning)
+        self.assertFalse(w.regular_expressions)
+        self.assertEqual(w.class_name, "class")
+        self.assertEqual(w.rules["type"], [['', 'am'], ['', 'er'], ['', '']])
 
 
 if __name__ == "__main__":

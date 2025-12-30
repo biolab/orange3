@@ -4873,6 +4873,12 @@ widgets/data/owcreateclass.py:
             Output: Izhod
             Class name: Ime razreda
             <ol>{output}</ol>: false
+        def `migrate_settings`:
+            context_settings: false
+            class_name: false
+            rules: false
+            match_beginning: false
+            case_sensitive: false
     __main__: false
     zoo: false
 widgets/data/owcreateinstance.py:
