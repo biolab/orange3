@@ -13893,6 +13893,8 @@ widgets/visualize/owbarplot.py:
             (Same color): (Enaka barva)
             color_var: false
             Color:: Barva:
+            show_legend: false
+            Show legend: Pokaži legendo
             auto_commit: false
         def `grouped_indices`:
             mergesort: false

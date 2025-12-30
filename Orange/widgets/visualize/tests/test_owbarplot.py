@@ -395,6 +395,31 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertTrue(all([pen.style() == Qt.SolidLine for i, pen
                              in enumerate(pens) if i not in indices]))
 
+    @staticmethod
+    def _set_check(checkbox, value):
+        state = Qt.Checked if value else Qt.Unchecked
+        checkbox.setCheckState(state)
+        checkbox.toggled[bool].emit(value)
+
+    def test_show_hide_legend(self):
+        widget = self.widget
+        legend = widget.graph.legend
+
+        self._set_check(widget.controls.show_legend, False)
+        self._set_check(widget.controls.show_legend, True)
+
+        self.send_signal(widget.Inputs.data, self.heart)
+        simulate.combobox_activate_index(widget.controls.color_var, 2)
+        self.assertTrue(legend.isVisible())
+        self._set_check(widget.controls.show_legend, False)
+        self.assertFalse(legend.isVisible())
+        self._set_check(widget.controls.show_legend, True)
+        self.assertTrue(legend.isVisible())
+
+        self.send_signal(widget.Inputs.data, None)
+        self._set_check(widget.controls.show_legend, False)
+        self._set_check(widget.controls.show_legend, True)
+
 
 if __name__ == "__main__":
     unittest.main()

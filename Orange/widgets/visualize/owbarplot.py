@@ -188,13 +188,18 @@ class BarPlotGraph(PlotWidget):
     def update_legend(self):
         self.legend.clear()
         self.legend.hide()
-        for color, text in self.master.get_legend_data():
+        if not self.master.show_legend:
+            return
+        legend_data = self.master.get_legend_data()
+        if not legend_data:
+            return
+        for color, text in legend_data:
             dot = pg.ScatterPlotItem(
                 pen=pg.mkPen(color=color),
                 brush=pg.mkBrush(color=color)
             )
             self.legend.addItem(dot, escape(text))
-            self.legend.show()
+        self.legend.show()
         Updater.update_legend_font(self.legend.items,
                                    **self.parameter_setter.legend_settings)
 
@@ -386,6 +391,7 @@ class OWBarPlot(OWWidget):
     group_var = ContextSetting(None)
     annot_var = ContextSetting(None)
     color_var = ContextSetting(None)
+    show_legend = Setting(True)
     auto_commit = Setting(True)
     selection = Setting(None, schema_only=True)
     visual_settings = Setting({}, schema_only=True)
@@ -476,6 +482,10 @@ class OWBarPlot(OWWidget):
             callback=self.__parameter_changed,
         )
 
+        gui.checkBox(
+            box, self, "show_legend", "Show legend",
+            callback=self.__show_legend_changed
+        )
         plot_gui = OWPlotGUI(self)
         plot_gui.box_zoom_select(self.buttonsArea)
 
@@ -483,6 +493,9 @@ class OWBarPlot(OWWidget):
 
     def __parameter_changed(self):
         self.graph.reset_graph()
+
+    def __show_legend_changed(self):
+        self.graph.update_legend()
 
     def __group_var_changed(self):
         self.clear_cache()
