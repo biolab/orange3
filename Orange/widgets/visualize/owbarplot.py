@@ -69,6 +69,7 @@ class ParameterSetter(CommonParameterSetter):
     DEFAULT_ALPHA_GRID, DEFAULT_SHOW_GRID = 80, True
     BOTTOM_AXIS_LABEL, GROUP_AXIS_LABEL = "Bottom axis", "Group axis"
     IS_VERTICAL_LABEL = "Vertical ticks"
+    HIDE_EMPTY_LABEL = "Hide empty categories in the legend"
 
     def __init__(self, master):
         self.grid_settings: Dict = None
@@ -79,6 +80,7 @@ class ParameterSetter(CommonParameterSetter):
         self.grid_settings = {
             Updater.ALPHA_LABEL: self.DEFAULT_ALPHA_GRID,
             self.SHOW_GRID_LABEL: self.DEFAULT_SHOW_GRID,
+            self.HIDE_EMPTY_LABEL: False,
         }
 
         self.initial_settings = {
@@ -104,6 +106,9 @@ class ParameterSetter(CommonParameterSetter):
                 self.GROUP_AXIS_LABEL: {
                     self.IS_VERTICAL_LABEL: (None, False),
                 },
+                self.LEGEND_LABEL: {
+                    self.HIDE_EMPTY_LABEL: (None, False)
+                },
             },
         }
 
@@ -120,10 +125,15 @@ class ParameterSetter(CommonParameterSetter):
             axis = self.master.group_axis
             axis.setRotateTicks(settings[self.IS_VERTICAL_LABEL])
 
+        def update_show_empty(**settings):
+            self.grid_settings.update(**settings)
+            self.master.update_legend()
+
         self._setters[self.PLOT_BOX] = {
             self.GRID_LABEL: update_grid,
             self.BOTTOM_AXIS_LABEL: update_bottom_axis,
             self.GROUP_AXIS_LABEL: update_group_axis,
+            self.LEGEND_LABEL: update_show_empty,
         }
 
     @property
@@ -607,8 +617,15 @@ class OWBarPlot(OWWidget):
             return []
         else:
             assert self.color_var.is_discrete
-            return [(QColor(*color), text) for color, text in
-                    zip(self.color_var.colors, self.color_var.values)]
+            present = np.zeros(len(self.color_var.values), dtype=bool)
+            if not self.graph.parameter_setter.grid_settings[
+                    ParameterSetter.HIDE_EMPTY_LABEL]:
+                present[:] = True
+            else:
+                present[self.grouped_data.get_column(self.color_var).astype(int)] = True
+            return [(QColor(*color), text) for color, text, is_present in
+                    zip(self.color_var.colors, self.color_var.values, present)
+                    if is_present]
 
     def get_colors(self) -> Optional[List[QColor]]:
         def create_color(i, id_):

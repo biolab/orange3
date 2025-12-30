@@ -13844,6 +13844,7 @@ widgets/visualize/owbarplot.py:
         Bottom axis: Spodnja os
         Group axis: Os skupin
         Vertical ticks: Navpične oznake
+        Hide empty categories in the legend: Skrij prazne kategorije v legendi
         def `update_setters`:
             def `update_bottom_axis`:
                 bottom: false
