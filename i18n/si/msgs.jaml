@@ -6498,6 +6498,9 @@ widgets/data/owfile.py:
             Format: Oblika
             Data: Podatki
             Resource: Vir
+        def `migrate_settings`:
+            recent_paths: false
+            active_path: false
     class `OWFileDropHandler`:
         def `canDropUrl`:
             http: false
