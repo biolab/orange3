@@ -720,6 +720,23 @@ class TestOWDistributions(WidgetTest):
             self.get_output(widget.Outputs.selected_data).X,
             np.arange(200, 300)[:, np.newaxis])
 
+    def test_hide_legend(self):
+        widget = self.widget
+        legend = widget._legend
+
+        self._set_check(widget.controls.show_legend, False)
+        self._set_check(widget.controls.show_legend, True)
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertTrue(legend.isVisible())
+        self._set_check(widget.controls.show_legend, False)
+        self.assertFalse(legend.isVisible())
+        self._set_check(widget.controls.show_legend, True)
+        self.assertTrue(legend.isVisible())
+
+        self.send_signal(widget.Inputs.data, None)
+        self._set_check(widget.controls.show_legend, False)
+        self._set_check(widget.controls.show_legend, True)
 
 if __name__ == "__main__":
     unittest.main()

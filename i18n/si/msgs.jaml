@@ -14064,6 +14064,8 @@ widgets/visualize/owdistributions.py:
             Show probabilities: Pokaži verjetnosti
             cumulative_distr: false
             Show cumulative distribution: Pokaži kumulativno porazdelitev
+            show_legend: false
+            Show legend: Pokaži legendo
         def `_setup_plots`:
             def `add_new_plot`:
                 right: false

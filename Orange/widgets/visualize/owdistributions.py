@@ -285,6 +285,7 @@ class OWDistributions(OWWidget):
     show_probs = settings.Setting(False)
     stacked_columns = settings.Setting(False)
     cumulative_distr = settings.Setting(False)
+    show_legend = settings.Setting(True)
     sort_by_freq = settings.Setting(False)
     kde_smoothing = settings.Setting(10)
 
@@ -371,6 +372,10 @@ class OWDistributions(OWWidget):
         gui.checkBox(
             box, self, "cumulative_distr", "Show cumulative distribution",
             callback=self._on_show_cumulative)
+        gui.checkBox(
+            box, self, "show_legend", "Show legend",
+            callback=self.show_hide_legend
+        )
 
         gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
@@ -872,12 +877,22 @@ class OWDistributions(OWWidget):
                    for value, freq in zip(gvalues, freqs)) + \
                "</table>"
 
+    def show_hide_legend(self):
+        if self.is_valid:
+            self._display_legend()
+
     def _display_legend(self):
-        assert self.is_valid  # called only from replot, so assumes data is OK
+        # called only from replot and show_hide_legend, so it assumes data is OK
+        assert self.is_valid
+        self._legend.clear()
+        if not self.show_legend or \
+                self.cvar is None and (
+                    not self.curve_descriptions
+                    or not self.curve_descriptions[0]
+                ):
+            self._legend.hide()
+            return
         if self.cvar is None:
-            if not self.curve_descriptions or not self.curve_descriptions[0]:
-                self._legend.hide()
-                return
             self._legend.addItem(
                 pg.PlotCurveItem(pen=pg.mkPen(width=5, color=0.0)),
                 self.curve_descriptions[0])
