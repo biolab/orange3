@@ -13844,6 +13844,7 @@ widgets/visualize/owbarplot.py:
         Bottom axis: Spodnja os
         Group axis: Os skupin
         Vertical ticks: Navpične oznake
+        Hide empty categories in the legend: Skrij prazne kategorije v legendi
         def `update_setters`:
             def `update_bottom_axis`:
                 bottom: false
@@ -13893,6 +13894,8 @@ widgets/visualize/owbarplot.py:
             (Same color): (Enaka barva)
             color_var: false
             Color:: Barva:
+            show_legend: false
+            Show legend: Pokaži legendo
             auto_commit: false
         def `grouped_indices`:
             mergesort: false
@@ -14064,6 +14067,8 @@ widgets/visualize/owdistributions.py:
             Show probabilities: Pokaži verjetnosti
             cumulative_distr: false
             Show cumulative distribution: Pokaži kumulativno porazdelitev
+            show_legend: false
+            Show legend: Pokaži legendo
         def `_setup_plots`:
             def `add_new_plot`:
                 right: false
