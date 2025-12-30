@@ -9,14 +9,15 @@ from collections import OrderedDict
 import numpy as np
 
 from AnyQt.QtWidgets import (
-    QGraphicsView, QGraphicsScene, QGraphicsItem, QGraphicsSimpleTextItem,
+    QGraphicsView, QGraphicsScene, QGraphicsItem,
     QGraphicsTextItem, QGraphicsLineItem, QGraphicsWidget, QGraphicsRectItem,
     QGraphicsEllipseItem, QGraphicsLinearLayout, QGridLayout, QLabel, QFrame,
     QSizePolicy, QFormLayout
 )
-from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush, QFontMetrics
+from AnyQt.QtGui import QColor, QPainter, QFont, QPen, QBrush, QFontMetrics, \
+    QPalette
 from AnyQt.QtCore import Qt, QRectF, QSize, QPropertyAnimation, QObject, \
-    pyqtProperty
+    pyqtProperty, QEvent
 
 from orangewidget.io import ClipboardFormat
 from orangewidget.utils import saveplot
@@ -368,6 +369,13 @@ class Continuous2DMovableDotItem(MovableDotItem, ContinuousItemMixin):
         self.horizontal_line.setVisible(True)
 
 
+def _line(x0, y0, x1, y1, parent):
+    foreground = parent.palette().color(QPalette.WindowText)
+    line = QGraphicsLineItem(x0, y0, x1, y1, parent)
+    line.setPen(foreground)
+    return line
+
+
 class RulerItem(QGraphicsWidget):
     tick_height = 6
     tick_width = 0
@@ -392,21 +400,19 @@ class RulerItem(QGraphicsWidget):
                                      values[-1])
         self.dot.setParentItem(self)
 
-        # pylint: disable=unused-variable
-        # line
-        line = QGraphicsLineItem(min(values) * scale + offset, 0,
-                                 max(values) * scale + offset, 0,
-                                 self)
+        _line(min(values) * scale + offset, 0,
+              max(values) * scale + offset, 0,
+              self)
 
         if labels is None:
             labels = [str(abs(v) if v == -0 else v) for v in values]
 
         old_x_tick = None
         shown_items = []
-        w = QGraphicsSimpleTextItem(labels[0]).boundingRect().width()
+        w = QGraphicsTextItem(labels[0]).boundingRect().width()
         text_finish = values[0] * scale - w + offset - 10
         for i, (label, value) in enumerate(zip(labels, values)):
-            text = QGraphicsSimpleTextItem(label)
+            text = QGraphicsTextItem(label)
             x_text = value * scale - text.boundingRect().width() / 2 + offset
             if text_finish > x_text - 10:
                 y_text, y_tick = self.DOT_RADIUS * 0.7, 0
@@ -424,12 +430,12 @@ class RulerItem(QGraphicsWidget):
             tick = QGraphicsRectItem(
                 x_tick, y_tick, self.tick_width, self.tick_height,
                 self)
-            tick.setBrush(QColor(Qt.black))
+            foreground = self.palette().color(QPalette.WindowText)
+            tick.setBrush(foreground)
 
             if self.half_tick_height and i:
                 x = x_tick - (x_tick - old_x_tick) / 2
-                half_tick = QGraphicsLineItem(x, - self.half_tick_height, x, 0,
-                                              self)
+                _line(x, - self.half_tick_height, x, 0, self)  # half_tick
             old_x_tick = x_tick
 
 
@@ -464,22 +470,19 @@ class ProbabilitiesRulerItem(QGraphicsWidget):
         self.dot.setPos(0, (- self.DOT_RADIUS + self.y_diff) / 2)
         self.dot.setParentItem(self)
 
-        # pylint: disable=unused-variable
-        # two lines
-        t_line = QGraphicsLineItem(self.min_val * scale + offset, 0,
-                                   self.max_val * scale + offset, 0,
-                                   self)
-        p_line = QGraphicsLineItem(self.min_val * scale + offset, self.y_diff,
-                                   self.max_val * scale + offset, self.y_diff,
-                                   self)
+        _line(self.min_val * scale + offset, 0,
+              self.max_val * scale + offset, 0,
+              self)  # t_line
+        _line(self.min_val * scale + offset, self.y_diff,
+              self.max_val * scale + offset, self.y_diff,
+              self)  # p_line
 
         # ticks and labels
         old_x_tick = values[0] * scale + offset
         for i, value in enumerate(values[1:]):
             x_tick = value * scale + offset
             x = x_tick - (x_tick - old_x_tick) / 2
-            half_tick = QGraphicsLineItem(x, - self.tick_height / 2, x, 0,
-                                          self)
+            _line(x, - self.tick_height / 2, x, 0, self)  # half tick
             old_x_tick = x_tick
             if i == len(values) - 2:
                 break
@@ -488,12 +491,11 @@ class ProbabilitiesRulerItem(QGraphicsWidget):
             x_text = value * scale - text.boundingRect().width() / 2 + offset
             y_text = - text.boundingRect().height() - self.DOT_RADIUS * 0.7
             text.setPos(x_text, y_text)
-            tick = QGraphicsLineItem(x_tick, -self.tick_height, x_tick, 0,
-                                     self)
+            _line(x_tick, -self.tick_height, x_tick, 0, self)  # tick
 
         self.prob_items = [
             (i / 10, QGraphicsTextItem(" " + str(i * 10) + " "),
-             QGraphicsLineItem(0, 0, 0, 0)) for i in range(1, 10)]
+             _line(0, 0, 0, 0, self)) for i in range(1, 10)]
 
     def rescale(self):
         shown_items = []
@@ -588,11 +590,11 @@ class ContinuousFeature2DItem(QGraphicsWidget):
         ascending = data_start < data_stop
         y_start, y_stop = (self.y_diff, 0) if ascending else (0, self.y_diff)
         for i in range(self.n_tck):
-            text = QGraphicsSimpleTextItem(labels[i], self)
+            text = QGraphicsTextItem(labels[i], self)
             w = text.boundingRect().width()
             y = y_start + (y_stop - y_start) / (self.n_tck - 1) * i
             text.setPos(-5 - w, y - 8)
-            tick = QGraphicsLineItem(-2, y, 2, y, self)
+            _line(-2, y, 2, y, self)  # tick
 
         # prediction marker
         self.dot = Continuous2DMovableDotItem(
@@ -600,19 +602,17 @@ class ContinuousFeature2DItem(QGraphicsWidget):
         self.dot.tooltip_labels = labels
         self.dot.tooltip_values = values
         self.dot.setParentItem(self)
-        h_line = QGraphicsLineItem(values[0] * scale + offset, self.y_diff / 2,
-                                   values[-1] * scale + offset, self.y_diff / 2,
-                                   self)
+        h_line = _line(values[0] * scale + offset, self.y_diff / 2,
+                       values[-1] * scale + offset, self.y_diff / 2,
+                       self)
         pen = QPen(Qt.DashLine)
         pen.setBrush(QColor(Qt.red))
         h_line.setPen(pen)
         self.dot.horizontal_line = h_line
 
-        # pylint: disable=unused-variable
-        # line
-        line = QGraphicsLineItem(values[0] * scale + offset, y_start,
-                                 values[-1] * scale + offset, y_stop,
-                                 self)
+        _line(values[0] * scale + offset, y_start,
+              values[-1] * scale + offset, y_stop,
+              self)
 
         # ticks
         for value in values:
@@ -797,8 +797,7 @@ class OWNomogram(OWWidget):
         class GraphicsView(_GraphicsView):
             def __init__(self, scene, parent):
                 super().__init__(scene, parent,
-                                 verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn,
-                                 styleSheet='QGraphicsView {background: white}')
+                                 verticalScrollBarPolicy=Qt.ScrollBarAlwaysOn)
                 self.viewport().setMinimumWidth(300)  # XXX: This prevents some tests failing
                 self._is_resizing = False
 
@@ -971,6 +970,11 @@ class OWNomogram(OWWidget):
             else:
                 self.log_reg_cont_data_extremes.append([None])
 
+    def changeEvent(self, event):
+        if event.type() == QEvent.PaletteChange:
+            self.update_scene()
+        super().changeEvent(event)
+
     def update_scene(self):
         self.clear_scene()
         if self.domain is None or not len(self.points[0]):
@@ -1125,7 +1129,8 @@ class OWNomogram(OWWidget):
         x = - scale_x * min_p
         y = self.nomogram_main.layout().preferredHeight() + 10
         self.vertical_line = QGraphicsLineItem(x, -6, x, y)
-        self.vertical_line.setPen(QPen(Qt.DotLine))
+        foreground = self.palette().color(QPalette.WindowText)
+        self.vertical_line.setPen(QPen(foreground, 1, Qt.DotLine))
         self.vertical_line.setParentItem(point_item)
         self.hidden_vertical_line = QGraphicsLineItem(x, -6, x, y)
         pen = QPen(Qt.DashLine)
