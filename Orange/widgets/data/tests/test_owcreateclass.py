@@ -678,16 +678,23 @@ class TestOWCreateClass(WidgetTest):
                 'class_name': ('class', -2),
                 'match_beginning': (True, -2),
                 'regular_expressions': (False, -2),
-                'rules': ({'type': [['', 'am'], ['', 'er'], ['', '']]}, -2),
+                'rules': ({'type': [['cam', 'am'], ['cer', 'er'], ['', '']],
+                           'eggs': [['de', 'e1'], ['', '']]},
+                          -2),
                 '__version__': 1},
             attributes = {'hair': 1, 'feathers': 1, 'eggs': 1, 'type': 1},
             metas = {'name': 3})]}
         w = self.create_widget(OWCreateClass, stored_settings=settings)
+        self.send_signal(w.Inputs.data, self.zoo, widget=w)
+        self.assertEqual(w.active_rules, [['cam', 'am'], ['cer', 'er'], ['', '']])
+        self.assertEqual(w.class_name, "class")
         self.assertTrue(w.case_sensitive)
         self.assertTrue(w.match_beginning)
         self.assertFalse(w.regular_expressions)
-        self.assertEqual(w.class_name, "class")
-        self.assertEqual(w.rules["type"], [['', 'am'], ['', 'er'], ['', '']])
+
+        w.attribute = self.zoo.domain["eggs"]
+        self.assertEqual(w.active_rules, [['de', 'e1'], ['', '']])
+
 
 
 if __name__ == "__main__":
