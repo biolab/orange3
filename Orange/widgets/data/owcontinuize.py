@@ -45,8 +45,8 @@ DiscreteOptions: Dict[int, MethodDesc] = {
     method.id_: method
     for method in (
         MethodDesc(
-            Continuize.Default, "Use preset", "preset",
-            "Treat the variable as defined in preset"),
+            Continuize.Default, "Use general preset", "preset",
+            "Treat the variable as defined in general preset"),
         MethodDesc(
             Continuize.Leave, "Keep categorical", "keep as is",
             "Keep the variable discrete"),
@@ -86,8 +86,8 @@ ContinuousOptions: Dict[int, MethodDesc] = {
     method.id_: method
     for method in (
         MethodDesc(
-            Normalize.Default, "Use preset", "preset",
-            "Treat the variable as defined in 'default setting'"),
+            Normalize.Default, "Use general preset", "preset",
+            "Treat the variable as defined in general preset"),
         MethodDesc(
             Normalize.Leave, "Keep as it is", "no change",
             "Keep the variable as it is"),
@@ -166,7 +166,7 @@ class DefaultContModel(QAbstractListModel):
 
     def data(self, _, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            return f"Preset: {self.method}"
+            return f"General preset: {self.method}"
         elif role == Qt.DecorationRole:
             return self.icon
         elif role == Qt.ToolTipRole:
@@ -700,7 +700,7 @@ class OWContinuize(widget.OWWidget):
             elif len(self.disc_view.model()) > 0:
                 self.report_items(
                     "Categorical variables",
-                    [("Preset" if name == DefaultKey else name,
+                    [("General preset" if name == DefaultKey else name,
                       DiscreteOptions[id_].label.lower())
                      for name, id_ in self.disc_var_hints.items()])
             if single_cont:
@@ -708,11 +708,11 @@ class OWContinuize(widget.OWWidget):
             elif len(self.cont_view.model()) > 0:
                 self.report_items(
                     "Numeric variables",
-                    [("Preset" if name == DefaultKey else name,
+                    [("General preset" if name == DefaultKey else name,
                       ContinuousOptions[id_].label.lower())
                      for name, id_ in self.cont_var_hints.items()])
             self.report_paragraph("Unlisted",
-                "Any unlisted attributes default to preset option, and "
+                "Any unlisted attributes default to general preset, and "
                 "unlisted meta attributes and target variables are kept "
                 "as they are")
 

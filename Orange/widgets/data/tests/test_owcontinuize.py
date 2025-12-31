@@ -832,7 +832,7 @@ class TestModelsAndViews(GuiTest):
         spy = QSignalSpy(model.dataChanged)
         model.setMethod("mega encoding")
         self.assertEqual(spy[0][0].row(), 0)
-        self.assertEqual(ind.data(), "Preset: mega encoding")
+        self.assertEqual(ind.data(), "General preset: mega encoding")
         self.assertIsNotNone(ind.data(Qt.DecorationRole))
         self.assertIsNotNone(ind.data(Qt.ToolTipRole))
 
