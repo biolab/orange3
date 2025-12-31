@@ -20,21 +20,21 @@ class TestRunner(WidgetTest):
         self.state.is_interruption_requested = Mock(return_value=False)
 
     def test_run(self):
-        result = run(self.zoo, "", "Feature", False, self.state)
+        result = run(self.zoo, "", "Feature name", "Feature", False, self.state)
         self.assert_table_equal(Table.transpose(self.zoo), result)
 
     def test_run_var(self):
-        result = run(self.zoo, "name", "Feature", False, self.state)
+        result = run(self.zoo, "name", "Feature name", "Feature", False, self.state)
         self.assert_table_equal(Table.transpose(self.zoo, "name"), result)
 
     def test_run_name(self):
-        result1 = run(self.zoo, "", "Foo", False, self.state)
+        result1 = run(self.zoo, "", "Feature name", "Foo", False, self.state)
         result2 = Table.transpose(self.zoo, feature_name="Foo")
         self.assert_table_equal(result1, result2)
 
     def test_run_callback(self):
         self.state.set_progress_value = Mock()
-        run(self.zoo, "", "Feature", False, self.state)
+        run(self.zoo, "", "Feature name", "Feature", False, self.state)
         self.state.set_progress_value.assert_called()
 
 
@@ -215,6 +215,36 @@ class TestOWTranspose(WidgetTest):
             apply.reset_mock()
             self.send_signal(self.widget.Inputs.data, self.zoo)
             apply.assert_called()
+
+    def test_output_column_name(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.zoo)
+
+        output = self.get_output(widget.Outputs.data)
+        self.assertEqual(output.domain.metas[0].name, "Column name")
+
+        widget.output_column_name = "Custom name"
+        widget.commit.now()
+        output = self.get_output(widget.Outputs.data)
+        self.assertEqual(output.domain.metas[0].name, "Custom name")
+
+        widget.output_column_name = ""
+        widget.commit.now()
+        output = self.get_output(widget.Outputs.data)
+        self.assertEqual(output.domain.metas[0].name, "Column name")
+
+    def test_migration(self):
+        w = self.create_widget(
+            OWTranspose,
+            stored_settings={
+                "__version__": 1,
+                "remove_redundant_inst": True,
+            },
+        )
+        self.send_signal(self.zoo)
+        self.assertEqual(w.feature_type, OWTranspose.GENERIC)
+        self.assertTrue(w.remove_redundant_inst)
+        self.assertEqual(w.output_column_name, "Feature name")
 
 
 if __name__ == "__main__":

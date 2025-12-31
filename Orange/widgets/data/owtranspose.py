@@ -12,7 +12,8 @@ from Orange.widgets.widget import Input, Output
 
 
 def run(data: Table,
-        variable: Optional[Union[Variable, bool]],
+        variable: Optional[Union[Variable, bool, str]],
+        meta_attr_name: str,
         feature_name: str,
         remove_redundant_inst: bool,
         state: TaskState
@@ -27,7 +28,9 @@ def run(data: Table,
         if state.is_interruption_requested():
             raise Exception
 
-    return Table.transpose(data, variable, feature_name=feature_name,
+    return Table.transpose(data, variable,
+                           meta_attr_name=meta_attr_name,
+                           feature_name=feature_name,
                            remove_redundant_inst=remove_redundant_inst,
                            progress_callback=callback)
 
@@ -58,7 +61,10 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
     feature_name = ContextSetting("")
     feature_names_column = ContextSetting(None)
     remove_redundant_inst = ContextSetting(False)
+    output_column_name = Setting("")
     auto_apply = Setting(True)
+
+    settings_version = 2
 
     class Warning(OWWidget.Warning):
         duplicate_names = Msg("Values are not unique.\nTo avoid multiple "
@@ -98,6 +104,12 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
         self.remove_check = gui.checkBox(
             gui.indentedBox(box, gui.checkButtonOffsetHint(button)), self,
             "remove_redundant_inst", "Remove redundant instance",
+            callback=self.commit.deferred)
+
+        box = gui.vBox(self.controlArea, "Name for column with column names")
+        gui.lineEdit(
+            box, self, "output_column_name",
+            placeholderText="Column name",
             callback=self.commit.deferred)
 
         gui.auto_apply(self.buttonsArea, self)
@@ -146,8 +158,9 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
         if self.data and self.data.domain.has_discrete_attributes():
             self.Warning.discrete_attrs()
         feature_name = self.feature_name or self.DEFAULT_PREFIX
+        meta_attr_name = self.output_column_name or "Column name"
         self.start(run, self.data, variable,
-                   feature_name, self.remove_redundant_inst)
+                   meta_attr_name, feature_name, self.remove_redundant_inst)
 
     def on_partial_result(self, _):
         pass
@@ -175,6 +188,11 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
         self.report_items("", [("Feature names", names)])
         if self.data:
             self.report_data("Data", self.data)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            settings.setdefault("output_column_name", "Feature name")
 
 
 if __name__ == "__main__":  # pragma: no cover
