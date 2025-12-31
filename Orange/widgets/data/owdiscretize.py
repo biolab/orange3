@@ -158,8 +158,8 @@ Options: Dict[Methods, MethodDesc] = {
     method.id_: method
     for method in (
         MethodDesc(Methods.Default,
-                   "Use default setting", "default",
-                   "Treat the variable as defined in 'default setting'",
+                   "Use general preset", "as preset",
+                   "Treat the variable as defined in general preset",
                    None,
                    ()),
         MethodDesc(Methods.Keep,
@@ -355,7 +355,7 @@ class DiscDomainModel(DomainModel):
 
 class DefaultDiscModel(QAbstractListModel):
     """
-    A model used for showing "Default settings" above the list view with var
+    A model used for showing "General preset" above the list view with var
     """
     icon = None
 
@@ -376,7 +376,7 @@ class DefaultDiscModel(QAbstractListModel):
 
     def data(self, _, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            return "Default setting: " + format_desc(self.hint)
+            return "General preset: " + format_desc(self.hint)
         elif role == Qt.DecorationRole:
             return DefaultDiscModel.icon
         elif role == Qt.ToolTipRole:
@@ -667,9 +667,13 @@ class OWDiscretize(widget.OWWidget):
                                      (self.copy_to_custom, None),
                                      stretch=False)
         button(Methods.Default)
-        maxheight = max(w.sizeHint().height() for w in children)
-        for w in children:
-            w.itemAt(0).widget().setFixedHeight(maxheight)
+        # Increase the height of smaller items to make the spacing look more
+        # uniform. Setting the same height for all make it look too large.
+        heights = [w.sizeHint().height() for w in children]
+        maxheight = max(heights)
+        midheight = (min(heights) + maxheight) // 2
+        for widg, h in zip(children, heights):
+            widg.itemAt(0).widget().setFixedHeight(max(h, midheight))
         button_box.layout().addStretch(1)
 
     def _update_default_model(self):
