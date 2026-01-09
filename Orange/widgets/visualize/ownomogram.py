@@ -746,6 +746,13 @@ class OWNomogram(OWWidget):
         self.sort_combo = gui.comboBox(
             None, self, "sort_index", items=SortBy.items(),
             callback=self.update_scene,
+            tooltips=[
+                "Do not sort features, display them in original order",
+                "Sort features alphabetically by name",
+                "Sort features by absolute importance",
+                "Sort features by positive influence on the class",
+                "Sort features by negative influence on the class"
+            ],
             sizePolicy=(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
         )
         grid.addWidget(QLabel("Order: "), 0, 0, lab_align)
@@ -881,10 +888,18 @@ class OWNomogram(OWWidget):
                 self.cont_feature_dim_combo.setEnabled(False)
                 self.cont_feature_dim_index = 0
         model = self.sort_combo.model()
-        item = model.item(SortBy.POSITIVE)
-        item.setFlags(item.flags() | Qt.ItemIsEnabled)
-        item = model.item(SortBy.NEGATIVE)
-        item.setFlags(item.flags() | Qt.ItemIsEnabled)
+
+        is_logistic = isinstance(self.classifier, LogisticRegressionClassifier)
+        inapplicable = (SortBy.POSITIVE, SortBy.NEGATIVE)
+        if is_logistic and self.sort_index in inapplicable:
+            self.sort_index = SortBy.ABSOLUTE
+        for idx in inapplicable:
+            item = model.item(idx)
+            if is_logistic:
+                item.setFlags(item.flags() & ~Qt.ItemIsEnabled)
+            else:
+                item.setFlags(item.flags() | Qt.ItemIsEnabled)
+
         self.align = OWNomogram.ALIGN_ZERO
         if self.classifier and isinstance(self.classifier,
                                           LogisticRegressionClassifier):
@@ -1405,7 +1420,8 @@ class OWNomogram(OWWidget):
 
 
 if __name__ == "__main__":  # pragma: no cover
-    from Orange.classification import NaiveBayesLearner  #, LogisticRegressionLearner
+    # pylint: disable=import-outside-toplevel, unused-import
+    from Orange.classification import NaiveBayesLearner, LogisticRegressionLearner
     data = Table("heart_disease")
     clf = NaiveBayesLearner()(data)
     # clf = LogisticRegressionLearner()(data)
