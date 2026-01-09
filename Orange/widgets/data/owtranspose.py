@@ -61,7 +61,7 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
     feature_name = ContextSetting("")
     feature_names_column = ContextSetting(None)
     remove_redundant_inst = ContextSetting(False)
-    output_column_name = Setting("")
+    output_column_name = Setting("", schema_only=True)
     auto_apply = Setting(True)
 
     settings_version = 2
