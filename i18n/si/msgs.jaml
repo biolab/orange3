@@ -8403,16 +8403,16 @@ widgets/data/owtranspose.py:
             {}: false
         def `__init__`:
             feature_type: false
-            Feature names: Imena spremenljivk
+            Output column names: Imena izhodnih stolpcev
             Generic: Generična imena
             feature_name: false
             Type a prefix ...: Določi predpono ...
             Custom feature name: Določi predpono imen spremenljivk
-            From variable:: Po vrednosti spremenljivke:
+            From column:: Po stolpcu:
             feature_names_column: false
             remove_redundant_inst: false
             Remove redundant instance: Odstrani odvečni primer
-            Name for column with column names: Ime stolpca z imeni stolpcev
+            Name for column with original column names: Ime stolpca z imeni izvornih stolpcev
             output_column_name: false
             Column name: Ime stolpca
         def `commit`:

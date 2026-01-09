@@ -82,7 +82,7 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
 
         # self.apply is changed later, pylint: disable=unnecessary-lambda
         box = gui.radioButtons(
-            self.controlArea, self, "feature_type", box="Feature names",
+            self.controlArea, self, "feature_type", box="Output column names",
             callback=self.commit.deferred)
 
         button = gui.appendRadioButton(box, "Generic")
@@ -92,7 +92,7 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
             placeholderText="Type a prefix ...", toolTip="Custom feature name")
         edit.editingFinished.connect(self._apply_editing)
 
-        self.meta_button = gui.appendRadioButton(box, "From variable:")
+        self.meta_button = gui.appendRadioButton(box, "From column:")
         self.feature_model = DomainModel(
             valid_types=(ContinuousVariable, StringVariable),
             alphabetical=False)
@@ -106,7 +106,8 @@ class OWTranspose(OWWidget, ConcurrentWidgetMixin):
             "remove_redundant_inst", "Remove redundant instance",
             callback=self.commit.deferred)
 
-        box = gui.vBox(self.controlArea, "Name for column with column names")
+        box = gui.vBox(self.controlArea,
+                       "Name for column with original column names")
         gui.lineEdit(
             box, self, "output_column_name",
             placeholderText="Column name",
