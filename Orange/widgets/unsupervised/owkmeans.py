@@ -34,6 +34,7 @@ class ClusterTableModel(QAbstractTableModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.scores = []
+        self.max_score = 1
         self.start_k = 0
 
     def rowCount(self, index=QModelIndex()):
@@ -51,12 +52,15 @@ class ClusterTableModel(QAbstractTableModel):
     def set_scores(self, scores, start_k):
         self.modelAboutToBeReset.emit()
         self.scores = scores
+        self.max_score = max(
+            (s for s in scores if not isinstance(s, str)), default=1)
         self.start_k = start_k
         self.modelReset.emit()
 
     def clear_scores(self):
         self.modelAboutToBeReset.emit()
         self.scores = []
+        self.max_score = 1
         self.start_k = 0
         self.modelReset.emit()
 
@@ -70,7 +74,7 @@ class ClusterTableModel(QAbstractTableModel):
         elif role == Qt.ToolTipRole and not valid:
             return score
         elif role == gui.BarRatioRole and valid:
-            return score
+            return score / self.max_score if self.max_score > 0 else 0
         return None
 
     def headerData(self, row, _orientation, role=Qt.DisplayRole):
