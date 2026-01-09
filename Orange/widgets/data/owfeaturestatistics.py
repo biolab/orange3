@@ -632,7 +632,7 @@ class FeatureStatisticsTableModel(AbstractSortTableModel):
 
 class FeatureStatisticsTableView(QTableView):
     HISTOGRAM_ASPECT_RATIO = (7, 3)
-    MINIMUM_HISTOGRAM_HEIGHT = 50
+    MINIMUM_HISTOGRAM_HEIGHT = 30
     MAXIMUM_HISTOGRAM_HEIGHT = 80
 
     def __init__(self, model, parent=None, **kwargs):
@@ -659,14 +659,8 @@ class FeatureStatisticsTableView(QTableView):
         # appears to work properly when the widget is actually shown. When the
         # widget is not shown, size `sizeHint` is called on every row.
         hheader.setResizeContentsPrecision(5)
-        # Set a nice default size so that headers have some space around titles
-        hheader.setMinimumSectionSize(100)
-        # Set individual column behaviour in `set_data` since the logical
-        # indices must be valid in the model, which requires data.
-        hheader.setSectionResizeMode(QHeaderView.Interactive)
+        self._resize_columns()
 
-        columns = model.Columns
-        hheader.setSectionResizeMode(columns.ICON.index, QHeaderView.ResizeToContents)
 
         vheader = self.verticalHeader()
         vheader.setVisible(False)
@@ -680,6 +674,15 @@ class FeatureStatisticsTableView(QTableView):
             FeatureStatisticsTableModel.Columns.DISTRIBUTION,
             DistributionDelegate(parent=self),
         )
+
+    def _resize_columns(self):
+        hheader = self.horizontalHeader()
+        hheader.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        for i in range(1, hheader.count()):
+            hheader.setSectionResizeMode(i, QHeaderView.ResizeToContents)
+            width = max(100, hheader.sectionSize(i))
+            hheader.setSectionResizeMode(i, QHeaderView.Interactive)
+            hheader.resizeSection(i, width)
 
     def bind_histogram_aspect_ratio(self, logical_index, _, new_size):
         """Force the horizontal and vertical header to maintain the defined
