@@ -158,7 +158,7 @@ Options: Dict[Methods, MethodDesc] = {
     method.id_: method
     for method in (
         MethodDesc(Methods.Default,
-                   "Use general preset", "as preset",
+                   "Use general preset", "preset",
                    "Treat the variable as defined in general preset",
                    None,
                    ()),
@@ -349,7 +349,9 @@ class DiscDomainModel(DomainModel):
             except TypeError:
                 pass  # don't have user role (yet)
             else:
-                value += f" ({format_desc(hint)}){points}"
+                value += ": " + format_desc(hint)
+                if points:
+                    value += " " + points
         return value
 
 
@@ -638,6 +640,7 @@ class OWDiscretize(widget.OWWidget):
         self.button_group = QButtonGroup(self)
         self.button_group.idClicked.connect(self.update_hints)
 
+        button(Methods.Default)
         button(Methods.Keep)
         button(Methods.Remove)
 
@@ -666,7 +669,6 @@ class OWDiscretize(widget.OWWidget):
                                      manual_cut_editline(),
                                      (self.copy_to_custom, None),
                                      stretch=False)
-        button(Methods.Default)
         # Increase the height of smaller items to make the spacing look more
         # uniform. Setting the same height for all make it look too large.
         heights = [w.sizeHint().height() for w in children]
@@ -839,7 +841,7 @@ class OWDiscretize(widget.OWWidget):
         thresholds = dvar.compute_value.points
         if len(thresholds) == 0:
             return " <removed>", None
-        return ": " + ", ".join(map(var.repr_val, thresholds)), dvar
+        return "(" + ", ".join(map(var.repr_val, thresholds))+ ")", dvar
 
     def _copy_to_manual(self):
         """

@@ -4645,7 +4645,6 @@ widgets/data/owcontinuize.py:
     Treat as normalized ordinal: Obravnavaj kot normalizirano ordinalno
     as norm. ordinal: kot norm. ordinalna
     Same as above, but scaled to [0, 1]: Enako kot zgoraj, vendar skalirano na [0, 1]
-    Treat the variable as defined in general preset: Spremeni, kot določajo splošne nastavitve
     Keep as it is: Ohrani tako, kot je
     no change: brez sprememb
     Keep the variable as it is: Ohrani spremenljivko tako, kot je
@@ -4679,7 +4678,7 @@ widgets/data/owcontinuize.py:
     class `ListViewSearch`:
         class `Delegate`:
             def `displayText`:
-                ': {hint}': false
+                '{name}: {hint}': false
     class `OWContinuize`:
         Continuize: Kontinuizacija
         'Transform categorical attributes into numeric and, ': 'Kategorične atribute pretvori v številčne in '
@@ -5451,7 +5450,7 @@ widgets/data/owdiscretize.py:
     def `_custom_discretization`:
         invalid cuts: nepravilne meje
     Use general preset: Uporabi splošno nastavitvo
-    as preset: splošno
+    preset: splošno
     Treat the variable as defined in general preset: Spremeni, kot je določeno v splošni nastavitvi
     Keep numeric: Ohrani številsko
     keep: ohrani
@@ -5499,7 +5498,8 @@ widgets/data/owdiscretize.py:
             {",&nbsp;&nbsp;".join(values)}</p>: false
             <br/>: false
             - {value}<br/>: false
-            ' ({format_desc(hint)}){points}': false
+            ': ': false
+            ' ': false
     class `DefaultDiscModel`:
         def `__init__`:
             ★: true
@@ -5557,8 +5557,9 @@ widgets/data/owdiscretize.py:
             ': <keep, not time>': : <ohrani, ni časovna>
             ' <{dvar}>': false
             ' <removed>': ' <odstranjena>'
-            ': ': true
+            (: false
             ', ': true
+            ): false
         def `_copy_to_manual`:
             ', ': true
         def `send_report`:

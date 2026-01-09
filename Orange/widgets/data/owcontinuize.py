@@ -195,25 +195,16 @@ class ListViewSearch(listview.ListViewSearch):
         """
         A delegate that shows items (variables) with specific settings in bold
         """
-        def __init__(self, *args, **kwargs):
-            super().__init__(*args, **kwargs)
-            self._default_hints = False
-
         def initStyleOption(self, option, index):
             super().initStyleOption(option, index)
             hint = index.data(ContDomainModel.HintRole)
             option.font.setBold(hint is not None and hint[1])
 
-        def set_default_hints(self, show):
-            self._default_hints = show
-
         def displayText(self, value, _):
             if value is None:
                 return None
-            name, hint, nondefault = value
-            if self._default_hints or nondefault:
-                name += f": {hint}"
-            return name
+            name, hint, _ = value
+            return f"{name}: {hint}"
 
     def __init__(self, *args, **kwargs):
         self.default_view = None
@@ -263,17 +254,6 @@ class ListViewSearch(listview.ListViewSearch):
         # Then the real list view
         margins.setTop(def_height + 2 + src_height)
         self.setViewportMargins(margins)
-
-    def event(self, ev):
-        if ev.type() == ev.ToolTip:
-            self.itemDelegate().set_default_hints(True)
-            self.viewport().update()
-            return True
-        return super().event(ev)
-
-    def leaveEvent(self, _):
-        self.itemDelegate().set_default_hints(False)
-        self.viewport().update()
 
 
 class OWContinuize(widget.OWWidget):

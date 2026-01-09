@@ -841,15 +841,10 @@ class TestListViewDelegate(unittest.TestCase):
     def test_displaytext(self):
         delegate = ListViewSearch.Delegate()
         self.assertEqual(delegate.displayText(("a", "foo", False), Mock()),
-                         "a")
+                         "a: foo")
         self.assertEqual(delegate.displayText(("a", "foo", True), Mock()),
                          "a: foo")
-        delegate.set_default_hints(True)
-        self.assertEqual(delegate.displayText(("a", "foo", False), Mock()),
-                         "a: foo")
-        delegate.set_default_hints(False)
-        self.assertEqual(delegate.displayText(("a", "foo", False), Mock()),
-                         "a")
+        self.assertIsNone(delegate.displayText(None, Mock()))
 
     @patch.object(SeparatedListDelegate, "initStyleOption")
     def test_bold(self, _):
