@@ -31,6 +31,7 @@ class OWNeighbors(OWWidget):
     icon = "icons/Neighbors.svg"
     category = "Unsupervised"
     replaces = ["orangecontrib.prototypes.widgets.owneighbours.OWNeighbours"]
+    keywords = "knn, nearest neighbors, distance, similarity"
 
     class Inputs:
         data = Input("Data", Table)

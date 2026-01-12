@@ -317,6 +317,7 @@ class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     description = "Fit learner for various values of fitting parameter."
     icon = "icons/ParameterFitter.svg"
     priority = 1110
+    keywords = "parameter, fitter, tuning"
 
     visual_settings = Setting({}, schema_only=True)
     graph_name = "graph.plotItem"
