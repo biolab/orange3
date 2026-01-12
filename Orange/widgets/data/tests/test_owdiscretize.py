@@ -567,7 +567,7 @@ class TestDiscModel(GuiTest, DataMixin):
                 VarHint(Methods.EqualFreq, (3, )), "1, 2", ("1", "2")),
             Qt.UserRole
         )
-        self.assertTrue(index.data(Qt.DisplayRole).startswith("x "))
+        self.assertTrue(index.data(Qt.DisplayRole).startswith("x: "))
         self.assertIn("2", index.data(Qt.ToolTipRole))
 
 
