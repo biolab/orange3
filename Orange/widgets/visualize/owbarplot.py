@@ -706,6 +706,7 @@ class OWBarPlot(OWWidget):
 
     def set_visual_settings(self, key: KeyType, value: ValueType):
         self.graph.parameter_setter.set_parameter(key, value)
+        # pylint: disable=unsupported-assignment-operation
         self.visual_settings[key] = value
 
     def sizeHint(self):  # pylint: disable=no-self-use

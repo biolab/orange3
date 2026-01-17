@@ -13999,6 +13999,10 @@ widgets/visualize/owdistributions.py:
         def `paint`:
             pxMode: false
             antialias: false
+    class `ParameterSetter`:
+        Hide empty categories in the legend: V legendo ne vključi praznih kategorij
+        def `axis_items`:
+            item: false
     class `AshCurve`:
         def `pdf`:
             same: false

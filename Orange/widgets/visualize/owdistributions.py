@@ -216,6 +216,7 @@ class ParameterSetter(CommonParameterSetter):
 
     @property
     def legend_items(self):
+        # pylint: disable=protected-access
         return self.master.parent_widget._legend.items
 
 
@@ -977,6 +978,8 @@ class OWDistributions(OWWidget):
     # Bins
 
     def recompute_binnings(self):
+        self.binnings = []
+        max_bins = 0
         if self.is_valid and self.var.is_continuous:
             # binning is computed on valid var data, ignoring any cvar nans
             column = self.data.get_column(self.var)
@@ -994,9 +997,6 @@ class OWDistributions(OWWidget):
                             for binning in self.binnings)
                 self.bin_width_label.setFixedWidth(width)
                 max_bins = len(self.binnings) - 1
-        else:
-            self.binnings = []
-            max_bins = 0
 
         self.controls.number_of_bins.setMaximum(max_bins)
         self.number_of_bins = min(
@@ -1142,6 +1142,9 @@ class OWDistributions(OWWidget):
         if right_idx < len(self.bar_items) - 1:
             right_pad = _padding(right_idx)
         else:
+            # if (left_idx, right_idx) span across all, we would have returned
+            # above, so left_idx > 0 here,
+            # pylint: disable=possibly-used-before-assignment
             right_pad = left_pad
         if left_idx == 0:
             left_pad = right_pad
@@ -1173,6 +1176,7 @@ class OWDistributions(OWWidget):
             self.selected_bars.add(self.ordered_values[self.last_click_idx])
 
         def on_key_left():
+            # first and last are defined, pylint: possibly-used-before-assignment
             if e.modifiers() & Qt.ShiftModifier:
                 if self.key_operation == Qt.Key_Right and first != last:
                     self.selected_bars.remove(self.ordered_values[last])
