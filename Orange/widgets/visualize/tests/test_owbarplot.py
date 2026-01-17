@@ -315,7 +315,7 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         font.setItalic(True)
         font.setFamily("Helvetica")
 
-        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data, self.data[50:])
         key, value = ("Fonts", "Font family", "Font family"), "Helvetica"
         self.widget.set_visual_settings(key, value)
 
@@ -373,6 +373,18 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.assertFalse(graph.group_axis.style["rotateTicks"])
         self.widget.set_visual_settings(key, value)
         self.assertTrue(graph.group_axis.style["rotateTicks"])
+
+        key = "Figure", "Legend", "Hide empty categories in the legend"
+        value = True
+        self.assertEqual(
+            [i[1].text for i in graph.parameter_setter.legend_items],
+            ["Iris-setosa", "Iris-versicolor", "Iris-virginica"]
+        )
+        self.widget.set_visual_settings(key, value)
+        self.assertEqual(
+            [i[1].text for i in graph.parameter_setter.legend_items],
+            ["Iris-versicolor", "Iris-virginica"]
+        )
 
     def assertFontEqual(self, font1, font2):
         self.assertEqual(font1.family(), font2.family())
