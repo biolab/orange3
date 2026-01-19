@@ -471,7 +471,7 @@ def table_to_frame(tab, include_metas=False):
     def _column_to_series(col, vals):
         result = ()
         if col.is_discrete:
-            codes = pd.Series(vals).fillna(-1).astype(int)
+            codes = (pd.Series(vals).fillna(-1).infer_objects(copy=False).astype(int))
             result = (col.name, pd.Categorical.from_codes(
                 codes=codes, categories=col.values, ordered=True
             ))
