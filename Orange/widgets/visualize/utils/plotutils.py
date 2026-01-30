@@ -124,7 +124,7 @@ class AnchorItem(pg.GraphicsWidget):
 
         self._label.setPos(label_pos)
         self._label.setAnchor(pg.Point(*anchor))
-        self._label.setRotation(-angle if left_quad else 180 - angle)
+        self._label.setAngle(angle if left_quad else 180 + angle)
 
         self._arrow.setPos(self._spine.line().p2())
         self._arrow.setRotation(180 - angle)
