@@ -4618,9 +4618,9 @@ widgets/data/owconcatenate.py:
     iris: false
     zoo: false
 widgets/data/owcontinuize.py:
-    Use preset: Uporabi privzeto
-    preset: privzeto
-    Treat the variable as defined in preset: Obravnavaj spremenljivko, kot je privzeto določena
+    Use general preset: Uporabi splošne nastavitve
+    preset: splošno
+    Treat the variable as defined in general preset: Spremeni, kot določajo splošne nastavitve
     Keep categorical: Ohrani kategorično
     keep as is: ohrani, kot je
     Keep the variable discrete: Ohrani spremenljivko diskretno
@@ -4645,7 +4645,6 @@ widgets/data/owcontinuize.py:
     Treat as normalized ordinal: Obravnavaj kot normalizirano ordinalno
     as norm. ordinal: kot norm. ordinalna
     Same as above, but scaled to [0, 1]: Enako kot zgoraj, vendar skalirano na [0, 1]
-    Treat the variable as defined in 'default setting': Obravnavaj spremenljivko, kot je prenastavljena.
     Keep as it is: Ohrani tako, kot je
     no change: brez sprememb
     Keep the variable as it is: Ohrani spremenljivko tako, kot je
@@ -4674,12 +4673,12 @@ widgets/data/owcontinuize.py:
         def `__init__`:
             ★: false
         def `data`:
-            'Preset: {self.method}': Privzeto: {self.method}
+            'General preset: {self.method}': Splošna nastavitev: {self.method}
             Default for variables without specific settings: Privzeto za spremenljivke brez posebnih nastavitev
     class `ListViewSearch`:
         class `Delegate`:
             def `displayText`:
-                ': {hint}': false
+                '{name}: {hint}': false
     class `OWContinuize`:
         Continuize: Kontinuizacija
         'Transform categorical attributes into numeric and, ': 'Kategorične atribute pretvori v številčne in '
@@ -4720,9 +4719,9 @@ widgets/data/owcontinuize.py:
         def `send_report`:
             Categorical variables: Kategorične spremenljivke
             Numeric variables: Numerične spremenljivke
-            Preset: Privzeto
+            General preset: Splošna nastavitev
             Unlisted: Nerazvrščeno
-            'Any unlisted attributes default to preset option, and ': 'Za atribute, ki niso izpisani, je uporabljena privzeta nastavitev, '
+            'Any unlisted attributes default to general preset, and ': 'Za atribute, ki niso izpisani, je uporabljena privzeta nastavitev, '
             'unlisted meta attributes and target variables are kept ': 'neizpisani meta atributi pa ostajajo '
             as they are: nespremenjeni.
         def `migrate_settings`:
@@ -5450,9 +5449,9 @@ widgets/data/owdiscretize.py:
         no discrete class: razred ni kategoričen
     def `_custom_discretization`:
         invalid cuts: nepravilne meje
-    Use default setting: Uporabi privzeto nastavitev
-    default: privzeto
-    Treat the variable as defined in 'default setting': Obravnavaj spremenljivko po določeni privzeti metodi
+    Use general preset: Uporabi splošno nastavitvo
+    preset: splošno
+    Treat the variable as defined in general preset: Spremeni, kot je določeno v splošni nastavitvi
     Keep numeric: Ohrani številsko
     keep: ohrani
     Keep the variable as is: Pusti spremenljivko tako, kot je
@@ -5499,12 +5498,13 @@ widgets/data/owdiscretize.py:
             {",&nbsp;&nbsp;".join(values)}</p>: false
             <br/>: false
             - {value}<br/>: false
-            ' ({format_desc(hint)}){points}': false
+            ': ': false
+            ' ': false
     class `DefaultDiscModel`:
         def `__init__`:
             ★: true
         def `data`:
-            'Default setting: ': 'Privzeta nastavitev: '
+            'General preset: ': 'Splošna nastavitev: '
             Default setting for variables without specific setings: Privzeta metoda za spremenljivke brez specifičnih nastavitev
     class `IncreasingNumbersListValidator`:
         def `validate`:
@@ -5557,8 +5557,9 @@ widgets/data/owdiscretize.py:
             ': <keep, not time>': : <ohrani, ni časovna>
             ' <{dvar}>': false
             ' <removed>': ' <odstranjena>'
-            ': ': true
+            (: false
             ', ': true
+            ): false
         def `_copy_to_manual`:
             ', ': true
         def `send_report`:
