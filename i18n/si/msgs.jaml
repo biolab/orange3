@@ -7502,8 +7502,8 @@ arr = np.array([
 out_data = Table.from_numpy(domain, arr)
 ': false
     def `read_file_content`:
-        utf-8: true
-        strict: true
+        utf-8: false
+        strict: false
     Light: false
     '#000': false
     '#f00': false
@@ -12060,7 +12060,7 @@ widgets/unsupervised/owmds.py:
     __main__: false
     iris: false
 widgets/unsupervised/owpca.py:
-    component variance: varianca kompomente
+    component variance: varianca komponente
     cumulative variance: skupna varianca
     class `OWPCA`:
         PCA: PCA
