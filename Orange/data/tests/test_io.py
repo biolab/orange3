@@ -7,6 +7,7 @@ import numpy as np
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable, \
     TimeVariable, Domain, Table
 from Orange.data.io import TabReader, ExcelReader, HDF5Reader
+from Orange.data.io_base import PICKLE_PROTOCOL
 from Orange.data.io_util import guess_data_type
 from Orange.misc.collections import natural_sorted
 from Orange.tests import named_file
@@ -165,6 +166,52 @@ class\tmeta\t\t
             np.testing.assert_equal(data.metas[:2], self.data.metas[:2])
             self.assertEqual(data.metas[2, 0], "")
             np.testing.assert_equal(data.domain, self.data.domain)
+
+
+class TestWriterMetadata(unittest.TestCase):
+    def setUp(self):
+        TestWriters.setUp(self)
+        self.data.attributes.update({
+            "Name": "Test dataset",
+            "Description": "This is a test dataset.",
+            "Author": "Unit Tester",
+            "Year": "2024",
+            "Reference": "None"
+        })
+
+    def test_metadata_string(self):
+        with NamedTemporaryFile(suffix=".tab", delete=False) as f:
+            fname = f.name
+        try:
+            TabReader.write(fname, self.data)
+            with open(fname + ".metadata", encoding="utf-8") as f:
+                content = f.read()
+                self.assertIn("Name: Test dataset", content)
+                self.assertIn("Description: This is a test dataset.", content)
+                self.assertIn("Author: Unit Tester", content)
+                self.assertIn("Year: 2024", content)
+                self.assertIn("Reference: None", content)
+            table = TabReader(fname).read()
+            self.assertEqual(table.attributes, self.data.attributes)
+        finally:
+            os.remove(fname)
+            os.remove(fname + ".metadata")
+
+    def test_metadata_pickle(self):
+        data = self.data.copy()
+        data.attributes["CustomAttr"] = {"key1": "value1", "key2": 2}
+        with NamedTemporaryFile(suffix=".tab", delete=False) as f:
+            fname = f.name
+        try:
+            TabReader.write(fname, data)
+            with open(fname + ".metadata", 'rb') as f:
+                pickle = f.read(2)
+                self.assertEqual(pickle, b'\x80' + bytes([PICKLE_PROTOCOL]))
+            table = TabReader(fname).read()
+            self.assertEqual(table.attributes, data.attributes)
+        finally:
+            os.remove(fname)
+            os.remove(fname + ".metadata")
 
 
 if __name__ == "__main__":
