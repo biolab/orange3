@@ -213,6 +213,18 @@ class TestWriterMetadata(unittest.TestCase):
             os.remove(fname)
             os.remove(fname + ".metadata")
 
+    def test_metadata_hdf5(self):
+        data = self.data.copy()
+        data.attributes["CustomAttr"] = {"key1": "value1", "key2": 2}
+        with NamedTemporaryFile(suffix=".hdf5", delete=False) as f:
+            fname = f.name
+        try:
+            HDF5Reader.write(fname, data)
+            table = HDF5Reader(fname).read()
+            self.assertEqual(table.attributes, data.attributes)
+        finally:
+            os.remove(fname)
+
 
 if __name__ == "__main__":
     unittest.main()
