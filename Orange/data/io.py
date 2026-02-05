@@ -614,3 +614,29 @@ class HDF5Reader(FileFormat):
                         col_data[pd.isnull(col_data)] = ""
                     f.create_dataset(f'metas/{i}', data=col_data, dtype=col_type)
         cls.write_table_metadata(filename, data)
+
+    @classmethod
+    def write_table_metadata(cls, filename, data):
+        with h5py.File(filename, 'r+') as f:
+            metadata_group = f.require_group('metadata')
+            str_dtype = h5py.string_dtype()
+            for key, value in data.attributes.items():
+                if not isinstance(value, str):
+                    value = json.dumps(value)
+                metadata_group.create_dataset(key, data=value, dtype=str_dtype)
+
+    @classmethod
+    def set_table_metadata(cls, filename, data):
+        with h5py.File(filename, 'r') as f:
+            if 'metadata' in f:
+                metadata_group = f['metadata']
+                for key in metadata_group:
+                    value = metadata_group[key][()]
+                    if isinstance(value, bytes):
+                        value = value.decode('utf-8')
+                    if value.startswith('{') or value.startswith('['):
+                        try:
+                            value = json.loads(value)
+                        except json.JSONDecodeError:
+                            pass
+                    data.attributes[key] = value
