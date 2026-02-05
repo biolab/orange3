@@ -4819,9 +4819,9 @@ widgets/data/owcreateclass.py:
         def `__init__`:
             class_name: false
             New Class Name: Ime novega razreda
-            Match by Substring: Vzorci in razredi
+            'QLineEdit { padding-left: 4px; }': false
+            Source column and patterns: Izvorni stolpec in vzorci
             attribute: false
-            From column:: Iz stolpca:
             Name: Ime
             Substring: Vzorec
             Count: Primerov
@@ -4872,6 +4872,12 @@ widgets/data/owcreateclass.py:
             Output: Izhod
             Class name: Ime razreda
             <ol>{output}</ol>: false
+        def `migrate_settings`:
+            context_settings: false
+            class_name: false
+            rules: false
+            match_beginning: false
+            case_sensitive: false
     __main__: false
     zoo: false
 widgets/data/owcreateinstance.py:
