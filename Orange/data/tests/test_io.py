@@ -168,6 +168,11 @@ class\tmeta\t\t
             np.testing.assert_equal(data.domain, self.data.domain)
 
 
+class Unserializable:
+    def __init__(self, name):
+        self.name = name
+
+
 class TestWriterMetadata(unittest.TestCase):
     def setUp(self):
         TestWriters.setUp(self)
@@ -224,6 +229,23 @@ class TestWriterMetadata(unittest.TestCase):
             self.assertEqual(table.attributes, data.attributes)
         finally:
             os.remove(fname)
+
+    def test_metadata_hdf5_pickle(self):
+        data = self.data.copy()
+        data.attributes["Unserializable"] = Unserializable(name="test")
+        with NamedTemporaryFile(suffix=".hdf5", delete=False) as f:
+            fname = f.name
+        try:
+            HDF5Reader.write(fname, data)
+            table = HDF5Reader(fname).read()
+            for key, value in table.attributes.items():
+                if isinstance(value, Unserializable):
+                    self.assertIsInstance(data.attributes[key], Unserializable)
+                else:
+                    self.assertEqual(value, data.attributes[key])
+        finally:
+            os.remove(fname)
+            os.remove(fname + ".metadata")
 
 
 if __name__ == "__main__":

@@ -617,13 +617,18 @@ class HDF5Reader(FileFormat):
 
     @classmethod
     def write_table_metadata(cls, filename, data):
-        with h5py.File(filename, 'r+') as f:
-            metadata_group = f.require_group('metadata')
-            str_dtype = h5py.string_dtype()
-            for key, value in data.attributes.items():
-                if not isinstance(value, str):
-                    value = json.dumps(value)
-                metadata_group.create_dataset(key, data=value, dtype=str_dtype)
+        try:
+            dump_dict = {key: value if isinstance(value, str) else json.dumps(value)
+                        for key, value in data.attributes.items()}
+        except TypeError:
+            # some attribute is not JSON serializable, fall back to pickle .metadata file
+            super().write_table_metadata(filename, data)
+        else:
+            with h5py.File(filename, 'r+') as f:
+                metadata_group = f.require_group('metadata')
+                str_dtype = h5py.string_dtype()
+                for key, value in dump_dict.items():
+                    metadata_group.create_dataset(key, data=value, dtype=str_dtype)
 
     @classmethod
     def set_table_metadata(cls, filename, data):
@@ -640,3 +645,5 @@ class HDF5Reader(FileFormat):
                         except json.JSONDecodeError:
                             pass
                     data.attributes[key] = value
+            else:
+                super().set_table_metadata(filename, data)
