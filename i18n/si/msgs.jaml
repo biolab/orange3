@@ -12426,6 +12426,7 @@ widgets/utils/__init__.py:
         =\\=: false
         ≠: false
     def `dumpObjectTree`:
+        QObject: false
         {indent}{type} "{name}": false
         ' ': false
     def `qname`:
