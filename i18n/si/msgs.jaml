@@ -13,8 +13,6 @@ __init__.py:
     statistics: false
     version: false
     widgets: false
-    pyqt5: false
-    pyqt4: false
     libGL.so.1: false
 base.py:
     Learner: false
