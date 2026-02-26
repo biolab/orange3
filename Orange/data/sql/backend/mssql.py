@@ -130,32 +130,6 @@ class PymssqlBackend(Backend):
 
     EST_ROWS_RE = re.compile(r'StatementEstRows="(\d+)"')
 
-    def count_approx(self, query):
-        with self.connection.cursor() as cur:
-            try:
-                cur.execute("SET SHOWPLAN_XML ON")
-                try:
-                    cur.execute(query)
-                    result = cur.fetchone()
-                    match = self.EST_ROWS_RE.search(result[0])
-                    if not match:
-                    # Either StatementEstRows was not found or
-                    # a float is received.
-                    # If it is a float then it is most probable
-                    # that the server's statistics are out of date
-                    # and the result is false. In that case
-                    # it is preferable to return None so
-                    # an exact count be used.
-                        return None
-                    return int(match.group(1))
-                finally:
-                    cur.execute("SET SHOWPLAN_XML OFF")
-            except pymssql.Error as ex:
-                if "SHOWPLAN permission denied" in str(ex):
-                    warnings.warn("SHOWPLAN permission denied, count approximates will not be used")
-                    return None
-                raise BackendError(parse_ex(ex)) from ex
-
     def distinct_values_query(self, field_name: str, table_name: str) -> str:
         field = self.quote_identifier(field_name)
         return self.create_sql_query(

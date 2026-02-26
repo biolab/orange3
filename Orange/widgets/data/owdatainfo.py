@@ -68,7 +68,7 @@ class OWDataInfo(widget.OWWidget):
 
             if is_sql(data):
                 def set_exact_length():
-                    self.data_desc["Size"] = self._p_size(data, exact=True)
+                    self.data_desc["Size"] = self._p_size(data)
                     self.update_info()
 
                 threading.Thread(target=set_exact_length).start()
@@ -119,14 +119,9 @@ class OWDataInfo(widget.OWWidget):
         return f"SQL Table using connection:<br/>{connection_string}"
 
     @staticmethod
-    def _p_size(data, exact=False):
-        exact = exact or is_sql(data)
-        if exact:
-            n = len(data)
-            desc = f"{n} {pl(n, 'row')}"
-        else:
-            n = data.approx_len()
-            desc = f"~{n} {pl(n, 'row')}"
+    def _p_size(data):
+        n = len(data)
+        desc = f"{n} {pl(n, 'row')}"
         ncols = len(data.domain.variables) + len(data.domain.metas)
         desc += f", {ncols} {pl(ncols, 'column')}"
 

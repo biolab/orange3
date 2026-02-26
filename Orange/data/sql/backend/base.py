@@ -172,19 +172,6 @@ class Backend(metaclass=Registry):
         """
         raise NotImplementedError
 
-    def count_approx(self, query):
-        """Return estimated number of rows returned by query.
-
-        Parameters
-        ----------
-        query : str
-
-        Returns
-        -------
-        Approximate number of rows
-        """
-        raise NotImplementedError
-
     # query related methods
 
     def create_sql_query(

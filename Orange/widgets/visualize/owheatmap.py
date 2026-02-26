@@ -575,7 +575,7 @@ class OWHeatMap(widget.OWWidget):
         self.clear_messages()
 
         if isinstance(data, SqlTable):
-            if data.approx_len() < 4000:
+            if len(data) < 4000:
                 data = Table(data)
             else:
                 self.Information.sampled()

@@ -1,3 +1,8 @@
+import warnings
+
+from Orange.util import OrangeDeprecationWarning
+
+
 class Storage:
 
     domain = None
@@ -7,6 +12,8 @@ class Storage:
     MISSING, DENSE, SPARSE, SPARSE_BOOL = range(4)
 
     def approx_len(self):
+        warnings.warn("table.approx_len() has been deprecated. Use len(table)"
+                      " instead.", OrangeDeprecationWarning)
         return len(self)
 
     def X_density(self):
