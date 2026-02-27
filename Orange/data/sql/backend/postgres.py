@@ -180,12 +180,6 @@ class Psycopg2Backend(Backend):
 
         return StringVariable.make(field_name)
 
-    def count_approx(self, query):
-        sql = "EXPLAIN " + query
-        with self.execute_sql_query(sql) as cur:
-            s = ''.join(row[0] for row in cur.fetchall())
-        return int(re.findall(r'rows=(\d*)', s)[0])
-
     def distinct_values_query(self, field_name: str, table_name: str) -> str:
         fields = [self.quote_identifier(field_name)]
         return self.create_sql_query(

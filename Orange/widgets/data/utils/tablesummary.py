@@ -1,5 +1,5 @@
 from concurrent.futures import Future, ThreadPoolExecutor
-from typing import NamedTuple, Union, Optional, List
+from typing import NamedTuple, Optional, List
 
 import numpy as np
 
@@ -39,28 +39,15 @@ class Summary(NamedTuple):
     M: Optional[_ArrayStat]
 
 
-#: Orange.data.sql.table.SqlTable summary
-class ApproxSummary(NamedTuple):
-    approx_len: int
-    len: 'Future[int]'
-    domain: Domain
-    X: Optional[_ArrayStat]
-    Y: Optional[_ArrayStat]
-    M: Optional[_ArrayStat]
-
-
 def _sql_table_len(table) -> 'Future[int]':
     exc = ThreadPoolExecutor()
     return exc.submit(table.__len__)
 
 
-def table_summary(table: Table) -> Union[Summary, ApproxSummary]:
+def table_summary(table: Table) -> Summary:
     if isinstance(table, SqlTable):
-        approx_len = table.approx_len()
-        len_future = datacaching.getCached(table, _sql_table_len, (table,))
-        return ApproxSummary(approx_len, len_future, table.domain,
-                             None, None, None)
-                             # NotAvailable(), NotAvailable(), NotAvailable())
+        n_instances = len(table)
+        return Summary(n_instances, table.domain, None, None, None)
     else:
         domain = table.domain
         n_instances = len(table)
@@ -93,7 +80,7 @@ def table_summary(table: Table) -> Union[Summary, ApproxSummary]:
         return Summary(n_instances, domain, X_part, Y_part, M_part)
 
 
-def format_summary(summary: Union[ApproxSummary, Summary]) -> List[str]:
+def format_summary(summary: Summary) -> List[str]:
     def format_part(part: Optional[_ArrayStat]) -> str:
         if isinstance(part, DenseArray):
             if not part.nans:
@@ -111,18 +98,11 @@ def format_summary(summary: Union[ApproxSummary, Summary]) -> List[str]:
         return f" ({tag}, density {dens:.2f} %)"
 
     text = []
-    if isinstance(summary, ApproxSummary):
-        if summary.len.done():
-            ninst = summary.len.result()
-            text.append(f"{ninst} {pl(ninst, 'instance')}")
-        else:
-            ninst = summary.approx_len
-            text.append(f"~{ninst} {pl(ninst, 'instance')}")
-    elif isinstance(summary, Summary):
-        ninst = summary.len
-        text.append(f"{ninst} {pl(ninst, 'instance')}")
-        if sum(p.nans for p in [summary.X, summary.Y, summary.M]) == 0:
-            text[-1] += " (no missing data)"
+    ninst = summary.len
+    text.append(f"{ninst} {pl(ninst, 'instance')}")
+    if summary.X is not None and \
+            sum(p.nans for p in [summary.X, summary.Y, summary.M]) == 0:
+        text[-1] += " (no missing data)"
 
     nattrs = len(summary.domain.attributes)
     text.append(f"{nattrs} {pl(nattrs, 'feature')}"

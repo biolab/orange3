@@ -620,7 +620,7 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
         self.sampling.setVisible(False)
         self.sql_data = None
         if isinstance(self.data, SqlTable):
-            if self.data.approx_len() < 4000:
+            if len(self.data) < 4000:
                 self.data = Table(self.data)
             else:
                 self.Information.sampled_sql()
@@ -739,7 +739,7 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
     def set_subset_data(self, subset: Optional[Table]):
         self.warning()
         if isinstance(subset, SqlTable):
-            if subset.approx_len() < AUTO_DL_LIMIT:
+            if len(subset) < AUTO_DL_LIMIT:
                 subset = Table(subset)
             else:
                 self.warning("Data subset does not support large Sql tables")

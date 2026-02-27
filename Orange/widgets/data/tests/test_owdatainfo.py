@@ -86,7 +86,7 @@ class TestOWDataInfo(WidgetTest):
             self.send_signal(w.Inputs.data, d)
             self.assertEqual(p_size.call_count, 2)
             self.assertEqual(p_size.call_args_list[0], ((d, ),))
-            self.assertEqual(p_size.call_args_list[1], ((d, ), dict(exact=True)))
+            self.assertEqual(p_size.call_args_list[1], ((d, ),))
 
 
 if __name__ == "__main__":

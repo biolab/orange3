@@ -4,7 +4,6 @@ Support for example tables wrapping data stored on a PostgreSQL server.
 import contextlib
 import functools
 import logging
-import threading
 import warnings
 from contextlib import contextmanager
 from itertools import islice
@@ -16,6 +15,7 @@ from Orange.data import (
 from Orange.data.sql import filter as sql_filter
 from Orange.data.sql.backend import Backend
 from Orange.data.sql.backend.base import TableDesc, BackendError
+from Orange.util import OrangeDeprecationWarning
 
 LARGE_TABLE = 100000
 AUTO_DL_LIMIT = 10000
@@ -89,7 +89,7 @@ class SqlTable(Table):
             elif "select" in table_or_sql.lower():
                 table = "(%s) as my_table" % table_or_sql.strip("; ")
             else:
-                table = self.backend.quote_identifier(table_or_sql)
+                table = table_or_sql
             self.table_name = table
             self.domain = self.get_domain(type_hints, inspect_values)
             self.name = table
@@ -177,8 +177,8 @@ class SqlTable(Table):
         rows = [row_index]
         values = list(self._query(attributes, rows=rows))
         if not values:
-            raise IndexError('Could not retrieve row {} from table {}'.format(
-                row_index, self.name))
+            raise IndexError(f'Could not retrieve row {row_index} '
+                             f'from table {self.name}')
         return Instance(self.domain, values[0])
 
     def __iter__(self):
@@ -259,22 +259,9 @@ class SqlTable(Table):
         return self._cached__len__
 
     def approx_len(self, get_exact=False):
-        if self._cached__len__ is not None:
-            return self._cached__len__
-
-        approx_len = None
-        try:
-            query = self._sql_query(["*"])
-            approx_len = self.backend.count_approx(query)
-            if get_exact:
-                threading.Thread(target=len, args=(self,)).start()
-        except NotImplementedError:
-            pass
-
-        if approx_len is None:
-            approx_len = len(self)
-
-        return approx_len
+        warnings.warn("table.approx_len() has been deprecated. Use len(table)"
+                      " instead.", OrangeDeprecationWarning)
+        return len(self)
 
     _X = None
     _Y = None
@@ -284,7 +271,7 @@ class SqlTable(Table):
 
     def download_data(self, limit=None, partial=False):
         """Download SQL data and store it in memory as numpy matrices."""
-        if limit and not partial and self.approx_len() > limit:
+        if limit and not partial and len(self) > limit:
             raise ValueError("Too many rows to download the data into memory.")
         X = [np.empty((0, len(self.domain.attributes)))]
         Y = [np.empty((0, len(self.domain.class_vars)))]
@@ -349,7 +336,7 @@ class SqlTable(Table):
 
     def _compute_basic_stats(self, columns=None,
                              include_metas=False, compute_variance=False):
-        if self.approx_len() > LARGE_TABLE:
+        if len(self) > LARGE_TABLE:
             self = self.sample_time(DEFAULT_SAMPLE_TIME)
 
         if columns is not None:
@@ -381,7 +368,7 @@ class SqlTable(Table):
         return stats
 
     def _compute_distributions(self, columns=None):
-        if self.approx_len() > LARGE_TABLE:
+        if len(self) > LARGE_TABLE:
             self = self.sample_time(DEFAULT_SAMPLE_TIME)
 
         if columns is not None:
@@ -408,7 +395,7 @@ class SqlTable(Table):
         return dists
 
     def _compute_contingency(self, col_vars=None, row_var=None):
-        if self.approx_len() > LARGE_TABLE:
+        if len(self) > LARGE_TABLE:
             self = self.sample_time(DEFAULT_SAMPLE_TIME)
 
         if col_vars is None:
@@ -600,7 +587,6 @@ class SqlTable(Table):
     def _sample(self, method, parameter, no_cache=False):
         # the module is optional, but this function is not called if it's not installed
         # pylint: disable=import-error
-        import psycopg2
         if "," in self.table_name:
             raise NotImplementedError("Sampling of complex queries is not supported")
 
@@ -608,16 +594,16 @@ class SqlTable(Table):
         if "." in self.table_name:
             schema, name = self.table_name.split(".")
             sample_name = '__%s_%s_%s' % (
-                self.backend.unquote_identifier(name),
+                name,
                 method,
                 parameter.replace('.', '_').replace('-', '_'))
-            sample_table_q = ".".join([schema, self.backend.quote_identifier(sample_name)])
+            sample_table_q = ".".join([schema, sample_name])
         else:
             sample_table = '__%s_%s_%s' % (
-                self.backend.unquote_identifier(self.table_name),
+                self.table_name,
                 method,
                 parameter.replace('.', '_').replace('-', '_'))
-            sample_table_q = self.backend.quote_identifier(sample_table)
+            sample_table_q = sample_table
         create = False
         try:
             query = "SELECT * FROM " + sample_table_q + " LIMIT 0;"
@@ -642,9 +628,6 @@ class SqlTable(Table):
 
         sampled_table = self.copy()
         sampled_table.table_name = sample_table_q
-        with sampled_table.backend.execute_sql_query('ANALYZE'
-                                                     + sample_table_q):
-            pass
         return sampled_table
 
     @contextmanager

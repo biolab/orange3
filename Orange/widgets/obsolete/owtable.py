@@ -244,7 +244,7 @@ class OWDataTable(OWWidget):
         """Setup the `view` (QTableView) with `data` (Orange.data.Table)
         """
         datamodel = RichTableModel(data)
-        rowcount = data.approx_len()
+        rowcount = len(data)
 
         if self.color_by_class and data.domain.has_discrete_class:
             color_schema = [
@@ -299,12 +299,7 @@ class OWDataTable(OWWidget):
 
     def _set_input_summary(self, slot):
         def format_summary(summary):
-            if isinstance(summary, tsummary.ApproxSummary):
-                length = summary.len.result() if summary.len.done() else \
-                    summary.approx_len
-            elif isinstance(summary, tsummary.Summary):
-                length = summary.len
-            return length
+            return summary.len
 
         summary, details = self.info.NoInput, ""
         if slot:

@@ -161,7 +161,7 @@ class _TableModel(RichTableModel):
 @dataclass
 class InputData:
     table: Table
-    summary: Union[tsummary.Summary, tsummary.ApproxSummary]
+    summary: tsummary.Summary
     model: TableModel
 
 
@@ -354,7 +354,7 @@ class OWTable(OWWidget):
 
         view = self.view
         data = self.input.table
-        rowcount = data.approx_len()
+        rowcount = len(data)
         view.setModel(datamodel)
 
         vheader = view.verticalHeader()
@@ -388,12 +388,7 @@ class OWTable(OWWidget):
 
     def _update_input_summary(self):
         def format_summary(summary):
-            if isinstance(summary, tsummary.ApproxSummary):
-                length = summary.len.result() if summary.len.done() else \
-                    summary.approx_len
-            elif isinstance(summary, tsummary.Summary):
-                length = summary.len
-            return length
+            return summary.len
 
         summary, details = self.info.NoInput, ""
         if self.input:
