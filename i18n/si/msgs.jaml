@@ -1361,6 +1361,11 @@ data/pandas_compat.py:
     def `amend_table_with_frame`:
         'Leading dimension mismatch ': false
         (not {arr.shape[0]} == {df.shape[0]}): false
+data/storage.py:
+    class `Storage`:
+        def `approx_len`:
+            table.approx_len() has been deprecated. Use len(table): false
+            ' instead.': false
 data/table.py:
     dataset_dirs: false
     get_sample_datasets_dir: false
@@ -1865,7 +1870,8 @@ data/sql/table.py:
             Table indices must be one- or two-dimensional: false
             Row indices must be integers.: false
         def `_fetch_row`:
-            Could not retrieve row {} from table {}: false
+            'Could not retrieve row {row_index} ': false
+            from table {self.name}: false
         def `_query`:
             to_sql: false
             Cannot use ordinary attributes with sql backend: false
@@ -1877,7 +1883,8 @@ data/sql/table.py:
         def `_count_rows`:
             COUNT(*): false
         def `approx_len`:
-            *: false
+            table.approx_len() has been deprecated. Use len(table): false
+            ' instead.': false
         def `download_data`:
             Too many rows to download the data into memory.: false
         def `_get_distributions`:
@@ -1976,11 +1983,6 @@ data/sql/backend/mssql.py:
         def `create_variable`:
             DATEDIFF(s, '1970-01-01 00:00:00', {}): false
         StatementEstRows="(\d+)": false
-        def `count_approx`:
-            SET SHOWPLAN_XML ON: false
-            SET SHOWPLAN_XML OFF: false
-            SHOWPLAN permission denied: false
-            SHOWPLAN permission denied, count approximates will not be used: false
         def `distinct_values_query`:
             {field}, Cast({field} as binary), DATALENGTH({field}): false
 data/sql/backend/postgres.py:
@@ -2036,9 +2038,6 @@ data/sql/backend/postgres.py:
         def `_guess_variable`:
             false: false
             true: false
-        def `count_approx`:
-            'EXPLAIN ': false
-            rows=(\d*): false
         def `__getstate__`:
             connection_pool: false
 datasets/list_update.py:
@@ -5230,7 +5229,6 @@ widgets/data/owdatainfo.py:
             SQL Table using connection:<br/>{connection_string}: Tabels SQL s povezavo:<br/>{connection_string}
         def `_p_size`:
             {n} {pl(n, 'row')}: {n} {plsi(n, 'vrstica')}
-            ~{n} {pl(n, 'row')}: ~{n} {plsi(n, 'vrstica')}
             , {ncols} {pl(ncols, 'column')}: , {ncols} {plsi(ncols, 'stolpec|stolpca|stolpci|stolpcev')}
             features: značilke
             meta attributes: meta atributi
@@ -8496,8 +8494,6 @@ widgets/data/utils/preprocess.py:
         def `__startInternalDrag`:
             application/x-internal-move: false
 widgets/data/utils/tablesummary.py:
-    class `ApproxSummary`:
-        Future[int]: false
     def `_sql_table_len`:
         Future[int]: false
     def `format_summary`:
@@ -8507,7 +8503,6 @@ widgets/data/utils/tablesummary.py:
             tags: oznake
             ' ({tag}, density {dens:.2f} %)': ' ({tag}, gostota {dens:.2f} %)'
         {ninst} {pl(ninst, 'instance')}: {ninst} {plsi(ninst, 'primer')}
-        ~{ninst} {pl(ninst, 'instance')}: ~{ninst} {plsi(ninst, 'primer')}
         ' (no missing data)': \n     (ni manjkajočih podatkov)
         {nattrs} {pl(nattrs, 'feature')}: {nattrs} {plsi(nattrs, 'spremenljivka')}
         No target variable.: Ni ciljne spremenljivke.
@@ -14693,9 +14688,6 @@ widgets/visualize/ownomogram.py:
             Numeric features:: Številske spremenljivke:
             1D projection: 1D projekcija
             2D curve: 2D krivulja
-            class `GraphicsView`:
-                def `__init__`:
-                    'QGraphicsView {background: white}': false
         def `_class_combo_changed`:
             ignore: false
         def `update_scene`:
