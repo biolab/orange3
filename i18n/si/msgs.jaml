@@ -198,9 +198,9 @@ util.py:
         def `funcv`:
             unsafe: false
 version.py:
-    3.40.0: false
-    3.40.0.dev0+e7d811b: null
-    e7d811bac580723c707decd32c550a75874dc9c8: null
+    3.41.0: false
+    3.41.0.dev0+58e68e8: false
+    58e68e8bc9a6b560967ca49f37f89a3dd0d213b8: false
     .dev: false
 canvas/__main__.py:
     ORANGE_STATISTICS_API_URL: false
@@ -13588,6 +13588,12 @@ widgets/utils/plot/owplotgui.py:
         def `class_density_check_box`:
             class_density: false
             Show color regions: Pokaži barvna področja
+        def `aggregate_points_check_box`:
+            aggregate_dense_regions: false
+            Agregate points in dense regions: Združi točke v gostih regijah
+            'Dense regions with many points are aggregated into ': "Goste regije z veliko točkami so združene v "
+            circles or pie charts,\n: kroge ali tortne diagrame,\n
+            unless data is jittered or labels, selection or subset is shown: razen če so točke tresene ali pa so prikazane oznake, izbori ali podmnožice.
         def `regression_line_check_box`:
             show_reg_line: false
             Show regression line: Pokaži regresijsko premico
@@ -13632,6 +13638,8 @@ widgets/utils/plot/owplotgui.py:
             labels_changed: false
         def `point_properties_box`:
             Attributes: Izgled
+        def `plot_properties_box`:
+            aggregate_dense_regions: false
         def `zoom_select_toolbar`:
             Zoom / Select: Povečava / Izbor
         def `theme_combo_box`:
@@ -15073,6 +15081,13 @@ widgets/visualize/owscatterplotgraph.py:
             size: false
             symbol: false
             data: false
+        def `_get_aggregated_points`:
+            x: false
+            y: false
+            visible: false
+            brush: false
+        def `_paint_aggregated_points`:
+            visible: false
     def `_define_symbols`:
         ?: false
         +: false

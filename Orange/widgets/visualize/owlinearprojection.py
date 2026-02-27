@@ -98,6 +98,7 @@ class LinearProjectionVizRank(VizRankDialogNAttrs):
 
 class OWLinProjGraph(OWGraphWithAnchors):
     hide_radius = Setting(0)
+    aggregate_dense_regions = Setting(True)
 
     @property
     def always_show_axes(self):
