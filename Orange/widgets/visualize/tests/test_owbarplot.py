@@ -315,7 +315,7 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         font.setItalic(True)
         font.setFamily("Helvetica")
 
-        self.send_signal(self.widget.Inputs.data, self.data)
+        self.send_signal(self.widget.Inputs.data, self.data[50:])
         key, value = ("Fonts", "Font family", "Font family"), "Helvetica"
         self.widget.set_visual_settings(key, value)
 
@@ -374,6 +374,18 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
         self.widget.set_visual_settings(key, value)
         self.assertTrue(graph.group_axis.style["rotateTicks"])
 
+        key = "Figure", "Legend", "Hide empty categories in the legend"
+        value = True
+        self.assertEqual(
+            [i[1].text for i in graph.parameter_setter.legend_items],
+            ["Iris-setosa", "Iris-versicolor", "Iris-virginica"]
+        )
+        self.widget.set_visual_settings(key, value)
+        self.assertEqual(
+            [i[1].text for i in graph.parameter_setter.legend_items],
+            ["Iris-versicolor", "Iris-virginica"]
+        )
+
     def assertFontEqual(self, font1, font2):
         self.assertEqual(font1.family(), font2.family())
         self.assertEqual(font1.pointSize(), font2.pointSize())
@@ -394,6 +406,31 @@ class TestOWBarPlot(WidgetTest, WidgetOutputsTestMixin):
                              in enumerate(pens) if i in indices]))
         self.assertTrue(all([pen.style() == Qt.SolidLine for i, pen
                              in enumerate(pens) if i not in indices]))
+
+    @staticmethod
+    def _set_check(checkbox, value):
+        state = Qt.Checked if value else Qt.Unchecked
+        checkbox.setCheckState(state)
+        checkbox.toggled[bool].emit(value)
+
+    def test_show_hide_legend(self):
+        widget = self.widget
+        legend = widget.graph.legend
+
+        self._set_check(widget.controls.show_legend, False)
+        self._set_check(widget.controls.show_legend, True)
+
+        self.send_signal(widget.Inputs.data, self.heart)
+        simulate.combobox_activate_index(widget.controls.color_var, 2)
+        self.assertTrue(legend.isVisible())
+        self._set_check(widget.controls.show_legend, False)
+        self.assertFalse(legend.isVisible())
+        self._set_check(widget.controls.show_legend, True)
+        self.assertTrue(legend.isVisible())
+
+        self.send_signal(widget.Inputs.data, None)
+        self._set_check(widget.controls.show_legend, False)
+        self._set_check(widget.controls.show_legend, True)
 
 
 if __name__ == "__main__":

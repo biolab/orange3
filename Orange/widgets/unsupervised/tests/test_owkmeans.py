@@ -20,21 +20,21 @@ from Orange.widgets.unsupervised.owkmeans import OWKMeans, ClusterTableModel
 class TestClusterTableModel(unittest.TestCase):
     def test_model(self):
         model = ClusterTableModel()
-        model.set_scores(["bad", 0.250, "another bad"], 3)
+        model.set_scores(["bad", 0.125, "another bad", 0.5], 3)
 
         self.assertEqual(model.start_k, 3)
-        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(model.rowCount(), 4)
         ind0, ind1 = model.index(0, 0), model.index(1, 0)
         self.assertEqual(model.flags(ind0), Qt.NoItemFlags)
         self.assertEqual(model.flags(ind1),
                          Qt.ItemIsEnabled | Qt.ItemIsSelectable)
         data = model.data
         self.assertEqual(data(ind0), "NA")
-        self.assertEqual(data(ind1), "0.250")
+        self.assertEqual(data(ind1), "0.125")
         self.assertEqual(data(ind0, Qt.ToolTipRole), "bad")
         self.assertIsNone(data(ind1, Qt.ToolTipRole))
         self.assertIsNone(data(ind0, gui.BarRatioRole))
-        self.assertAlmostEqual(data(ind1, gui.BarRatioRole), 0.250)
+        self.assertAlmostEqual(data(ind1, gui.BarRatioRole), 0.25)
 
         self.assertAlmostEqual(data(ind1, Qt.TextAlignmentRole),
                                Qt.AlignVCenter | Qt.AlignLeft)

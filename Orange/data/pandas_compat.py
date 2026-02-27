@@ -274,11 +274,11 @@ def vars_from_df(df, role=None, force_nominal=False, variables=None):
 
     def _convert_string(s, _):
         return np.asarray(
-                    # to object so that fillna can replace with nans if Unknown in nan
-                    # replace nan with object Unknown assure that all values are string
-                    s.astype(object).fillna(StringVariable.Unknown).astype(str),
-                    dtype=object
-                )
+            # to object so that fillna can replace with nans if Unknown in nan
+            # replace nan with object Unknown assure that all values are string
+            s.infer_objects(copy=False).fillna(StringVariable.Unknown).astype(str),
+            dtype=object
+        )
 
     conversions = {
         DiscreteVariable: to_categorical,
@@ -471,7 +471,7 @@ def table_to_frame(tab, include_metas=False):
     def _column_to_series(col, vals):
         result = ()
         if col.is_discrete:
-            codes = pd.Series(vals).fillna(-1).astype(int)
+            codes = pd.Series(vals).infer_objects(copy=False).fillna(-1).astype(int)
             result = (col.name, pd.Categorical.from_codes(
                 codes=codes, categories=col.values, ordered=True
             ))

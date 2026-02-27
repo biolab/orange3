@@ -4482,6 +4482,7 @@ widgets/data/owcolor.py:
         Color: Obarvaj
         Set color legend for variables.: Določi barvne legende za spremenljivke.
         icons/Colors.svg: false
+        palette, legend: palette, legend, barve, legenda
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -4618,9 +4619,9 @@ widgets/data/owconcatenate.py:
     iris: false
     zoo: false
 widgets/data/owcontinuize.py:
-    Use preset: Uporabi privzeto
-    preset: privzeto
-    Treat the variable as defined in preset: Obravnavaj spremenljivko, kot je privzeto določena
+    Use general preset: Uporabi splošne nastavitve
+    preset: splošno
+    Treat the variable as defined in general preset: Spremeni, kot določajo splošne nastavitve
     Keep categorical: Ohrani kategorično
     keep as is: ohrani, kot je
     Keep the variable discrete: Ohrani spremenljivko diskretno
@@ -4645,7 +4646,6 @@ widgets/data/owcontinuize.py:
     Treat as normalized ordinal: Obravnavaj kot normalizirano ordinalno
     as norm. ordinal: kot norm. ordinalna
     Same as above, but scaled to [0, 1]: Enako kot zgoraj, vendar skalirano na [0, 1]
-    Treat the variable as defined in 'default setting': Obravnavaj spremenljivko, kot je prenastavljena.
     Keep as it is: Ohrani tako, kot je
     no change: brez sprememb
     Keep the variable as it is: Ohrani spremenljivko tako, kot je
@@ -4674,12 +4674,12 @@ widgets/data/owcontinuize.py:
         def `__init__`:
             ★: false
         def `data`:
-            'Preset: {self.method}': Privzeto: {self.method}
+            'General preset: {self.method}': Splošna nastavitev: {self.method}
             Default for variables without specific settings: Privzeto za spremenljivke brez posebnih nastavitev
     class `ListViewSearch`:
         class `Delegate`:
             def `displayText`:
-                ': {hint}': false
+                '{name}: {hint}': false
     class `OWContinuize`:
         Continuize: Kontinuizacija
         'Transform categorical attributes into numeric and, ': 'Kategorične atribute pretvori v številčne in '
@@ -4720,9 +4720,9 @@ widgets/data/owcontinuize.py:
         def `send_report`:
             Categorical variables: Kategorične spremenljivke
             Numeric variables: Numerične spremenljivke
-            Preset: Privzeto
+            General preset: Splošna nastavitev
             Unlisted: Nerazvrščeno
-            'Any unlisted attributes default to preset option, and ': 'Za atribute, ki niso izpisani, je uporabljena privzeta nastavitev, '
+            'Any unlisted attributes default to general preset, and ': 'Za atribute, ki niso izpisani, je uporabljena privzeta nastavitev, '
             'unlisted meta attributes and target variables are kept ': 'neizpisani meta atributi pa ostajajo '
             as they are: nespremenjeni.
         def `migrate_settings`:
@@ -4753,6 +4753,7 @@ widgets/data/owcorrelations.py:
         Compute all pairwise attribute correlations.: Izračuna korelacije med vsemi pari spremenljivk.
         icons/Correlations.svg: false
         Unsupervised: Nenadzorovano učenje
+        pearson, spearman: pearson, spearman
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -5450,9 +5451,9 @@ widgets/data/owdiscretize.py:
         no discrete class: razred ni kategoričen
     def `_custom_discretization`:
         invalid cuts: nepravilne meje
-    Use default setting: Uporabi privzeto nastavitev
-    default: privzeto
-    Treat the variable as defined in 'default setting': Obravnavaj spremenljivko po določeni privzeti metodi
+    Use general preset: Uporabi splošno nastavitvo
+    preset: splošno
+    Treat the variable as defined in general preset: Spremeni, kot je določeno v splošni nastavitvi
     Keep numeric: Ohrani številsko
     keep: ohrani
     Keep the variable as is: Pusti spremenljivko tako, kot je
@@ -5499,12 +5500,13 @@ widgets/data/owdiscretize.py:
             {",&nbsp;&nbsp;".join(values)}</p>: false
             <br/>: false
             - {value}<br/>: false
-            ' ({format_desc(hint)}){points}': false
+            ': ': false
+            ' ': false
     class `DefaultDiscModel`:
         def `__init__`:
             ★: true
         def `data`:
-            'Default setting: ': 'Privzeta nastavitev: '
+            'General preset: ': 'Splošna nastavitev: '
             Default setting for variables without specific setings: Privzeta metoda za spremenljivke brez specifičnih nastavitev
     class `IncreasingNumbersListValidator`:
         def `validate`:
@@ -5557,8 +5559,9 @@ widgets/data/owdiscretize.py:
             ': <keep, not time>': : <ohrani, ni časovna>
             ' <{dvar}>': false
             ' <removed>': ' <odstranjena>'
-            ': ': true
+            (: false
             ', ': true
+            ): false
         def `_copy_to_manual`:
             ', ': true
         def `send_report`:
@@ -6735,6 +6738,7 @@ widgets/data/owneighbors.py:
         icons/Neighbors.svg: false
         Unsupervised: Nenadzorovano učenje
         orangecontrib.prototypes.widgets.owneighbours.OWNeighbours: false
+        knn, nearest neighbors, distance, similarity: knn, nearest neighbors, distance, similarity, najbližji sosedje, razdalja, podobnost
         class `Inputs`:
             Data: Podatki
             Reference: Referenčni podatki
@@ -7899,6 +7903,7 @@ widgets/data/owselectbydataindex.py:
         Match instances by index from data subset.: Izberi primere, ki ustrezajo vrsticam iz podmnožice.
         Transform: Predelava podatkov
         icons/SelectByDataIndex.svg: false
+        _keywords: true
         class `Inputs`:
             Data: Podatki
             Data Subset: Podmnožica podatkov
@@ -8174,15 +8179,7 @@ widgets/data/owsplit.py:
         Split text or categorical variables into indicator variables: Razdeli besedilne ali kategorične spremenljivke na spremenljivke.
         Transform: Predelava podatkov
         icons/Split.svg: false
-        text to columns: besedilo v stolpce
-        word encoding: kodiranje besed
-        questionnaire: vprašalniki
-        survey: ankete
-        term: pojmi
-        word presence: prisotnost besed
-        word counts: število besed
-        categorical encoding: kodiranje kategorij
-        indicator variables: indikatorske spremenljivke
+        text, columns, word, encoding, questionnaire, survey, term, counts, indicator: text, columns, word, encoding, questionnaire, survey, term, counts, indicator, besedilo, stolpci, besede, kodiranje, vprašalnik, raziskava, štetje, indikator
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -8254,7 +8251,7 @@ widgets/data/owsql.py:
             Table: false
             (None): (Brez)
             Query: Poizvedba
-            Custom SQL: Prikrojen SQL
+            Custom SQL: Prilagojen SQL
             Specify a table name to materialize the query: Določi ime materializirane tabele
             'DROP TABLE IF EXISTS ': false
             'CREATE TABLE ': false
@@ -8403,20 +8400,28 @@ widgets/data/owtranspose.py:
             {}: false
         def `__init__`:
             feature_type: false
-            Feature names: Imena spremenljivk
+            Output column names: Imena izhodnih stolpcev
             Generic: Generična imena
             feature_name: false
             Type a prefix ...: Določi predpono ...
             Custom feature name: Določi predpono imen spremenljivk
-            From variable:: Po vrednosti spremenljivke:
+            From column:: Po stolpcu:
             feature_names_column: false
             remove_redundant_inst: false
             Remove redundant instance: Odstrani odvečni primer
+            Name for column with original column names: Ime stolpca z imeni izvornih stolpcev
+            output_column_name: false
+            Column name: Ime stolpca
+        def `commit`:
+            Column name: Ime stolpca
         def `send_report`:
             from variable: po spremenljivki
             "  '{}'": false
             Feature names: Imena spremenljivk
             Data: Podatki
+        def `migrate_settings`:
+            output_column_name: false
+            Feature name: Ime spremenljivke
     __main__: false
     iris: false
 widgets/data/owunique.py:
@@ -8425,6 +8430,7 @@ widgets/data/owunique.py:
         icons/Unique.svg: false
         Filter instances unique by specified key attribute(s).: Filtriraj primere tako, da se ključne vrednosti ne ponavljajo.
         Transform: Predelava podatkov
+        unique, distinct, remove, duplicates, filter: unique, distinct, remove, duplicates, filter, enkratni, odstrani, podvojene, filtriraj
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -9289,6 +9295,7 @@ widgets/evaluate/owparameterfitter.py:
         Parameter Fitter: Umerjanje parametrov
         Fit learner for various values of fitting parameter.: Umeri model za različne vrednosti parametrov.
         icons/ParameterFitter.svg: false
+        parameter, fitter, tuning: parameter, fitter, tuning, umerjanje, prilagajanje
         graph.plotItem: false
         class `Inputs`:
             Data: Podatki
@@ -9367,6 +9374,7 @@ widgets/evaluate/owpermutationplot.py:
         Permutation Plot: Permutacijski grafikon
         Permutation analysis plotting: Grafični prikaz permutacijske analize
         icons/PermutationPlot.svg: false
+        _keywords: permutation, plot
         graph.plotItem: false
         class `Inputs`:
             Data: Podatki
@@ -10780,6 +10788,7 @@ widgets/model/owstack.py:
         Stacking: Sklad modelov
         Stack multiple models.: Sestavi več modelov v model.
         icons/Stacking.svg: false
+        stacking, ensemble: stacking, ensemble, sklad
         Stack: Sklad
         class `Inputs`:
             Learners: Modeli
@@ -10932,6 +10941,7 @@ widgets/obsolete/owtable.py:
         Data Table: Tabela
         View the dataset in a spreadsheet.: Pregled podatkov v tabeli.
         ../data/icons/Table.svg: false
+        _keywords: false
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -11034,6 +11044,20 @@ widgets/tests/base.py:
                 widget: false
                 not tested because .widget is not set: false
                 inputs: false
+        def `test_has_keywords`:
+            widget: false
+            _final_class: false
+            name: false
+            \nFile "{file}", line {inspect.getsourcelines(widget_class)[1]}.: false
+            keywords: false
+            Widget {widget_class.__name__} must define a 'keywords': false
+            class attribute.\n: false
+            If none are needed, set keywords='_keywords'.: false
+            utf-8: false
+            ^\s+keywords\s*=\s*\[: false
+            "'keywords' class attribute must be a comma-separated string, ": false
+            not a list.: false
+    Orange.: false
     class `BaseParameterMapping`:
         def `__init__`:
             both: false
@@ -11235,6 +11259,7 @@ widgets/unsupervised/owdbscan.py:
         DBSCAN: true
         Density-based spatial clustering.: Gručenje na podlagi prostorske gostote.
         icons/DBSCAN.svg: false
+        density based clustering, clustering: density based clustering, clustering, gostota, gručenje
         class `Inputs`:
             Data: Podatki
         class `Error`:
@@ -11703,6 +11728,7 @@ widgets/unsupervised/owlouvainclustering.py:
         Louvain Clustering: Louvainsko gručenje
         Detects communities in a network of nearest neighbors.: Poišče zgostitve v mreži najbližjih sosedov.
         icons/LouvainClustering.svg: false
+        community: community, gručenje, clustering
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -13825,6 +13851,7 @@ widgets/utils/tests/concurrent_example.py:
         Calculating...: false
     class `OWConcurrentWidget`:
         Projection: false
+        concurrent, projection, example: false
         def `_add_controls`:
             param: false
             Parameter:: false
@@ -13852,6 +13879,7 @@ widgets/visualize/owbarplot.py:
         Bottom axis: Spodnja os
         Group axis: Os skupin
         Vertical ticks: Navpične oznake
+        Hide empty categories in the legend: Skrij prazne kategorije v legendi
         def `update_setters`:
             def `update_bottom_axis`:
                 bottom: false
@@ -13901,6 +13929,8 @@ widgets/visualize/owbarplot.py:
             (Same color): (Enaka barva)
             color_var: false
             Color:: Barva:
+            show_legend: false
+            Show legend: Pokaži legendo
             auto_commit: false
         def `grouped_indices`:
             mergesort: false
@@ -14004,6 +14034,10 @@ widgets/visualize/owdistributions.py:
         def `paint`:
             pxMode: false
             antialias: false
+    class `ParameterSetter`:
+        Hide empty categories in the legend: V legendo ne vključi praznih kategorij
+        def `axis_items`:
+            item: false
     class `AshCurve`:
         def `pdf`:
             same: false
@@ -14072,6 +14106,8 @@ widgets/visualize/owdistributions.py:
             Show probabilities: Pokaži verjetnosti
             cumulative_distr: false
             Show cumulative distribution: Pokaži kumulativno porazdelitev
+            show_legend: false
+            Show legend: Pokaži legendo
         def `_setup_plots`:
             def `add_new_plot`:
                 right: false
@@ -14650,6 +14686,11 @@ widgets/visualize/ownomogram.py:
             Log odds ratios: Razmerje logaritmov obetov
             Displayed features: Prikazane spremenljivke
             sort_index: false
+            Do not sort features, display them in original order: Pokaži spremenljivke v izvirnem vrstnem redu
+            Sort features alphabetically by name: Uredi spremenljivke abecedno po imenu
+            Sort features by absolute importance: Uredi spremenljivke po absolutni pomembnosti
+            Sort features by positive influence on the class: Uredi spremenljivke po pozitivnem vplivu na razred
+            Sort features by negative influence on the class: Uredi spremenljivke po negativnem vplivu na razred
             'Order: ': 'Vrstni red: '
             display_index: false
             All features: Vse značilke

@@ -344,7 +344,12 @@ def stats(X, weights=None, compute_variance=False):
 
     if X.size and is_numeric:
         if is_sparse:
-            nans = countnans(X, axis=0)
+            if X.shape[0] == 1:
+                # Since `countnans` assumes vector shape to be (1, n) and `x`
+                # shape is (n, 1), we pass the transpose
+                nans = countnans(X.T, axis=1)
+            else:
+                nans = countnans(X, axis=0)
             X = X.tocsc()
         else:
             nans = np.isnan(X).sum(axis=0)

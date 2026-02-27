@@ -69,6 +69,7 @@ class ParameterSetter(CommonParameterSetter):
     DEFAULT_ALPHA_GRID, DEFAULT_SHOW_GRID = 80, True
     BOTTOM_AXIS_LABEL, GROUP_AXIS_LABEL = "Bottom axis", "Group axis"
     IS_VERTICAL_LABEL = "Vertical ticks"
+    HIDE_EMPTY_LABEL = "Hide empty categories in the legend"
 
     def __init__(self, master):
         self.grid_settings: Dict = None
@@ -79,6 +80,7 @@ class ParameterSetter(CommonParameterSetter):
         self.grid_settings = {
             Updater.ALPHA_LABEL: self.DEFAULT_ALPHA_GRID,
             self.SHOW_GRID_LABEL: self.DEFAULT_SHOW_GRID,
+            self.HIDE_EMPTY_LABEL: False,
         }
 
         self.initial_settings = {
@@ -104,6 +106,9 @@ class ParameterSetter(CommonParameterSetter):
                 self.GROUP_AXIS_LABEL: {
                     self.IS_VERTICAL_LABEL: (None, False),
                 },
+                self.LEGEND_LABEL: {
+                    self.HIDE_EMPTY_LABEL: (None, False)
+                },
             },
         }
 
@@ -120,10 +125,15 @@ class ParameterSetter(CommonParameterSetter):
             axis = self.master.group_axis
             axis.setRotateTicks(settings[self.IS_VERTICAL_LABEL])
 
+        def update_show_empty(**settings):
+            self.grid_settings.update(**settings)
+            self.master.update_legend()
+
         self._setters[self.PLOT_BOX] = {
             self.GRID_LABEL: update_grid,
             self.BOTTOM_AXIS_LABEL: update_bottom_axis,
             self.GROUP_AXIS_LABEL: update_group_axis,
+            self.LEGEND_LABEL: update_show_empty,
         }
 
     @property
@@ -188,13 +198,18 @@ class BarPlotGraph(PlotWidget):
     def update_legend(self):
         self.legend.clear()
         self.legend.hide()
-        for color, text in self.master.get_legend_data():
+        if not self.master.show_legend:
+            return
+        legend_data = self.master.get_legend_data()
+        if not legend_data:
+            return
+        for color, text in legend_data:
             dot = pg.ScatterPlotItem(
                 pen=pg.mkPen(color=color),
                 brush=pg.mkBrush(color=color)
             )
             self.legend.addItem(dot, escape(text))
-            self.legend.show()
+        self.legend.show()
         Updater.update_legend_font(self.legend.items,
                                    **self.parameter_setter.legend_settings)
 
@@ -386,6 +401,7 @@ class OWBarPlot(OWWidget):
     group_var = ContextSetting(None)
     annot_var = ContextSetting(None)
     color_var = ContextSetting(None)
+    show_legend = Setting(True)
     auto_commit = Setting(True)
     selection = Setting(None, schema_only=True)
     visual_settings = Setting({}, schema_only=True)
@@ -476,6 +492,10 @@ class OWBarPlot(OWWidget):
             callback=self.__parameter_changed,
         )
 
+        gui.checkBox(
+            box, self, "show_legend", "Show legend",
+            callback=self.__show_legend_changed
+        )
         plot_gui = OWPlotGUI(self)
         plot_gui.box_zoom_select(self.buttonsArea)
 
@@ -483,6 +503,9 @@ class OWBarPlot(OWWidget):
 
     def __parameter_changed(self):
         self.graph.reset_graph()
+
+    def __show_legend_changed(self):
+        self.graph.update_legend()
 
     def __group_var_changed(self):
         self.clear_cache()
@@ -594,8 +617,15 @@ class OWBarPlot(OWWidget):
             return []
         else:
             assert self.color_var.is_discrete
-            return [(QColor(*color), text) for color, text in
-                    zip(self.color_var.colors, self.color_var.values)]
+            present = np.zeros(len(self.color_var.values), dtype=bool)
+            if not self.graph.parameter_setter.grid_settings[
+                    ParameterSetter.HIDE_EMPTY_LABEL]:
+                present[:] = True
+            else:
+                present[self.grouped_data.get_column(self.color_var).astype(int)] = True
+            return [(QColor(*color), text) for color, text, is_present in
+                    zip(self.color_var.colors, self.color_var.values, present)
+                    if is_present]
 
     def get_colors(self) -> Optional[List[QColor]]:
         def create_color(i, id_):
@@ -676,6 +706,7 @@ class OWBarPlot(OWWidget):
 
     def set_visual_settings(self, key: KeyType, value: ValueType):
         self.graph.parameter_setter.set_parameter(key, value)
+        # pylint: disable=unsupported-assignment-operation
         self.visual_settings[key] = value
 
     def sizeHint(self):  # pylint: disable=no-self-use

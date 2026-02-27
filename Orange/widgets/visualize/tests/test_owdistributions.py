@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 from AnyQt.QtCore import QItemSelection, Qt, QEvent
-from AnyQt.QtGui import QKeyEvent
+from AnyQt.QtGui import QKeyEvent, QFont
 from AnyQt.QtWidgets import QCheckBox
 
 from orangewidget.utils.combobox import qcombobox_emit_activated
@@ -719,6 +719,76 @@ class TestOWDistributions(WidgetTest):
         np.testing.assert_equal(
             self.get_output(widget.Outputs.selected_data).X,
             np.arange(200, 300)[:, np.newaxis])
+
+    def test_hide_legend(self):
+        widget = self.widget
+        legend = widget._legend
+
+        self._set_check(widget.controls.show_legend, False)
+        self._set_check(widget.controls.show_legend, True)
+
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.assertTrue(legend.isVisible())
+        self._set_check(widget.controls.show_legend, False)
+        self.assertFalse(legend.isVisible())
+        self._set_check(widget.controls.show_legend, True)
+        self.assertTrue(legend.isVisible())
+
+        self.send_signal(widget.Inputs.data, None)
+        self._set_check(widget.controls.show_legend, False)
+        self._set_check(widget.controls.show_legend, True)
+
+    @WidgetTest.skipNonEnglish
+    def test_visual_settings(self):
+        graph = self.widget.plotview
+        font = QFont()
+        font.setItalic(True)
+        font.setFamily("Helvetica")
+
+        self.send_signal(self.widget.Inputs.data, self.iris[50:])
+        key, value = ("Fonts", "Font family", "Font family"), "Helvetica"
+        self.widget.set_visual_settings(key, value)
+
+        key, value = ("Fonts", "Axis title", "Font size"), 16
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis title", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(16)
+        for item in graph.parameter_setter.axis_items:
+            self.assertFontEqual(item.label.font(), font)
+
+        key, value = ("Fonts", "Axis ticks", "Font size"), 15
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis ticks", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(15)
+        for item in graph.parameter_setter.axis_items:
+            self.assertFontEqual(item.style["tickFont"], font)
+
+        key, value = ("Fonts", "Legend", "Font size"), 14
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Legend", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(14)
+        legend_item = list(graph.parameter_setter.legend_items)[0]
+        self.assertFontEqual(legend_item[1].item.font(), font)
+
+        key = "Figure", "Legend", "Hide empty categories in the legend"
+        value = True
+        self.assertEqual(
+            [i[1].text for i in graph.parameter_setter.legend_items],
+            ["Iris-setosa", "Iris-versicolor", "Iris-virginica"]
+        )
+        self.widget.set_visual_settings(key, value)
+        self.assertEqual(
+            [i[1].text for i in graph.parameter_setter.legend_items],
+            ["Iris-versicolor", "Iris-virginica"]
+        )
+
+    def assertFontEqual(self, font1, font2):
+        self.assertEqual(font1.family(), font2.family())
+        self.assertEqual(font1.pointSize(), font2.pointSize())
+        self.assertEqual(font1.italic(), font2.italic())
 
 
 if __name__ == "__main__":

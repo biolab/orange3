@@ -10,6 +10,8 @@ from AnyQt.QtGui import QColor, QPen, QBrush, QPainter, QPalette, QPolygonF, \
     QFontMetrics
 from AnyQt.QtCore import Qt, QRectF, QPointF, pyqtSignal as Signal
 from orangewidget.utils.listview import ListViewSearch
+from orangewidget.utils.visual_settings_dlg import VisualSettingsDialog, \
+    KeyType, ValueType
 import pyqtgraph as pg
 
 from Orange.data import Table, DiscreteVariable, ContinuousVariable, Domain
@@ -21,6 +23,8 @@ from Orange.widgets.utils.annotated_data import \
     create_groups_table, create_annotated_table, ANNOTATED_DATA_SIGNAL_NAME
 from Orange.widgets.utils.itemmodels import DomainModel
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+from Orange.widgets.visualize.utils.customizableplot import Updater, \
+    CommonParameterSetter
 from Orange.widgets.visualize.utils.plotutils import ElidedLabelsAxis, \
     PlotWidget
 from Orange.widgets.widget import Input, Output, OWWidget, Msg
@@ -170,14 +174,62 @@ class DistributionBarItem(pg.GraphicsObject):
         return QRectF(self.x, 0, self.width, height)
 
 
+class ParameterSetter(CommonParameterSetter):
+    HIDE_EMPTY_LABEL = "Hide empty categories in the legend"
+
+    def __init__(self, master):
+        self.master: DistributionWidget = master
+        self.figure_settings: dict = None
+        super().__init__()
+
+    def update_setters(self):
+        self.figure_settings = {
+            self.HIDE_EMPTY_LABEL: False,
+        }
+
+        self.initial_settings = {
+            self.LABELS_BOX: {
+                self.FONT_FAMILY_LABEL: self.FONT_FAMILY_SETTING,
+                self.AXIS_TITLE_LABEL: self.FONT_SETTING,
+                self.AXIS_TICKS_LABEL: self.FONT_SETTING,
+                self.LEGEND_LABEL: self.FONT_SETTING,
+            },
+            self.PLOT_BOX: {
+                self.LEGEND_LABEL: {
+                    self.HIDE_EMPTY_LABEL: (None, False)
+                },
+            },
+        }
+
+        def update_show_empty(**_settings):
+            self.figure_settings.update(**_settings)
+            self.master.parent_widget.update_legend()
+
+        self._setters[self.PLOT_BOX] = {
+            self.LEGEND_LABEL: update_show_empty,
+        }
+
+    @property
+    def axis_items(self):
+        return [value["item"] for value in
+                self.master.parent_widget.ploti.axes.values()]
+
+    @property
+    def legend_items(self):
+        # pylint: disable=protected-access
+        return self.master.parent_widget._legend.items
+
+
 class DistributionWidget(PlotWidget):
     item_clicked = Signal(DistributionBarItem, Qt.KeyboardModifiers, bool)
     blank_clicked = Signal()
     mouse_released = Signal()
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_item = None
+        self.parent_widget: OWDistributions = parent
+        self.parameter_setter = ParameterSetter(self)
 
     def _get_bar_item(self, pos):
         for item in self.items(pos):
@@ -285,10 +337,12 @@ class OWDistributions(OWWidget):
     show_probs = settings.Setting(False)
     stacked_columns = settings.Setting(False)
     cumulative_distr = settings.Setting(False)
+    show_legend = settings.Setting(True)
     sort_by_freq = settings.Setting(False)
     kde_smoothing = settings.Setting(10)
 
     auto_apply = settings.Setting(True)
+    visual_settings = settings.Setting({}, schema_only=True)
 
     graph_name = "plot"  # pg.GraphicsItem (pg.ViewBox)
 
@@ -371,12 +425,20 @@ class OWDistributions(OWWidget):
         gui.checkBox(
             box, self, "cumulative_distr", "Show cumulative distribution",
             callback=self._on_show_cumulative)
+        gui.checkBox(
+            box, self, "show_legend", "Show legend",
+            callback=self.update_legend
+        )
 
         gui.auto_apply(self.buttonsArea, self, commit=self.apply)
 
         self._set_smoothing_visibility()
         self._setup_plots()
         self._setup_legend()
+
+        VisualSettingsDialog(
+            self, self.plotview.parameter_setter.initial_settings
+        )
 
     def _setup_plots(self):
         def add_new_plot(zvalue):
@@ -387,7 +449,7 @@ class OWDistributions(OWWidget):
             plot.setZValue(zvalue)
             return plot
 
-        self.plotview = DistributionWidget()
+        self.plotview = DistributionWidget(self)
         self.plotview.item_clicked.connect(self._on_item_clicked)
         self.plotview.blank_clicked.connect(self._on_blank_clicked)
         self.plotview.mouse_released.connect(self._on_end_selecting)
@@ -872,29 +934,52 @@ class OWDistributions(OWWidget):
                    for value, freq in zip(gvalues, freqs)) + \
                "</table>"
 
+    def update_legend(self):
+        if self.is_valid:
+            self._display_legend()
+
     def _display_legend(self):
-        assert self.is_valid  # called only from replot, so assumes data is OK
+        # called only from replot and update_legend, so it assumes data is OK
+        assert self.is_valid
+        self._legend.clear()
+        if not self.show_legend or \
+                self.cvar is None and (
+                    not self.curve_descriptions
+                    or not self.curve_descriptions[0]
+                ):
+            self._legend.hide()
+            return
+
+        param_setter = self.plotview.parameter_setter
         if self.cvar is None:
-            if not self.curve_descriptions or not self.curve_descriptions[0]:
-                self._legend.hide()
-                return
             self._legend.addItem(
                 pg.PlotCurveItem(pen=pg.mkPen(width=5, color=0.0)),
                 self.curve_descriptions[0])
         else:
+            add_item = np.ones(len(self.cvar.values), dtype=bool)
+            if param_setter.figure_settings[ParameterSetter.HIDE_EMPTY_LABEL]:
+                add_item[:] = False
+                add_item[self.data.get_column(self.cvar).astype(int)] = True
             cvar_values = self.cvar.values
             colors = [QColor(*col) for col in self.cvar.colors]
             descriptions = self.curve_descriptions or repeat(None)
-            for color, name, desc in zip(colors, cvar_values, descriptions):
+            for color, name, desc, add in zip(colors, cvar_values,
+                                              descriptions, add_item):
+                if not add:
+                    continue
                 self._legend.addItem(
                     ScatterPlotItem(pen=color, brush=color, size=10, shape="s"),
                     escape(name + (f" ({desc})" if desc else "")))
         self._legend.show()
+        Updater.update_legend_font(self._legend.items,
+                                   **param_setter.legend_settings)
 
     # -----------------------------
     # Bins
 
     def recompute_binnings(self):
+        self.binnings = []
+        max_bins = 0
         if self.is_valid and self.var.is_continuous:
             # binning is computed on valid var data, ignoring any cvar nans
             column = self.data.get_column(self.var)
@@ -912,9 +997,6 @@ class OWDistributions(OWWidget):
                             for binning in self.binnings)
                 self.bin_width_label.setFixedWidth(width)
                 max_bins = len(self.binnings) - 1
-        else:
-            self.binnings = []
-            max_bins = 0
 
         self.controls.number_of_bins.setMaximum(max_bins)
         self.number_of_bins = min(
@@ -1060,6 +1142,9 @@ class OWDistributions(OWWidget):
         if right_idx < len(self.bar_items) - 1:
             right_pad = _padding(right_idx)
         else:
+            # if (left_idx, right_idx) span across all, we would have returned
+            # above, so left_idx > 0 here,
+            # pylint: disable=possibly-used-before-assignment
             right_pad = left_pad
         if left_idx == 0:
             left_pad = right_pad
@@ -1091,6 +1176,7 @@ class OWDistributions(OWWidget):
             self.selected_bars.add(self.ordered_values[self.last_click_idx])
 
         def on_key_left():
+            # first and last are defined, pylint: possibly-used-before-assignment
             if e.modifiers() & Qt.ShiftModifier:
                 if self.key_operation == Qt.Key_Right and first != last:
                     self.selected_bars.remove(self.ordered_values[last])
@@ -1298,6 +1384,13 @@ class OWDistributions(OWWidget):
         if self.cvar:
             text += f" with columns split by '{self.cvar.name}'"
         self.report_caption(text)
+
+    # -----------------------------
+    # Visual (plot) settings
+
+    def set_visual_settings(self, key: KeyType, value: ValueType):
+        self.visual_settings[key] = value
+        self.plotview.parameter_setter.set_parameter(key, value)
 
 
 if __name__ == "__main__":  # pragma: no cover
