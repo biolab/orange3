@@ -28,8 +28,8 @@ from Orange.widgets.visualize.utils.owlegend import (
 )
 from Orange.widgets.visualize.utils.scene import \
     UpdateItemsOnSelectGraphicsScene
-from Orange.widgets.visualize.utils.tree.skltreeadapter import SklTreeAdapter
-from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
+from Orange.utils.tree.skltreeadapter import SklTreeAdapter
+from Orange.utils.tree.treeadapter import TreeAdapter
 from Orange.widgets.visualize.utils.view import (
     PannableGraphicsView,
     ZoomableGraphicsView,

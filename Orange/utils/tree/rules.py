@@ -166,8 +166,8 @@ class IntervalRule(Rule):
     Examples
     --------
     >>> print(IntervalRule('Rule',
-    >>>                    ContinuousRule('Rule', True, 1, inclusive=True),
-    >>>                    ContinuousRule('Rule', False, 3)))
+    ...                    ContinuousRule('Rule', True, 1, inclusive=True),
+    ...                    ContinuousRule('Rule', False, 3)))
     Rule ∈ [1.000, 3.000)
 
     Notes

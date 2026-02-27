@@ -13,8 +13,6 @@ __init__.py:
     statistics: false
     version: false
     widgets: false
-    pyqt5: false
-    pyqt4: false
     libGL.so.1: false
 base.py:
     Learner: false
@@ -4217,6 +4215,59 @@ tests/sql/test_sql_table.py:
             postgres: false
             mssql: false
     __main__: false
+utils/tree/rules.py:
+    class `DiscreteRule`:
+        def `merge_with`:
+            Merged two discrete rules `%s` and `%s`: false
+        def `description`:
+            {} {}: false
+            =: false
+            ≠: false
+        def `__str__`:
+            {} {} {}: false
+            =: false
+            ≠: false
+        def `__repr__`:
+            DiscreteRule(attr_name='%s', equals=%s, value=%s): false
+    class `ContinuousRule`:
+        def `merge_with`:
+            'Continuous rules can currently only be ': false
+            merged with other continuous rules: false
+        def `description`:
+            %s %.3f: false
+            >: false
+            ≤: false
+        def `__str__`:
+            %s %s %.3f: false
+            >: false
+            ≤: false
+        def `__repr__`:
+            "ContinuousRule(attr_name='%s', greater=%s, value=%s, ": false
+            inclusive=%s): false
+    class `IntervalRule`:
+        def `__init__`:
+            'The left rule must be an instance of the `ContinuousRule` ': false
+            class.: false
+            'The right rule must be an instance of the `ContinuousRule` ': false
+        def `description`:
+            ∈ %s%.3f, %.3f%s: false
+            [: false
+            (: false
+            ]: false
+            ): false
+        def `__str__`:
+            %s ∈ %s%.3f, %.3f%s: false
+            [: false
+            (: false
+            ]: false
+            ): false
+        def `__repr__`:
+            IntervalRule(attr_name='%s', left_rule=%s, right_rule=%s): false
+utils/tree/skltreeadapter.py:
+    class `SklTreeAdapter`:
+        def `rules`:
+            values: false
+            _: false
 widgets/__init__.py:
     def `widget_discovery`:
         Orange3: false
@@ -12426,6 +12477,7 @@ widgets/utils/__init__.py:
         =\\=: false
         ≠: false
     def `dumpObjectTree`:
+        QObject: false
         {indent}{type} "{name}": false
         ' ': false
     def `qname`:
@@ -15879,6 +15931,8 @@ widgets/visualize/utils/scene.py:
     class `UpdateItemsOnSelectGraphicsScene`:
         def `__handle_selection`:
             selection_changed: false
+widgets/visualize/utils/tree.py:
+    {__name__} module was moved. Use {tree.__name__} instead: false
 widgets/visualize/utils/vizrank.py:
     class `VizRankDialog`:
         Score Plots: Oceni prikaze
@@ -15978,56 +16032,3 @@ widgets/visualize/utils/widget.py:
     class `OWProjectionWidgetWithName`:
         projection: false
     iris: false
-widgets/visualize/utils/tree/rules.py:
-    class `DiscreteRule`:
-        def `merge_with`:
-            Merged two discrete rules `%s` and `%s`: false
-        def `description`:
-            {} {}: false
-            =: false
-            ≠: false
-        def `__str__`:
-            {} {} {}: false
-            =: false
-            ≠: false
-        def `__repr__`:
-            DiscreteRule(attr_name='%s', equals=%s, value=%s): false
-    class `ContinuousRule`:
-        def `merge_with`:
-            'Continuous rules can currently only be ': false
-            merged with other continuous rules: false
-        def `description`:
-            %s %.3f: false
-            >: false
-            ≤: false
-        def `__str__`:
-            %s %s %.3f: false
-            >: false
-            ≤: false
-        def `__repr__`:
-            "ContinuousRule(attr_name='%s', greater=%s, value=%s, ": false
-            inclusive=%s): false
-    class `IntervalRule`:
-        def `__init__`:
-            'The left rule must be an instance of the `ContinuousRule` ': false
-            class.: false
-            'The right rule must be an instance of the `ContinuousRule` ': false
-        def `description`:
-            ∈ %s%.3f, %.3f%s: false
-            [: false
-            (: false
-            ]: false
-            ): false
-        def `__str__`:
-            %s ∈ %s%.3f, %.3f%s: false
-            [: false
-            (: false
-            ]: false
-            ): false
-        def `__repr__`:
-            IntervalRule(attr_name='%s', left_rule=%s, right_rule=%s): false
-widgets/visualize/utils/tree/skltreeadapter.py:
-    class `SklTreeAdapter`:
-        def `rules`:
-            values: false
-            _: false

@@ -3,16 +3,19 @@
 """
 import os
 import sysconfig
+from typing import TYPE_CHECKING
 
-from orangecanvas.registry import CategoryDescription
-from orangecanvas.registry.utils import category_from_package_globals
-from orangecanvas.utils.pkgmeta import get_distribution
-import orangewidget.workflow.discovery
-
+if TYPE_CHECKING:
+    import orangewidget.workflow.discovery
 
 # Entry point for main Orange categories/widgets discovery
 def widget_discovery(discovery):
     # type: (orangewidget.workflow.discovery.WidgetDiscovery) -> None
+    from orangecanvas.registry import CategoryDescription
+    from orangecanvas.registry.utils import category_from_package_globals
+    from orangecanvas.utils.pkgmeta import get_distribution
+
+
     dist = get_distribution("Orange3")
     pkgs = [
         "Orange.widgets.data",

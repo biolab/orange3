@@ -31,8 +31,8 @@ from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, \
     Setting
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.visualize.utils.tree.skltreeadapter import SklTreeAdapter
-from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
+from Orange.utils.tree.skltreeadapter import SklTreeAdapter
+from Orange.utils.tree.treeadapter import TreeAdapter
 
 
 class PieChart(QGraphicsRectItem):
