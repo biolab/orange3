@@ -146,6 +146,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     orthonormal_regression = Setting(False)
     show_ellipse = Setting(False)
     jitter_continuous = Setting(False)
+    aggregate_dense_regions = Setting(True)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
@@ -347,12 +348,14 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     def update_jittering(self):
         super().update_jittering()
         self.update_error_bars()
+        self.set_aggregation()
 
     def allow_aggregation(self):
-        # Reimplement to allow aggregation when jittering is non-zero but
+        # Reimplemented to allow aggregation when jittering is non-zero but
         # disabled for continuous variables
         return (
-            (self.selection is None or len(self.selection) == 0)
+            self.aggregate_dense_regions
+            and (self.selection is None or len(self.selection) == 0)
             and not self.subset_is_shown
             and (self.labels is None or len(self.labels) == 0)
             and (self.jitter_size == 0

@@ -13,7 +13,7 @@ from Orange.preprocess import preprocess
 from Orange.projection import PCA
 from Orange.projection import manifold
 from Orange.widgets import gui
-from Orange.widgets.settings import SettingProvider, ContextSetting
+from Orange.widgets.settings import SettingProvider, Setting, ContextSetting
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
@@ -343,6 +343,8 @@ class TSNERunner:
 
 
 class OWtSNEGraph(OWScatterPlotBase):
+    aggregate_dense_regions = Setting(True)
+
     def update_coordinates(self):
         super().update_coordinates()
         if self.scatterplot_item is not None:

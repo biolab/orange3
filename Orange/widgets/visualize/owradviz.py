@@ -82,6 +82,8 @@ class RadvizVizRank(VizRankDialogNAttrs):
 
 
 class OWRadvizGraph(OWGraphWithAnchors):
+    aggregate_dense_regions = Setting(True)
+
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
         self.anchors_scatter_item = None
