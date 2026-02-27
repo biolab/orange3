@@ -494,6 +494,7 @@ class OWPlotGUI:
     ZoomReset = 16
 
     ToolTipShowsAll = 17
+    AggregatePoints = 53
     ClassDensity = 18
     RegressionLine = 19
     LabelOnlySelected = 20
@@ -633,6 +634,20 @@ class OWPlotGUI:
                             cb_name=self._plot.update_density,
                             stateWhenDisabled=False)
 
+    def aggregate_points_check_box(self, widget):
+        cb = self._master.cb_aggregate_points = \
+            self._check_box(
+                widget=widget,
+                value="aggregate_dense_regions",
+                label="Agregate points in dense regions",
+                cb_name=self._plot.set_aggregation,
+                stateWhenDisabled=False,
+            )
+        cb.setToolTip(
+            "Dense regions with many points are aggregated into "
+            "circles or pie charts,\n"
+            "unless data is jittered or labels, selection or subset is shown")
+
     def regression_line_check_box(self, widget):
         self._master.cb_reg_line = \
             self._check_box(widget=widget, value="show_reg_line",
@@ -758,7 +773,11 @@ class OWPlotGUI:
         """
         Create a box with controls for common plot settings
         """
-        return self.create_box([
+        return self.create_box(
+            ([self.AggregatePoints]
+             if type(self._plot).__dict__.get("aggregate_dense_regions", False) is not False else
+             [])
+            + [
             self.ClassDensity,
             self.ShowLegend], widget, box, False)
 
@@ -769,6 +788,7 @@ class OWPlotGUI:
         ShowLegend: show_legend_check_box,
         ShowGridLines: grid_lines_check_box,
         ToolTipShowsAll: tooltip_shows_all_check_box,
+        AggregatePoints: aggregate_points_check_box,
         ClassDensity: class_density_check_box,
         RegressionLine: regression_line_check_box,
         LabelOnlySelected: label_only_selected_check_box,

@@ -628,6 +628,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
     show_legend = Setting(True)
     class_density = Setting(False)
     jitter_size = Setting(0)
+    aggregate_dense_regions = False  # Override in subclasses
 
     resolution = 256
 
