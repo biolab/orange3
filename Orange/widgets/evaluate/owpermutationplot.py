@@ -235,6 +235,7 @@ class OWPermutationPlot(OWWidget, ConcurrentWidgetMixin):
     description = "Permutation analysis plotting"
     icon = "icons/PermutationPlot.svg"
     priority = 1100
+    keywords = "_keywords"
 
     n_permutations = Setting(20)
     visual_settings = Setting({}, schema_only=True)

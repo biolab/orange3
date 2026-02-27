@@ -18,7 +18,7 @@ class OWPLS(OWBaseLearner):
     description = "Partial Least Squares Regression widget for multivariate data analysis"
     icon = "icons/PLS.svg"
     priority = 85
-    keywords = ["partial least squares"]
+    keywords = "partial least squares"
 
     LEARNER = PLSRegressionLearner
 

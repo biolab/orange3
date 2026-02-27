@@ -13,6 +13,7 @@ class OWStackedLearner(OWBaseLearner):
     description = "Stack multiple models."
     icon = "icons/Stacking.svg"
     priority = 100
+    keywords = "stacking, ensemble"
 
     LEARNER = StackedFitter
 

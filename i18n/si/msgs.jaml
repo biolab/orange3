@@ -4482,6 +4482,7 @@ widgets/data/owcolor.py:
         Color: Obarvaj
         Set color legend for variables.: Določi barvne legende za spremenljivke.
         icons/Colors.svg: false
+        palette, legend: palette, legend, barve, legenda
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -4752,6 +4753,7 @@ widgets/data/owcorrelations.py:
         Compute all pairwise attribute correlations.: Izračuna korelacije med vsemi pari spremenljivk.
         icons/Correlations.svg: false
         Unsupervised: Nenadzorovano učenje
+        pearson, spearman: pearson, spearman
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -6736,6 +6738,7 @@ widgets/data/owneighbors.py:
         icons/Neighbors.svg: false
         Unsupervised: Nenadzorovano učenje
         orangecontrib.prototypes.widgets.owneighbours.OWNeighbours: false
+        knn, nearest neighbors, distance, similarity: knn, nearest neighbors, distance, similarity, najbližji sosedje, razdalja, podobnost
         class `Inputs`:
             Data: Podatki
             Reference: Referenčni podatki
@@ -7900,6 +7903,7 @@ widgets/data/owselectbydataindex.py:
         Match instances by index from data subset.: Izberi primere, ki ustrezajo vrsticam iz podmnožice.
         Transform: Predelava podatkov
         icons/SelectByDataIndex.svg: false
+        _keywords: true
         class `Inputs`:
             Data: Podatki
             Data Subset: Podmnožica podatkov
@@ -8175,15 +8179,7 @@ widgets/data/owsplit.py:
         Split text or categorical variables into indicator variables: Razdeli besedilne ali kategorične spremenljivke na spremenljivke.
         Transform: Predelava podatkov
         icons/Split.svg: false
-        text to columns: besedilo v stolpce
-        word encoding: kodiranje besed
-        questionnaire: vprašalniki
-        survey: ankete
-        term: pojmi
-        word presence: prisotnost besed
-        word counts: število besed
-        categorical encoding: kodiranje kategorij
-        indicator variables: indikatorske spremenljivke
+        text, columns, word, encoding, questionnaire, survey, term, counts, indicator: text, columns, word, encoding, questionnaire, survey, term, counts, indicator, besedilo, stolpci, besede, kodiranje, vprašalnik, raziskava, štetje, indikator
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -8254,8 +8250,8 @@ widgets/data/owsql.py:
         def `get_table`:
             Table: false
             (None): (Brez)
-            Custom SQL: Prikrojen SQL
             Query: Poizvedba
+            Custom SQL: Prilagojen SQL
             Specify a table name to materialize the query: Določi ime materializirane tabele
             'DROP TABLE IF EXISTS ': false
             'CREATE TABLE ': false
@@ -8434,6 +8430,7 @@ widgets/data/owunique.py:
         icons/Unique.svg: false
         Filter instances unique by specified key attribute(s).: Filtriraj primere tako, da se ključne vrednosti ne ponavljajo.
         Transform: Predelava podatkov
+        unique, distinct, remove, duplicates, filter: unique, distinct, remove, duplicates, filter, enkratni, odstrani, podvojene, filtriraj
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -9298,6 +9295,7 @@ widgets/evaluate/owparameterfitter.py:
         Parameter Fitter: Umerjanje parametrov
         Fit learner for various values of fitting parameter.: Umeri model za različne vrednosti parametrov.
         icons/ParameterFitter.svg: false
+        parameter, fitter, tuning: parameter, fitter, tuning, umerjanje, prilagajanje
         graph.plotItem: false
         class `Inputs`:
             Data: Podatki
@@ -9376,6 +9374,7 @@ widgets/evaluate/owpermutationplot.py:
         Permutation Plot: Permutacijski grafikon
         Permutation analysis plotting: Grafični prikaz permutacijske analize
         icons/PermutationPlot.svg: false
+        _keywords: permutation, plot
         graph.plotItem: false
         class `Inputs`:
             Data: Podatki
@@ -10789,6 +10788,7 @@ widgets/model/owstack.py:
         Stacking: Sklad modelov
         Stack multiple models.: Sestavi več modelov v model.
         icons/Stacking.svg: false
+        stacking, ensemble: stacking, ensemble, sklad
         Stack: Sklad
         class `Inputs`:
             Learners: Modeli
@@ -10941,6 +10941,7 @@ widgets/obsolete/owtable.py:
         Data Table: Tabela
         View the dataset in a spreadsheet.: Pregled podatkov v tabeli.
         ../data/icons/Table.svg: false
+        _keywords: false
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -11043,6 +11044,20 @@ widgets/tests/base.py:
                 widget: false
                 not tested because .widget is not set: false
                 inputs: false
+        def `test_has_keywords`:
+            widget: false
+            _final_class: false
+            name: false
+            \nFile "{file}", line {inspect.getsourcelines(widget_class)[1]}.: false
+            keywords: false
+            Widget {widget_class.__name__} must define a 'keywords': false
+            class attribute.\n: false
+            If none are needed, set keywords='_keywords'.: false
+            utf-8: false
+            ^\s+keywords\s*=\s*\[: false
+            "'keywords' class attribute must be a comma-separated string, ": false
+            not a list.: false
+    Orange.: false
     class `BaseParameterMapping`:
         def `__init__`:
             both: false
@@ -11244,6 +11259,7 @@ widgets/unsupervised/owdbscan.py:
         DBSCAN: true
         Density-based spatial clustering.: Gručenje na podlagi prostorske gostote.
         icons/DBSCAN.svg: false
+        density based clustering, clustering: density based clustering, clustering, gostota, gručenje
         class `Inputs`:
             Data: Podatki
         class `Error`:
@@ -11712,6 +11728,7 @@ widgets/unsupervised/owlouvainclustering.py:
         Louvain Clustering: Louvainsko gručenje
         Detects communities in a network of nearest neighbors.: Poišče zgostitve v mreži najbližjih sosedov.
         icons/LouvainClustering.svg: false
+        community: community, gručenje, clustering
         class `Inputs`:
             Data: Podatki
         class `Outputs`:
@@ -13826,6 +13843,7 @@ widgets/utils/tests/concurrent_example.py:
         Calculating...: false
     class `OWConcurrentWidget`:
         Projection: false
+        concurrent, projection, example: false
         def `_add_controls`:
             param: false
             Parameter:: false
