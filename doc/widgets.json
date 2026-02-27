@@ -110,7 +110,10 @@
     "doc": "visual-programming/source/widgets/data/color.md",
     "icon": "../Orange/widgets/data/icons/Colors.svg",
     "background": "#FFD39F",
-    "keywords": []
+    "keywords": [
+     "palette",
+     "legend"
+    ]
    },
    {
     "text": "Column Statistics",
@@ -185,15 +188,15 @@
     "icon": "../Orange/widgets/data/icons/Split.svg",
     "background": "#FF9D5E",
     "keywords": [
-     "text to columns",
-     "word encoding",
+     "text",
+     "columns",
+     "word",
+     "encoding",
      "questionnaire",
      "survey",
      "term",
-     "word presence",
-     "word counts",
-     "categorical encoding",
-     "indicator variables"
+     "counts",
+     "indicator"
     ]
    },
    {
@@ -230,7 +233,13 @@
     "doc": "visual-programming/source/widgets/data/unique.md",
     "icon": "../Orange/widgets/data/icons/Unique.svg",
     "background": "#FF9D5E",
-    "keywords": []
+    "keywords": [
+     "unique",
+     "distinct",
+     "remove",
+     "duplicates",
+     "filter"
+    ]
    },
    {
     "text": "Aggregate Columns",
@@ -769,7 +778,9 @@
     "icon": "../Orange/widgets/model/icons/PLS.svg",
     "background": "#FAC1D9",
     "keywords": [
-     "partial least squares"
+     "partial",
+     "least",
+     "squares"
     ]
    },
    {
@@ -807,7 +818,10 @@
     "doc": "visual-programming/source/widgets/model/stacking.md",
     "icon": "../Orange/widgets/model/icons/Stacking.svg",
     "background": "#FAC1D9",
-    "keywords": []
+    "keywords": [
+     "stacking",
+     "ensemble"
+    ]
    },
    {
     "text": "Save Model",
@@ -922,7 +936,11 @@
     "doc": "visual-programming/source/widgets/evaluate/parameterfitter.md",
     "icon": "../Orange/widgets/evaluate/icons/ParameterFitter.svg",
     "background": "#C3F3F3",
-    "keywords": []
+    "keywords": [
+     "parameter",
+     "fitter",
+     "tuning"
+    ]
    }
   ]
  ],
@@ -966,7 +984,10 @@
     "doc": "visual-programming/source/widgets/unsupervised/correlations.md",
     "icon": "../Orange/widgets/data/icons/Correlations.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "pearson",
+     "spearman"
+    ]
    },
    {
     "text": "Distance Map",
@@ -1004,14 +1025,19 @@
     "doc": "visual-programming/source/widgets/unsupervised/louvainclustering.md",
     "icon": "../Orange/widgets/unsupervised/icons/LouvainClustering.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "community"
+    ]
    },
    {
     "text": "DBSCAN",
     "doc": "visual-programming/source/widgets/unsupervised/DBSCAN.md",
     "icon": "../Orange/widgets/unsupervised/icons/DBSCAN.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "density based clustering",
+     "clustering"
+    ]
    },
    {
     "text": "Manifold Learning",
@@ -1049,7 +1075,12 @@
     "doc": "visual-programming/source/widgets/unsupervised/neighbors.md",
     "icon": "../Orange/widgets/data/icons/Neighbors.svg",
     "background": "#CAE1EF",
-    "keywords": []
+    "keywords": [
+     "knn",
+     "nearest neighbors",
+     "distance",
+     "similarity"
+    ]
    },
    {
     "text": "Correspondence Analysis",
