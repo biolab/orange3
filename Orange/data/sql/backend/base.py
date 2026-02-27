@@ -62,9 +62,7 @@ class Backend(metaclass=Registry):
         with self.execute_sql_query(query) as cur:
             tables = []
             for schema, name in cur.fetchall():
-                sql = "{}.{}".format(
-                    self.quote_identifier(schema),
-                    self.quote_identifier(name)) if schema else self.quote_identifier(name)
+                sql = "{}.{}".format(schema, name if schema else name)
                 tables.append(TableDesc(name, schema, sql))
             return tables
 
