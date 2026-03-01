@@ -1,3 +1,4 @@
+from itertools import count
 from typing import Callable
 import warnings
 from unittest.mock import patch
@@ -522,21 +523,30 @@ class JaccardModel(FittedDistanceModel):
     def _compute_sparse(self, x1, x2=None):
         callback = self.callback or (lambda x: x)
         symmetric = x2 is None
+        mtype = sp.csr_matrix if self.axis == 1 else sp.csc_matrix
+        x1 = mtype(x1, copy=True)
+        x1.eliminate_zeros()
         if symmetric:
             x2 = x1
-        x1 = sp.csr_matrix(x1).copy()
-        x1.eliminate_zeros()
-        x2 = sp.csr_matrix(x2).copy()
-        x2.eliminate_zeros()
-        n, m = x1.shape[0], x2.shape[0]
+        else:
+            x2 = mtype(x2, copy=True)
+            x2.eliminate_zeros()
+        if self.axis == 1:
+            n, m = x1.shape[0], x2.shape[0]
+        else:
+            n, m = x1.shape[1], x2.shape[1]
         matrix = np.zeros((n, m))
-        for i in range(n):
-            callback(i * 100 / n)
-            xi_ind = set(x1[i].indices)
-            for j in range(i if symmetric else m):
-                union = len(xi_ind.union(x2[j].indices))
+        jlines = np.hstack((np.arange(len(x2.indptr) - 1)[:, None],
+                            x2.indptr[:-1, None],
+                            x2.indptr[1:, None]))
+        for i, i1, i2 in zip(count(), x1.indptr, x1.indptr[1:]):
+            callback(i1 * 100 / n)
+            x1_ind = set(x1.indices[i1:i2])
+            for j, j1, j2 in jlines[:i if symmetric else m]:
+                x2_ind = x2.indices[j1:j2]
+                union = len(x1_ind.union(x2_ind))
                 if union:
-                    jacc = 1 - len(xi_ind.intersection(x2[j].indices)) / union
+                    jacc = 1 - len(x1_ind.intersection(x2_ind)) / union
                 else:
                     jacc = 0
                 matrix[i, j] = jacc
