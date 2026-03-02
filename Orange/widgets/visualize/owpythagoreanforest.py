@@ -20,8 +20,7 @@ from Orange.widgets.visualize.pythagorastreeviewer import (
     PythagorasTreeViewer,
     ContinuousTreeNode,
 )
-from Orange.widgets.visualize.utils.tree.skltreeadapter import \
-    SklTreeAdapter
+from Orange.utils.tree.skltreeadapter import SklTreeAdapter
 from Orange.widgets.widget import OWWidget
 
 

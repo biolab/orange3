@@ -4,14 +4,15 @@ from collections import deque
 from contextlib import contextmanager
 from enum import Enum, IntEnum
 from typing import (
-    TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union
+    TypeVar, Callable, Any, Iterable, Optional, Hashable, Type, Union, TYPE_CHECKING
 )
 from xml.sax.saxutils import escape
 
-from AnyQt.QtCore import QObject, Qt
-
 from Orange.data.variable import TimeVariable
 from Orange.util import deepgetattr, ftry  # pylint: disable=unused-import
+
+if TYPE_CHECKING:
+    from AnyQt.QtCore import QObject, Qt
 
 
 def vartype(var):
@@ -57,12 +58,11 @@ def get_variable_values_sorted(variable):
         return variable.values
 
 
-def dumpObjectTree(obj, _indent=0):
+def dumpObjectTree(obj: "QObject", _indent=0):
     """
     Dumps Qt QObject tree. Aids in debugging internals.
     See also: QObject.dumpObjectTree()
     """
-    assert isinstance(obj, QObject)
     print('{indent}{type} "{name}"'.format(indent=' ' * (_indent * 4),
                                            type=type(obj).__name__,
                                            name=obj.objectName()),
@@ -182,7 +182,11 @@ def enum2int(enum: Union[Enum, IntEnum]) -> int:
 
 
 @contextmanager
-def disconnected(signal, slot, connection_type=Qt.AutoConnection):
+def disconnected(signal, slot, connection_type=None):
+    if connection_type is None:
+        from AnyQt.QtCore import Qt
+        connection_type = Qt.ConnectionType.AutoConnection
+
     signal.disconnect(slot)
     try:
         yield
