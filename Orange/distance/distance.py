@@ -548,15 +548,11 @@ class JaccardModel(FittedDistanceModel):
             callback(100 * (i / steps) ** (1 + symmetric))
             x1_ind = set(x1.indices[i1:i2])
             for j, j1, j2 in jlines[:i if symmetric else m]:
-                x2_ind = x2.indices[j1:j2]
-                union = len(x1_ind.union(x2_ind))
-                if union:
-                    jacc = 1 - len(x1_ind.intersection(x2_ind)) / union
-                else:
-                    jacc = 0
-                matrix[i, j] = jacc
-                if symmetric:
-                    matrix[j, i] = jacc
+                x2_ind = set(x2.indices[j1:j2])
+                union = len(x1_ind | x2_ind)
+                matrix[i, j] = union and 1 - len(x1_ind & x2_ind) / union
+        if symmetric:
+            matrix += matrix.T
         return matrix
 
 
