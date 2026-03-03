@@ -539,8 +539,13 @@ class JaccardModel(FittedDistanceModel):
         jlines = np.hstack((np.arange(len(x2.indptr) - 1)[:, None],
                             x2.indptr[:-1, None],
                             x2.indptr[1:, None]))
+        steps = len(x1.indptr) - 1
         for i, i1, i2 in zip(count(), x1.indptr, x1.indptr[1:]):
-            callback(i1 * 100 / n)
+            # For asymmetric case, we've done i / steps of work.
+            # For symmetric case, the total time is proportional to steps ** 2
+            # and the time used so far is proportional to i ** 2.
+            # Thence the exponent is 1 + symmetric.
+            callback(100 * (i / steps) ** (1 + symmetric))
             x1_ind = set(x1.indices[i1:i2])
             for j, j1, j2 in jlines[:i if symmetric else m]:
                 x2_ind = x2.indices[j1:j2]
