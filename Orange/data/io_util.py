@@ -12,14 +12,22 @@ try:
 except ImportError:  # pandas < 2.2.0
     from pandas.core.tools.datetimes import guess_datetime_format
 
-from chardet.universaldetector import UniversalDetector
-
 from Orange.data import (
     is_discrete_values, MISSING_VALUES, Variable,
     DiscreteVariable, StringVariable, ContinuousVariable, TimeVariable, Table,
 )
 from Orange.misc.collections import natural_sorted
 from Orange.util import ftry, frompyfunc
+
+# pylint: disable=wrong-import-order
+import chardet
+if chardet.__version__ < "7":  # pragma: no cover
+    # pylint: disable=wrong-import-position
+    from chardet.universaldetector import UniversalDetector
+else:  # pragma: no cover
+    # pylint: disable=wrong-import-position
+    from chardet.detector import UniversalDetector
+
 
 __all__ = [
     "Compression",
@@ -46,6 +54,7 @@ class Compression:
 
 def open_compressed(filename, *args, _open=open, **kwargs):
     """Return seamlessly decompressed open file handle for `filename`"""
+    # pylint: disable=import-outside-toplevel
     if isinstance(filename, str):
         if filename.endswith(Compression.GZIP):
             from gzip import open as _open

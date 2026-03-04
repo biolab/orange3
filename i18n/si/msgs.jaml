@@ -1233,6 +1233,7 @@ data/io_base.py:
         def `qualified_name`:
             .: false
 data/io_util.py:
+    7: false
     Compression: false
     open_compressed: false
     detect_encoding: false
