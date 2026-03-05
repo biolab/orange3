@@ -617,18 +617,22 @@ class HDF5Reader(FileFormat):
 
     @classmethod
     def write_table_metadata(cls, filename, data):
-        try:
-            dump_dict = {key: value if isinstance(value, str) else json.dumps(value)
-                        for key, value in data.attributes.items()}
-        except TypeError:
-            # some attribute is not JSON serializable, fall back to pickle .metadata file
-            super().write_table_metadata(filename, data)
-        else:
-            with h5py.File(filename, 'r+') as f:
-                metadata_group = f.require_group('metadata')
-                str_dtype = h5py.string_dtype()
-                for key, value in dump_dict.items():
-                    metadata_group.create_dataset(key, data=value, dtype=str_dtype)
+        dump_dict = {}
+        for key, value in data.attributes.items():
+             if isinstance(value, str):
+                 dump_dict[key] = value
+             else:
+                 try:
+                     dump_dict[key] = json.dumps(value)
+                 except TypeError:
+                     # value is not JSON serializable, fall back to pickle
+                    dump_dict[key] = pickle.dumps(value, protocol=PICKLE_PROTOCOL).hex()
+
+        with h5py.File(filename, 'r+') as f:
+            metadata_group = f.require_group('metadata')
+            str_dtype = h5py.string_dtype()
+            for key, value in dump_dict.items():
+                metadata_group.create_dataset(key, data=value, dtype=str_dtype)
 
     @classmethod
     def set_table_metadata(cls, filename, data):
@@ -643,6 +647,11 @@ class HDF5Reader(FileFormat):
                         try:
                             value = json.loads(value)
                         except json.JSONDecodeError:
+                            pass
+                    elif value.startswith(f"80{PICKLE_PROTOCOL:02x}"):
+                        try:
+                            value = pickle.loads(bytes.fromhex(value))
+                        except (pickle.UnpicklingError, ValueError):
                             pass
                     data.attributes[key] = value
             else:

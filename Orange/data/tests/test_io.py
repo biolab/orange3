@@ -245,7 +245,6 @@ class TestWriterMetadata(unittest.TestCase):
                     self.assertEqual(value, data.attributes[key])
         finally:
             os.remove(fname)
-            os.remove(fname + ".metadata")
 
 
 if __name__ == "__main__":
