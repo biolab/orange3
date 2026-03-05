@@ -12,7 +12,7 @@ try:
 except ImportError:  # pandas < 2.2.0
     from pandas.core.tools.datetimes import guess_datetime_format
 
-from chardet.universaldetector import UniversalDetector
+from chardet import UniversalDetector
 
 from Orange.data import (
     is_discrete_values, MISSING_VALUES, Variable,
