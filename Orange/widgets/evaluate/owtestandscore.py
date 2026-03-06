@@ -429,7 +429,7 @@ class OWTestAndScore(OWWidget):
                     break
 
         if isinstance(data, SqlTable):
-            if data.approx_len() < AUTO_DL_LIMIT:
+            if len(data) < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
                 self.Information.data_sampled()
@@ -480,7 +480,7 @@ class OWTestAndScore(OWWidget):
             self.Error.class_required_test.clear()
 
         if isinstance(data, SqlTable):
-            if data.approx_len() < AUTO_DL_LIMIT:
+            if len(data) < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
                 self.Information.test_data_sampled()
