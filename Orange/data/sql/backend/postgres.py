@@ -135,6 +135,8 @@ class Psycopg2Backend(Backend):
             else:
                 var.to_sql = ToSql("({})::double precision"
                                    .format(field_name_q))
+        elif var.is_discrete and sorted(var.values) == ["false", "true"]:
+            var.to_sql = ToSql(field_name_q)
         else:  # discrete or string
             var.to_sql = ToSql("({})::text"
                                .format(field_name_q))

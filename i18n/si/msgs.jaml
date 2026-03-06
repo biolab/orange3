@@ -1933,7 +1933,6 @@ data/sql/table.py:
             TABLESAMPLE: false
             (: false
             ): false
-            ANALYZE: false
         def `_execute_sql_query`:
             Use backend.execute_sql_query: false
         def `__get_nan_frequency`:
@@ -2034,6 +2033,10 @@ data/sql/backend/postgres.py:
         def `create_variable`:
             extract(epoch from {}): false
             ({})::double precision: false
+            false: false
+            true: false
+            '((CASE WHEN {field_name_q} ': false
+            THEN 'true' ELSE 'false' END)): false
             ({})::text: false
         def `_guess_variable`:
             false: false
