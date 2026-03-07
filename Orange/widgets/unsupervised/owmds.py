@@ -78,6 +78,7 @@ MAX_N_PAIRS = 10000
 class OWMDSGraph(OWScatterPlotBase):
     #: Percentage of all pairs displayed (ranges from 0 to 20)
     connected_pairs = Setting(5)
+    aggregate_dense_regions = Setting(True)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
