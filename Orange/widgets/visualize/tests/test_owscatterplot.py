@@ -664,6 +664,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data = Table("heart_disease")
         self.send_signal(self.widget.Inputs.data, data)
         widget = self.widget
+        widget.graph.aggregate_dense_regions = False
+
         graph = widget.graph
         scatterplot_item = graph.scatterplot_item
 

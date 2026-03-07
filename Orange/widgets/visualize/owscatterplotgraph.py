@@ -163,6 +163,11 @@ class ScatterPlotItem(pg.ScatterPlotItem):
         self._agg_size_default = 50
         self._agg_threshold_default = 10
 
+        self._nonaggregated = True
+        self._agg_indices = None
+        self._agg_coords = None
+        self._agg_r2s = None
+
     def setZ(self, z):
         """
         Set z values for all points.
@@ -223,9 +228,14 @@ class ScatterPlotItem(pg.ScatterPlotItem):
     def paint(self, painter, option, widget=None):
         # super().paint will reset painter.transform, so we must compute
         # all transformations in advance
-        agg_pts, agg_colors = self._get_aggregated_points(painter)
+        self._nonaggregated = True
+        self._agg_indices = None
+        self._agg_coords = None
+        self._agg_r2s = None
+        agg_colors = self._get_aggregated_points(painter)
 
         try:
+            self.data["visible"] = self._nonaggregated
             if self._z_mapping is not None:
                 assert len(self._z_mapping) == len(self.data)
                 self.data = self.data[self._z_mapping]
@@ -235,19 +245,20 @@ class ScatterPlotItem(pg.ScatterPlotItem):
             painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
             super().paint(painter, option, widget)
         finally:
+            self.data["visible"] = True
             if self._inv_mapping is not None:
                 self.data = self.data[self._inv_mapping]
 
-        self._paint_aggregated_points(painter, agg_pts, agg_colors)
+        self._paint_aggregated_points(painter, agg_colors)
 
     def _get_aggregated_points(self, painter):
         if self._aggregation_size is None:
-            return None, None
+            return None
 
         viewmask = self._maskAt(self.viewRect())
         data = self.data[viewmask]
         if len(data) == 0:
-            return None, None
+            return None
 
         x, y = data["x"], data["y"]
         xmi, xma = np.min(x), np.max(x)
@@ -269,13 +280,13 @@ class ScatterPlotItem(pg.ScatterPlotItem):
         counts = np.bincount(idx, minlength=NX * NY)
 
         if np.max(counts) < self._aggregation_threshold:
-            return None, None
+            return None
 
-        visible = np.ones(len(self.data), dtype=bool)
-        visible[viewmask] = counts[idx] < self._aggregation_threshold
-        self.data["visible"] = visible
+        self._nonaggregated = np.ones(len(self.data), dtype=bool)
+        self._nonaggregated[viewmask] = counts[idx] < self._aggregation_threshold
 
         agg_pts = []
+        self._agg_indices = []
         agg_colors = []
         brushes = data["brush"]
         for i, count in enumerate(counts):
@@ -283,29 +294,29 @@ class ScatterPlotItem(pg.ScatterPlotItem):
                 continue
             mask = idx == i
             agg_pts.append([np.mean(x[mask]), np.mean(y[mask])])
+            self._agg_indices.append(np.flatnonzero(mask))
             agg_colors.append(
                 Counter(
                     brush.color().getRgb() for brush in brushes[mask]
                 )
             )
-        agg_pts = fn.transformCoordinates(painter.transform(), np.array(agg_pts).T).T
+        self._agg_coords = fn.transformCoordinates(painter.transform(), np.array(agg_pts).T).T
+        return agg_colors
 
-        return agg_pts, agg_colors
-
-    def _paint_aggregated_points(self, painter, agg_pts, agg_colors):
-        if agg_pts is None:
+    def _paint_aggregated_points(self, painter, agg_colors):
+        if self._agg_coords is None:
             return
-
-        self.data["visible"] = True
 
         countf = 8 / max(sum(c.values()) for c in agg_colors)
         text_opt = QTextOption()
         text_opt.setAlignment(Qt.AlignCenter)
-        for (pt, spot_colors) in zip(agg_pts, agg_colors):
+        rs = []
+        for (pt, spot_colors) in zip(self._agg_coords, agg_colors):
             painter.resetTransform()
             painter.translate(*pt)
             total = sum(spot_colors.values())
             r = int(6 + countf * total)
+            rs.append(r + 12)
             if len(spot_colors) == 1:
                 color = QColor(*next(iter(spot_colors)))
                 painter.setBrush(fn.mkBrush(color))
@@ -332,6 +343,33 @@ class ScatterPlotItem(pg.ScatterPlotItem):
             painter.setBrush(fn.mkBrush(QColor(0, 0, 0)))
             painter.setPen(fn.mkPen(QColor(0, 0, 0)))
             painter.drawText(QRectF(-15, -15, 30, 30), str(total), text_opt)
+        self._agg_r2s = np.array(rs) ** 2
+
+    def aggregatedPointsAt(self, pos):
+        """
+        Returns indices of aggregated points for the given **scene** coordinate.
+
+        Note that unlike pointsAt, this function's argument is scene coordinate
+        and not data coordinate. This is because the aggregation is done in scene
+        coordinates.
+        """
+        if self._agg_indices is None:
+            indices = []
+        else:
+            x, y = pos.x(), pos.y()
+            aggs = np.flatnonzero(
+                np.sum((self._agg_coords - np.array([x, y])) ** 2, axis=1)
+                < self._agg_r2s)
+            indices = list(itertools.chain(*(self._agg_indices[i] for i in aggs)))
+        return self.points()[indices][::-1]
+
+    def pointsAt(self, pos):
+        # Override to ignore aggregated points.
+        try:
+            self.data["visible"] = self._nonaggregated
+            return super().pointsAt(pos)
+        finally:
+            self.data["visible"] = True
 
 def _define_symbols():
     """
@@ -628,7 +666,11 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
     show_legend = Setting(True)
     class_density = Setting(False)
     jitter_size = Setting(0)
-    aggregate_dense_regions = False  # Override in subclasses
+
+    # Subclasses that want to "opt in" aggregation of dense regions should
+    # override this with `aggregate_dense_regions = Setting(True)`
+    # (or `Setting(False)` if they want to have it disabled by default).
+    aggregate_dense_regions = False
 
     resolution = 256
 
@@ -1749,11 +1791,13 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         """
         if self.scatterplot_item is None:
             return False
-        act_pos = self.scatterplot_item.mapFromScene(event.scenePos())
-        point_data = [p.data() for p in self.scatterplot_item.pointsAt(act_pos)]
-        text = self.master.get_tooltip(point_data)
-        if text:
-            QToolTip.showText(event.screenPos(), text, widget=self.plot_widget)
-            return True
+        pos = event.scenePos()
+        act_pos = self.scatterplot_item.mapFromScene(pos)
+        if len(points := self.scatterplot_item.aggregatedPointsAt(pos)) != 0:
+            text = self.master.get_aggregated_tooltip([p.data() for p in points])
+        elif len(points := self.scatterplot_item.pointsAt(act_pos)) != 0:
+            text = self.master.get_tooltip([p.data() for p in points])
         else:
             return False
+        QToolTip.showText(event.screenPos(), text, widget=self.plot_widget)
+        return True

@@ -646,7 +646,7 @@ class OWPlotGUI:
         cb.setToolTip(
             "Dense regions with many points are aggregated into "
             "circles or pie charts,\n"
-            "unless data is jittered or labels, selection or subset is shown")
+            "unless data is jittered or labels, selection or subset is shown.")
 
     def regression_line_check_box(self, widget):
         self._master.cb_reg_line = \
