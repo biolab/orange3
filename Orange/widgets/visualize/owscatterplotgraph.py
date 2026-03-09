@@ -1,6 +1,7 @@
 import sys
 import itertools
 import warnings
+from collections import Counter
 from typing import Callable
 from xml.sax.saxutils import escape
 from datetime import datetime, timezone
@@ -9,11 +10,12 @@ import numpy as np
 from AnyQt.QtCore import Qt, QRectF, QSize, QTimer, pyqtSignal as Signal, \
     QObject, QEvent
 from AnyQt.QtGui import QColor, QPen, QBrush, QPainterPath, QTransform, \
-    QPainter, QPalette
+    QPainter, QPalette, QTextOption
 from AnyQt.QtWidgets import QApplication, QToolTip, QGraphicsTextItem, \
     QGraphicsRectItem, QGraphicsItemGroup
 
 import pyqtgraph as pg
+from pyqtgraph import functions as fn
 from pyqtgraph.graphicsItems.ScatterPlotItem import Symbols
 from pyqtgraph.graphicsItems.LegendItem import LegendItem as PgLegendItem
 from pyqtgraph.graphicsItems.TextItem import TextItem
@@ -156,6 +158,15 @@ class ScatterPlotItem(pg.ScatterPlotItem):
         self._update_spots_in_paint = False
         self._z_mapping = None
         self._inv_mapping = None
+        self._aggregation_size = None
+        self._aggregation_threshold = None
+        self._agg_size_default = 50
+        self._agg_threshold_default = 10
+
+        self._nonaggregated = True
+        self._agg_indices = None
+        self._agg_coords = None
+        self._agg_r2s = None
 
     def setZ(self, z):
         """
@@ -198,9 +209,33 @@ class ScatterPlotItem(pg.ScatterPlotItem):
         self._update_spots_in_paint = True
         self.update()
 
+    def setAggregationOptions(self, size, threshold):
+        self._agg_size_default = size
+        self._agg_threshold_default = threshold
+
+    def setAggregation(self, enabled):
+        if enabled != (self._aggregation_size is None):
+            return
+        if enabled:
+            self._aggregation_size = self._agg_size_default
+            self._aggregation_threshold = self._agg_threshold_default
+        else:
+            self._aggregation_size = None
+            self._aggregation_threshold = None
+        self.update()
+
     # pylint: disable=arguments-differ
     def paint(self, painter, option, widget=None):
+        # super().paint will reset painter.transform, so we must compute
+        # all transformations in advance
+        self._nonaggregated = True
+        self._agg_indices = None
+        self._agg_coords = None
+        self._agg_r2s = None
+        agg_colors = self._get_aggregated_points(painter)
+
         try:
+            self.data["visible"] = self._nonaggregated
             if self._z_mapping is not None:
                 assert len(self._z_mapping) == len(self.data)
                 self.data = self.data[self._z_mapping]
@@ -210,9 +245,131 @@ class ScatterPlotItem(pg.ScatterPlotItem):
             painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
             super().paint(painter, option, widget)
         finally:
+            self.data["visible"] = True
             if self._inv_mapping is not None:
                 self.data = self.data[self._inv_mapping]
 
+        self._paint_aggregated_points(painter, agg_colors)
+
+    def _get_aggregated_points(self, painter):
+        if self._aggregation_size is None:
+            return None
+
+        viewmask = self._maskAt(self.viewRect())
+        data = self.data[viewmask]
+        if len(data) == 0:
+            return None
+
+        x, y = data["x"], data["y"]
+        xmi, xma = np.min(x), np.max(x)
+        ymi, yma = np.min(y), np.max(y)
+
+        tr = fn.transformCoordinates(
+            painter.transform(),
+            np.array([[xmi, ymi], [xma, yma]]).T).T
+        width = tr[1, 0] - tr[0, 0] or 1
+        height = tr[0, 1] - tr[1, 1] or 1
+
+        NX = int(width / self._aggregation_size) or 1
+        NY = int(height / self._aggregation_size) or 1
+        cellx = (xma - xmi) / NX or 1
+        celly = (yma - ymi) / NY or 1
+        xg = np.clip((x - xmi) // cellx, 0, NX - 1)
+        yg = np.clip((y - ymi) // celly, 0, NY - 1)
+        idx = (xg + NX * yg).astype(int)
+        counts = np.bincount(idx, minlength=NX * NY)
+
+        if np.max(counts) < self._aggregation_threshold:
+            return None
+
+        self._nonaggregated = np.ones(len(self.data), dtype=bool)
+        self._nonaggregated[viewmask] = counts[idx] < self._aggregation_threshold
+
+        agg_pts = []
+        self._agg_indices = []
+        agg_colors = []
+        brushes = data["brush"]
+        for i, count in enumerate(counts):
+            if count < self._aggregation_threshold:
+                continue
+            mask = idx == i
+            agg_pts.append([np.mean(x[mask]), np.mean(y[mask])])
+            self._agg_indices.append(np.flatnonzero(mask))
+            agg_colors.append(
+                Counter(
+                    brush.color().getRgb() for brush in brushes[mask]
+                )
+            )
+        self._agg_coords = fn.transformCoordinates(painter.transform(), np.array(agg_pts).T).T
+        return agg_colors
+
+    def _paint_aggregated_points(self, painter, agg_colors):
+        if self._agg_coords is None:
+            return
+
+        countf = 8 / max(sum(c.values()) for c in agg_colors)
+        text_opt = QTextOption()
+        text_opt.setAlignment(Qt.AlignCenter)
+        rs = []
+        for (pt, spot_colors) in zip(self._agg_coords, agg_colors):
+            painter.resetTransform()
+            painter.translate(*pt)
+            total = sum(spot_colors.values())
+            r = int(6 + countf * total)
+            rs.append(r + 12)
+            if len(spot_colors) == 1:
+                color = QColor(*next(iter(spot_colors)))
+                painter.setBrush(fn.mkBrush(color))
+                painter.setPen(fn.mkPen(color))
+                painter.drawEllipse(-r, -r, 2 * r, 2 * r)
+                painter.setBrush(fn.mkBrush(None))
+                for r in (r + 3, r + 6):
+                    painter.setPen(fn.mkPen(color, width=5))
+                    painter.drawEllipse(-r, -r, 2 * r, 2 * r)
+            else:
+                start_angle = 0
+                for color, count in spot_colors.items():
+                    angle_span = 360 * count / total
+                    painter.setBrush(fn.mkBrush(color))
+                    painter.setPen(fn.mkPen(color))
+                    start = int(16 * start_angle)
+                    span = int(16 * angle_span)
+                    painter.drawPie(-r, -r, 2 * r, 2 * r, start, span)
+                    for nr in (r + 3, r + 6):
+                        painter.setPen(fn.mkPen(color, width=5))
+                        painter.drawArc(-nr, -nr, 2 * nr, 2 * nr, start, span)
+                    start_angle += angle_span
+
+            painter.setBrush(fn.mkBrush(QColor(0, 0, 0)))
+            painter.setPen(fn.mkPen(QColor(0, 0, 0)))
+            painter.drawText(QRectF(-15, -15, 30, 30), str(total), text_opt)
+        self._agg_r2s = np.array(rs) ** 2
+
+    def aggregatedPointsAt(self, pos):
+        """
+        Returns indices of aggregated points for the given **scene** coordinate.
+
+        Note that unlike pointsAt, this function's argument is scene coordinate
+        and not data coordinate. This is because the aggregation is done in scene
+        coordinates.
+        """
+        if self._agg_indices is None:
+            indices = []
+        else:
+            x, y = pos.x(), pos.y()
+            aggs = np.flatnonzero(
+                np.sum((self._agg_coords - np.array([x, y])) ** 2, axis=1)
+                < self._agg_r2s)
+            indices = list(itertools.chain(*(self._agg_indices[i] for i in aggs)))
+        return self.points()[indices][::-1]
+
+    def pointsAt(self, pos):
+        # Override to ignore aggregated points.
+        try:
+            self.data["visible"] = self._nonaggregated
+            return super().pointsAt(pos)
+        finally:
+            self.data["visible"] = True
 
 def _define_symbols():
     """
@@ -510,6 +667,11 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
     class_density = Setting(False)
     jitter_size = Setting(0)
 
+    # Subclasses that want to "opt in" aggregation of dense regions should
+    # override this with `aggregate_dense_regions = Setting(True)`
+    # (or `Setting(False)` if they want to have it disabled by default).
+    aggregate_dense_regions = False
+
     resolution = 256
 
     CurveSymbols = np.array("o x t + d star ?".split())
@@ -579,6 +741,19 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self.timer = None
 
         self.parameter_setter = ScatterBaseParameterSetter(self)
+
+    def allow_aggregation(self):
+        return (
+            (self.selection is None or len(self.selection) == 0)
+            and not self.subset_is_shown
+            and (self.labels is None or len(self.labels) == 0)
+            and self.jitter_size == 0
+        )
+
+    def set_aggregation(self):
+        if self.scatterplot_item is not None:
+            self.scatterplot_item.setAggregation(
+                self.aggregate_dense_regions and self.allow_aggregation())
 
     def _create_legend(self, anchor):
         legend = LegendItem()
@@ -652,6 +827,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self.scatterplot_item.setCoordinates(x, y)
         self.scatterplot_item_sel.setCoordinates(x, y)
         self.update_labels()
+        self.set_aggregation()
 
     # TODO: Rename to remove_plot_items
     def clear(self):
@@ -1276,6 +1452,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         self._signal_too_many_labels(
             bool(mask is not None and mask.sum() > self.MAX_VISIBLE_LABELS))
         if self._too_many_labels or mask is None or not np.any(mask):
+            self.set_aggregation()
             return
 
         foreground = self.plot_widget.palette().color(QPalette.Text)
@@ -1288,6 +1465,8 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             self.plot_widget.addItem(ti)
             self.labels.append(ti)
             ti.setFont(self.parameter_setter.label_font)
+
+        self.set_aggregation()
 
     def _signal_too_many_labels(self, too_many):
         if self._too_many_labels != too_many:
@@ -1544,6 +1723,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             if self.label_only_selected:
                 self.update_labels()
             self.master.selection_changed()
+            self.set_aggregation()
 
     def select(self, points):
         # noinspection PyArgumentList
@@ -1588,6 +1768,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         if self.label_only_selected:
             self.update_labels()
         self.master.selection_changed()
+        self.set_aggregation()
 
     def _compress_indices(self):
         indices = sorted(set(self.selection) | {0})
@@ -1610,11 +1791,13 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         """
         if self.scatterplot_item is None:
             return False
-        act_pos = self.scatterplot_item.mapFromScene(event.scenePos())
-        point_data = [p.data() for p in self.scatterplot_item.pointsAt(act_pos)]
-        text = self.master.get_tooltip(point_data)
-        if text:
-            QToolTip.showText(event.screenPos(), text, widget=self.plot_widget)
-            return True
+        pos = event.scenePos()
+        act_pos = self.scatterplot_item.mapFromScene(pos)
+        if len(points := self.scatterplot_item.aggregatedPointsAt(pos)) != 0:
+            text = self.master.get_aggregated_tooltip([p.data() for p in points])
+        elif len(points := self.scatterplot_item.pointsAt(act_pos)) != 0:
+            text = self.master.get_tooltip([p.data() for p in points])
         else:
             return False
+        QToolTip.showText(event.screenPos(), text, widget=self.plot_widget)
+        return True

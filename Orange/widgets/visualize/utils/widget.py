@@ -341,6 +341,20 @@ class OWProjectionWidgetBase(OWWidget, openclass=True):
             text = f"{len(point_ids)} instances<hr/>{text}<hr/>..."
         return text
 
+    def get_aggregated_tooltip(self, point_ids):
+        """
+        Return tooltip for aggregate points (e.g. piecharts).
+
+        Default implementation falls back to get_tooltip
+
+        Args:
+            point_ids (list): indices into 'data'
+
+        Returns:
+            tooltip (str)
+        """
+        return self.get_tooltip(point_ids)
+
     def keyPressEvent(self, event):
         """Update the tip about using the modifier keys when selecting"""
         super().keyPressEvent(event)

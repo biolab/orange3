@@ -4,10 +4,9 @@ from itertools import count
 from unittest.mock import patch, Mock
 import numpy as np
 
-from AnyQt.QtCore import QRectF, Qt
-from AnyQt.QtGui import QColor
+from AnyQt.QtCore import QRectF, QPointF, Qt
+from AnyQt.QtGui import QColor, QTransform
 from AnyQt.QtTest import QSignalSpy
-
 from pyqtgraph import mkPen, mkBrush
 
 from orangewidget.tests.base import GuiTest
@@ -1319,6 +1318,87 @@ class TestOWScatterPlotBase(WidgetTest):
         self.assertEqual(graph.scatterplot_item.data["symbol"][2],
                          graph.CurveSymbols[0])
 
+    def test_set_aggregations(self):
+        graph = self.graph
+        graph.aggregate_dense_regions = True
+
+
+        with patch.object(graph, "allow_aggregation") as aa:
+            assert self.graph.scatterplot_item is None
+            aa.return_value = True
+            # Must not crash
+            graph.set_aggregation()
+
+            graph.reset_graph()
+            aa.return_value = True
+            graph.set_aggregation()
+            self.assertIsNotNone(self.graph.scatterplot_item._aggregation_size)
+
+            aa.return_value = False
+            graph.set_aggregation()
+            self.assertIsNone(self.graph.scatterplot_item._aggregation_size)
+
+    def test_allow_aggregation(self):
+        graph = self.graph
+
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.selection = [1, 2, 3]
+        self.assertFalse(graph.allow_aggregation())
+        graph.selection = []
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.subset_is_shown = True
+        self.assertFalse(graph.allow_aggregation())
+        graph.subset_is_shown = False
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.labels = ["Foo"]
+        self.assertFalse(graph.allow_aggregation())
+        graph.labels = []
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.jitter_size = 1
+        self.assertFalse(graph.allow_aggregation())
+        graph.jitter_size = 0
+        self.assertTrue(graph.allow_aggregation())
+
+    @patch("AnyQt.QtWidgets.QToolTip.showText")
+    def test_help_event(self, _):
+        master = self.master
+        graph = self.graph
+        event = Mock()
+
+        graph.scatterplot_item = None
+        self.assertFalse(graph.help_event(event))
+
+        scp = graph.scatterplot_item = Mock()
+        scp.mapFromScene = Mock()
+        scp.aggregatedPointsAt = Mock(return_value=[])
+        master.get_aggregated_tooltip = Mock()
+        scp.pointsAt = Mock(return_value=[])
+        master.get_tooltip = Mock()
+
+        self.assertFalse(graph.help_event(event))
+
+        mv = [Mock(), Mock()]
+        scp.pointsAt = Mock(return_value=mv)
+        self.assertTrue(graph.help_event(event))
+        master.get_aggregated_tooltip.assert_not_called()
+        master.get_tooltip.assert_called_with([mv[0].data.return_value,
+                                               mv[1].data.return_value])
+        master.get_aggregated_tooltip.reset_mock()
+        scp.pointsAt.reset_mock()
+        master.get_tooltip.reset_mock()
+
+        scp.aggregatedPointsAt = Mock(return_value=mv)
+        self.assertTrue(graph.help_event(event))
+        master.get_tooltip.assert_not_called()
+        scp.pointsAt.assert_not_called()
+        master.get_aggregated_tooltip.assert_called_with([mv[0].data.return_value,
+                                                          mv[1].data.return_value])
+
+
     def test_show_grid(self):
         graph = self.graph
         show_grid = self.graph.plot_widget.showGrid = Mock()
@@ -1648,6 +1728,125 @@ class TestScatterPlotItem(GuiTest):
             x, y = scp.getData()
             np.testing.assert_equal(x, np.arange(10, 15))
             np.testing.assert_equal(y, np.arange(20, 25))
+
+    def test_set_aggregation(self):
+        orig_x = np.arange(10, 15)
+        orig_y = np.arange(20, 25)
+        scp = ScatterPlotItem(x=orig_x[:], y=orig_y[:])
+        scp.update = Mock()
+
+        self.assertIsNone(scp._aggregation_size)
+        scp.setAggregation(False)
+        scp.update.assert_not_called()
+
+        scp.setAggregation(True)
+        self.assertIsNotNone(scp._aggregation_size)
+        scp.update.assert_called_once()
+        scp.update.reset_mock()
+
+        scp.setAggregation(True)
+        self.assertIsNotNone(scp._aggregation_size)
+        scp.update.assert_not_called()
+
+        scp.setAggregation(False)
+        scp.update.assert_called_once()
+
+    def test_get_aggregate_points(self):
+        x, y = np.array([[1, 3], [1, 3], [1.5, 3.2],
+                         [24, 100],
+                         [200, 1],
+                         [24.5, 100], [200, 20]]).T
+        n = len(x)
+        scp = ScatterPlotItem(x=x, y=y)
+        scp.setBrush([mkBrush(QColor(0, 0, 0))] +
+                     [mkBrush(QColor(10 * i, 10 * i, 10 * i)) for i in range(n - 1)])
+
+        scp._agg_size_default = 10
+        scp._agg_threshold_default = 3
+        scp._maskAt = Mock(return_value=np.arange(n - 1))
+        painter = Mock()
+        painter.transform = lambda: QTransform(1, 0, 0, 0, -1, 0, 0, 0, 1)
+
+        self.assertIsNone(scp._get_aggregated_points(painter))
+        np.testing.assert_equal(scp.data["visible"], np.ones(n))
+
+        scp.setAggregation(True)
+        scp._nonaggregated = True
+        colors = scp._get_aggregated_points(painter)
+        pts = scp._agg_coords
+        np.testing.assert_almost_equal(pts, [[ 1.16666667, -3.06666667]])
+        self.assertEqual(colors, [{(0, 0, 0, 255): 2, (10, 10, 10, 255): 1}])
+        np.testing.assert_equal(scp._nonaggregated, [0, 0, 0, 1, 1, 1, 1])
+
+        scp._aggregation_threshold = 2
+        scp._nonaggregated = True
+        colors = scp._get_aggregated_points(painter)
+        pts = scp._agg_coords
+        np.testing.assert_almost_equal(pts, [[1.16666667, -3.06666667],
+                                             [24.25, -100]])
+        self.assertEqual(colors, [
+            {(0, 0, 0, 255): 2, (10, 10, 10, 255): 1},
+            {(20, 20, 20, 255): 1, (40, 40, 40, 255): 1}
+        ])
+        np.testing.assert_equal(scp._nonaggregated, [0, 0, 0, 0, 1, 0, 1])
+        scp.data["visible"] = np.ones(n)
+
+        scp._aggregation_threshold = 4
+        scp._nonaggregated = True
+        self.assertIsNone(scp._get_aggregated_points(painter))
+        np.testing.assert_equal(scp._nonaggregated, np.ones(n))
+
+    def test_paint_aggregated_points(self):
+        scp = ScatterPlotItem()
+        painter = Mock()
+
+        scp._agg_coordspts = [[1, 2], [3, 4]]
+        colors = [
+            {(0, 0, 0, 255): 2, (10, 10, 10, 255): 1},
+            {(20, 20, 20, 255): 3}
+        ]
+
+        # Well ... don't crash, OK?
+        scp._paint_aggregated_points(painter, colors)
+        scp._paint_aggregated_points(painter, None)
+
+    def test_pointsAt(self):
+        x, y = np.array([[1, 3], [1, 3], [1.5, 3.2],
+                         [24, 100],
+                         [200, 1],
+                         [24.5, 100], [200, 20]]).T
+        n = len(x)
+        scp = ScatterPlotItem(x=x, y=y)
+        scp.setBrush([mkBrush(QColor(0, 0, 0))] +
+                     [mkBrush(QColor(10 * i, 10 * i, 10 * i)) for i in range(n - 1)])
+        scp.setPointData(np.arange(n))
+        scp._agg_size_default = 10
+        scp._maskAt = Mock(return_value=np.arange(n - 1))
+        painter = Mock()
+        painter.transform = lambda: QTransform(1, 0, 0, 0, -1, 0, 0, 0, 1)
+        scp.setAggregation(True)
+        scp._aggregation_threshold = 2
+
+        scp._nonaggregated = True
+        agg_colors = scp._get_aggregated_points(painter)
+        scp._paint_aggregated_points(painter, agg_colors)
+
+        self.assertEqual(
+            {p.data() for p in scp.aggregatedPointsAt(QPointF(1.2, 1.3))}, {0, 1, 2})
+        self.assertEqual(
+            len(scp.aggregatedPointsAt(QPointF(200, 1))), 0)
+
+        def test_mask(*_, **__):
+            np.testing.assert_equal(
+                scp.data["visible"],
+                [False, False, False, False, True, False, True])
+
+        with patch(
+                "pyqtgraph.graphicsItems.ScatterPlotItem.ScatterPlotItem.pointsAt",
+                new=test_mask):
+            scp.pointsAt(QPointF(1.2, 1.3))
+        np.testing.assert_equal(scp.data["visible"], True)
+
 
 
 if __name__ == "__main__":

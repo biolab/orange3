@@ -664,6 +664,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data = Table("heart_disease")
         self.send_signal(self.widget.Inputs.data, data)
         widget = self.widget
+        widget.graph.aggregate_dense_regions = False
+
         graph = widget.graph
         scatterplot_item = graph.scatterplot_item
 
@@ -1481,6 +1483,42 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(list(error_bar_item.opts["left"][:3].round(1)),
                          [0.1] * 3)
 
+    def test_allow_aggregation(self):
+        widget = self.widget
+        graph = self.widget.graph
+
+        self.send_signal(widget.Inputs.data, self.data)
+
+        self.assertTrue(graph.allow_aggregation())
+
+        self._select_data()
+        self.assertFalse(graph.allow_aggregation())
+
+        graph.unselect_all()
+        self.assertTrue(graph.allow_aggregation())
+
+        self.send_signal(widget.Inputs.data_subset, self.data[:5])
+        self.assertFalse(graph.allow_aggregation())
+
+        self.send_signal(widget.Inputs.data_subset, None)
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.jitter_size = 1
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.jitter_continuous = True
+        self.assertFalse(graph.allow_aggregation())
+
+        graph.jitter_size = 0
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.jitter_size = 1
+        graph.jitter_continuous = False
+        self.send_signal(widget.Inputs.data, Table("titanic"))
+        self.assertFalse(graph.allow_aggregation())
+
+        graph.jitter_size = 0
+        self.assertTrue(graph.allow_aggregation())
 
 if __name__ == "__main__":
     import unittest
