@@ -274,7 +274,7 @@ class OWSql(OWBaseSql):
 
         sample = False
 
-        if table.approx_len() > LARGE_TABLE and self.guess_values:
+        if len(table) > LARGE_TABLE and self.guess_values:
             confirm = QMessageBox(self)
             confirm.setIcon(QMessageBox.Warning)
             confirm.setText("Attribute discovery might take "
@@ -304,16 +304,16 @@ class OWSql(OWBaseSql):
             QApplication.restoreOverrideCursor()
             table.domain = domain
 
-        if table.approx_len() > AUTO_DL_LIMIT:
+        if len(table) > AUTO_DL_LIMIT:
             if is_postgres(self.backend):
                 confirm = QMessageBox(self)
                 confirm.setIcon(QMessageBox.Warning)
                 confirm.setText("Data appears to be big. Do you really "
                                 "want to download it to local memory?\n"
                                 "Table length: {:,}. Limit {:,}".format(
-                    table.approx_len(), MAX_DL_LIMIT))
+                    len(table), MAX_DL_LIMIT))
 
-                if table.approx_len() <= MAX_DL_LIMIT:
+                if len(table) <= MAX_DL_LIMIT:
                     confirm.addButton("Yes", QMessageBox.YesRole)
                 no_button = confirm.addButton("No", QMessageBox.NoRole)
                 sample_button = confirm.addButton("Yes, a sample",
@@ -323,13 +323,13 @@ class OWSql(OWBaseSql):
                     return None
                 elif confirm.clickedButton() == sample_button:
                     table = table.sample_percentage(
-                        AUTO_DL_LIMIT / table.approx_len() * 100)
+                        AUTO_DL_LIMIT / len(table) * 100)
             else:
-                if table.approx_len() > MAX_DL_LIMIT:
+                if len(table) > MAX_DL_LIMIT:
                     QMessageBox.warning(
                         self, 'Warning',
                         "Data is too big to download.\n"
-                        "Table length: {:,}. Limit {:,}".format(table.approx_len(), MAX_DL_LIMIT)
+                        "Table length: {:,}. Limit {:,}".format(len(table), MAX_DL_LIMIT)
                     )
                     return None
                 else:

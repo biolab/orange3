@@ -3,8 +3,6 @@ from collections import OrderedDict
 from orangewidget.report.report import *
 from orangewidget.report import report as __report
 
-from Orange.data.sql.table import SqlTable
-
 __all__ = __report.__all__ + [
     "DataReport", "describe_data", "describe_data_brief",
     "describe_domain", "describe_domain_brief",
@@ -117,10 +115,7 @@ def describe_data(data):
     items = OrderedDict()
     if data is None:
         return items
-    if isinstance(data, SqlTable):
-        items["Data instances"] = data.approx_len()
-    else:
-        items["Data instances"] = len(data)
+    items["Data instances"] = len(data)
     items.update(describe_domain(data.domain))
     return items
 
@@ -170,9 +165,6 @@ def describe_data_brief(data):
     items = OrderedDict()
     if data is None:
         return items
-    if isinstance(data, SqlTable):
-        items["Data instances"] = data.approx_len()
-    else:
-        items["Data instances"] = len(data)
+    items["Data instances"] = len(data)
     items.update(describe_domain_brief(data.domain))
     return items
