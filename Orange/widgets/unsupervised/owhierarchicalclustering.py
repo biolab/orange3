@@ -652,7 +652,8 @@ class OWHierarchicalClustering(widget.OWWidget):
                 labels = [str(attr[i]) for i in indices]
             elif isinstance(self.annotation, Orange.data.Variable):
                 col_data = self.items.get_column(self.annotation)
-                labels = [self.annotation.str_val(val) for val in col_data]
+                labels = [self.annotation.str_val(val).replace("\n", " ")
+                          for val in col_data]
                 labels = [labels[idx] for idx in indices]
             else:
                 labels = []

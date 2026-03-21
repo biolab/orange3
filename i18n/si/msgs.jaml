@@ -11676,6 +11676,8 @@ widgets/unsupervised/owhierarchicalclustering.py:
             label_model: false
             Enumeration: Številčenje
             Name: Ime
+            \n: false
+            ' ': false
             ', ': true
         def `commit`:
             items: false
