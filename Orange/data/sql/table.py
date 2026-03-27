@@ -89,7 +89,7 @@ class SqlTable(Table):
             elif "select" in table_or_sql.lower():
                 table = "(%s) as my_table" % table_or_sql.strip("; ")
             else:
-                table = table_or_sql
+                table = self.backend.quote_identifier(table_or_sql)
             self.table_name = table
             self.domain = self.get_domain(type_hints, inspect_values)
             self.name = table
@@ -594,16 +594,16 @@ class SqlTable(Table):
         if "." in self.table_name:
             schema, name = self.table_name.split(".")
             sample_name = '__%s_%s_%s' % (
-                name,
+                self.backend.unquote_identifier(name),
                 method,
                 parameter.replace('.', '_').replace('-', '_'))
-            sample_table_q = ".".join([schema, sample_name])
+            sample_table_q = ".".join([schema, self.backend.quote_identifier(sample_name)])
         else:
             sample_table = '__%s_%s_%s' % (
-                self.table_name,
+                self.backend.unquote_identifier(self.table_name),
                 method,
                 parameter.replace('.', '_').replace('-', '_'))
-            sample_table_q = sample_table
+            sample_table_q = self.backend.quote_identifier(sample_table)
         create = False
         try:
             query = "SELECT * FROM " + sample_table_q + " LIMIT 0;"
