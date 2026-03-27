@@ -39,11 +39,6 @@ class Summary(NamedTuple):
     M: Optional[_ArrayStat]
 
 
-def _sql_table_len(table) -> 'Future[int]':
-    exc = ThreadPoolExecutor()
-    return exc.submit(table.__len__)
-
-
 def table_summary(table: Table) -> Summary:
     if isinstance(table, SqlTable):
         n_instances = len(table)
