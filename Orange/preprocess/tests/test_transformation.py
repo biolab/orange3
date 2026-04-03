@@ -85,6 +85,48 @@ class TestTransformEquality(unittest.TestCase):
         self.assertNotEqual(t1, t1a)
         self.assertNotEqual(hash(t1), hash(t1a))
 
+    def test_safe_lookup_table_equal(self):
+        sl = Lookup._safe_lookup_table_equal
+        self.assertTrue(sl([1, 2, 3], [1, 2, 3]))
+        self.assertTrue(sl(np.array([1, 2, 3]), np.array([1, 2, 3])))
+        self.assertTrue(sl(np.array("foo bar baz".split()), np.array("foo bar baz".split())))
+
+        self.assertFalse(sl([1, 2, 3], [1, 2, 4]))
+        self.assertFalse(sl(np.array([1, 2, 3]), np.array([1, 2, 4])))
+        self.assertFalse(sl(np.array("foo bar baz".split()), np.array("foo bar qux".split())))
+        self.assertFalse(sl([1, 2, 3], [1, 2, 3, 4]))
+        self.assertFalse(sl(np.array([1, 2, 3]), np.array([1, 2, 3, 4])))
+        self.assertFalse(sl(np.array("foo bar baz".split()), np.array("foo bar baz qux".split())))
+
+        self.assertFalse(sl(np.array([1, 2, 3]), np.array("foo bar baz".split())))
+
+    def test_eq(self):
+        self.assertEqual(
+            Lookup(self.disc1, np.array([0, 2, 1]), 1),
+            Lookup(self.disc1a, np.array([0, 2, 1]), 1))
+        self.assertEqual(
+            Lookup(self.disc1, np.array(["foo", "bar", "baz"]), ""),
+            Lookup(self.disc1a, np.array(["foo", "bar", "baz"]), ""))
+
+        self.assertNotEqual(
+            Lookup(self.disc1, np.array([0, 2, 1]), 1),
+            Lookup(self.disc1a, np.array([0, 1, 2]), 1))
+        self.assertNotEqual(
+            Lookup(self.disc1, np.array([0, 2, 1]), 1),
+            Lookup(self.disc1a, np.array([0, 2, 1, 5]), 1))
+        self.assertNotEqual(
+            Lookup(self.disc1, np.array([0, 2, 1]), 1),
+            Lookup(self.disc1a, np.array([0, 2, 1]), 2))
+        self.assertNotEqual(
+            Lookup(self.disc1, np.array(["foo", "bar", "baz"]), ""),
+            Lookup(self.disc1a, np.array(["foo", "baz", "bar"]), ""))
+        self.assertNotEqual(
+            Lookup(self.disc1, np.array(["foo", "bar", "baz"]), ""),
+            Lookup(self.disc1a, np.array(["foo", "bar", "baz"]), "qux"))
+        self.assertNotEqual(
+            Lookup(self.disc1, np.array([0, 1, 2]), 1),
+            Lookup(self.disc1a, np.array(["foo", "bar", "baz"]), "qux"))
+
     def test_mapping(self):
         def test_equal(a, b):
             self.assertEqual(a, b)
