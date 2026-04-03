@@ -218,12 +218,27 @@ class Lookup(Transformation):
         :type variable: int or str or :obj:`~Orange.data.DiscreteVariable`
         :param lookup_table: transformations for each value of `self.variable`
         :type lookup_table: np.array
-        :param unknown: The value to be used as unknown value.
-        :type unknown: float or int
+        :param unknown  : The value to be used as unknown value.
+        :type unknown: float or int or str
         """
         super().__init__(variable)
         self.lookup_table = lookup_table
         self.unknown = unknown
+
+    @staticmethod
+    def _safe_lookup_table_equal(a, b):
+        a = np.asarray(a)
+        b = np.asarray(b)
+
+        if a.shape != b.shape:
+            return False
+
+        a_is_num = np.issubdtype(a.dtype, np.number)
+        b_is_num = np.issubdtype(b.dtype, np.number)
+        if a_is_num and b_is_num:
+            return np.allclose(a, b, equal_nan=True)
+
+        return np.array_equal(a, b)
 
     def transform(self, column):
         # Densify DiscreteVariable values coming from sparse datasets.
@@ -236,11 +251,11 @@ class Lookup(Transformation):
         return np.where(mask, self.unknown, values)
 
     def __eq__(self, other):
-        return super().__eq__(other) \
-               and np.allclose(self.lookup_table, other.lookup_table,
-                               equal_nan=True) \
-               and np.allclose(self.unknown, other.unknown, equal_nan=True)
-
+        return (
+            super().__eq__(other)
+            and self._safe_lookup_table_equal(self.lookup_table, other.lookup_table)
+            and self._safe_lookup_table_equal(self.unknown, other.unknown)
+        )
     def __hash__(self):
         return hash(
             (
