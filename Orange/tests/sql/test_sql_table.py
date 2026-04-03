@@ -6,6 +6,7 @@ import contextlib
 import unittest.mock
 import unittest
 import string
+from datetime import datetime
 
 import numpy as np
 from numpy.testing import assert_almost_equal
@@ -44,6 +45,11 @@ class TestSqlTable(unittest.TestCase, dbt):
                        inspect_values=guess_values)
 
         self.drop_sql_table(table_name)
+
+    def test_approx_len(self):
+        if datetime.today() > datetime(2027, 1, 1):
+            # remove table.approx_len() function and this test
+            self.assertTrue(False)
 
     @dbt.run_on(["postgres"])
     def test_constructs_correct_attributes(self):

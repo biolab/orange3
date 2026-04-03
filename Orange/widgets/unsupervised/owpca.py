@@ -125,7 +125,7 @@ class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
         if not data:
             self.clear_outputs()
         if isinstance(data, SqlTable):
-            if data.approx_len() < AUTO_DL_LIMIT:
+            if len(data) < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
                 self.information("Data has been sampled")

@@ -85,7 +85,6 @@ class TestOWSql(WidgetTest):
         backend().list_tables.return_value = ["a", "b", "c"]
         backend().n_tables.return_value = 3
         mock_backends.available_backends.return_value = [backend]
-        mock_sqltable().approx_len.return_value = 100
 
         settings = {"host": "host", "port": "port", "database": "DB",
                     "schema": "", "username": "username",

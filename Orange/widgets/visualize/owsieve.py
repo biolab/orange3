@@ -162,7 +162,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         Args:
             data (Table): input data
         """
-        if isinstance(data, SqlTable) and data.approx_len() > LARGE_TABLE:
+        if isinstance(data, SqlTable) and len(data) > LARGE_TABLE:
             data = data.sample_time(DEFAULT_SAMPLE_TIME)
 
         self.closeContext()
