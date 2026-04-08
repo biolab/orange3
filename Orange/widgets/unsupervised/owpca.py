@@ -27,7 +27,7 @@ LINE_NAMES = ["component variance", "cumulative variance"]
 class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
     name = "PCA"
     description = "Principal component analysis with a scree-diagram."
-    icon = "icons/PCA.svg"
+    icon = "icons/PCA-symbolic.svg"
     priority = 3050
     keywords = "pca, principal component analysis, linear transformation"
 

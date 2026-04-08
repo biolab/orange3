@@ -315,7 +315,7 @@ class RangePreview(QWidget):
 class OWParameterFitter(OWWidget, ConcurrentWidgetMixin):
     name = "Parameter Fitter"
     description = "Fit learner for various values of fitting parameter."
-    icon = "icons/ParameterFitter.svg"
+    icon = "icons/ParameterFitter-symbolic.svg"
     priority = 1110
     keywords = "parameter, fitter, tuning"
 

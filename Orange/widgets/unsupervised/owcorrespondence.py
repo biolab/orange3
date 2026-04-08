@@ -32,7 +32,7 @@ class ScatterPlotItem(pg.ScatterPlotItem):
 class OWCorrespondenceAnalysis(widget.OWWidget):
     name = "Correspondence Analysis"
     description = "Correspondence analysis for categorical multivariate data."
-    icon = "icons/CorrespondenceAnalysis.svg"
+    icon = "icons/CorrespondenceAnalysis-symbolic.svg"
     keywords = "correspondence analysis"
 
     class Inputs:

@@ -41,7 +41,7 @@ from Orange.widgets.widget import OWWidget
 class OWPythagorasTree(OWWidget):
     name = "Pythagorean Tree"
     description = 'Pythagorean Tree visualization for tree like-structures.'
-    icon = 'icons/PythagoreanTree.svg'
+    icon = 'icons/PythagoreanTree-symbolic.svg'
     keywords = "pythagorean tree, fractal"
 
     priority = 1000

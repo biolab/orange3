@@ -135,7 +135,7 @@ def create_list_model(
 class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
     description = "Plot a data matrix heatmap."
-    icon = "icons/Heatmap.svg"
+    icon = "icons/Heatmap-symbolic.svg"
     priority = 260
     keywords = "heat map"
 

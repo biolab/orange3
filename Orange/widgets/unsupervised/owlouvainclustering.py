@@ -48,7 +48,7 @@ METRICS = [("Euclidean", "l2"), ("Manhattan", "l1"), ("Cosine", "cosine")]
 class OWLouvainClustering(widget.OWWidget):
     name = "Louvain Clustering"
     description = "Detects communities in a network of nearest neighbors."
-    icon = "icons/LouvainClustering.svg"
+    icon = "icons/LouvainClustering-symbolic.svg"
     priority = 2110
     keywords = "community"
 

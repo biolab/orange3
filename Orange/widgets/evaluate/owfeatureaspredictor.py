@@ -17,7 +17,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 class OWFeatureAsPredictor(OWWidget):
     name = "Feature as Predictor"
     description = "Use a column as probabilities or predictions"
-    icon = "icons/FeatureAsPredictor.svg"
+    icon = "icons/FeatureAsPredictor-symbolic.svg"
     priority = 1000
     keywords = "column predictor"
 

@@ -184,7 +184,7 @@ class OWRadvizGraph(OWGraphWithAnchors):
 class OWRadviz(OWAnchorProjectionWidget, VizRankMixin(RadvizVizRank)):
     name = "Radviz"
     description = "Display Radviz projection"
-    icon = "icons/Radviz.svg"
+    icon = "icons/Radviz-symbolic.svg"
     priority = 241
     keywords = "radviz, viz"
 

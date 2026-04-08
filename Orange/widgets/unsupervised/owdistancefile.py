@@ -22,7 +22,7 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
     name = "Distance File"
     id = "orange.widgets.unsupervised.distancefile"
     description = "Read distances from a file."
-    icon = "icons/DistanceFile.svg"
+    icon = "icons/DistanceFile-symbolic.svg"
     priority = 10
     keywords = "distance file, load, read, open"
 

@@ -133,7 +133,7 @@ class State(enum.Enum):
 class OWTestAndScore(OWWidget):
     name = "Test and Score"
     description = "Cross-validation accuracy estimation."
-    icon = "icons/TestLearners1.svg"
+    icon = "icons/TestLearners1-symbolic.svg"
     priority = 100
     keywords = "test and score, cross validation, cv"
     replaces = ["Orange.widgets.evaluate.owtestlearners.OWTestLearners"]

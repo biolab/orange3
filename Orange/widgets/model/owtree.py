@@ -17,7 +17,7 @@ class OWTreeLearner(OWBaseLearner):
     """Tree algorithm with forward pruning."""
     name = "Tree"
     description = "A tree algorithm with forward pruning."
-    icon = "icons/Tree.svg"
+    icon = "icons/Tree-symbolic.svg"
     replaces = [
         "Orange.widgets.classify.owclassificationtree.OWClassificationTree",
         "Orange.widgets.regression.owregressiontree.OWRegressionTree",

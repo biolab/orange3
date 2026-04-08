@@ -62,7 +62,7 @@ class OWSilhouettePlot(widget.OWWidget):
     description = "Visually assess cluster quality and " \
                   "the degree of cluster membership."
 
-    icon = "icons/SilhouettePlot.svg"
+    icon = "icons/SilhouettePlot-symbolic.svg"
     priority = 300
     keywords = "silhouette plot"
 

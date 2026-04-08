@@ -188,7 +188,7 @@ class SpectralEmbeddingParametersEditor(ManifoldParametersEditor):
 class OWManifoldLearning(OWWidget):
     name = "Manifold Learning"
     description = "Nonlinear dimensionality reduction."
-    icon = "icons/Manifold.svg"
+    icon = "icons/Manifold-symbolic.svg"
     priority = 2200
     keywords = "manifold learning"
     settings_version = 2
