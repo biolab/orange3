@@ -371,6 +371,7 @@ class OWTreeGraph(OWTreeViewer2D):
             nunique, var = max(
                 ((len(set(self.dataset.get_column(v))), v)
                  for v in self.domain.metas if v.is_string),
+                key=lambda x: x[0],
                 default=(0, None))
             if nunique > 0.8 * len(self.dataset):
                 self.node_labels = var
