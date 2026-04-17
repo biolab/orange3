@@ -6,7 +6,8 @@ from unittest.mock import Mock
 import numpy as np
 
 from Orange.classification import TreeLearner
-from Orange.data import Table, ContinuousVariable, DiscreteVariable, Domain
+from Orange.data import (
+    Table, ContinuousVariable, DiscreteVariable, StringVariable, Domain)
 from Orange.tree import DiscreteNode, MappedDiscreteNode, Node, NumericNode, \
     TreeModel
 from Orange.widgets.tests.base import WidgetTest, WidgetOutputsTestMixin
@@ -340,6 +341,24 @@ class TestOWTreeGraph(WidgetTest, WidgetOutputsTestMixin):
         self.widget.update_node_info(node)
         self.assertIn(", ".join(map(var.str_val, values[[0, 50, 75, 11]])) + ", …",
                       node.toHtml())
+
+    def test_select_node_heuristic(self):
+        zoo = Table("zoo")
+        dom = zoo.domain
+        d = DiscreteVariable("d", values=tuple("abcde"))
+        s1 = StringVariable("s1")
+        s2 = StringVariable("s2")
+        s3 = StringVariable("s3")
+        domain = Domain(dom.attributes, dom.class_var, [d, s1, s2, s3, dom["name"]])
+        data = zoo.transform(domain)
+        with data.unlocked(data.metas):
+            data.metas[:, 0] = np.random.randint(0, 5, len(data))
+            data.metas[:, 1] = [str(i % 10) for i in range(len(data))]
+            data.metas[:, 2] = [str(i) for i in range(len(data))]
+            data.metas[:, 3] = [str(i) for i in range(len(data))]
+        zootree = TreeLearner()(data)
+        self.send_signal(self.widget.Inputs.tree, zootree)
+        self.assertIs(self.widget.node_labels, s2)
 
 
 if __name__ == "__main__":
