@@ -383,7 +383,7 @@ class invalidated:
 class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     name = "t-SNE"
     description = "Two-dimensional data projection with t-SNE."
-    icon = "icons/TSNE.svg"
+    icon = "icons/TSNE-symbolic.svg"
     priority = 920
     keywords = "t-sne, tsne"
 

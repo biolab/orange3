@@ -22,7 +22,7 @@ class OWLoadModel(OWUrlDropBase, RecentPathsWComboMixin):
     description = "Load a model from an input file."
     priority = 3050
     replaces = ["Orange.widgets.classify.owloadclassifier.OWLoadClassifier"]
-    icon = "icons/LoadModel.svg"
+    icon = "icons/LoadModel-symbolic.svg"
     keywords = "load model, file, open, model"
 
     class Outputs:

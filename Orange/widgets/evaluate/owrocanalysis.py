@@ -301,7 +301,7 @@ class OWROCAnalysis(widget.OWWidget):
     name = "ROC Analysis"
     description = "Display the Receiver Operating Characteristics curve " \
                   "based on the evaluation of classifiers."
-    icon = "icons/ROCAnalysis.svg"
+    icon = "icons/ROCAnalysis-symbolic.svg"
     priority = 1010
     keywords = "roc analysis, analyse"
 

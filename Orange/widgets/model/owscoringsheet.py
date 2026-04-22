@@ -24,7 +24,7 @@ class ScoringSheetRunner:
 class OWScoringSheet(OWBaseLearner, ConcurrentWidgetMixin):
     name = "Scoring Sheet"
     description = "A fast and explainable classifier."
-    icon = "icons/ScoringSheet.svg"
+    icon = "icons/ScoringSheet-symbolic.svg"
     replaces = ["orangecontrib.prototypes.widgets.owscoringsheet.OWScoringSheet"]
     priority = 75
     keywords = "scoring sheet"

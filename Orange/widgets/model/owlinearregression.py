@@ -18,7 +18,7 @@ class OWLinearRegression(OWBaseLearner):
     name = "Linear Regression"
     description = "A linear regression algorithm with optional L1 (LASSO), " \
                   "L2 (ridge) or L1L2 (elastic net) regularization."
-    icon = "icons/LinearRegression.svg"
+    icon = "icons/LinearRegression-symbolic.svg"
     replaces = [
         "Orange.widgets.regression.owlinearregression.OWLinearRegression",
     ]

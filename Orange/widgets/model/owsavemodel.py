@@ -9,7 +9,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 class OWSaveModel(OWSaveBase):
     name = "Save Model"
     description = "Save a trained model to an output file."
-    icon = "icons/SaveModel.svg"
+    icon = "icons/SaveModel-symbolic.svg"
     replaces = ["Orange.widgets.classify.owsaveclassifier.OWSaveClassifier"]
     priority = 3000
     keywords = "save model, save"

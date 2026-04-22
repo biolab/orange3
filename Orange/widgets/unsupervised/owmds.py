@@ -150,7 +150,7 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
     name = "MDS"
     description = "Two-dimensional data projection by multidimensional " \
                   "scaling constructed from a distance matrix."
-    icon = "icons/MDS.svg"
+    icon = "icons/MDS-symbolic.svg"
     keywords = "mds, multidimensional scaling, multi dimensional scaling"
 
     class Inputs(OWDataProjectionWidget.Inputs):

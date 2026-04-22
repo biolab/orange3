@@ -15,7 +15,7 @@ class OWCalibratedLearner(OWBaseLearner):
     name = "Calibrated Learner"
     description = "Wraps another learner with probability calibration and " \
                   "decision threshold optimization"
-    icon = "icons/CalibratedLearner.svg"
+    icon = "icons/CalibratedLearner-symbolic.svg"
     priority = 20
     keywords = "calibrated learner, calibration, threshold"
 

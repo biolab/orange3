@@ -245,7 +245,7 @@ class ParametersWidget(QWidget):
 class OWCurveFit(OWBaseLearner):
     name = "Curve Fit"
     description = "Fit a function to data."
-    icon = "icons/CurveFit.svg"
+    icon = "icons/CurveFit-symbolic.svg"
     priority = 90
     keywords = "curve fit, function"
 

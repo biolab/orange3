@@ -11,7 +11,7 @@ from Orange.widgets.widget import Msg
 class OWRandomForest(OWBaseLearner):
     name = "Random Forest"
     description = "Predict using an ensemble of decision trees."
-    icon = "icons/RandomForest.svg"
+    icon = "icons/RandomForest-symbolic.svg"
     replaces = [
         "Orange.widgets.classify.owrandomforest.OWRandomForest",
         "Orange.widgets.regression.owrandomforestregression.OWRandomForestRegression",

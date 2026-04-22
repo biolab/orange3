@@ -298,7 +298,7 @@ class GetGroups:
 class OWSOM(OWWidget):
     name = "Self-Organizing Map"
     description = "Computation of self-organizing map."
-    icon = "icons/SOM.svg"
+    icon = "icons/SOM-symbolic.svg"
     keywords = "self-organizing map, som"
 
     class Inputs:
