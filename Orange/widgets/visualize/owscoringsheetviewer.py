@@ -348,7 +348,7 @@ class OWScoringSheetViewer(OWWidget):
     name = "Scoring Sheet Viewer"
     description = "Visualize the scoring sheet model."
     want_control_area = False
-    icon = "icons/ScoringSheetViewer.svg"
+    icon = "icons/ScoringSheetViewer-symbolic.svg"
     replaces = [
         "orangecontrib.prototypes.widgets.owscoringsheetviewer.OWScoringSheetViewer"
     ]

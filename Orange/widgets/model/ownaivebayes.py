@@ -11,7 +11,7 @@ class OWNaiveBayes(OWBaseLearner):
     name = "Naive Bayes"
     description = "A fast and simple probabilistic classifier based on " \
                   "Bayes' theorem with the assumption of feature independence."
-    icon = "icons/NaiveBayes.svg"
+    icon = "icons/NaiveBayes-symbolic.svg"
     replaces = [
         "Orange.widgets.classify.ownaivebayes.OWNaiveBayes",
     ]

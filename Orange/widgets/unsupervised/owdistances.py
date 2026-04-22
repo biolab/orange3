@@ -95,7 +95,7 @@ class DistanceRunner:
 class OWDistances(OWWidget, ConcurrentWidgetMixin):
     name = "Distances"
     description = "Compute a matrix of pairwise distances."
-    icon = "icons/Distance.svg"
+    icon = "icons/Distance-symbolic.svg"
     keywords = "distances"
 
     class Inputs:

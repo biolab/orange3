@@ -7,7 +7,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 class OWSaveDistances(OWSaveBase):
     name = "Save Distance Matrix"
     description = "Save distance matrix to an output file."
-    icon = "icons/SaveDistances.svg"
+    icon = "icons/SaveDistances-symbolic.svg"
     keywords = "save distance matrix, distance matrix, save"
 
     filters = ["Excel File (*.xlsx)", "Distance File (*.dst)"]

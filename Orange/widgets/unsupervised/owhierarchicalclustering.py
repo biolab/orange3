@@ -181,7 +181,7 @@ class OWHierarchicalClustering(widget.OWWidget):
     name = "Hierarchical Clustering"
     description = "Display a dendrogram of a hierarchical clustering " \
                   "constructed from the input distance matrix."
-    icon = "icons/HierarchicalClustering.svg"
+    icon = "icons/HierarchicalClustering-symbolic.svg"
     priority = 2100
     keywords = "hierarchical clustering"
 

@@ -263,7 +263,7 @@ class GraphicsView(pg.GraphicsView):
 class OWDistanceMap(widget.OWWidget):
     name = "Distance Map"
     description = "Visualize a distance matrix."
-    icon = "icons/DistanceMap.svg"
+    icon = "icons/DistanceMap-symbolic.svg"
     priority = 1200
     keywords = "distance map"
 

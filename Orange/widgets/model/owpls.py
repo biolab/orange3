@@ -16,7 +16,7 @@ from Orange.widgets.widget import Msg
 class OWPLS(OWBaseLearner):
     name = 'PLS'
     description = "Partial Least Squares Regression widget for multivariate data analysis"
-    icon = "icons/PLS.svg"
+    icon = "icons/PLS-symbolic.svg"
     priority = 85
     keywords = "partial least squares"
 

@@ -10,7 +10,7 @@ from Orange.widgets.widget import Input, Output
 class OWDistanceTransformation(widget.OWWidget):
     name = "Distance Transformation"
     description = "Transform distances according to selected criteria."
-    icon = "icons/DistancesTransformation.svg"
+    icon = "icons/DistancesTransformation-symbolic.svg"
     keywords = "distance transformation"
 
     class Inputs:
