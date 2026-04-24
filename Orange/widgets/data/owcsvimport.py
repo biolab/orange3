@@ -68,6 +68,7 @@ from Orange.widgets.utils import (
 from Orange.widgets.utils.combobox import ItemStyledComboBox
 from Orange.widgets.utils.pathutils import (
     PathItem, VarPath, AbsPath, samepath, prettyfypath, isprefixed,
+    infer_prefix,
 )
 from Orange.widgets.utils.overlay import OverlayWidget
 from Orange.widgets.utils.settings import (
@@ -1282,9 +1283,17 @@ class OWCSVFileImport(OWUrlDropBase):
     def _saveState(self):
         session_items = []
         model = self.import_items_model
+        env = list(self._replacements().items())
         for item in map(model.item, range(model.rowCount())):
             if isinstance(item, ImportItem) and item.data(ImportItem.IsSessionItemRole):
                 vp = item.data(VarPathItem.VarPathRole)
+                # If the file lives inside a known prefix (e.g. the workflow's
+                # basedir), persist it as a VarPath so that moving the
+                # workflow together with its data resolves automatically.
+                if isinstance(vp, AbsPath) and env:
+                    inferred = infer_prefix(vp.path, env)
+                    if inferred is not None:
+                        vp = inferred
                 session_items.append((vp.as_dict(), item.options().as_dict()))
         self._session_items_v2 = session_items
 
