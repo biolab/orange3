@@ -1,0 +1,5 @@
+canvas/tests/test_mainwindow.py:
+    class `TestMainWindow`:
+        def `test_settings_dialog`:
+            exec: null
+            show: null
