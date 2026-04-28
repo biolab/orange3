@@ -9,8 +9,8 @@ languages:
   zh_CN:
     name: 简体中文
     international-name: 简体中文
-auto-import: |2
-  from orangecanvas.localization import Translator  # pylint: disable=wrong-import-order
-  _tr = Translator("Orange", "biolab.si", "Orange")
-  del Translator
+    auto-import: |
+      from orangecanvas.localization import Translator  # pylint: disable=wrong-import-order
+      _tr = Translator("Orange", "biolab.si", "Orange")
+      del Translator
 encoding: "utf-8"

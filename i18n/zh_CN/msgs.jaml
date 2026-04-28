@@ -1,28 +1,28 @@
 __init__.py:
     orange.addons: orange.addons
-    classification: classification
-    clustering: null
+    classification: 分类
+    clustering: 聚类
     distance: null
     ensembles: null
-    evaluation: evaluation
+    evaluation: 评估
     misc: null
     modelling: null
-    preprocess: preprocess
-    projection: projection
-    regression: null
+    preprocess: 预处理
+    projection: 投影
+    regression: 回归
     statistics: null
-    version: version
+    version: 版本
     widgets: null
     libGL.so.1: null
 base.py:
-    Learner: null
+    Learner: 学习器
     Model: 模型
     SklLearner: null
     SklModel: null
     ReprableWithPreprocessors: null
     class `ReprableWithPreprocessors`:
         def `_reprable_omit_param`:
-            preprocessors: null
+            preprocessors: 预处理器
     class `Learner`:
         def `fit`:
             Descendants of Learner must overload method fit or fit_storage: null
@@ -36,8 +36,8 @@ base.py:
             Fitting...: 正在拟合...
             domain: null
         def `name`:
-            Learner: null
-            Fitter: null
+            Learner: 学习器
+            Fitter: 拟合器
             Skl: null
             learner: null
             ([a-z0-9])([A-Z]): null
@@ -63,10 +63,10 @@ base.py:
             Unrecognized argument (instance of '{}'): null
             model returned a {prediction.ndim}-dimensional array: null
         def `__getstate__`:
-            original_data: null
+            original_data: 原始数据
     class `SklModel`:
         def `predict`:
-            probability: null
+            probability: 概率
             predict_proba: null
         def `__repr__`:
             '  # params=': null
@@ -81,18 +81,18 @@ base.py:
         def `__init__`:
             euclidean: null
             uniform: null
-            auto: null
+            auto: 自动
         def `fit`:
-            metric_params: null
-            metric: null
+            metric_params: 矩阵参数
+            metric: 矩阵
             mahalanobis: null
             V: null
     class `NNBase`:
         def `__init__`:
             relu: null
             adam: null
-            auto: null
-            constant: null
+            auto: 自动
+            constant: 常量
     class `CatGBModel`:
         def `predict`:
             predict_proba: null
@@ -120,9 +120,9 @@ tree.py:
             {:>20} {}{} {}\n: null
             '    ': null
 util.py:
-    default: null
+    default: 默认
     ORANGE_DEPRECATIONS_ERROR: null
-    error: null
+    error: 错误
     def `log_warnings`:
         nested log_warnings: null
     def `resource_filename`:
@@ -147,7 +147,7 @@ util.py:
     _Requirement: null
     name: null
     op: null
-    value: null
+    value: 值
     True: null
     true: null
     False: null
@@ -267,10 +267,10 @@ canvas/__main__.py:
             notifications/blog: null
             notifications/new-features: null
             announcement: null
-            blog: null
-            new-features: null
-            installed: null
-            local_config: null
+            blog: 博客
+            new-features: 新特性
+            installed: 已安装
+            local_config: 本地设置
             canvas/icons/: null
             .png: null
             def `remember_notification`:
@@ -283,8 +283,8 @@ canvas/__main__.py:
             reporting/machine-id: null
             Continuum: null
             conda: null
-            Orange Version: null
-            Application Version: null
+            Orange Version: Orange 版本
+            Application Version: 应用版本
             Anaconda: null
             UUID: null
             file: null
@@ -293,11 +293,11 @@ canvas/__main__.py:
             Usage statistics sent.: null
             w: null
             utf-8: null
-            Connection error while attempting to send usage statistics.: null
-            Failed to send usage statistics.: null
+            Connection error while attempting to send usage statistics.: 尝试发送使用数据时连接错误
+            Failed to send usage statistics.: 发送使用数据失败
         class `SendUsageStatistics`:
             def `run`:
-                Failed to send usage statistics.: null
+                Failed to send usage statistics.: 发送使用数据时失败
     class `OMain`:
         Orange.canvas.config.Config: null
         def `run`:
@@ -319,9 +319,9 @@ canvas/__main__.py:
             Clearing application settings: null
             clear '%s': null
         def `setup_application`:
-            DELETE_ON_START: null
-            startup/launch-count: null
-            reporting/send-statistics: null
+            DELETE_ON_START: 启动时删除
+            startup/launch-count: 启动次数
+            reporting/send-statistics: 发送数据
             def `onPaletteChange`:
                 Setting pyqtgraph background to %s: null
                 background: null
@@ -405,16 +405,16 @@ canvas/mainwindow.py:
         def `__init__`:
             Automatically check for updates: 自动检查更新
             Updates: 更新
-            checked: null
-            startup/check-updates: null
+            checked: 已检查
+            startup/check-updates: 检查更新
             Reporting: 报告
             Settings related to reporting: 与报告相关的设置
             text: null
-            reporting/machine-id: null
+            reporting/machine-id: 机器 ID
             Machine ID:: 机器 ID:
             Share: 共享
             Share anonymous usage statistics to improve Orange: 共享匿名使用统计信息以改进 Orange
-            reporting/send-statistics: null
+            reporting/send-statistics: 发送数据
             Anonymous Statistics: 匿名统计
             '<a ': null
             href=\"https://orange.biolab.si/statistics-more-info\">: null
@@ -424,9 +424,9 @@ canvas/mainwindow.py:
             Settings related to notifications: 与通知相关的设置
             Enable notifications: 启用通知
             Pull and display a notification feed.: 拉取并显示通知信息流。
-            notifications/check-notifications: null
+            notifications/check-notifications: 查看通知
             On startup: 启动时
-            notifications-group: null
+            notifications-group: 消息组
             Announcements: 公告
             Show notifications about Biolab announcements.\n: 显示 Biolab 公告通知。\n
             'This entails events and courses hosted by the developers of ': 这包括由 Orange 开发者举办的活动和课程，
@@ -438,9 +438,9 @@ canvas/mainwindow.py:
             'Show notifications about new features in Orange when a new ': 当下载并安装新版本时，显示 Orange 新功能通知，
             version is downloaded and installed,\n: 仅在该版本包含重要更新时显示。\n
             should the new version entail notable updates.: ""
-            notifications/announcements: null
-            notifications/blog: null
-            notifications/new-features: null
+            notifications/announcements: 公告
+            notifications/blog: 博客
+            notifications/new-features: 新特性
             Show notifications about: 显示以下通知
     class `MainWindow`:
         def `__init__`:
@@ -454,16 +454,16 @@ canvas/report.py:
 canvas/run.py:
     def `main`:
         'Run an orange workflow without showing a GUI and exit ': 以非交互模式运行 Orange 工作流，并在完成后退出。
-        when it completes.\n\n: null
+        when it completes.\n\n: 当完成时。\n\n
         'WARNING: This is experimental as Orange is not designed to run ': null
         non-interactive.: null
         --log-level: null
         -l: null
-        LEVEL: null
-        log_level: null
+        LEVEL: 级别
+        log_level: 日志级别
         --config: null
         Orange.canvas.config.Config: null
-        file: null
+        file: 文件
         basedir: null
         rb: null
     __main__: null
@@ -508,11 +508,11 @@ classification/gb.py:
     GBClassifier: null
     class `GBClassifier`:
         def `__init__`:
-            log_loss: null
+            log_loss: 日志丢失
             friedman_mse: null
-            deprecated: null
+            deprecated: 已过期
 classification/knn.py:
-    KNNLearner: null
+    KNNLearner: KNN 学习器
 classification/logistic_regression.py:
     LogisticRegressionLearner: null
     class `LogisticRegressionLearner`:
@@ -593,7 +593,7 @@ classification/random_forest.py:
             gini: null
             sqrt: null
 classification/rules.py:
-    CN2Learner: null
+    CN2Learner: CN2 学习器
     CN2UnorderedLearner: null
     CN2SDLearner: null
     CN2SDUnorderedLearner: null
@@ -646,7 +646,7 @@ classification/scoringsheet.py:
     __main__: null
     https://datasets.biolab.si/core/heart_disease.tab: null
 classification/sgd.py:
-    SGDClassificationLearner: null
+    SGDClassificationLearner: SGD分类学习器
     class `SGDClassificationLearner`:
         sgd: null
         def `__init__`:
@@ -654,13 +654,13 @@ classification/sgd.py:
             l2: null
             invscaling: null
 classification/simple_random_forest.py:
-    SimpleRandomForestLearner: null
+    SimpleRandomForestLearner: 简单随机森林学习器
     class `SimpleRandomForestLearner`:
         simple rf class: null
         def `__init__`:
             sqrt: null
 classification/simple_tree.py:
-    SimpleTreeLearner: null
+    SimpleTreeLearner: 简单决策树学习器
     type: null
     children_size: null
     split_attr: null
@@ -670,7 +670,7 @@ classification/simple_tree.py:
     n: null
     sum: null
     class `SimpleTreeLearner`:
-        simple tree: null
+        simple tree: 简单决策树
     class `SimpleTreeModel`:
         def `__init__`:
             'Number of classes should be 1: {}': null
@@ -680,9 +680,9 @@ classification/simple_tree.py:
             log2: null
             'skip_prob not valid: {}': null
         def `predict`:
-            Invalid prediction type: null
+            Invalid prediction type: 错误的预测类型
         def `__del__`:
-            node: null
+            node: 节点
         def `__getstate__`:
             node: null
         def `dumps_tree`:
@@ -709,19 +709,19 @@ classification/softmax_regression.py:
     class `SoftmaxRegressionLearner`:
         softmax: null
         def `fit`:
-            'Softmax regression does not support ': null
-            multi-label classification: null
-            unknown values: null
+            'Softmax regression does not support ': Softmax 回归不可用
+            multi-label classification: 多标签分类
+            unknown values: 未知值
     __main__: null
     iris: null
 classification/svm.py:
-    SVMLearner: null
-    LinearSVMLearner: null
+    SVMLearner: SVM 学习器
+    LinearSVMLearner: 线性 SVM 学习器
     NuSVMLearner: null
     class `SVMLearner`:
         def `__init__`:
             rbf: null
-            auto: null
+            auto: 自动
     class `LinearSVMLearner`:
         def `__init__`:
             l2: null
@@ -730,20 +730,20 @@ classification/svm.py:
     class `NuSVMLearner`:
         def `__init__`:
             rbf: null
-            auto: null
+            auto: 自动
     __main__: null
     iris: null
     'learner: {}\nCA: {}\n': null
 classification/tree.py:
     SklTreeLearner: null
-    TreeLearner: null
+    TreeLearner: 决策树学习器
     class `TreeLearner`:
         def `__init__`:
             binarize: null
             min_samples_leaf: null
             min_samples_split: null
             sufficient_majority: null
-            max_depth: null
+            max_depth: 最大深度
         def `fit_storage`:
             'Exhaustive binarization does not handle ': null
             attributes with more than {} values: null
@@ -753,16 +753,16 @@ classification/tree.py:
             gini: null
             best: null
 classification/xgb.py:
-    XGBClassifier: null
-    XGBRFClassifier: null
+    XGBClassifier: XGB 分类器
+    XGBRFClassifier: XGBRF 分类器
     class `XGBClassifier`:
         def `__init__`:
             binary:logistic: null
-            gain: null
+            gain: 增益
     class `XGBRFClassifier`:
         def `__init__`:
             binary:logistic: null
-            gain: null
+            gain: 增益
 classification/utils/fasterrisk/base_model.py:
     class `logRegModel`:
         def `warm_start_from_original_beta0_betas`:
@@ -770,9 +770,9 @@ classification/utils/fasterrisk/base_model.py:
 classification/utils/fasterrisk/fasterrisk.py:
     class `RiskScoreOptimizer`:
         def `__init__`:
-            input y must have 1-D shape!: null
-            input y must have only 2 labels: null
-            input y must be equal to only +1 or -1: null
+            input y must have 1-D shape!: 输入的 y 必须是一维的
+            input y must have only 2 labels: 输入的 y 只能有两个标签
+            input y must be equal to only +1 or -1: 输入的 y 只能等于 +1 或 -1
             input X must have 2-D shape!: null
             number of rows from input X must be equal to the number of elements from input y!: null
             lb: null
@@ -835,7 +835,7 @@ clustering/dbscan.py:
     class `DBSCAN`:
         def `__init__`:
             euclidean: null
-            auto: null
+            auto: 自动
     __main__: null
     iris: null
 clustering/hierarchical.py:
@@ -863,7 +863,7 @@ clustering/hierarchical.py:
         _Tree__value: null
         _Tree__branches: null
     Cluster: null
-    range: null
+    range: 范围
     height: null
     Singleton: null
     index: null
@@ -881,10 +881,10 @@ clustering/hierarchical.py:
         "'progress_callback' parameter is deprecated and ignored. ": null
         Passing it will raise an error in the future.: null
 clustering/kmeans.py:
-    KMeans: null
+    KMeans: K聚类
     class `KMeansModel`:
         def `k`:
-            n_clusters: null
+            n_clusters: 簇
     class `KMeans`:
         def `__init__`:
             k-means++: null
@@ -931,13 +931,13 @@ data/domain.py:
         def `from_numpy`:
             def `get_name`:
                 {} {:0{}}: null
-            X must be a 2-dimensional array: null
-            Feature: null
+            X must be a 2-dimensional array: X 必须是一个二维的数列
+            Feature: 特征
             Y has invalid shape: null
             Class: null
             v1: null
             v2: null
-            Target: null
+            Target: 目标
             Meta: null
         def `__bool__`:
             Domain.__bool__ is ambiguous; use 'is None' or 'empty' instead: null
@@ -1016,7 +1016,7 @@ data/instance.py:
             Domain has multiple class variables: null
 data/io.py:
     Flags: null
-    FileFormat: null
+    FileFormat: 文件格式
     def `class_from_qualified_name`:
         .: null
     class `CSVReader`:
@@ -1026,19 +1026,19 @@ data/io.py:
         def `read`:
             us-ascii: null
             utf-8: null
-            ignore: null
+            ignore: 忽略
             rt: null
             'Skipped invalid byte(s) in position ': null
             {}{}: null
             -: null
-            'Cannot parse dataset {}: {}': null
+            'Cannot parse dataset {}: {}': 无法解析数据集 {}: {}
         def `write_file`:
             wt: null
             utf-8: null
     class `TabReader`:
         .tab: null
         .tsv: null
-        Tab-separated values: null
+        Tab-separated values: Tab 分隔的值
         \t: null
     class `PickleReader`:
         .pkl: null
@@ -1046,7 +1046,7 @@ data/io.py:
         Pickled Orange data: null
         def `read`:
             rb: null
-            file does not contain a data table: null
+            file does not contain a data table: 文件不包含数据表
         def `write_file`:
             wb: null
     class `BasketReader`:
@@ -1062,7 +1062,7 @@ data/io.py:
             "Couldn't load spreadsheet from ": null
     class `ExcelReader`:
         .xlsx: null
-        Microsoft Excel spreadsheet: null
+        Microsoft Excel spreadsheet: 微软 Excel 表
         '#VALUE!': null
         '#DIV/0!': null
         '#REF!': null
@@ -1070,7 +1070,7 @@ data/io.py:
         '#NULL!': null
         '#NAME?': null
         def `workbook`:
-            ignore: null
+            ignore: 忽略
             .*extension is not supported and will be removed.*: null
         def `write_file`:
             _w: null
@@ -1084,7 +1084,7 @@ data/io.py:
         def `write_graph`:
             wt: null
         def `write`:
-            tree: null
+            tree: 树
     class `UrlReader`:
         def `__init__`:
             http://: null
@@ -1164,15 +1164,15 @@ data/io_base.py:
             name: null
     class `_TableBuilder`:
         def `__init__`:
-            'Feature ': null
+            'Feature ': 特征
         def `_cont_column`:
-            unsafe: null
+            unsafe: 不安全
             'Non-continuous value in (1-based) ': null
             line {row + offset + 1}, column {col + 1}: null
     class `DataTableMixin`:
         def `adjust_data_width`:
             F: null
-            Columns with no headers were removed.: null
+            Columns with no headers were removed.: 没有表头的列已被移除
     class `_FileReader`:
         def `get_reader`:
             *: null
@@ -1191,15 +1191,15 @@ data/io_base.py:
                 '{}: {}': null
                 wb: null
             .metadata: null
-            attributes: null
+            attributes: 属性
         def `header_names`:
             weights: null
         def `header_types`:
-            continuous: null
+            continuous: 连续
         def `header_flags`:
             weight: null
             {}={}: null
-            class: null
+            class: 类
             meta: null
         def `write_data`:
             _w: null
@@ -1237,7 +1237,7 @@ data/io_util.py:
     open_compressed: null
     detect_encoding: null
     isnastr: null
-    guess_data_type: null
+    guess_data_type: 猜测数据类型
     sanitize_variable: null
     update_origin: null
     isnatstr: null
@@ -1263,21 +1263,21 @@ data/io_util.py:
         utf-16be: null
         ebcdic: null
         def `_from_file`:
-            encoding: null
+            encoding: 编码
             confidence: null
             utf-8: null
         rb: null
-        encoding: null
+        encoding: 编码
     def `isnastr`:
-        unsafe: null
+        unsafe: 不安全
     def `guess_data_type`:
-        unsafe: null
+        unsafe: 不安全
         _: null
     def `sanitize_variable`:
         def `get_number_of_decimals`:
             .: null
         def `mapvalues`:
-            unsafe: null
+            unsafe: 不安全
         _: null
     def `_extract_new_origin`:
         origin: null
@@ -2624,14 +2624,14 @@ modelling/neural_network.py:
         classification: null
         regression: null
 modelling/randomforest.py:
-    RandomForestLearner: null
+    RandomForestLearner: 随机森林学习器
     class `RandomForestLearner`:
-        random forest: null
-        classification: null
-        regression: null
+        random forest: 随机森林
+        classification: 分类
+        regression: 回归
         def `fitted_parameters`:
             n_estimators: null
-            Number of trees: null
+            Number of trees: 树的数量
 modelling/svm.py:
     SVMLearner: null
     LinearSVMLearner: null
@@ -4669,85 +4669,85 @@ widgets/data/owconcatenate.py:
     iris: null
     zoo: null
 widgets/data/owcontinuize.py:
-    Use general preset: null
-    preset: null
-    Treat the variable as defined in general preset: null
-    Keep categorical: null
-    keep as is: null
-    Keep the variable discrete: null
-    First value as base: null
-    first as base: null
-    One indicator variable for each value except the first: null
-    Most frequent as base: null
-    frequent as base: null
-    One indicator variable for each value except the most frequent: null
-    One-hot encoding: null
-    one-hot: null
-    One indicator variable for each value: null
-    Remove if more than 2 values: null
-    remove if >2: null
-    Remove variables with more than two values; indicator otherwise: null
-    Remove: null
-    remove: null
-    Remove variable: null
-    Treat as ordinal: null
-    as ordinal: null
-    Each value gets a consecutive number from 0 to number of values - 1: null
-    Treat as normalized ordinal: null
-    as norm. ordinal: null
-    Same as above, but scaled to [0, 1]: null
-    Keep as it is: null
-    no change: null
-    Keep the variable as it is: null
-    Standardize to μ=0, σ²=1: null
-    standardize: null
-    Subtract the mean and divide by standard deviation: null
-    Center to μ=0: null
-    center: null
-    Subtract the mean: null
-    Scale to σ²=1: null
-    scale: null
-    Divide by standard deviation: null
-    Normalize to interval [-1, 1]: null
-    to [-1, 1]: null
-    Linear transformation into interval [-1, 1]: null
-    Normalize to interval [0, 1]: null
-    to [0, 1]: null
-    Linear transformation into interval [0, 1]: null
+    Use general preset: 使用全局预设
+    preset: 预设
+    Treat the variable as defined in general preset: 按全局预设处理该变量
+    Keep categorical: 保留分类变量
+    keep as is: 保持不变
+    Keep the variable discrete: 保持该变量为离散型
+    First value as base: 以第一个值为基准
+    first as base: 首值为基准
+    One indicator variable for each value except the first: 除第一个值外，每个值对应一个指示变量
+    Most frequent as base: 以最常见值为基准
+    frequent as base: 高频值为基准
+    One indicator variable for each value except the most frequent: 除最常见值外，每个值对应一个指示变量
+    One-hot encoding: 独热编码
+    one-hot: 独热
+    One indicator variable for each value: 每个值对应一个指示变量
+    Remove if more than 2 values: 超过 2 个值则移除
+    remove if >2: 大于 2 则移除
+    Remove variables with more than two values; indicator otherwise: 移除取值超过两个的变量，否则转为指示变量
+    Remove: 移除
+    remove: 移除
+    Remove variable: 移除变量
+    Treat as ordinal: 视为有序变量
+    as ordinal: 有序
+    Each value gets a consecutive number from 0 to number of values - 1: 为每个值分配从 0 到值数量减 1 的连续编号
+    Treat as normalized ordinal: 视为归一化有序变量
+    as norm. ordinal: 归一化有序
+    Same as above, but scaled to [0, 1]: 同上，但缩放到 [0, 1]
+    Keep as it is: 保持原样
+    no change: 不变
+    Keep the variable as it is: 保持该变量原样
+    Standardize to μ=0, σ²=1: 标准化为 μ=0，σ²=1
+    standardize: 标准化
+    Subtract the mean and divide by standard deviation: 减去均值并除以标准差
+    Center to μ=0: 中心化为 μ=0
+    center: 中心化
+    Subtract the mean: 减去均值
+    Scale to σ²=1: 缩放为 σ²=1
+    scale: 缩放
+    Divide by standard deviation: 除以标准差
+    Normalize to interval [-1, 1]: 归一化到区间 [-1, 1]
+    to [-1, 1]: 到 [-1, 1]
+    Linear transformation into interval [-1, 1]: 线性变换到区间 [-1, 1]
+    Normalize to interval [0, 1]: 归一化到区间 [0, 1]
+    to [0, 1]: 到 [0, 1]
+    Linear transformation into interval [0, 1]: 线性变换到区间 [0, 1]
     class `ContDomainModel`:
         def `__init__`:
-            Meta attributes: null
-            Targets: null
+            Meta attributes: 元属性
+            Targets: 目标变量
         def `data`:
             {name} {hint[0]}: null
     class `DefaultContModel`:
         def `__init__`:
             ★: null
         def `data`:
-            'General preset: {self.method}': null
-            Default for variables without specific settings: null
+            'General preset: {self.method}': 全局预设：{self.method}
+            Default for variables without specific settings: 未单独设置的变量使用此默认值
     class `ListViewSearch`:
         class `Delegate`:
             def `displayText`:
                 '{name}: {hint}': null
     class `OWContinuize`:
         Continuize: 连续化
-        'Transform categorical attributes into numeric and, ': null
-        optionally, scale numeric values.: null
+        'Transform categorical attributes into numeric and, ': 将分类属性转换为数值属性，并
+        optionally, scale numeric values.: 可选地对数值变量进行缩放。
         icons/Continuize.svg: null
         Transform: 转换
         continuize, encode, dummy, numeric, one-hot, binary, treatment, contrast: null
         class `Inputs`:
-            Data: null
+            Data: 数据
         class `Outputs`:
-            Data: null
+            Data: 数据
         class `Error`:
-            'Some chosen methods do not support sparse data: {}': null
+            'Some chosen methods do not support sparse data: {}': 某些所选方法不支持稀疏数据：{}
         def `__init__`:
-            Categorical Variables: null
-            Numeric Variables: null
-            Reset All: null
-            autosend: null
+            Categorical Variables: 分类变量
+            Numeric Variables: 数值变量
+            Reset All: 全部重置
+            autosend: 自动应用
         def `_prepare_output`:
             \n: null
             ', ': null
@@ -4768,13 +4768,13 @@ widgets/data/owcontinuize.py:
             hint={hint}?!: null
             {var.name}={value}: null
         def `send_report`:
-            Categorical variables: null
-            Numeric variables: null
-            General preset: null
-            Unlisted: null
-            'Any unlisted attributes default to general preset, and ': null
-            'unlisted meta attributes and target variables are kept ': null
-            as they are: null
+            Categorical variables: 分类变量
+            Numeric variables: 数值变量
+            General preset: 全局预设
+            Unlisted: 未列出
+            'Any unlisted attributes default to general preset, and ': 未列出的属性默认使用全局预设，
+            'unlisted meta attributes and target variables are kept ': 未列出的元属性和目标变量
+            as they are: 保持原样
         def `migrate_settings`:
             continuous_treatment: null
             zero_based: null
@@ -5050,7 +5050,7 @@ widgets/data/owcsvimport.py:
     class `VarPathItem`:
         def `data`:
             ${{{vpath.name}}}/{vpath.relpath}: null
-            ' (missing)': null
+            ' (missing)': （缺失）
     class `ImportItem`:
         def `fromPath`:
             ImportItem: null
@@ -5096,7 +5096,7 @@ widgets/data/owcsvimport.py:
             recent-combo: null
             Recent files.: 最近文件。
             Recent files…: 最近文件…
-            …: null
+            …: …
             Browse filesystem: 浏览文件系统
             Import any file…: 导入任意文件…
             Import relative to workflow file…: 导入相对于工作流文件的文件…
@@ -5156,7 +5156,7 @@ widgets/data/owcsvimport.py:
             'error. The file might be saved in an unknown or invalid ': 错误。该文件可能使用了未知或无效的
             encoding, or it might be a binary file.</div>: 编码保存，或者它可能是二进制文件。</div>
             <div><i>{basename}</i> was not loaded due to an error:: <div><i>{basename}</i> 未能加载，原因是错误：
-            "<p style='white-space: pre;'>{err}</p>": null
+            "<p style='white-space: pre;'>{err}</p>": "<p style='white-space: pre;'>{err}</p>"
         def `_update_status_messages`:
             "{n_instances} {pl(n_instances, 'row')}, ": "{n_instances} {pl(n_instances, '行')}, "
             "{n_features} {pl(n_features, 'feature')}, ": "{n_features} {pl(n_features, '特征')}, "
@@ -5165,11 +5165,11 @@ widgets/data/owcsvimport.py:
             recent: null
             path: null
             options: null
-            Could not reconstruct options for '%s': null
+            Could not reconstruct options for '%s': 无法重建 “%s” 的导入选项
         def `_replacements`:
             basedir: null
         def `_restoreState`:
-            Failed to restore '%s': null
+            Failed to restore '%s': 无法恢复 “%s”
         def `canDropUrl`:
             text/plain: null
         def `migrate_settings`:
@@ -5485,59 +5485,59 @@ widgets/data/owdatasets.py:
     __main__: null
 widgets/data/owdiscretize.py:
     \s*,\s*: null
-    year: null
-    month: null
-    day: null
-    week: null
-    hour: null
-    minute: null
-    second: null
-    invalid width: null
-    too many intervals: null
+    year: 年
+    month: 月
+    day: 日
+    week: 周
+    hour: 小时
+    minute: 分钟
+    second: 秒
+    invalid width: 宽度无效
+    too many intervals: 区间过多
     def `_fixed_width_discretization`:
         .: null
     def `_mdl_discretization`:
-        no discrete class: null
+        no discrete class: 没有离散类别
     def `_custom_discretization`:
-        invalid cuts: null
-    Use general preset: null
-    preset: null
-    Treat the variable as defined in general preset: null
-    Keep numeric: null
-    keep: null
-    Keep the variable as is: null
-    Entropy vs. MDL: null
-    entropy: null
-    Split values until MDL exceeds the entropy (Fayyad-Irani)\n: null
-    (requires discrete class variable): null
-    'Equal frequency, intervals: ': null
-    equal freq, k={}: null
-    Create bins with same number of instances: null
+        invalid cuts: 切分点无效
+    Use general preset: 使用全局预设
+    preset: 预设
+    Treat the variable as defined in general preset: 按全局预设处理该变量
+    Keep numeric: 保留数值变量
+    keep: 保留
+    Keep the variable as is: 保持该变量原样
+    Entropy vs. MDL: 熵 vs. MDL
+    entropy: 熵
+    Split values until MDL exceeds the entropy (Fayyad-Irani)\n: 持续切分数值，直到 MDL 超过熵（Fayyad-Irani）\n
+    (requires discrete class variable): （需要离散类别变量）
+    'Equal frequency, intervals: ': 等频，区间数：
+    equal freq, k={}: 等频，k={}
+    Create bins with same number of instances: 创建包含相同样本数的分箱
     freq_spin: null
-    'Equal width, intervals: ': null
-    equal width, k={}: null
-    Create bins of the same width: null
+    'Equal width, intervals: ': 等宽，区间数：
+    equal width, k={}: 等宽，k={}
+    Create bins of the same width: 创建宽度相同的分箱
     width_spin: null
-    Remove: null
-    remove: null
-    Remove variable: null
-    'Natural binning, desired bins: ': null
-    binning, desired={}: null
-    'Create bins with nice thresholds; ': null
-    try matching desired number of bins: null
+    Remove: 移除
+    remove: 移除
+    Remove variable: 移除变量
+    'Natural binning, desired bins: ': 自然分箱，期望箱数：
+    binning, desired={}: 分箱，期望={}
+    'Create bins with nice thresholds; ': 创建具有合适阈值的分箱；
+    try matching desired number of bins: 尽量匹配期望的箱数
     binning_spin: null
-    'Fixed width: ': null
-    fixed width {}: null
-    Create bins with the given width (not for time variables): null
+    'Fixed width: ': 固定宽度：
+    fixed width {}: 固定宽度 {}
+    Create bins with the given width (not for time variables): 按给定宽度创建分箱（不适用于时间变量）
     width_line: null
-    'Time interval: ': null
-    time interval, {} {}: null
-    Create bins with the give width (for time variables): null
+    'Time interval: ': 时间间隔：
+    time interval, {} {}: 时间间隔，{} {}
+    Create bins with the give width (for time variables): 按给定宽度创建分箱（适用于时间变量）
     width_time_line: null
     width_time_unit: null
-    'Custom: ': null
-    'custom: {}': null
-    Use manually specified thresholds: null
+    'Custom: ': 自定义：
+    'custom: {}': 自定义：{}
+    Use manually specified thresholds: 使用手动指定的阈值
     threshold_line: null
     def `format_desc`:
         {time_units[unit]}(s): null
@@ -5555,8 +5555,8 @@ widgets/data/owdiscretize.py:
         def `__init__`:
             ★: null
         def `data`:
-            'General preset: ': null
-            Default setting for variables without specific setings: null
+            'General preset: ': 全局预设：
+            Default setting for variables without specific setings: 未单独设置的变量将使用此默认设置
     class `IncreasingNumbersListValidator`:
         def `validate`:
             +-., 0123456789: null
@@ -5583,24 +5583,24 @@ widgets/data/owdiscretize.py:
         Discretize numeric variables: 将数值变量离散化。
         Transform: 转换
         icons/Discretize.svg: null
-        discretize, bin, categorical, nominal, ordinal: null
+        discretize, bin, categorical, nominal, ordinal: 离散化, 分箱, 分类, 名义, 有序
         class `Inputs`:
-            Data: null
-            Input data table: null
+            Data: 数据
+            Input data table: 输入数据表
         class `Outputs`:
-            Data: null
-            Table with categorical features: null
+            Data: 数据
+            Table with categorical features: 含分类特征的数据表
         def `__init__`:
-            autosend: null
+            autosend: 自动应用
         def `_create_buttons`:
             def `manual_cut_editline`:
-                e.g. 0.0, 0.5, 1.0: null
+                e.g. 0.0, 0.5, 1.0: 例如 0.0, 0.5, 1.0
                 <p style="white-space:pre">: null
-                Enter cut points as a comma-separate list of \n: null
-                strictly increasing numbers e.g. 0.0, 0.5, 1.0).</p>: null
+                Enter cut points as a comma-separate list of \n: 请输入用逗号分隔的切分点列表，数值需\n
+                strictly increasing numbers e.g. 0.0, 0.5, 1.0).</p>: 严格递增，例如 0.0, 0.5, 1.0）。</p>
             {unit}(s): null
             CC: null
-            Copy the current cut points to manual mode: null
+            Copy the current cut points to manual mode: 将当前切分点复制到手动模式
         def `_update_discretizations`:
             values: null
         def `_discretize_var`:
@@ -5617,7 +5617,7 @@ widgets/data/owdiscretize.py:
             ': ': null
             {name} ({format_desc(desc.hint)}): null
             ', ': null
-            Variables: null
+            Variables: 变量
         def `migrate_settings`:
             default_method: null
             default_method_name: null
@@ -6054,7 +6054,7 @@ Use variable names as values in expression.
 Categorical features are passed as strings
 (note the change in behaviour from Orange 3.30).
 
-': null
+': false
         _: null
         str: null
         float: null
@@ -6064,13 +6064,13 @@ Categorical features are passed as strings
         max: null
         min: null
         def `__init__`:
-            Name...: null
-            Meta attribute: null
-            Expression...: null
-            Select Column: null
-            Select Function: null
+            Name...: 名称...
+            Meta attribute: 元属性
+            Expression...: 表达式...
+            Select Column: 选择列
+            Select Function: 选择函数
         def `setEditorData`:
-            Select Feature: null
+            Select Feature: 选择特征
         def `on_funcs_changed`:
             atan2: null
             fmod: null
@@ -6084,19 +6084,19 @@ Categorical features are passed as strings
             pi: null
             (): null
     class `ContinuousFeatureEditor`:
-        A numeric expression\n\n: null
+        A numeric expression\n\n: 数值表达式\n\n
     class `DateTimeFeatureEditor`:
-        'Result must be a string in ISO-8601 format ': null
-        (e.g. 2019-07-30T15:37:27 or a part thereof),\n: null
-        or a number of seconds since Jan 1, 1970.: null
+        'Result must be a string in ISO-8601 format ': 结果必须是 ISO-8601 格式的字符串
+        (e.g. 2019-07-30T15:37:27 or a part thereof),\n: （例如 2019-07-30T15:37:27 或其一部分），\n
+        or a number of seconds since Jan 1, 1970.: 或者是自 1970 年 1 月 1 日以来的秒数。
     class `DiscreteFeatureEditor`:
-        Result must be a string, if values are not explicitly given\n: null
-        or a zero-based integer indices into a list of values given below.: null
+        Result must be a string, if values are not explicitly given\n: 如果未显式给定取值，结果必须是字符串\n
+        or a zero-based integer indices into a list of values given below.: 或者是下方取值列表中的从 0 开始整数索引。
         def `__init__`:
-            'If values are given, above expression must return zero-based ': null
-            integer indices into that list.: null
-            A, B ...: null
-            Values (optional): null
+            'If values are given, above expression must return zero-based ': 如果给定了取值，上方表达式必须返回从 0 开始的
+            integer indices into that list.: 该列表整数索引。
+            A, B ...: A, B ...
+            Values (optional): 取值（可选）
         def `setEditorData`:
             ', ': null
             ,: null
@@ -6106,7 +6106,7 @@ Categorical features are passed as strings
             \,: null
             ,: null
     class `StringFeatureEditor`:
-        A string expression\n\n: null
+        A string expression\n\n: 字符串表达式\n\n
     d: null
     c: null
     t: null
@@ -6125,41 +6125,41 @@ Categorical features are passed as strings
         existing features in the input dataset.: 用于输入数据集。
         Transform: 转换
         icons/FeatureConstructor.svg: null
-        feature constructor, function, lambda, calculation: null
+        feature constructor, function, lambda, calculation: 特征构造, 函数, lambda, 计算
         class `Inputs`:
-            Data: null
+            Data: 数据
         class `Outputs`:
-            Data: null
+            Data: 数据
         class `Error`:
-            Categorical feature {} needs more values.: null
-            'Invalid expressions: {}.': null
+            Categorical feature {} needs more values.: 分类特征 {} 需要更多取值。
+            'Invalid expressions: {}.': 无效表达式：{}。
             {}: null
         class `Information`:
-            'A new variable that is named the same as an existing one will ': null
-            replace it on the output.: null
+            'A new variable that is named the same as an existing one will ': 新变量如果与现有变量同名，
+            replace it on the output.: 将在输出中替换原变量。
         def `__init__`:
-            Variable Definitions: null
-            New: null
-            Create a new variable: null
-            Numeric: null
+            Variable Definitions: 变量定义
+            New: 新建
+            Create a new variable: 创建新变量
+            Numeric: 数值
             X{}: null
-            Categorical: null
+            Categorical: 分类
             D{}: null
-            Text: null
+            Text: 文本
             S{}: null
-            Date/Time: null
+            Date/Time: 日期/时间
             T{}: null
-            Duplicate Selected Variable: null
-            Remove: null
-            Remove selected variable: null
-            Upgrade Expressions: null
-            Send: null
+            Duplicate Selected Variable: 复制所选变量
+            Remove: 移除
+            Remove selected variable: 移除所选变量
+            Upgrade Expressions: 升级表达式
+            Send: 发送
         def `_validate_descriptors`:
             def `validate`:
                 eval: null
             ', ': null
         def `on_done`:
-            Result: null
+            Result: 结果
         def `send_report`:
             categorical: null
             ' with values ': null
@@ -6170,17 +6170,17 @@ Categorical features are passed as strings
             date/time: null
             text: null
             {feature.expression} ({desc}): null
-            Constructed {pl(len(items), 'feature')}: null
+            Constructed {pl(len(items), 'feature')}: 已构造 {pl(len(items), '特征')}
         def `fix_expressions`:
-            Fix Expressions: null
-            "This widget's behaviour has changed. Values of categorical ": null
-            'variables are now inserted as their textual representations ': null
-            '(strings); previously they appeared as integer numbers, with an ': null
-            attribute '.value' that contained the text.\n\n: null
-            'The widget currently runs in compatibility mode. After ': null
-            expressions are updated, manually check for their correctness.: null
-            Update: null
-            Cancel: null
+            Fix Expressions: 修复表达式
+            "This widget's behaviour has changed. Values of categorical ": 此组件的行为已更改。分类变量的值
+            'variables are now inserted as their textual representations ': 现在会以其文本表示形式
+            '(strings); previously they appeared as integer numbers, with an ': （字符串）插入；此前它们会显示为整数，
+            attribute '.value' that contained the text.\n\n: 并带有包含文本的 `.value` 属性。\n\n
+            'The widget currently runs in compatibility mode. After ': 组件当前运行在兼容模式下。表达式更新后，
+            expressions are updated, manually check for their correctness.: 请手动检查其正确性。
+            Update: 更新
+            Cancel: 取消
             def `fixer`:
                 .value: null
                 {: null
@@ -6564,7 +6564,7 @@ widgets/data/owimpute.py:
         def `initStyleOption`:
             method: null
     class `AsDefault`:
-        Default (above): null
+        Default (above): 默认（上方）
         {var.name}: null
     RowMask: null
     mask: null
@@ -6572,41 +6572,41 @@ widgets/data/owimpute.py:
         {}.{}: null
     class `OWImpute`:
         Impute: 缺失值填补
-        Impute missing values in the data table.: null
+        Impute missing values in the data table.: 对数据表中的缺失值进行填补。
         icons/Impute.svg: null
         impute, substitute, missing: null
         Transform: 转换
         class `Inputs`:
-            Data: null
-            Learner: null
+            Data: 数据
+            Learner: 学习器
         class `Outputs`:
-            Data: null
+            Data: 数据
         class `Error`:
-            Imputation failed for '{}': null
-            Model based imputer does not work for sparse data: null
+            Imputation failed for '{}': “{}”的缺失值填补失败
+            Model based imputer does not work for sparse data: 基于模型的填补方法不适用于稀疏数据
         class `Warning`:
-            Default method can not handle '{}': null
+            Default method can not handle '{}': 默认方法无法处理“{}”
         def `__init__`:
-            Default Method: null
-            Fixed values; numeric variables:: null
+            Default Method: 默认方法
+            Fixed values; numeric variables:: 固定值；数值变量：
             default_numeric_value: null
-            , time:: null
-            default_time: null
-            Individual Attribute Settings: null
-            Restore All to Default: null
-            autocommit: null
+            , time:: ，时间变量：
+            default_time: 默认时间值
+            Individual Attribute Settings: 单个属性设置
+            Restore All to Default: 全部恢复为默认
+            autocommit: 自动应用
         def `__commit_finish`:
             def `get_variable`:
-                Error for %s: null
+                Error for %s: %s 出错
             def `create_data`:
-                Error: null
-                Unknown: null
+                Error: 错误
+                Unknown: 未知
         def `send_report`:
             {} ({}): null
-            Default method: null
-            Specific imputers: null
+            Default method: 默认方法
+            Specific imputers: 特定填补器
             ', ': null
-            Method: null
+            Method: 方法
     def `__sample_data`:
         c{i}: null
         t{i}: null
@@ -7041,7 +7041,7 @@ widgets/data/owpaintdata.py:
             symbol_size: null
             Symbol:: null
             Reset to Input Data: null
-            autocommit: null
+            autocommit: 自动应用
             bottom: null
             left: null
         def `set_dimensions`:
@@ -7275,23 +7275,23 @@ widgets/data/owpreprocess.py:
         Information Gain: 信息增益
         Gain ratio: 增益率
         Gini index: 基尼指数
-        ReliefF: null
+        ReliefF: ReliefF
         Fast Correlation Based Filter: 基于快速相关性的筛选
-        ANOVA: null
-        Chi2: null
-        RReliefF: null
+        ANOVA: 方差分析
+        Chi2: 卡方
+        RReliefF: RReliefF
         Univariate Linear Regression: 单变量线性回归
         def `__init__`:
-            text: null
+            text: 文本
             Information Gain: 信息增益
-            tooltip: null
+            tooltip: 提示
             Gain Ratio: 增益率
             Gini Index: 基尼指数
-            ReliefF: null
+            ReliefF: ReliefF
             Fast Correlation Based Filter: 基于快速相关性的筛选
-            ANOVA: null
-            Chi2: null
-            RReliefF: null
+            ANOVA: 方差分析
+            Chi2: 卡方
+            RReliefF: RReliefF
             Univariate Linear Regression: 单变量线性回归
         def `createinstance`:
             score: null
@@ -7655,27 +7655,27 @@ out_data = Table.from_numpy(domain, arr)
     filename: null
     class `OWPythonScript`:
         Python Script: Python 脚本
-        Write a Python script and run it on input data or models.: null
+        Write a Python script and run it on input data or models.: 编写 Python 脚本，并在输入数据或模型上运行它。
         Transform: 转换
         icons/PythonScript.svg: null
-        program, function: null
+        program, function: 程序, 函数
         class `Inputs`:
-            Data: null
+            Data: 数据
             in_data: null
-            Learner: null
+            Learner: 学习器
             in_learner: null
             Classifier: 分类器
             in_classifier: null
-            Object: null
+            Object: 对象
             in_object: null
         class `Outputs`:
-            Data: null
+            Data: 数据
             out_data: null
-            Learner: null
+            Learner: 学习器
             out_learner: null
             Classifier: 分类器
             out_classifier: null
-            Object: null
+            Object: 对象
             out_object: null
         data: null
         learner: null
@@ -7693,32 +7693,32 @@ out_data = Table.from_numpy(domain, arr)
             win32: null
             cygwin: null
             DejaVu Sans Mono: null
-            Editor: null
+            Editor: 编辑器
             darkMode: null
             Dark: null
             Light: null
             0000: null
-            Preferences: null
+            Preferences: 首选项
             vimModeEnabled: null
-            Vim mode: null
-            Only for the coolest.: null
-            Library: null
+            Vim mode: Vim 模式
+            Only for the coolest.: 只给最酷的人用。
+            Library: 脚本库
             +: null
-            Add a new script to the library: null
+            Add a new script to the library: 向脚本库添加新脚本
             MINUS SIGN: null
-            Remove script from library: null
-            Update: null
-            Save changes in the editor to library: null
-            More: null
-            More actions: null
-            Import Script from File: null
-            Save Selected Script to File: null
-            Undo Changes to Selected Script: null
-            Run: null
-            Run script: null
-            &Save: null
-            Save script to file: null
-            Console: null
+            Remove script from library: 从脚本库移除脚本
+            Update: 更新
+            Save changes in the editor to library: 将编辑器中的更改保存到脚本库
+            More: 更多
+            More actions: 更多操作
+            Import Script from File: 从文件导入脚本
+            Save Selected Script to File: 将所选脚本保存到文件
+            Undo Changes to Selected Script: 撤销对所选脚本的更改
+            Run: 运行
+            Run script: 运行脚本
+            &Save: 保存(&S)
+            Save script to file: 将脚本保存到文件
+            Console: 控制台
         def `set_data`:
             data: null
         def `insert_data`:
@@ -10231,24 +10231,24 @@ widgets/model/owknn.py:
         manhattan: null
         chebyshev: null
         mahalanobis: null
-        Uniform: null
-        By Distances: null
-        Euclidean: null
-        Manhattan: null
-        Chebyshev: null
-        Mahalanobis: null
+        Uniform: 均匀
+        By Distances: 按距离
+        Euclidean: 欧几里得
+        Manhattan: 曼哈顿
+        Chebyshev: 切比雪夫
+        Mahalanobis: 马氏
         def `add_main_layout`:
-            Neighbors: null
-            n_neighbors: null
-            Number of neighbors:: null
+            Neighbors: 邻居数
+            n_neighbors: 邻居数
+            Number of neighbors:: 邻居数量：
             metric_index: null
-            Metric:: null
+            Metric:: 距离度量：
             weight_index: null
-            Weight:: null
+            Weight:: 权重：
         def `get_learner_parameters`:
-            Number of neighbours: null
-            Metric: null
-            Weight: null
+            Number of neighbours: 邻居数量
+            Metric: 距离度量
+            Weight: 权重
     __main__: null
     iris: null
 widgets/model/owlinearregression.py:
@@ -10488,27 +10488,27 @@ widgets/model/owrandomforest.py:
         Orange.widgets.regression.owrandomforestregression.OWRandomForestRegression: null
         random forest: null
         class `Error`:
-            Insufficient number of attributes ({}): null
+            Insufficient number of attributes ({}): 属性数量不足（{}）
         class `Warning`:
-            Weighting by class may decrease performance.: null
+            Weighting by class may decrease performance.: 按类别加权可能会降低性能。
         def `add_main_layout`:
-            Basic Properties: null
+            Basic Properties: 基本属性
             n_estimators: null
-            'Number of trees: ': null
+            'Number of trees: ': 树的数量：
             max_features: null
-            'Number of attributes considered at each split: ': null
+            'Number of attributes considered at each split: ': 每次分裂考虑的属性数：
             use_max_features: null
             use_random_state: null
-            Replicable training: null
+            Replicable training: 可复现训练
             class_weight: null
-            Balance class distribution: null
-            Weigh classes inversely proportional to their frequencies.: null
-            Growth Control: null
+            Balance class distribution: 平衡类别分布
+            Weigh classes inversely proportional to their frequencies.: 类别权重与其频率成反比。
+            Growth Control: 生长控制
             max_depth: null
-            'Limit depth of individual trees: ': null
+            'Limit depth of individual trees: ': 限制单棵树深度：
             use_max_depth: null
             min_samples_split: null
-            'Do not split subsets smaller than: ': null
+            'Do not split subsets smaller than: ': 不拆分小于以下大小的子集：
             use_min_samples_split: null
         def `create_learner`:
             n_estimators: null
@@ -10519,15 +10519,15 @@ widgets/model/owrandomforest.py:
             class_weight: null
             balanced: null
         def `get_learner_parameters`:
-            Number of trees: null
-            Maximal number of considered features: null
-            unlimited: null
-            Replicable training: null
-            No: null
-            Yes: null
-            Maximal tree depth: null
-            Stop splitting nodes with maximum instances: null
-            Class weights: null
+            Number of trees: 树的数量
+            Maximal number of considered features: 最大考虑特征数
+            unlimited: 不限
+            Replicable training: 可复现训练
+            No: 否
+            Yes: 是
+            Maximal tree depth: 最大树深
+            Stop splitting nodes with maximum instances: 节点样本数不超过该值时停止分裂
+            Class weights: 类别权重
     __main__: null
     iris: null
 widgets/model/owrules.py:
