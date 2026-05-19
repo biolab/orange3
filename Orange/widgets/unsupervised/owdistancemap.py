@@ -23,7 +23,9 @@ from Orange.widgets.utils import itemmodels, colorpalettes
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
 from Orange.widgets.utils.graphicsscene import graphicsscene_help_event
-from Orange.widgets.utils.graphicstextlist import TextListWidget
+from Orange.widgets.utils.graphicstextlist import (
+    TextListWidget, effective_point_size_for_height
+)
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils.plotutils import HelpEventDelegate
 from Orange.widgets.widget import Input, Output
@@ -723,13 +725,7 @@ class TextList(TextListWidget):
         self.setFont(font_)
 
     def _point_size(self, height):
-        font = self.font()
-        font.setPointSizeF(height)
-        fix = 0
-        while QFontMetrics(font).lineSpacing() > height and height - fix > 1:
-            fix += 1
-            font.setPointSizeF(height - fix)
-        return height
+        return effective_point_size_for_height(self.font(), height)
 
 
 # run widget with `python -m Orange.widgets.unsupervised.owdistancemap`
