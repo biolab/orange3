@@ -374,6 +374,44 @@ class TestOWCSVFileImport(WidgetTest):
             self.assertEqual(item[0], cur.varPath())
             self.assertEqual(item[1].as_dict(), cur.options().as_dict())
 
+    def test_save_state_infers_basedir_relative(self):
+        # A file chosen via the regular (non-prefixed) browse action should be
+        # persisted as a VarPath when it lives inside the workflow's basedir,
+        # so that moving the workflow together with its data resolves
+        # automatically (see GH-5155).
+        path = self.data_regions_path
+        basedir = os.path.dirname(path)
+        widget = self.widget
+        widget.workflowEnv = lambda: {"basedir": basedir}
+        widget.workflowEnvChanged("basedir", basedir, "")
+        with self._browse_setup(widget, path):
+            widget.browse()
+        cur = widget.current_item()
+        self.assertIsInstance(cur.varPath(), PathItem.AbsPath)
+
+        widget._saveState()
+        self.assertEqual(len(widget._session_items_v2), 1)
+        stored, _ = widget._session_items_v2[0]
+        self.assertEqual(
+            stored,
+            PathItem.VarPath("basedir", "data-regions.tab").as_dict(),
+        )
+
+    def test_save_state_keeps_abspath_outside_basedir(self):
+        # Files that live outside the workflow's basedir remain absolute.
+        path = self.data_regions_path
+        basedir = tempfile.mkdtemp()
+        widget = self.widget
+        widget.workflowEnv = lambda: {"basedir": basedir}
+        widget.workflowEnvChanged("basedir", basedir, "")
+        with self._browse_setup(widget, path):
+            widget.browse()
+
+        widget._saveState()
+        self.assertEqual(len(widget._session_items_v2), 1)
+        stored, _ = widget._session_items_v2[0]
+        self.assertEqual(stored, PathItem.AbsPath(path).as_dict())
+
     def test_activate_import_dialog(self):
         path = self.data_regions_path
         item = ImportItem.fromPath(path)
