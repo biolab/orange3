@@ -729,7 +729,7 @@ class TextList(TextListWidget):
         while QFontMetrics(font).lineSpacing() > height and height - fix > 1:
             fix += 1
             font.setPointSizeF(height - fix)
-        return height - fix
+        return height
 
 
 # run widget with `python -m Orange.widgets.unsupervised.owdistancemap`
