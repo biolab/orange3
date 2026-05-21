@@ -1785,6 +1785,26 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         else:
             return np.flatnonzero(self.selection)
 
+    def get_dragged_points(self, pos):
+        if not hasattr(self.master, "set_coordinates") \
+                or self.scatterplot_item is None:
+            return None
+
+        pts = self.scatterplot_item.pointsAt(pos)
+        if pts is None or len(pts) == 0:
+            return None
+        idx = np.array([p.data() for p in pts], dtype=int)
+
+        if self.selection is not None and np.all(self.selection[idx]):
+            idx = np.flatnonzero(self.selection)
+
+        x, y = self.scatterplot_item.getData()
+        return idx, x[idx], y[idx]
+
+    def move_dragged_points(self, points, dist):
+        idx, x, y = points
+        self.master.set_coordinates(idx, np.vstack((x + dist.x(), y + dist.y())).T)
+
     def help_event(self, event):
         """
         Create a `QToolTip` for the point hovered by the mouse

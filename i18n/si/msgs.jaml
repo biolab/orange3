@@ -15183,6 +15183,8 @@ widgets/visualize/owscatterplotgraph.py:
             impute_shapes: false
         def `_update_color_legend`:
             o: false
+        def `get_dragged_points`:
+            set_coordinates: false
 widgets/visualize/owscoringsheetviewer.py:
     class `ScoringSheetTable`:
         def `__init__`:
@@ -15929,6 +15931,7 @@ widgets/visualize/utils/plotutils.py:
             def `select`:
                 unsuspend_jittering: false
                 suspend_jittering: false
+            get_dragged_points: false
             mouseMode: false
     class `PaletteItemSample`:
         def `__init__`:
