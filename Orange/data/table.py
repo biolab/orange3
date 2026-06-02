@@ -149,12 +149,11 @@ class RowInstance(Instance):
                 if self.sparse_x is not None:
                     self._x[key] = value
             else:
-                if self.sparse_y is not None:
+                if self.table._Y.ndim == 2:
                     self.table._Y[self.row_index, key - len(self._x)] = value
                 else:
                     self.table._Y[self.row_index] = value
-                    if self.table._Y.ndim == 1:  # if _y is not a view
-                        self._y[0] = value
+                    self._y[0] = value  # _y is not a view
         else:
             self.table.metas[self.row_index, -1 - key] = value
             if self.sparse_metas is not None:
