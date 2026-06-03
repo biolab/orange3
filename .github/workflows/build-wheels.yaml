@@ -135,4 +135,4 @@ jobs:
       - name: Publish packages to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages_dir: downloads/
+          packages-dir: downloads/
