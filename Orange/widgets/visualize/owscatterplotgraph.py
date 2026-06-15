@@ -1817,7 +1817,7 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
             return None
         idx = np.array([p.data() for p in pts], dtype=int)
 
-        if self.selection is not None and np.all(self.selection[idx]):
+        if self.selection is not None and np.any(self.selection[idx]):
             idx = np.flatnonzero(self.selection)
 
         x, y = self.scatterplot_item.getData()
