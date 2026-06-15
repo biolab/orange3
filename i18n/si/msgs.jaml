@@ -15183,6 +15183,8 @@ widgets/visualize/owscatterplotgraph.py:
             impute_shapes: false
         def `_update_color_legend`:
             o: false
+        def `__adjust_pos`:
+            pxMode: false
         def `get_dragged_points`:
             set_coordinates: false
         def `finish_dragging`:

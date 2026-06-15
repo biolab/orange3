@@ -1785,10 +1785,32 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         else:
             return np.flatnonzero(self.selection)
 
+    def __adjust_pos(self, pos):
+        # This code is "inspired" by the code in pyqtgraph's ScatterPlotItem._maskAt
+        x = pos.x()
+        y = pos.y()
+        w = h = 3
+        if self.scatterplot_item.opts['pxMode']:
+            px, py = self.scatterplot_item.pixelVectors()
+            try:
+                px = 0 if px is None else px.length()
+            except OverflowError:
+                px = 0
+            try:
+                py = 0 if py is None else py.length()
+            except OverflowError:
+                py = 0
+            w *= px
+            h *= py
+        return QRectF(x - w, y - w, 2 * w, 2 * h)
+
     def get_dragged_points(self, pos):
         if not hasattr(self.master, "set_coordinates") \
                 or self.scatterplot_item is None:
             return None
+
+        # Expand the position to a rectangle of 3 pixels in each direction
+        pos = self.__adjust_pos(pos)
 
         pts = self.scatterplot_item.pointsAt(pos)
         if pts is None or len(pts) == 0:
