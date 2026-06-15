@@ -15185,6 +15185,8 @@ widgets/visualize/owscatterplotgraph.py:
             o: false
         def `get_dragged_points`:
             set_coordinates: false
+        def `finish_dragging`:
+            finish_dragging: false
 widgets/visualize/owscoringsheetviewer.py:
     class `ScoringSheetTable`:
         def `__init__`:
