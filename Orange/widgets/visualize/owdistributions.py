@@ -190,9 +190,15 @@ class ParameterSetter(CommonParameterSetter):
         self.initial_settings = {
             self.LABELS_BOX: {
                 self.FONT_FAMILY_LABEL: self.FONT_FAMILY_SETTING,
+                self.TITLE_LABEL: self.FONT_SETTING,
                 self.AXIS_TITLE_LABEL: self.FONT_SETTING,
                 self.AXIS_TICKS_LABEL: self.FONT_SETTING,
                 self.LEGEND_LABEL: self.FONT_SETTING,
+            },
+            self.ANNOT_BOX: {
+                self.TITLE_LABEL: {self.TITLE_LABEL: ("", "")},
+                self.X_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
+                self.Y_AXIS_LABEL: {self.TITLE_LABEL: ("", "")},
             },
             self.PLOT_BOX: {
                 self.LEGEND_LABEL: {
@@ -208,6 +214,14 @@ class ParameterSetter(CommonParameterSetter):
         self._setters[self.PLOT_BOX] = {
             self.LEGEND_LABEL: update_show_empty,
         }
+
+    @property
+    def title_item(self):
+        return self.master.parent_widget.ploti.titleLabel
+
+    @property
+    def getAxis(self):
+        return self.master.parent_widget.ploti.getAxis
 
     @property
     def axis_items(self):
@@ -648,16 +662,26 @@ class OWDistributions(OWWidget):
     def _set_axis_names(self):
         assert self.is_valid  # called only from replot, so assumes data is OK
         bottomaxis = self.ploti.getAxis("bottom")
-        bottomaxis.setLabel(self.var and self.var.name)
+        bottomaxis.setLabel(
+            self._custom_axis_title(ParameterSetter.X_AXIS_LABEL)
+            or (self.var and self.var.name))
         bottomaxis.setShowUnit(not (self.var and self.var.is_time))
 
         leftaxis = self.ploti.getAxis("left")
-        if self.show_probs and self.cvar:
+        custom_label = self._custom_axis_title(ParameterSetter.Y_AXIS_LABEL)
+        if custom_label:
+            leftaxis.setLabel(custom_label)
+        elif self.show_probs and self.cvar:
             leftaxis.setLabel(
                 f"Probability of '{self.cvar.name}' at given '{self.var.name}'")
         else:
             leftaxis.setLabel("Frequency")
         leftaxis.resizeEvent()
+
+    def _custom_axis_title(self, axis_label):
+        return self.visual_settings.get(
+            (ParameterSetter.ANNOT_BOX, axis_label, ParameterSetter.TITLE_LABEL),
+            "")
 
     def _update_controls_state(self):
         assert self.is_valid  # called only from replot, so assumes data is OK
@@ -1391,6 +1415,11 @@ class OWDistributions(OWWidget):
     def set_visual_settings(self, key: KeyType, value: ValueType):
         self.visual_settings[key] = value
         self.plotview.parameter_setter.set_parameter(key, value)
+        if self.is_valid and key[:2] in (
+                (ParameterSetter.ANNOT_BOX, ParameterSetter.X_AXIS_LABEL),
+                (ParameterSetter.ANNOT_BOX, ParameterSetter.Y_AXIS_LABEL)):
+            # an empty custom title falls back to the auto-generated label
+            self._set_axis_names()
 
 
 if __name__ == "__main__":  # pragma: no cover
