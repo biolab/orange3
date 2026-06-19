@@ -229,6 +229,7 @@ class OWCreateClass(widget.OWWidget):
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
     #: Max pixel height of the rules area before it scrolls instead of
+    #: growing the widget further
     MAX_RULES_AREA_HEIGHT = 360
 
     settingsHandler = DomainContextHandler()
@@ -340,10 +341,7 @@ class OWCreateClass(widget.OWWidget):
 
         gui.button(self.buttonsArea, self, "Apply", callback=self.apply)
 
-        # TODO: Resizing upon changing the number of rules does not work
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-
-
 
     @property
     def active_rules(self):
@@ -444,13 +442,7 @@ class OWCreateClass(widget.OWWidget):
         QTimer.singleShot(0, self._refit_rules_area)
 
     def _refit_rules_area(self):
-        """Size the rules scroll area to its contents, but never taller than
-        MAX_RULES_AREA_HEIGHT (beyond that it scrolls, so the Apply button
-        stays on screen), then re-fit the window to its new contents."""
         content_height = self._rules_widget.sizeHint().height()
-        needs_scroll = content_height > self.MAX_RULES_AREA_HEIGHT
-        self._rules_scroll.setVerticalScrollBarPolicy(
-            Qt.ScrollBarAlwaysOn if needs_scroll else Qt.ScrollBarAlwaysOff)
         self._rules_scroll.setFixedHeight(
             min(content_height, self.MAX_RULES_AREA_HEIGHT))
         self.adjustSize()
