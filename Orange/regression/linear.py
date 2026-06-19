@@ -79,7 +79,7 @@ class ElasticNetCVLearner(LinearRegressionLearner):
     supports_weights = True
 
     # Arguments are needed for signatures, pylint: disable=unused-argument
-    def __init__(self, l1_ratio=0.5, eps=0.001, n_alphas=100, alphas=None,
+    def __init__(self, l1_ratio=0.5, eps=0.001, n_alphas=100, alphas=100,
                  fit_intercept=True, precompute='auto', max_iter=1000,
                  tol=0.0001, cv=5, copy_X=True, verbose=0, n_jobs=1,
                  positive=False, preprocessors=None):
