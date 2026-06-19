@@ -5,8 +5,9 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-from AnyQt.QtWidgets import QFrame ,QGridLayout, QLabel, QLineEdit, QSizePolicy, QWidget,QScrollArea
-from AnyQt.QtCore import Qt , QTimer
+from AnyQt.QtWidgets import QFrame, QGridLayout, QLabel, QLineEdit, \
+    QSizePolicy, QWidget, QScrollArea
+from AnyQt.QtCore import Qt, QTimer
 
 from Orange.data import StringVariable, DiscreteVariable, Domain
 from Orange.data.table import Table
@@ -271,6 +272,9 @@ class OWCreateClass(widget.OWWidget):
         self.remove_buttons = []
         #: list of list of QLabel: pairs of labels with counts
         self.counts = []
+        #: bool: set by add_row, tells _refit_rules_area to scroll down
+        #    once the new row's height has been applied
+        self._scroll_to_bottom_pending = False
 
         gui.lineEdit(
             self.controlArea, self, "class_name",
@@ -451,7 +455,7 @@ class OWCreateClass(widget.OWWidget):
             min(content_height, self.MAX_RULES_AREA_HEIGHT))
         self.adjustSize()
 
-        if getattr(self, "_scroll_to_bottom_pending", False):
+        if self._scroll_to_bottom_pending:
             self._scroll_to_bottom_pending = False
             QTimer.singleShot(0, self._scroll_rules_to_bottom)
 
