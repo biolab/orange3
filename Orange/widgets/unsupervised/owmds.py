@@ -520,6 +520,9 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
             self.update_stress()
             self.graph.update_sizes()
 
+    def finish_dragging(self):
+        self.commit.deferred()
+
     def _on_connected_changed(self):
         self.graph.set_effective_matrix(self.effective_matrix)
         self.graph.update_pairs()

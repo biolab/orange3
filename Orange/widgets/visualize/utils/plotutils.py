@@ -259,7 +259,9 @@ class InteractiveViewBox(pg.ViewBox):
 
         def drag():
             if ev.isFinish():
-                self.dragged_points = None
+                if self.dragged_points:
+                    self.graph.finish_dragging()
+                    self.dragged_points = None
                 self.graph.unsuspend_jittering()
             else:
                 ev.accept()

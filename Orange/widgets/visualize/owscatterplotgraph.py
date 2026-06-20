@@ -1827,6 +1827,10 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         idx, x, y = points
         self.master.set_coordinates(idx, np.vstack((x + dist.x(), y + dist.y())).T)
 
+    def finish_dragging(self):
+        if hasattr(self.master, "finish_dragging"):
+            self.master.finish_dragging()
+
     def help_event(self, event):
         """
         Create a `QToolTip` for the point hovered by the mouse
