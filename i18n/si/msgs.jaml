@@ -860,6 +860,7 @@ clustering/hierarchical.py:
         __hash: false
         def `__repr__`:
             {0.__name__}(value={1!r}, branches={2!r}): false
+            {0.__name__}(...): false
         _Tree__value: false
         _Tree__branches: false
     Cluster: false
