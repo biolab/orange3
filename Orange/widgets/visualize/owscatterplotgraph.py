@@ -1785,6 +1785,52 @@ class OWScatterPlotBase(gui.OWComponent, QObject):
         else:
             return np.flatnonzero(self.selection)
 
+    def __adjust_pos(self, pos):
+        # This code is "inspired" by the code in pyqtgraph's ScatterPlotItem._maskAt
+        x = pos.x()
+        y = pos.y()
+        w = h = 3
+        if self.scatterplot_item.opts['pxMode']:
+            px, py = self.scatterplot_item.pixelVectors()
+            try:
+                px = 0 if px is None else px.length()
+            except OverflowError:
+                px = 0
+            try:
+                py = 0 if py is None else py.length()
+            except OverflowError:
+                py = 0
+            w *= px
+            h *= py
+        return QRectF(x - w, y - w, 2 * w, 2 * h)
+
+    def get_dragged_points(self, pos):
+        if not hasattr(self.master, "set_coordinates") \
+                or self.scatterplot_item is None:
+            return None
+
+        # Expand the position to a rectangle of 3 pixels in each direction
+        pos = self.__adjust_pos(pos)
+
+        pts = self.scatterplot_item.pointsAt(pos)
+        if pts is None or len(pts) == 0:
+            return None
+        idx = np.array([p.data() for p in pts], dtype=int)
+
+        if self.selection is not None and np.any(self.selection[idx]):
+            idx = np.flatnonzero(self.selection)
+
+        x, y = self.scatterplot_item.getData()
+        return idx, x[idx], y[idx]
+
+    def move_dragged_points(self, points, dist):
+        idx, x, y = points
+        self.master.set_coordinates(idx, np.vstack((x + dist.x(), y + dist.y())).T)
+
+    def finish_dragging(self):
+        if hasattr(self.master, "finish_dragging"):
+            self.master.finish_dragging()
+
     def help_event(self, event):
         """
         Create a `QToolTip` for the point hovered by the mouse

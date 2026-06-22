@@ -175,6 +175,7 @@ class InteractiveViewBox(pg.ViewBox):
         self.init_history()
         pg.ViewBox.__init__(self, enableMenu=enable_menu)
         self.graph = graph
+        self.dragged_points = None
         self.setMouseMode(self.PanMode)
         self.grabGesture(Qt.PinchGesture)
 
@@ -256,7 +257,29 @@ class InteractiveViewBox(pg.ViewBox):
             self.axHistoryPointer += 1
             self.axHistory = self.axHistory[:self.axHistoryPointer] + [ax]
 
-        if self.graph.state == SELECT and axis is None:
+        def drag():
+            if ev.isFinish():
+                if self.dragged_points:
+                    self.graph.finish_dragging()
+                    self.dragged_points = None
+                self.graph.unsuspend_jittering()
+            else:
+                ev.accept()
+                p0 = self.mapToView(ev.buttonDownPos())
+                p1 = self.mapToView(ev.pos())
+                dist = p1 - p0
+                self.graph.move_dragged_points(self.dragged_points, dist)
+
+        if ev.isStart() and ev.button() & (Qt.LeftButton | Qt.MiddleButton) \
+                and hasattr(self.graph, "get_dragged_points"):
+            view_pos = self.mapSceneToView(ev.pos())
+            self.dragged_points = self.graph.get_dragged_points(view_pos)
+            if self.dragged_points is not None:
+                self.graph.suspend_jittering()
+
+        if self.dragged_points:
+            drag()
+        elif self.graph.state == SELECT and axis is None:
             select()
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
             # Inherited mouseDragEvent doesn't work for large zooms because it

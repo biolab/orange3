@@ -1,6 +1,8 @@
 # pylint: disable=too-many-ancestors
 import time
 from types import SimpleNamespace as namespace
+from typing import Optional
+import hashlib
 
 import numpy as np
 import scipy.spatial.distance
@@ -178,6 +180,8 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
     GRAPH_CLASS = OWMDSGraph
     graph = SettingProvider(OWMDSGraph)
     embedding_variables_names = ("mds-x", "mds-y")
+    positions_hint: Optional[tuple[list[list[float]], str]] = \
+        Setting(None, schema_only=True)
 
     class Error(OWDataProjectionWidget.Error):
         not_enough_rows = Msg("Input data needs at least 2 rows")
@@ -201,6 +205,8 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
 
         self.embedding = None  # type: Optional[np.ndarray]
         self.effective_matrix = None  # type: Optional[DistMatrix]
+        self._effective_matrix_hash_ref: Optional[DistMatrix] = None
+        self._effective_matrix_hash: Optional[str] = None
         self.stress = None
 
         self.size_model = self.gui.points_models[2]
@@ -389,14 +395,9 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         first_result = self.embedding is None
         new_embedding = result.embedding
         need_update = new_embedding is not self.embedding
-        self.embedding = new_embedding
+        self.set_embedding(new_embedding, update=not first_result and need_update)
         if first_result:
             self.setup_plot()
-        else:
-            if need_update:
-                self.graph.update_coordinates()
-                self.graph.update_density()
-                self.update_stress()
 
     def on_done(self, result: Result):
         assert isinstance(result.embedding, np.ndarray)
@@ -470,15 +471,57 @@ class OWMDS(OWDataProjectionWidget, ConcurrentWidgetMixin):
         else:
             self.update_stress()
 
+    def __array_hash(self):
+        X = self.effective_matrix
+        if X is None:
+            return ""
+        if self._effective_matrix_hash_ref is X:
+            return self._effective_matrix_hash
+        h = hashlib.sha256()
+        digest = h.hexdigest()
+        self._effective_matrix_hash_ref = X
+        self._effective_matrix_hash = digest
+        return digest
+
     def handleNewSignals(self):
         self._initialize()
         self.input_changed.emit(self.data)
         if self._invalidated:
-            self.__invalidate_embedding()
             self.enable_controls()
-            if self.effective_matrix is not None:
-                self._run()
+            if (self.positions_hint is not None
+                    and self.effective_matrix is not None
+                    and len(self.positions_hint[0]) == len(self.effective_matrix)
+                    and self.positions_hint[1] == self.__array_hash()):
+                self.embedding = np.array(self.positions_hint[0])
+                self.positions_hint = None
+                self.graph.update_coordinates()
+                self.graph.update_density()
+                self.update_stress()
+            else:
+                self.__invalidate_embedding()
+                if self.effective_matrix is not None:
+                    self._run()
         super().handleNewSignals()
+
+    def set_embedding(self, embedding, update=True):
+        self.set_coordinates(..., embedding, update)
+
+    def set_coordinates(self, idx, coordinates, update=True):
+        if coordinates is not None \
+                and self.effective_matrix is not None \
+                and self.embedding is not None:
+            self.embedding[idx] = coordinates
+            self.positions_hint = (self.embedding.tolist(), self.__array_hash())
+        else:
+            self.positions_hint = None
+        if update:
+            self.graph.update_coordinates()
+            self.graph.update_density()
+            self.update_stress()
+            self.graph.update_sizes()
+
+    def finish_dragging(self):
+        self.commit.deferred()
 
     def _on_connected_changed(self):
         self.graph.set_effective_matrix(self.effective_matrix)
