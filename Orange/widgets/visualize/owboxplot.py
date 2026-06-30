@@ -62,7 +62,7 @@ class BoxData:
         self.var = np.nanvar(col)
         self.dev = np.sqrt(self.var)
         self.q25, self.median, self.q75 = \
-            np.nanquantile(col, [0.25, 0.5, 0.75], interpolation="midpoint")
+            np.nanquantile(col, [0.25, 0.5, 0.75], method="midpoint")
         self.data_range = ContDataRange(self.q25, self.q75, group_val)
         if self.q25 == self.median:
             self.q25 = None
