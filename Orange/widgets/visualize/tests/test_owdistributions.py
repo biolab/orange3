@@ -749,6 +749,13 @@ class TestOWDistributions(WidgetTest):
         key, value = ("Fonts", "Font family", "Font family"), "Helvetica"
         self.widget.set_visual_settings(key, value)
 
+        key, value = ("Fonts", "Title", "Font size"), 20
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Title", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        font.setPointSize(20)
+        self.assertFontEqual(graph.parameter_setter.title_item.item.font(), font)
+
         key, value = ("Fonts", "Axis title", "Font size"), 16
         self.widget.set_visual_settings(key, value)
         key, value = ("Fonts", "Axis title", "Italic"), True
@@ -784,6 +791,104 @@ class TestOWDistributions(WidgetTest):
             [i[1].text for i in graph.parameter_setter.legend_items],
             ["Iris-versicolor", "Iris-virginica"]
         )
+
+        self.assertFalse(graph.parameter_setter.title_item.isVisible())
+        key, value = ("Annotations", "Title", "Title"), "iris distributions"
+        self.widget.set_visual_settings(key, value)
+        self.assertTrue(graph.parameter_setter.title_item.isVisible())
+        self.assertEqual(graph.parameter_setter.title_item.item.toPlainText(), "iris distributions")
+
+        key, value = ("Annotations", "x-axis title", "Title"), "x-axis custom label"
+        self.widget.set_visual_settings(key, value)
+        self.assertEqual(self.widget.ploti.getAxis("bottom").labelText, "x-axis custom label")
+
+        key, value = ("Annotations", "y-axis title", "Title"), "y-axis custom label"
+        self.widget.set_visual_settings(key, value)
+        self.assertEqual(self.widget.ploti.getAxis("left").labelText, "y-axis custom label")
+    
+    def test_custom_titles_variable_change(self):
+        """Custom titles persist when plotted variable is changed"""
+        self.send_signal(self.widget.Inputs.data, self.iris)
+        graph = self.widget.plotview
+
+        key, value = ("Annotations", "Title", "Title"), "iris distributions"
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Annotations", "x-axis title", "Title"), "x-axis custom label"
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Annotations", "y-axis title", "Title"), "y-axis custom label"
+        self.widget.set_visual_settings(key, value)
+
+        self._set_var(1)
+
+        self.assertEqual(graph.parameter_setter.title_item.item.toPlainText(), "iris distributions")
+        self.assertEqual(self.widget.ploti.getAxis("bottom").labelText, "x-axis custom label")
+        self.assertEqual(self.widget.ploti.getAxis("left").labelText, "y-axis custom label")
+
+        key, value = ("Annotations", "x-axis title", "Title"), ""
+        self.widget.set_visual_settings(key, value)
+        self.assertEqual(self.widget.ploti.getAxis("bottom").labelText, "sepal length")
+
+        key, value = ("Annotations", "y-axis title", "Title"), ""
+        self.widget.set_visual_settings(key, value)
+        self.assertEqual(self.widget.ploti.getAxis("left").labelText, "Frequency")
+
+    def test_saved_workflow(self):
+        """Visual settings are saved and restored"""
+        font = QFont()
+        font.setItalic(True)
+        font.setFamily("Helvetica")
+
+        key, value = ("Fonts", "Title", "Font size"), 20
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Title", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis title", "Font size"), 16
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis title", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis ticks", "Font size"), 15
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Axis ticks", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Legend", "Font size"), 14
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Fonts", "Legend", "Italic"), True
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Figure", "Legend", "Hide empty categories in the legend"), True
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Annotations", "Title", "Title"), "iris distributions"
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Annotations", "x-axis title", "Title"), "x-axis custom label"
+        self.widget.set_visual_settings(key, value)
+        key, value = ("Annotations", "y-axis title", "Title"), "y-axis custom label"
+        self.widget.set_visual_settings(key, value)
+
+        settings = self.widget.settingsHandler.pack_data(self.widget)
+        w = self.create_widget(OWDistributions, stored_settings=settings)
+        
+        self.send_signal(w.Inputs.data, self.iris[50:], widget=w)
+        key, value = ("Fonts", "Font family", "Font family"), "Helvetica"
+        w.set_visual_settings(key, value)
+
+        font.setPointSize(20)
+        self.assertFontEqual(w.plotview.parameter_setter.title_item.item.font(), font)
+        font.setPointSize(16)
+        for item in w.plotview.parameter_setter.axis_items:
+            self.assertFontEqual(item.label.font(), font)
+        font.setPointSize(15)
+        for item in w.plotview.parameter_setter.axis_items:
+            self.assertFontEqual(item.style["tickFont"], font)
+        font.setPointSize(14)
+        legend_item = list(w.plotview.parameter_setter.legend_items)[0]
+        self.assertFontEqual(legend_item[1].item.font(), font)
+        self.assertEqual(
+            [i[1].text for i in w.plotview.parameter_setter.legend_items],
+            ["Iris-versicolor", "Iris-virginica"]
+        )
+        self.assertTrue(w.plotview.parameter_setter.title_item.isVisible())
+        self.assertEqual(w.plotview.parameter_setter.title_item.item.toPlainText(), "iris distributions")
+        self.assertEqual(w.ploti.getAxis("bottom").labelText, "x-axis custom label")
+        self.assertEqual(w.ploti.getAxis("left").labelText, "y-axis custom label")
 
     def assertFontEqual(self, font1, font2):
         self.assertEqual(font1.family(), font2.family())

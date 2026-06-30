@@ -5,8 +5,9 @@ from typing import Optional, Sequence
 
 import numpy as np
 
-from AnyQt.QtWidgets import QGridLayout, QLabel, QLineEdit, QSizePolicy, QWidget
-from AnyQt.QtCore import Qt
+from AnyQt.QtWidgets import QFrame, QGridLayout, QLabel, QLineEdit, \
+    QSizePolicy, QWidget, QScrollArea
+from AnyQt.QtCore import Qt, QTimer
 
 from Orange.data import StringVariable, DiscreteVariable, Domain
 from Orange.data.table import Table
@@ -227,6 +228,9 @@ class OWCreateClass(widget.OWWidget):
 
     want_main_area = False
     buttons_area_orientation = Qt.Vertical
+    #: Max pixel height of the rules area before it scrolls instead of
+    #: growing the widget further
+    MAX_RULES_AREA_HEIGHT = 360
 
     settingsHandler = DomainContextHandler()
     attribute = ContextSetting(None)
@@ -269,6 +273,9 @@ class OWCreateClass(widget.OWWidget):
         self.remove_buttons = []
         #: list of list of QLabel: pairs of labels with counts
         self.counts = []
+        #: bool: set by add_row, tells _refit_rules_area to scroll down
+        #    once the new row's height has been applied
+        self._scroll_to_bottom_pending = False
 
         gui.lineEdit(
             self.controlArea, self, "class_name",
@@ -301,9 +308,15 @@ class OWCreateClass(widget.OWWidget):
         rules_box.addWidget(QLabel("Count"), 0, 3, 1, 2)
         self.update_rules()
 
-        widg = QWidget(patternbox)
+        self._rules_widget = widg = QWidget()
         widg.setLayout(rules_box)
-        patternbox.layout().addWidget(widg)
+
+        self._rules_scroll = scroll = QScrollArea()
+        scroll.setWidget(widg)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        patternbox.layout().addWidget(scroll)
 
         box = gui.hBox(patternbox)
         gui.rubber(box)
@@ -328,7 +341,6 @@ class OWCreateClass(widget.OWWidget):
 
         gui.button(self.buttonsArea, self, "Apply", callback=self.apply)
 
-        # TODO: Resizing upon changing the number of rules does not work
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
 
     @property
@@ -427,9 +439,27 @@ class OWCreateClass(widget.OWWidget):
             _remove_line()
         _fix_tab_order()
 
+        QTimer.singleShot(0, self._refit_rules_area)
+
+    def _refit_rules_area(self):
+        content_height = self._rules_widget.sizeHint().height()
+        self._rules_scroll.setFixedHeight(
+            min(content_height, self.MAX_RULES_AREA_HEIGHT))
+        self.adjustSize()
+
+        if self._scroll_to_bottom_pending:
+            self._scroll_to_bottom_pending = False
+            QTimer.singleShot(0, self._scroll_rules_to_bottom)
+
+    def _scroll_rules_to_bottom(self):
+        """Scroll the rules area down so a newly added row is visible."""
+        bar = self._rules_scroll.verticalScrollBar()
+        bar.setValue(bar.maximum())
+
     def add_row(self):
         """Append a new row at the end."""
         self.active_rules.append(["", ""])
+        self._scroll_to_bottom_pending = True
         self.adjust_n_rule_rows()
         self.update_counts()
 
