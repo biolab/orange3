@@ -16,7 +16,7 @@ from AnyQt.QtCore import (
 )
 
 from AnyQt.QtGui import (
-    QCursor, QIcon, QPainter, QPixmap, QStandardItemModel,
+    QIcon, QPainter, QPixmap, QStandardItemModel,
     QDrag, QKeySequence
 )
 
@@ -291,7 +291,7 @@ class Controller(QObject):
         if event.mimeData().hasFormat(self.MimeType) and \
                 self.model() is not None:
             event.accept()
-            self._setDropIndicatorAt(event.pos())
+            self._setDropIndicatorAt(event.position())
             return True
         else:
             return False
@@ -646,8 +646,7 @@ class SequenceFlow(QWidget):
     def dropEvent(self, event):
         """Reimplemented."""
         layout = self.__flowlayout
-        index = self.__insertIndexAt(self.mapFromGlobal(QCursor.pos()))
-
+        index = self.__insertIndexAt(event.position())
         if event.mimeData().hasFormat("application/x-internal-move") and \
                 event.source() is self:
             # Complete the internal move
@@ -677,8 +676,7 @@ class SequenceFlow(QWidget):
 
     def dragMoveEvent(self, event):
         """Reimplemented."""
-        pos = self.mapFromGlobal(QCursor.pos())
-        self.__setDropIndicatorAt(pos)
+        self.__setDropIndicatorAt(event.position())
 
     def dragLeaveEvent(self, event):
         """Reimplemented."""

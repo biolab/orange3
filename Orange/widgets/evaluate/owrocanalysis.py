@@ -695,8 +695,8 @@ class OWROCAnalysis(widget.OWWidget):
                         mask = np.equal(cache_clf, clf_idx)
                         curr_thresh = np.compress(mask, cache_thresh).tolist()
                         curr_clf = np.compress(mask, cache_clf).tolist()
-                    else:
-                        QToolTip.showText(QCursor.pos(), "")
+                    else: # pragma: no cover
+                        QToolTip.showText(QCursor.pos(), "", self.plotview)
                         self._tooltip_cache = None
 
                     if curr_thresh:
@@ -721,7 +721,7 @@ class OWROCAnalysis(widget.OWWidget):
             clf_names = self.classifier_names
             msg = "Thresholds:\n" + "\n".join(["({:s}) {:.3f}".format(clf_names[i], thresh)
                                                for i, thresh in zip(valid_clf, valid_thresh)])
-            QToolTip.showText(QCursor.pos(), msg)
+            QToolTip.showText(QCursor.pos(), msg, self.plotview)
             self._tooltip_cache = (pt, valid_thresh, valid_clf, ave_mode)
 
     def _on_target_changed(self):
