@@ -20,7 +20,7 @@ class OWSGD(OWBaseLearner):
     name = 'Stochastic Gradient Descent'
     description = 'Minimize an objective function using a stochastic ' \
                   'approximation of gradient descent.'
-    icon = "icons/SGD.svg"
+    icon = "icons/SGD-symbolic.svg"
     replaces = [
         "Orange.widgets.regression.owsgdregression.OWSGDRegression",
     ]

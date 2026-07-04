@@ -8993,7 +8993,7 @@ widgets/evaluate/owcalibrationplot.py:
     class `OWCalibrationPlot`:
         Calibration Plot: Kalibracijska krivulja
         Calibration plot based on evaluation of classifiers.: Kalibracijska krivulja na osnovi rezultatov vrednotenja modelov.
-        icons/CalibrationPlot.svg: false
+        icons/CalibrationPlot-symbolic.svg: false
         calibration plot: calibration plot, krivulja
         class `Inputs`:
             Evaluation Results: Rezultati vrednotenja
@@ -9103,7 +9103,7 @@ widgets/evaluate/owconfusionmatrix.py:
         Confusion Matrix: Matrika zmot
         'Display a confusion matrix constructed from ': 'Pokaži matriko zmot glede na '
         the results of classifier evaluations.: rezultate vrednotenja.
-        icons/ConfusionMatrix.svg: false
+        icons/ConfusionMatrix-symbolic.svg: false
         confusion matrix: confusion matrix
         class `Inputs`:
             Evaluation Results: Rezultati vrednotenja
@@ -9169,7 +9169,7 @@ widgets/evaluate/owfeatureaspredictor.py:
     class `OWFeatureAsPredictor`:
         Feature as Predictor: Stolpec kot napoved
         Use a column as probabilities or predictions: Uporabi stolpec kot verjetnosti ali napovedi
-        icons/FeatureAsPredictor.svg: false
+        icons/FeatureAsPredictor-symbolic.svg: false
         column predictor: true
         class `Inputs`:
             Data: Podatki
@@ -9211,7 +9211,7 @@ widgets/evaluate/owliftcurve.py:
         Performance Curve: Krivulja zmogljivosti
         'Construct and display a performance curve ': 'Sestavi in pokaže krivuljo zmogljivosti '
         from the evaluation of classifiers.: iz rezultatov vrednotenja.
-        icons/LiftCurve.svg: false
+        icons/LiftCurve-symbolic.svg: false
         performance curve, lift, cumulative gain, precision, recall, curve: performance curve, lift, cumulative gain, precision, recall, curve, dvig, kumulativni dobiček, preciznost, priklic, krivulja
         class `Inputs`:
             Evaluation Results: Rezultati vrednotenja
@@ -9344,7 +9344,7 @@ widgets/evaluate/owparameterfitter.py:
     class `OWParameterFitter`:
         Parameter Fitter: Umerjanje parametrov
         Fit learner for various values of fitting parameter.: Umeri model za različne vrednosti parametrov.
-        icons/ParameterFitter.svg: false
+        icons/ParameterFitter-symbolic.svg: false
         parameter, fitter, tuning: parameter, fitter, tuning, umerjanje, prilagajanje
         graph.plotItem: false
         class `Inputs`:
@@ -9423,7 +9423,7 @@ widgets/evaluate/owpermutationplot.py:
     class `OWPermutationPlot`:
         Permutation Plot: Permutacijski grafikon
         Permutation analysis plotting: Grafični prikaz permutacijske analize
-        icons/PermutationPlot.svg: false
+        icons/PermutationPlot-symbolic.svg: false
         _keywords: permutation, plot
         graph.plotItem: false
         class `Inputs`:
@@ -9500,7 +9500,7 @@ widgets/evaluate/owpredictions.py:
     Show absolute value of relative difference between predicted and actual value: Pokaži absolutno vrednost relativne napake
     class `OWPredictions`:
         Predictions: Napovedi
-        icons/Predictions.svg: false
+        icons/Predictions-symbolic.svg: false
         Display predictions of models for an input dataset.: Pokaži napovedi modela na tabeli podatkov.
         predictions: predictions
         class `Inputs`:
@@ -9659,7 +9659,7 @@ widgets/evaluate/owrocanalysis.py:
         ROC Analysis: Analiza ROC
         'Display the Receiver Operating Characteristics curve ': 'Pokaže krivuljo ROC za '
         based on the evaluation of classifiers.: rezultate vrednotenja.
-        icons/ROCAnalysis.svg: false
+        icons/ROCAnalysis-symbolic.svg: false
         roc analysis, analyse: roc analysis, analyse
         class `Inputs`:
             Evaluation Results: Rezultati vrednotenja
@@ -9764,7 +9764,7 @@ widgets/evaluate/owtestandscore.py:
     class `OWTestAndScore`:
         Test and Score: Testiraj in meri
         Cross-validation accuracy estimation.: Ocenjevanje modeliranja s prečnim preverjanjem.
-        icons/TestLearners1.svg: false
+        icons/TestLearners1-symbolic.svg: false
         test and score, cross validation, cv: test and score, cross validation, cv, prečno preverjanje
         Orange.widgets.evaluate.owtestlearners.OWTestLearners: false
         class `Inputs`:
@@ -9977,7 +9977,7 @@ widgets/model/owadaboost.py:
         AdaBoost: true
         'An ensemble meta-algorithm that combines weak learners ': 'Skupinski algoritem učenja, ki združuje šibke algoritme '
         "and adapts to the 'hardness' of each training sample. ": in prilagaja 'težavnosti' učnih primerov.
-        icons/AdaBoost.svg: false
+        icons/AdaBoost-symbolic.svg: false
         Orange.widgets.classify.owadaboost.OWAdaBoostClassification: false
         Orange.widgets.regression.owadaboostregression.OWAdaBoostRegression: false
         adaboost, boost: adaboost, boost
@@ -10013,7 +10013,7 @@ widgets/model/owcalibratedlearner.py:
         Calibrated Learner: Kalibriran učni algoritem
         'Wraps another learner with probability calibration and ': 'Ovije drug učni algoritem z modelom za kalibracijo verjetnosti '
         decision threshold optimization: in optimiranje klasifikacijskega praga.
-        icons/CalibratedLearner.svg: false
+        icons/CalibratedLearner-symbolic.svg: false
         calibrated learner, calibration, threshold: calibrated learner, calibration, threshold, kalibracija, prag
         Sigmoid calibration: Sigmoidna kalibracija
         Isotonic calibration: Izotonična kalibracija
@@ -10044,7 +10044,7 @@ widgets/model/owconstant.py:
         Constant: Konstanta
         'Predict the most frequent class or mean value ': 'Vedno napove isti, večinski razred oz. povprečno vrednost '
         from the training set.: učnih primerov.
-        icons/Constant.svg: false
+        icons/Constant-symbolic.svg: false
         Orange.widgets.classify.owmajority.OWMajority: false
         Orange.widgets.regression.owmean.OWMean: false
         constant, majority, mean: constant, majority, mean, večina, povprečje
@@ -10116,7 +10116,7 @@ widgets/model/owcurvefit.py:
     class `OWCurveFit`:
         Curve Fit: Prileganje krivulje
         Fit a function to data.: Prilagodi krivuljo podatkom.
-        icons/CurveFit.svg: false
+        icons/CurveFit-symbolic.svg: false
         curve fit, function: curve fit, function, krivulja, prilagajanje
         class `Outputs`:
             Coefficients: Koeficienti
@@ -10259,7 +10259,7 @@ widgets/model/owgradientboosting.py:
     class `OWGradientBoosting`:
         Gradient Boosting: true
         Predict using gradient boosting on decision trees.: Napovedovanje z modelom Gradient Boosting na odločitvenih drevesih.
-        icons/GradientBoosting.svg: false
+        icons/GradientBoosting-symbolic.svg: false
         gradient boosting, catboost, gradient, boost, tree, forest, xgb, gb, extreme: gradient boosting, catboost, gradient, boost, tree, forest, xgb, gb, extreme, drevo, gozd
         def `add_main_layout`:
             Method: Metoda
@@ -10270,7 +10270,7 @@ widgets/model/owknn.py:
     class `OWKNNLearner`:
         kNN: k sosedov
         Predict according to the nearest training instances.: Napoveduje glede na najbližje sosede iz učnih primerov.
-        icons/KNN.svg: false
+        icons/KNN-symbolic.svg: false
         Orange.widgets.classify.owknn.OWKNNLearner: false
         Orange.widgets.regression.owknnregression.OWKNNRegression: false
         knn, k nearest, knearest, neighbor, neighbour: knn, k nearest, knearest, neighbor, neighbour, najbližji, sosedi
@@ -10305,7 +10305,7 @@ widgets/model/owlinearregression.py:
         Linear Regression: Linearna regresija
         'A linear regression algorithm with optional L1 (LASSO), ': 'Linearna regresija z '
         L2 (ridge) or L1L2 (elastic net) regularization.: različnimi vrstami regularizacije.
-        icons/LinearRegression.svg: false
+        icons/LinearRegression-symbolic.svg: false
         Orange.widgets.regression.owlinearregression.OWLinearRegression: false
         linear regression, ridge, lasso, elastic net: linear regression, ridge, lasso, elastic net, regresija, regularizacija
         class `Outputs`:
@@ -10352,7 +10352,7 @@ widgets/model/owloadmodel.py:
         Load Model: Naloži model
         Load a model from an input file.: Preberi model iz datoteke.
         Orange.widgets.classify.owloadclassifier.OWLoadClassifier: false
-        icons/LoadModel.svg: false
+        icons/LoadModel-symbolic.svg: false
         load model, file, open, model: load model, file, open, model, datoteka, odpri
         class `Outputs`:
             Model: true
@@ -10378,7 +10378,7 @@ widgets/model/owlogisticregression.py:
         Logistic Regression: Logistična regresija
         'The logistic regression classification algorithm with ': Logistična regresija z regularizacijo.
         LASSO (L1) or ridge (L2) regularization.: ""
-        icons/LogisticRegression.svg: false
+        icons/LogisticRegression-symbolic.svg: false
         Orange.widgets.classify.owlogisticregression.OWLogisticRegression: false
         logistic regression: logistic regression, regresija, regularizacija
         class `Outputs`:
@@ -10421,7 +10421,7 @@ widgets/model/ownaivebayes.py:
         Naive Bayes: Naivni Bayes
         'A fast and simple probabilistic classifier based on ': 'Preprost model, ki temelji na Bayesovi formuli '
         Bayes' theorem with the assumption of feature independence.: in predpostavlja pogojno neodvisnost spremenljivk.
-        icons/NaiveBayes.svg: false
+        icons/NaiveBayes-symbolic.svg: false
         Orange.widgets.classify.ownaivebayes.OWNaiveBayes: false
         naive bayes: naive bayes, bayes, pogojna neodvisnost
     __main__: false
@@ -10434,7 +10434,7 @@ widgets/model/owneuralnetwork.py:
         Neural Network: Nevronska mreža
         'A multi-layer perceptron (MLP) algorithm with ': Večnivojski perceptron z vzvratnim širjenjem
         backpropagation.: ' (backpropagation).'
-        icons/NN.svg: false
+        icons/NN-symbolic.svg: false
         neural network, mlp: neural network, mlp, večnivojskost, mreža
         identity: false
         logistic: false
@@ -10495,7 +10495,7 @@ widgets/model/owpls.py:
     class `OWPLS`:
         PLS: true
         Partial Least Squares Regression widget for multivariate data analysis: PLS regresija za multivariatno analizo podatkov
-        icons/PLS.svg: false
+        icons/PLS-symbolic.svg: false
         partial least squares: partial least squares, pls, regresija
         class `Outputs`:
             Coefficients and Loadings: Koeficienti in uteži
@@ -10532,7 +10532,7 @@ widgets/model/owrandomforest.py:
     class `OWRandomForest`:
         Random Forest: Naključni gozd
         Predict using an ensemble of decision trees.: Skupinsko napovedovanje z drevesi.
-        icons/RandomForest.svg: false
+        icons/RandomForest-symbolic.svg: false
         Orange.widgets.classify.owrandomforest.OWRandomForest: false
         Orange.widgets.regression.owrandomforestregression.OWRandomForestRegression: false
         random forest: random forest, drevesa
@@ -10614,7 +10614,7 @@ widgets/model/owrules.py:
     class `OWRuleLearner`:
         CN2 Rule Induction: Odločitvena pravila
         Induce rules from data using CN2 algorithm.: Sestavi odločitvena pravila z algoritmom CN2.
-        icons/CN2RuleInduction.svg: false
+        icons/CN2RuleInduction-symbolic.svg: false
         Orange.widgets.classify.owrules.OWRuleLearner: false
         cn2 rule induction: cn2 rule induction
         ordered: urejena
@@ -10673,7 +10673,7 @@ widgets/model/owsavemodel.py:
     class `OWSaveModel`:
         Save Model: Shrani model
         Save a trained model to an output file.: Shrani model v datoteko.
-        icons/SaveModel.svg: false
+        icons/SaveModel-symbolic.svg: false
         Orange.widgets.classify.owsaveclassifier.OWSaveClassifier: false
         save model, save: save model, save
         class `Inputs`:
@@ -10689,7 +10689,7 @@ widgets/model/owscoringsheet.py:
     class `OWScoringSheet`:
         Scoring Sheet: Točkovalnik
         A fast and explainable classifier.: Hitra in razložljiva klasifikacija.
-        icons/ScoringSheet.svg: false
+        icons/ScoringSheet-symbolic.svg: false
         orangecontrib.prototypes.widgets.owscoringsheet.OWScoringSheet: false
         scoring sheet: true
         class `Information`:
@@ -10714,7 +10714,7 @@ widgets/model/owsgd.py:
         Stochastic Gradient Descent: Stohastični gradientni spust
         'Minimize an objective function using a stochastic ': 'Minimiziranje ciljne funkcije z uporabo stohastičnega '
         approximation of gradient descent.: približka gradientnega spusta.
-        icons/SGD.svg: false
+        icons/SGD-symbolic.svg: false
         Orange.widgets.regression.owsgdregression.OWSGDRegression: false
         stochastic gradient descent, sgd: stochastic gradient descent, sgd
         class `Outputs`:
@@ -10837,7 +10837,7 @@ widgets/model/owstack.py:
     class `OWStackedLearner`:
         Stacking: Sklad modelov
         Stack multiple models.: Sestavi več modelov v model.
-        icons/Stacking.svg: false
+        icons/Stacking-symbolic.svg: false
         stacking, ensemble: stacking, ensemble, sklad
         Stack: Sklad
         class `Inputs`:
@@ -10857,7 +10857,7 @@ widgets/model/owsvm.py:
         SVM: true
         'Support Vector Machines map inputs to higher-dimensional ': Metoda podpornih vektorjev.
         feature spaces.: ""
-        icons/SVM.svg: false
+        icons/SVM-symbolic.svg: false
         Orange.widgets.classify.owsvmclassification.OWSVMClassification: false
         Orange.widgets.regression.owsvmregression.OWSVMRegression: false
         svm, support vector machines: svm, support vector machines, podporni vektorji
@@ -10940,7 +10940,7 @@ widgets/model/owtree.py:
     class `OWTreeLearner`:
         Tree: Drevo
         A tree algorithm with forward pruning.: Gradnja drevesa z rezanjem.
-        icons/Tree.svg: false
+        icons/Tree-symbolic.svg: false
         Orange.widgets.classify.owclassificationtree.OWClassificationTree: false
         Orange.widgets.regression.owregressiontree.OWRegressionTree: false
         Orange.widgets.classify.owclassificationtree.OWTreeLearner: false
@@ -11243,7 +11243,7 @@ widgets/unsupervised/owcorrespondence.py:
     class `OWCorrespondenceAnalysis`:
         Correspondence Analysis: Korespondenčna analiza
         Correspondence analysis for categorical multivariate data.: Korespondenčna analiza kategoričnih multivariatnih podatkov.
-        icons/CorrespondenceAnalysis.svg: false
+        icons/CorrespondenceAnalysis-symbolic.svg: false
         correspondence analysis: correspondence analysis
         class `Inputs`:
             Data: Podatki
@@ -11308,7 +11308,7 @@ widgets/unsupervised/owdbscan.py:
     class `OWDBSCAN`:
         DBSCAN: true
         Density-based spatial clustering.: Gručenje na podlagi prostorske gostote.
-        icons/DBSCAN.svg: false
+        icons/DBSCAN-symbolic.svg: false
         density based clustering, clustering: density based clustering, clustering, gostota, gručenje
         class `Inputs`:
             Data: Podatki
@@ -11350,7 +11350,7 @@ widgets/unsupervised/owdistancefile.py:
         Distance File: Branje razdalj
         orange.widgets.unsupervised.distancefile: false
         Read distances from a file.: Prebere matriko razdalj iz datoteke.
-        icons/DistanceFile.svg: false
+        icons/DistanceFile-symbolic.svg: false
         distance file, load, read, open: distance file, load, read, open, naloži, preberi, odpri
         class `Outputs`:
             Distances: Razdalje
@@ -11397,7 +11397,7 @@ widgets/unsupervised/owdistancemap.py:
     class `OWDistanceMap`:
         Distance Map: Slika razdalj
         Visualize a distance matrix.: Prikaže matriko razdalj s toplo gredo.
-        icons/DistanceMap.svg: false
+        icons/DistanceMap-symbolic.svg: false
         distance map: distance map, slika razdalj
         class `Inputs`:
             Distances: Razdalje
@@ -11439,7 +11439,7 @@ widgets/unsupervised/owdistancematrix.py:
     class `OWDistanceMatrix`:
         Distance Matrix: Matrika razdalj
         View distance matrix.: Pokaže matriko razdalj.
-        icons/DistanceMatrix.svg: false
+        icons/DistanceMatrix-symbolic.svg: false
         distance matrix: distance matrix
         class `Inputs`:
             Distances: Razdalje
@@ -11515,7 +11515,7 @@ widgets/unsupervised/owdistances.py:
     class `OWDistances`:
         Distances: Razdalje
         Compute a matrix of pairwise distances.: Izračunaj matriko razdalj.
-        icons/Distance.svg: false
+        icons/Distance-symbolic.svg: false
         distances: distances
         class `Inputs`:
             Data: Podatki
@@ -11566,7 +11566,7 @@ widgets/unsupervised/owdistancetransformation.py:
     class `OWDistanceTransformation`:
         Distance Transformation: Transformacija razdalj
         Transform distances according to selected criteria.: Transformira razdalje v matriki.
-        icons/DistancesTransformation.svg: false
+        icons/DistancesTransformation-symbolic.svg: false
         distance transformation: distance transformation
         class `Inputs`:
             Distances: Razdalje
@@ -11617,7 +11617,7 @@ widgets/unsupervised/owhierarchicalclustering.py:
         Hierarchical Clustering: Hierarhično gručenje
         'Display a dendrogram of a hierarchical clustering ': 'Prikaži dendrogram hierarhičnega razvrščanja v skupine, '
         constructed from the input distance matrix.: zgrajenega iz matrike razdalj.
-        icons/HierarchicalClustering.svg: false
+        icons/HierarchicalClustering-symbolic.svg: false
         hierarchical clustering: hierarchical clustering, dendrogram, razvrščanje, skupine
         class `Inputs`:
             Distances: Razdalje
@@ -11713,7 +11713,7 @@ widgets/unsupervised/owkmeans.py:
         k-Means: K gruč
         'k-Means clustering algorithm with silhouette-based ': Gručenje v k gruč in izbor s silhueto.
         quality estimation.: ""
-        icons/KMeans.svg: false
+        icons/KMeans-symbolic.svg: false
         k-means, kmeans, clustering: k-means, kmeans, clustering, gručenje
         class `Inputs`:
             Data: Podatki
@@ -11779,7 +11779,7 @@ widgets/unsupervised/owlouvainclustering.py:
     class `OWLouvainClustering`:
         Louvain Clustering: Louvainsko gručenje
         Detects communities in a network of nearest neighbors.: Poišče zgostitve v mreži najbližjih sosedov.
-        icons/LouvainClustering.svg: false
+        icons/LouvainClustering-symbolic.svg: false
         community: community, gručenje, clustering
         class `Inputs`:
             Data: Podatki
@@ -11969,7 +11969,7 @@ widgets/unsupervised/owmanifoldlearning.py:
     class `OWManifoldLearning`:
         Manifold Learning: Večplastno učenje
         Nonlinear dimensionality reduction.: Nelinearno zmanjšanje dimenzionalnosti.
-        icons/Manifold.svg: false
+        icons/Manifold-symbolic.svg: false
         manifold learning: manifold learning
         class `Inputs`:
             Data: Podatki
@@ -12026,7 +12026,7 @@ widgets/unsupervised/owmds.py:
         MDS: Večrazsežnostno lestvičenje
         'Two-dimensional data projection by multidimensional ': 'Dvodimenzionalna projekcija večdimenzionalnih podatkov, '
         scaling constructed from a distance matrix.: ki poskuša ohraniti razdalje med primeri.
-        icons/MDS.svg: false
+        icons/MDS-symbolic.svg: false
         mds, multidimensional scaling, multi dimensional scaling: mds, multidimensional scaling, multi dimensional scaling, večdimenzionalnost
         class `Inputs`:
             Distances: Razdalja
@@ -12134,7 +12134,7 @@ widgets/unsupervised/owpca.py:
     class `OWPCA`:
         PCA: PCA
         Principal component analysis with a scree-diagram.: Analiza osnovnih komponent.
-        icons/PCA.svg: false
+        icons/PCA-symbolic.svg: false
         pca, principal component analysis, linear transformation: pca, principal component analysis, linear transformation, osnovne komponente, linearna transformacija
         class `Inputs`:
             Data: Podatki
@@ -12193,7 +12193,7 @@ widgets/unsupervised/owsavedistances.py:
     class `OWSaveDistances`:
         Save Distance Matrix: Shrani matriko razdalj
         Save distance matrix to an output file.: Shrani matriko razdalj v datoteko.
-        icons/SaveDistances.svg: false
+        icons/SaveDistances-symbolic.svg: false
         save distance matrix, distance matrix, save: save distance matrix, distance matrix, matrika, razdalje
         Excel File (*.xlsx): Excelova datoteka (*.xlsx)
         Distance File (*.dst): Datoteka razdalj (*.dst)
@@ -12225,7 +12225,7 @@ widgets/unsupervised/owsom.py:
     class `OWSOM`:
         Self-Organizing Map: SOM
         Computation of self-organizing map.: Samodejni zemljevid.
-        icons/SOM.svg: false
+        icons/SOM-symbolic.svg: false
         self-organizing map, som: self-organizing map, som, samodejni zemljevid
         class `Inputs`:
             Data: Podatki
@@ -12387,7 +12387,7 @@ widgets/unsupervised/owtsne.py:
     class `OWtSNE`:
         t-SNE: false
         Two-dimensional data projection with t-SNE.: Dvodimenzionalna projekcija podatkov s t-SNE.
-        icons/TSNE.svg: false
+        icons/TSNE-symbolic.svg: false
         t-sne, tsne: tsne, projekcija podatkov
         t-SNE-x: false
         t-SNE-y: false
@@ -14314,7 +14314,7 @@ widgets/visualize/owheatmap.py:
     class `OWHeatMap`:
         Heat Map: Topla greda
         Plot a data matrix heatmap.: Pokaži podatke v topli gredi.
-        icons/Heatmap.svg: false
+        icons/Heatmap-symbolic.svg: false
         heat map: heat map
         class `Inputs`:
             Data: Podatki
@@ -14437,7 +14437,7 @@ widgets/visualize/owlinearprojection.py:
         Linear Projection: Linearna projekcija
         'A multi-axis projection of data onto ': 'Projekcija večdimenzionalnih podatkov '
         a two-dimensional plane.: v dve dimenziji.
-        icons/LinearProjection.svg: false
+        icons/LinearProjection-symbolic.svg: false
         linear projection: linear projection
         Circular Placement: Krožna postavitev
         Linear Discriminant Analysis: Linearna diskriminantna analiza
@@ -14772,7 +14772,7 @@ widgets/visualize/owpythagorastree.py:
     class `OWPythagorasTree`:
         Pythagorean Tree: Pitagorovo drevo
         Pythagorean Tree visualization for tree like-structures.: Prikaz drevesne strukture s Pitagorovim drevesom.
-        icons/PythagoreanTree.svg: false
+        icons/PythagoreanTree-symbolic.svg: false
         pythagorean tree, fractal: pythagorean tree, fractal, fraktal
         class `Inputs`:
             Tree: Drevo
@@ -14878,7 +14878,7 @@ widgets/visualize/owpythagoreanforest.py:
     class `OWPythagoreanForest`:
         Pythagorean Forest: Pitagorov gozd
         Pythagorean forest for visualising random forests.: Prikaz naključnega gozda s Pitagorovimi drevesi.
-        icons/PythagoreanForest.svg: false
+        icons/PythagoreanForest-symbolic.svg: false
         pythagorean forest, fractal: pythagorean forest, fractal, fraktal, drevesa
         class `Inputs`:
             Random Forest: Naključni gozd
@@ -14936,7 +14936,7 @@ widgets/visualize/owradviz.py:
     class `OWRadviz`:
         Radviz: Radviz
         Display Radviz projection: Projekcija z Radvizom.
-        icons/Radviz.svg: false
+        icons/Radviz-symbolic.svg: false
         radviz, viz: radviz, viz
         class `Warning`:
             Categorical variables with more than two values are not shown.: Kategorične spremenljivke z več kot dvema vrednostima niso prikazane.
@@ -15213,7 +15213,7 @@ widgets/visualize/owscoringsheetviewer.py:
     class `OWScoringSheetViewer`:
         Scoring Sheet Viewer: Pregledovalnik točkovalnika
         Visualize the scoring sheet model.: Prikaz točkovalnega modela.
-        icons/ScoringSheetViewer.svg: false
+        icons/ScoringSheetViewer-symbolic.svg: false
         orangecontrib.prototypes.widgets.owscoringsheetviewer.OWScoringSheetViewer: false
         scoring sheet viewer: true
         class `Inputs`:
@@ -15243,7 +15243,7 @@ widgets/visualize/owsieve.py:
         Sieve Diagram: Sievov diagram
         'Visualize the observed and expected frequencies ': 'Prikaz pričakovanih in opaženih pogostosti '
         for a combination of values.: za kombinacije spremenljivk.
-        icons/SieveDiagram.svg: false
+        icons/SieveDiagram-symbolic.svg: false
         sieve diagram: sieve diagram, grafikon
         class `Inputs`:
             Data: Podatki
@@ -15306,7 +15306,7 @@ widgets/visualize/owsilhouetteplot.py:
         Silhouette Plot: Silhuete
         'Visually assess cluster quality and ': Pokaže kvaliteto gručenja oz. skupin in pripadnost skupinam.
         the degree of cluster membership.: ""
-        icons/SilhouettePlot.svg: false
+        icons/SilhouettePlot-symbolic.svg: false
         silhouette plot: silhouette plot
         class `Inputs`:
             Data: Podatki

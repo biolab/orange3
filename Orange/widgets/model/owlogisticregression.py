@@ -17,7 +17,7 @@ class OWLogisticRegression(OWBaseLearner):
     name = "Logistic Regression"
     description = "The logistic regression classification algorithm with " \
                   "LASSO (L1) or ridge (L2) regularization."
-    icon = "icons/LogisticRegression.svg"
+    icon = "icons/LogisticRegression-symbolic.svg"
     replaces = [
         "Orange.widgets.classify.owlogisticregression.OWLogisticRegression",
     ]

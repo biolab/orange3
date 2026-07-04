@@ -11,7 +11,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 class OWKNNLearner(OWBaseLearner):
     name = "kNN"
     description = "Predict according to the nearest training instances."
-    icon = "icons/KNN.svg"
+    icon = "icons/KNN-symbolic.svg"
     replaces = [
         "Orange.widgets.classify.owknn.OWKNNLearner",
         "Orange.widgets.regression.owknnregression.OWKNNRegression",

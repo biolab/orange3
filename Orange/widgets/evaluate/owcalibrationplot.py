@@ -95,7 +95,7 @@ class ParameterSetter(CommonParameterSetter):
 class OWCalibrationPlot(widget.OWWidget):
     name = "Calibration Plot"
     description = "Calibration plot based on evaluation of classifiers."
-    icon = "icons/CalibrationPlot.svg"
+    icon = "icons/CalibrationPlot-symbolic.svg"
     priority = 1030
     keywords = "calibration plot"
 

@@ -106,7 +106,7 @@ class OWKMeans(widget.OWWidget):
     name = "k-Means"
     description = "k-Means clustering algorithm with silhouette-based " \
                   "quality estimation."
-    icon = "icons/KMeans.svg"
+    icon = "icons/KMeans-symbolic.svg"
     priority = 2100
     keywords = "k-means, kmeans, clustering"
 
