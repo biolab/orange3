@@ -10267,6 +10267,11 @@ widgets/model/owgradientboosting.py:
     __main__: false
     iris: false
 widgets/model/owknn.py:
+    class `NormalizeInstancesL2`:
+        def `__call__`:
+            l2: null
+        def `__repr__`:
+            Normalize instances (L2): null
     class `OWKNNLearner`:
         kNN: k sosedov
         Predict according to the nearest training instances.: Napoveduje glede na najbližje sosede iz učnih primerov.
@@ -10292,11 +10297,20 @@ widgets/model/owknn.py:
             Number of neighbors:: Število sosedov:
             metric_index: false
             Metric:: Metrika:
+            normalize_instances_l2: null
+            Normalize instances (L2): null
+            'Normalize each instance to unit L2 norm before learning. ': null
+            Recommended for embeddings when using Euclidean distance.: null
             weight_index: false
             Weight:: Uteži:
+        def `_update_l2_checkbox`:
+            euclidean: null
         def `get_learner_parameters`:
             Number of neighbours: Število sosedov
             Metric: Metrika
+            Normalize instances: null
+            L2: null
+            No: null
             Weight: Uteži
     __main__: false
     iris: false
