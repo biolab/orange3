@@ -1478,7 +1478,7 @@ class TestReinterpretTransforms(TestCase):
         )
         self.assertEqual(tdomain["A"].values, ("a", "b", "c"))
         self.assertEqual(tdomain["B"].values, ("0", "1", "2"))
-        self.assertEqual(tdomain["C"].values, ("0.0", "0.2", "0.25", "1.25"))
+        self.assertEqual(tdomain["C"].values, ("0", "0.2", "0.25", "1.25"))
         self.assertEqual(
             tdomain["D"].values,
             ("00:00:00", "00:03:00",
