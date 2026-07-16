@@ -10,7 +10,8 @@ from AnyQt.QtWidgets import \
     QLineEdit, QSizePolicy as Policy, QCompleter
 from AnyQt.QtCore import Qt, QTimer, QSize, QUrl
 
-from orangewidget.utils.filedialogs import format_filter
+from orangewidget.utils.filedialogs import \
+    format_filter, LocalRecentPathsWComboMixin
 from orangewidget.workflow.drophandler import SingleUrlDropHandler
 
 from Orange.data.table import Table, get_sample_datasets_dir
@@ -23,7 +24,7 @@ from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, \
+from Orange.widgets.utils.filedialogs import \
     open_filename_dialog, stored_recent_paths_prepend
 from Orange.widgets.utils.filedialogs import OWUrlDropBase
 from Orange.widgets.utils.widgetpreview import WidgetPreview
@@ -82,7 +83,7 @@ class LineEditSelectOnFocus(QLineEdit):
         QTimer.singleShot(0, self.selectAll)
 
 
-class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
+class OWFile(OWUrlDropBase, LocalRecentPathsWComboMixin):
     name = "File"
     id = "orange.widgets.data.file"
     description = "Read data from an input file or network " \
@@ -108,25 +109,27 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
     )
 
     # pylint seems to want declarations separated from definitions
-    recent_paths: List[RecentPath]
     recent_urls: List[str]
     variables: list
 
     # Overload RecentPathsWidgetMixin.recent_paths to set defaults
-    recent_paths = Setting([
+    DefaultRecentPaths = [
         RecentPath("", "sample-datasets", "iris.tab"),
         RecentPath("", "sample-datasets", "titanic.tab"),
         RecentPath("", "sample-datasets", "housing.tab"),
         RecentPath("", "sample-datasets", "heart_disease.tab"),
         RecentPath("", "sample-datasets", "brown-selected.tab"),
         RecentPath("", "sample-datasets", "zoo.tab"),
-    ])
+    ]
+
     recent_urls = Setting([])
     source = Setting(LOCAL_FILE)
     sheet_names = Setting({})
     url = Setting("")
 
     variables = ContextSetting([])
+
+    settings_version = 2
 
     domain_editor = SettingProvider(DomainEditor)
 
@@ -166,7 +169,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
 
     def __init__(self):
         super().__init__()
-        RecentPathsWComboMixin.__init__(self)
+        LocalRecentPathsWComboMixin.__init__(self)
         self.domain = None
         self.data = None
         self.loaded_file = ""
@@ -320,14 +323,14 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
     def select_file(self, n):
         assert n < len(self.recent_paths)
         super().select_file(n)
-        if self.recent_paths:
+        if self.active_path:
             self.source = self.LOCAL_FILE
             self.load_data()
             self.set_file_list()
 
     def select_sheet(self):
         # pylint: disable=unsubscriptable-object
-        self.recent_paths[0].sheet = self.sheet_combo.currentText()
+        self.active_path.sheet = self.sheet_combo.currentText()
         self.load_data()
 
     def on_reader_change(self, n):
@@ -339,7 +342,7 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
             return  # ignore for URL's
 
         if self.recent_paths:
-            path = self.recent_paths[0]  # pylint: disable=unsubscriptable-object
+            path = self.active_path
             if n == 0:  # default
                 path.file_format = None
             elif n <= len(self.available_readers):
@@ -385,7 +388,8 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
         self.add_path(filename)
         if reader is not None:
             # pylint: disable=unsubscriptable-object
-            self.recent_paths[0].file_format = reader.qualified_name()
+            self.active_path.file_format = reader.qualified_name()
+            self.store_recent_paths()
 
         self.source = self.LOCAL_FILE
         self.load_data()
@@ -481,8 +485,8 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
             self.reader_combo.setEnabled(True)
 
             # pylint: disable=unsubscriptable-object
-            if self.recent_paths and self.recent_paths[0].file_format:
-                qname = self.recent_paths[0].file_format
+            if self.active_path and self.active_path.file_format:
+                qname = self.active_path.file_format
                 qname_index = {r.qualified_name(): i for i, r in enumerate(self.available_readers)}
                 if qname in qname_index:
                     self.reader_combo.setCurrentIndex(qname_index[qname] + 1)
@@ -511,8 +515,8 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
                     return self._get_reader()
 
             # pylint: disable=unsubscriptable-object
-            if self.recent_paths and self.recent_paths[0].sheet:
-                reader.select_sheet(self.recent_paths[0].sheet)
+            if self.active_path and self.active_path.sheet:
+                reader.select_sheet(self.active_path.sheet)
             return reader
         else:
             url = self.url_combo.currentText().strip()
@@ -697,8 +701,15 @@ class OWFile(OWUrlDropBase, RecentPathsWComboMixin):
         It make sure that all environment connected values are modified
         (e.g. relative file paths are changed)
         """
-        self.update_file_list(key, value, oldvalue)
+        self.update_active_path()
 
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            paths = settings.pop("recent_paths", [])
+            if paths:
+                cls.merge_paths(paths)
+                settings["active_path"] = paths[0]
 
 class OWFileDropHandler(SingleUrlDropHandler):
     WIDGET = OWFile
