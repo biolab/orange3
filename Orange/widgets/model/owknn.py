@@ -1,13 +1,29 @@
 from AnyQt.QtCore import Qt
 from sklearn.preprocessing import normalize
 
+from Orange.classification import KNNLearner as KNNClassificationLearner
 from Orange.data import Table
 from Orange.modelling import KNNLearner
-from Orange.preprocess import PreprocessorList
+from Orange.regression import KNNRegressionLearner
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.owlearnerwidget import OWBaseLearner
 from Orange.widgets.utils.widgetpreview import WidgetPreview
+
+class L2KNNClassificationLearner(KNNClassificationLearner):
+    """Classification kNN with row-wise L2 normalization."""
+
+    def preprocess(self, data, progress_callback=None):
+        data = super().preprocess(data, progress_callback)
+        return NormalizeInstancesL2()(data)
+
+
+class L2KNNRegressionLearner(KNNRegressionLearner):
+    """Regression kNN with row-wise L2 normalization."""
+
+    def preprocess(self, data, progress_callback=None):
+        data = super().preprocess(data, progress_callback)
+        return NormalizeInstancesL2()(data)
 
 class NormalizeInstancesL2:
     """Normalize each instance to unit L2 norm."""
@@ -27,6 +43,14 @@ class NormalizeInstancesL2:
 
     def __repr__(self):
         return "Normalize instances (L2)"
+
+class L2KNNLearner(KNNLearner):
+    """kNN fitter using L2-normalized instances."""
+
+    __fits__ = {
+        "classification": L2KNNClassificationLearner,
+        "regression": L2KNNRegressionLearner,
+    }
 
 class OWKNNLearner(OWBaseLearner):
     name = "kNN"
@@ -65,7 +89,7 @@ class OWKNNLearner(OWBaseLearner):
             callback=self._on_metric_changed)
         self.normalize_l2_checkbox = gui.checkBox(
             box, self, "normalize_instances_l2",
-            label="Normalize instances (L2)",
+            label="Normalize instances (L2; cosine-equivalent)",
             callback=self.settings_changed)
         self.normalize_l2_checkbox.setToolTip(
             "Normalize each instance to unit L2 norm before learning. "
@@ -89,28 +113,18 @@ class OWKNNLearner(OWBaseLearner):
             self.normalize_l2_checkbox.setChecked(False)
 
     def create_learner(self):
-        preprocessors = self.preprocessors
+        learner_class = (
+            L2KNNLearner
+            if self.normalize_instances_l2
+            else self.LEARNER
+        )
 
-        if self.normalize_instances_l2:
-            l2_normalizer = NormalizeInstancesL2()
-
-            if preprocessors is None:
-                preprocessors = l2_normalizer
-            elif isinstance(preprocessors, PreprocessorList):
-                preprocessors = PreprocessorList(
-                    preprocessors.preprocessors + [l2_normalizer]
-                )
-            else:
-                preprocessors = PreprocessorList(
-                    [preprocessors, l2_normalizer]
-                )
-
-        return self.LEARNER(
+        return learner_class(
             n_neighbors=self.n_neighbors,
             # false positive, pylint: disable=invalid-sequence-index
             metric=self.metrics[self.metric_index],
             weights=self.weights[self.weight_index],
-            preprocessors=preprocessors,
+            preprocessors=self.preprocessors,
         )
 
     def get_learner_parameters(self):
