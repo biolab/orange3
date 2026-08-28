@@ -6790,15 +6790,6 @@ widgets/data/owmergedata.py:
     tests/data-gender-region: false
     tests/data-regions: false
 widgets/data/owneighbors.py:
-    Euclidean: Evklidska
-    Manhattan: Manhattanska
-    Mahalanobis: Mahalanobisova
-    Cosine: Kosinusna
-    Jaccard: Jaccardova
-    Spearman: Spearmanova
-    Absolute Spearman: Absolutna Spearmanova
-    Pearson: Pearsonova
-    Absolute Pearson: Absolutna Pearsonova
     class `OWNeighbors`:
         Neighbors: Sosedi
         Compute nearest neighbors in data according to reference.: Poišči najbližje sosede referenčnih primerov.
@@ -6816,20 +6807,27 @@ widgets/data/owneighbors.py:
             Reference instances are not considered as neighbours.: Referenčni primeri niso šteti za sosede.
         class `Warning`:
             Every data instance is same as some reference: Vsi podatki se pojavijo tudi med referenčnimi.
+            Missing values were imputed: Manjkajoče vrednosti so bile nadomeščene
         class `Error`:
             Data and reference have different features: Podatki in referenčni podatki so opisani z različnimi značilkami.
         def `__init__`:
-            distance_index: false
+            _distance_index: false
             'Distance metric: ': 'Vrsta razdalje: '
             n_neighbors: false
             Limit number of neighbors to:: Omeji število sosedov na:
             limit_neighbors: false
             include_reference: false
             Include reference example: Vključi referenčni primer
+        def `compute_distances`:
+            impute: false
+            normalize: false
         def `commit`:
             ' (neighbors)': ' (sosedi)'
         def `_data_with_similarity`:
             distance: false
+        def `migrate_settings`:
+            distance_index: false
+            metric_id: false
     __main__: false
     iris.tab: false
 widgets/data/owoutliers.py:
