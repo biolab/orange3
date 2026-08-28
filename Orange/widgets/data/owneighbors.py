@@ -4,25 +4,12 @@ from AnyQt.QtCore import Qt
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.util import get_unique_names
-from Orange.preprocess import RemoveNaNColumns, Impute
-from Orange import distance
 from Orange.widgets import gui
 from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-
-METRICS = [
-    ("Euclidean", distance.Euclidean),
-    ("Manhattan", distance.Manhattan),
-    ("Mahalanobis", distance.Mahalanobis),
-    ("Cosine", distance.Cosine),
-    ("Jaccard", distance.Jaccard),
-    ("Spearman", distance.SpearmanR),
-    ("Absolute Spearman", distance.SpearmanRAbsolute),
-    ("Pearson", distance.PearsonR),
-    ("Absolute Pearson", distance.PearsonRAbsolute),
-]
+from Orange.widgets.unsupervised.owdistances import MetricDefs, EuclideanNormalized
 
 
 class OWNeighbors(OWWidget):
@@ -52,17 +39,16 @@ class OWNeighbors(OWWidget):
     class Error(OWWidget.Error):
         diff_domains = Msg("Data and reference have different features")
 
-    n_neighbors: int
-    distance_index: int
-
-    n_neighbors = Setting(10)
+    n_neighbors: int = Setting(10)
     limit_neighbors = Setting(True)
-    distance_index = Setting(0)
+    metric_id: int = Setting(EuclideanNormalized)
     include_reference = Setting(False)
     auto_apply = Setting(True)
 
     want_main_area = False
     resizing_enabled = False
+
+    settings_version = 2
 
     def __init__(self):
         super().__init__()
@@ -71,11 +57,17 @@ class OWNeighbors(OWWidget):
         self.reference = None
         self.distances = None
 
+        self._metric_id_to_index = {metric.id: i for i, metric in enumerate(MetricDefs.values())}
+        self._metric_index_to_id = {i: metric.id for i, metric in enumerate(MetricDefs.values())}
+        self._distance_index = self._metric_id_to_index[self.metric_id]
+
         box = gui.vBox(self.controlArea, box=True)
         gui.comboBox(
-            box, self, "distance_index", orientation=Qt.Horizontal,
-            label="Distance metric: ", items=[d[0] for d in METRICS],
-            callback=self.recompute)
+            box, self, "_distance_index", orientation=Qt.Horizontal,
+            label="Distance metric: ",
+            items=[metric.name for metric in MetricDefs.values()],
+            tooltips=[metric.tooltip for metric in MetricDefs.values()],
+            callback=self._metric_changed)
         gui.spin(
             box, self, "n_neighbors", label="Limit number of neighbors to:",
             step=1, spinType=int, minv=0, maxv=100, checked='limit_neighbors',
@@ -102,6 +94,10 @@ class OWNeighbors(OWWidget):
         self.compute_distances()
         self.commit.now()
 
+    def _metric_changed(self):
+        self.metric_id = self._metric_index_to_id[self._distance_index]
+        self.recompute()
+
     def recompute(self):
         self.compute_distances()
         self.commit.deferred()
@@ -117,18 +113,18 @@ class OWNeighbors(OWWidget):
             self.distances = None
             return
 
-        metric = METRICS[self.distance_index][1]
-        n_ref = len(self.reference)
+        metric_def = MetricDefs[self.metric_id]
+        metric = metric_def.metric
 
         # comparing only attributes, no metas and class-vars
         new_domain = Domain(self.data.domain.attributes)
         reference = self.reference.transform(new_domain)
         data = self.data.transform(new_domain)
 
-        all_data = Table.concatenate([reference, data], 0)
-        pp_all_data = Impute()(RemoveNaNColumns()(all_data))
-        pp_reference, pp_data = pp_all_data[:n_ref], pp_all_data[n_ref:]
-        self.distances = metric(pp_data, pp_reference).min(axis=1)
+        kwargs = {"impute": True}
+        if metric_def.normalize:
+            kwargs["normalize"] = True
+        self.distances = metric(data, reference, **kwargs).min(axis=1)
 
     @gui.deferred
     def commit(self):
