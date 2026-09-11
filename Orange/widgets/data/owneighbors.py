@@ -9,7 +9,10 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.unsupervised.owdistances import MetricDefs, EuclideanNormalized
+from Orange.widgets.unsupervised.owdistances import (
+    MetricDefs, EuclideanNormalized, Euclidean, Manhattan, Cosine,Mahalanobis,
+    Pearson, PearsonAbsolute, Spearman, SpearmanAbsolute, Jaccard
+)
 
 
 class OWNeighbors(OWWidget):
@@ -181,6 +184,16 @@ class OWNeighbors(OWWidget):
             if distances.size > 0:
                 neighbours.set_column(dist_var, distances)
         return neighbours
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            metric_idx = settings.pop("distance_index")
+            # ordered as in METRIC in the previous version
+            metric_id = [Euclidean, Manhattan, Mahalanobis, Cosine, Jaccard,
+                         Spearman, SpearmanAbsolute, Pearson, PearsonAbsolute,
+                         ][metric_idx]
+            settings["metric_id"] = metric_id
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -5,7 +5,11 @@ from unittest.mock import Mock
 import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable
-from Orange.widgets.unsupervised.owdistances import Euclidean, MetricDefs, MetricDef
+from Orange.widgets.unsupervised.owdistances import (
+    MetricDefs, MetricDef,
+    Euclidean, Manhattan, Cosine, Mahalanobis,
+    Pearson, PearsonAbsolute, Spearman, SpearmanAbsolute, Jaccard
+)
 from Orange.widgets.data.owneighbors import OWNeighbors
 from Orange.widgets.tests.base import WidgetTest, ParameterMapping
 
@@ -481,6 +485,17 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(self.widget.Inputs.reference, self.iris[:1])
         dst = self.get_output(self.widget.Outputs.data).get_column("distance").tolist()
         self.assertTrue(dst == sorted(dst))  # check distance in ascending order
+
+    def test_migrate_to_2(self):
+        for old, new in ((0, Euclidean), (1, Manhattan),
+                         (2, Mahalanobis), (3, Cosine),
+                         (4, Jaccard), (5, Spearman),
+                         (6, SpearmanAbsolute), (7, Pearson),
+                         (8, PearsonAbsolute)):
+            settings = dict(distance_index=old, __version__=0)
+            w = self.create_widget(OWNeighbors, stored_settings=settings)
+            self.assertEqual(w.metric_id, new,
+                             msg=f"at {old} to {MetricDefs[new].name}")
 
 
 if __name__ == "__main__":
