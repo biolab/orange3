@@ -5,7 +5,7 @@ from unittest.mock import Mock
 import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable
-from Orange.widgets.unsupervised.owdistances import (
+from Orange.widgets.unsupervised.utils import (
     MetricDefs, MetricDef,
     Euclidean, Manhattan, Cosine, Mahalanobis,
     Pearson, PearsonAbsolute, Spearman, SpearmanAbsolute, Jaccard

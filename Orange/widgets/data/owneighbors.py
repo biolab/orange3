@@ -11,7 +11,7 @@ from Orange.widgets.settings import Setting
 from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.widget import OWWidget, Msg
 from Orange.widgets.utils.widgetpreview import WidgetPreview
-from Orange.widgets.unsupervised.owdistances import (
+from Orange.widgets.unsupervised.utils import (
     MetricDefs, EuclideanNormalized, Euclidean, Manhattan, Cosine,Mahalanobis,
     Pearson, PearsonAbsolute, Spearman, SpearmanAbsolute, Jaccard
 )

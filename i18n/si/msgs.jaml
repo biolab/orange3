@@ -11496,29 +11496,6 @@ widgets/unsupervised/owdistancematrix.py:
     __main__: false
     zoo: false
 widgets/unsupervised/owdistances.py:
-    Euclidean (normalized): Evklidska (normalizirana)
-    Square root of summed difference between normalized values: Kvadratni koren vsote razlik med normaliziranimi vrednostmi
-    Euclidean: Evklidska
-    Square root of summed difference between values: Kvadratni koren vsote razlik med vrednostmi
-    Manhattan (normalized): Manhattanska (normalizirana)
-    Sum of absolute differences between normalized values: Vsota absolutnih razlik med normaliziranimi vrednostmi
-    Manhattan: Manhattanska
-    Sum of absolute differences between values: Vsota absolutnih razlik med vrednostmi
-    Mahalanobis: Mahalanobisova
-    Mahalanobis distance: Mahalanobisova razdalja
-    Hamming: Hammingova
-    Hamming distance: Hammingova razdalja
-    Cosine: kosinusna
-    Cosine distance: kosinusna razdalja
-    Pearson: Pearsonova
-    Pearson correlation; distance = 1 - ρ/2: Pearsonova korelacija; razdalja = 1 - ρ/2
-    Pearson (absolute): Pearsonova (absolutna)
-    Absolute value of Pearson correlation; distance = 1 - |ρ|: Absolutna vrednost Pearsonove korelacije; razdalja = 1 - |ρ|
-    Spearman: Spearmanova
-    Spearman correlation; distance = 1 - ρ/2: Spearmanova korelacija; razdalja = 1 - ρ/2
-    Spearman (absolute): Spearmanova (absolutna)
-    Jaccard: Jaccardova
-    Jaccard distance: Jaccardova razdalja
     class `DistanceRunner`:
         def `run`:
             Calculating...: Računam ...
@@ -12492,6 +12469,30 @@ widgets/unsupervised/owtsne.py:
             attr_label: false
     __main__: false
     iris: false
+widgets/unsupervised/utils.py:
+      Euclidean (normalized): Evklidska (normalizirana)
+      Square root of summed difference between normalized values: Kvadratni koren vsote razlik med normaliziranimi vrednostmi
+      Euclidean: Evklidska
+      Square root of summed difference between values: Kvadratni koren vsote razlik med vrednostmi
+      Manhattan (normalized): Manhattanska (normalizirana)
+      Sum of absolute differences between normalized values: Vsota absolutnih razlik med normaliziranimi vrednostmi
+      Manhattan: Manhattanska
+      Sum of absolute differences between values: Vsota absolutnih razlik med vrednostmi
+      Mahalanobis: Mahalanobisova
+      Mahalanobis distance: Mahalanobisova razdalja
+      Hamming: Hammingova
+      Hamming distance: Hammingova razdalja
+      Cosine: kosinusna
+      Cosine distance: kosinusna razdalja
+      Pearson: Pearsonova
+      Pearson correlation; distance = 1 - ρ/2: Pearsonova korelacija; razdalja = 1 - ρ/2
+      Pearson (absolute): Pearsonova (absolutna)
+      Absolute value of Pearson correlation; distance = 1 - |ρ|: Absolutna vrednost Pearsonove korelacije; razdalja = 1 - |ρ|
+      Spearman: Spearmanova
+      Spearman correlation; distance = 1 - ρ/2: Spearmanova korelacija; razdalja = 1 - ρ/2
+      Spearman (absolute): Spearmanova (absolutna)
+      Jaccard: Jaccardova
+      Jaccard distance: Jaccardova razdalja
 widgets/utils/PDFExporter.py:
     PDFExporter: false
 widgets/utils/SVGExporter.py:
