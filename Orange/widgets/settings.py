@@ -38,10 +38,11 @@ import logging
 import warnings
 
 from orangewidget.settings import (
-    Setting, SettingProvider, SettingsHandler, ContextSetting,
+    Setting, SettingProvider, SettingsHandler,
     ContextHandler, Context, IncompatibleContext, SettingsPrinter,
     rename_setting, widget_settings_dir
 )
+from orangewidget.settings import ContextSetting as WBContextSetting
 from orangewidget.settings import _apply_setting
 
 from Orange.data import Domain, Variable
@@ -62,7 +63,167 @@ __all__ = [
 ]
 
 
-class DomainContextHandler(ContextHandler):
+class ContextSetting(WBContextSetting):
+    """Description of a context dependent setting"""
+
+    def __init__(self, default, *, required=2,
+                 exclude_attributes=False, exclude_class_vars=False, exclude_metas=False,
+                 **data):
+        super().__init__(default, required=required, **data)
+        self.exclude_attributes = exclude_attributes
+        self.exclude_class_vars = exclude_class_vars
+        self.exclude_metas = exclude_metas
+        self.required = required
+
+
+class StructuredVariableSettingMixin:
+
+    def filter_value(self, setting, data, *args):
+        value = data.get(setting.name, None)
+        if isinstance(value, list):
+            new_value = [item for item in value
+                         if self.is_valid_item(setting, item,  *args)]
+            data[setting.name] = new_value
+        elif isinstance(value, dict):
+            new_value = {item: val for item, val in value.items()
+                         if self.is_valid_item(setting, item,  *args)}
+            data[setting.name] = new_value
+        elif self.is_encoded_var(value) \
+                and not self.match_variable(setting, value,  *args):
+            del data[setting.name]
+
+    def encode_setting(self, context, setting, value):
+        if isinstance(value, list):
+            if all(e is None or isinstance(e, Variable) for e in value) \
+                    and any(e is not None for e in value):
+                return ([None if e is None else self.encode_variable(e)
+                         for e in value],
+                        -3)
+            else:
+                return copy.copy(value)
+
+        elif isinstance(value, dict) \
+                and all(isinstance(e, Variable) for e in value):
+            return ({self.encode_variable(e): val for e, val in value.items()},
+                    -4)
+
+        if isinstance(value, Variable):
+            if isinstance(setting, WBContextSetting):
+                return self.encode_variable(value)
+            else:
+                raise ValueError("Variables must be stored as ContextSettings; "
+                                 f"change {setting.name} to ContextSetting.")
+
+        return copy.copy(value), -2
+
+    # backward compatibility, pylint: disable=keyword-arg-before-vararg
+    def decode_setting(self, setting, value, domain=None, *args):
+        def get_var(name):
+            if domain is None:
+                raise ValueError("Cannot decode variable without domain")
+            return domain[name]
+
+        if isinstance(value, tuple):
+            data, dtype = value
+            if dtype == -3:
+                return[None if name_type is None else get_var(name_type[0])
+                       for name_type in data]
+            if dtype == -4:
+                return {get_var(name): val for (name, _), val in data.items()}
+            if dtype >= 100:
+                return get_var(data)
+            return value[0]
+        else:
+            return value
+
+    def match(self, context, *args):
+        matches = []
+        try:
+            for setting, data, _ in \
+                    self.provider.traverse_settings(data=context.values):
+                if not isinstance(setting, WBContextSetting):
+                    continue
+                value = data.get(setting.name, None)
+
+                if isinstance(value, list):
+                    matches.append(
+                        self.match_list(setting, value, context, *args))
+                # type check is a (not foolproof) check in case of a pair that
+                # would, by conincidence, have -3 or -4 as the second element
+                elif isinstance(value, tuple) and len(value) == 2 \
+                       and (value[1] == -3 and isinstance(value[0], list)
+                            or (value[1] == -4 and isinstance(value[0], dict))):
+                    matches.append(self.match_list(setting, value[0], context,
+                                                   *args))
+                elif value is not None:
+                    matches.append(
+                        self.match_value(setting, value, *args))
+        except IncompatibleContext:
+            return self.NO_MATCH
+
+        if self.first_match and matches and sum(m[0] for m in matches):
+            return self.MATCH
+
+        matches.append((0, 0))
+        matched, available = [sum(m) for m in zip(*matches)]
+        return matched / available if available else 0.1
+
+    def match_list(self, setting, value, context, *args):
+        """Match a list of values with the given context.
+        returns a tuple containing number of matched and all values.
+        """
+        matched = 0
+        for item in value:
+            if self.is_valid_item(setting, item, *args):
+                matched += 1
+            elif setting.required == WBContextSetting.REQUIRED:
+                raise IncompatibleContext()
+        return matched, len(value)
+
+    def match_value(self, setting, value, *args):
+        """Match a single value """
+        if value[1] < 0:
+            return 0, 0
+
+        if self.match_variable(setting, value, *args):
+            return 1, 1
+        elif setting.required == setting.OPTIONAL:
+            return 0, 1
+        else:
+            raise IncompatibleContext()
+
+    def is_valid_item(self, setting, item, *args):
+        """Return True if given item can be used with attrs and metas
+
+        Subclasses can override this method to checks data in alternative
+        representations.
+        """
+        if not isinstance(item, tuple):
+            return True
+        return self.match_variable(setting, item, *args)
+
+    @classmethod
+    def match_variable(cls, setting, value, *args):
+        """ Return if variable described with value can be matched to *args. """
+        raise NotImplementedError
+
+
+class VariableEncoderMixin:
+
+    @staticmethod
+    def encode_variable(var):
+        return var.name, 100 + vartype(var)
+
+    @staticmethod
+    def is_encoded_var(value):
+        return isinstance(value, tuple) \
+            and len(value) == 2 \
+            and isinstance(value[0], str) and isinstance(value[1], int) \
+            and value[1] >= 0
+
+
+class DomainContextHandler(ContextHandler, StructuredVariableSettingMixin,
+                           VariableEncoderMixin):
     """Context handler for widgets with settings that depend on
     the input dataset. Suitable settings are selected based on the
     data domain."""
@@ -124,72 +285,20 @@ class DomainContextHandler(ContextHandler):
             domain = domain.domain
         super().open_context(widget, domain, *self.encode_domain(domain))
 
-    def filter_value(self, setting, data, domain, attrs, metas):
-        value = data.get(setting.name, None)
-        if isinstance(value, list):
-            new_value = [item for item in value
-                         if self.is_valid_item(setting, item, attrs, metas)]
-            data[setting.name] = new_value
-        elif isinstance(value, dict):
-            new_value = {item: val for item, val in value.items()
-                         if self.is_valid_item(setting, item, attrs, metas)}
-            data[setting.name] = new_value
-        elif self.is_encoded_var(value) \
-                and not self._var_exists(setting, value, attrs, metas):
-            del data[setting.name]
+    def filter_value(self, setting, data, domain, *args):
+        StructuredVariableSettingMixin.filter_value(self, setting, data, *args)
 
-    @staticmethod
-    def encode_variable(var):
-        return var.name, 100 + vartype(var)
-
-    @classmethod
-    def encode_setting(cls, context, setting, value):
-        if isinstance(value, list):
-            if all(e is None or isinstance(e, Variable) for e in value) \
-                    and any(e is not None for e in value):
-                return ([None if e is None else cls.encode_variable(e)
-                         for e in value],
-                        -3)
-            else:
-                return copy.copy(value)
-
-        elif isinstance(value, dict) \
-                and all(isinstance(e, Variable) for e in value):
-            return ({cls.encode_variable(e): val for e, val in value.items()},
-                    -4)
-
-        if isinstance(value, Variable):
-            if isinstance(setting, ContextSetting):
-                return cls.encode_variable(value)
-            else:
-                raise ValueError("Variables must be stored as ContextSettings; "
-                                 f"change {setting.name} to ContextSetting.")
-
-        return copy.copy(value), -2
+    def encode_setting(self, context, setting, value):
+        return StructuredVariableSettingMixin.encode_setting(
+            self, context, setting, value)
 
     # backward compatibility, pylint: disable=keyword-arg-before-vararg
     def decode_setting(self, setting, value, domain=None, *args):
-        def get_var(name):
-            if domain is None:
-                raise ValueError("Cannot decode variable without domain")
-            return domain[name]
+        return StructuredVariableSettingMixin.decode_setting(
+            self, setting, value, domain, *args)
 
-        if isinstance(value, tuple):
-            data, dtype = value
-            if dtype == -3:
-                return[None if name_type is None else get_var(name_type[0])
-                       for name_type in data]
-            if dtype == -4:
-                return {get_var(name): val for (name, _), val in data.items()}
-            if dtype >= 100:
-                return get_var(data)
-            return value[0]
-        else:
-            return value
-
-    @classmethod
-    def _var_exists(cls, setting, value, attributes, metas):
-        if not cls.is_encoded_var(value):
+    def match_variable(self, setting, value, attributes, metas):
+        if not self.is_encoded_var(value):
             return False
 
         attr_name, attr_type = value
@@ -205,78 +314,59 @@ class DomainContextHandler(ContextHandler):
     def match(self, context, domain, attrs, metas):
         if context.attributes == attrs and context.metas == metas:
             return self.PERFECT_MATCH
+        return StructuredVariableSettingMixin.match(self, context, attrs, metas)
 
-        matches = []
-        try:
-            for setting, data, _ in \
-                    self.provider.traverse_settings(data=context.values):
-                if not isinstance(setting, ContextSetting):
-                    continue
-                value = data.get(setting.name, None)
 
-                if isinstance(value, list):
-                    matches.append(
-                        self.match_list(setting, value, context, attrs, metas))
-                # type check is a (not foolproof) check in case of a pair that
-                # would, by conincidence, have -3 or -4 as the second element
-                elif isinstance(value, tuple) and len(value) == 2 \
-                       and (value[1] == -3 and isinstance(value[0], list)
-                            or (value[1] == -4 and isinstance(value[0], dict))):
-                    matches.append(self.match_list(setting, value[0], context,
-                                                   attrs, metas))
-                elif value is not None:
-                    matches.append(
-                        self.match_value(setting, value, attrs, metas))
-        except IncompatibleContext:
-            return self.NO_MATCH
+class SimpleDomainContextHandler(ContextHandler, StructuredVariableSettingMixin,
+                                 VariableEncoderMixin):
+    def __init__(self):
+        super().__init__()
+        self.first_match = True
 
-        if self.first_match and matches and sum(m[0] for m in matches):
-            return self.MATCH
+    def open_context(self, widget, domain):
+        if domain is None:
+            return
+        if not isinstance(domain, Domain):
+            domain = domain.domain
+        super().open_context(widget, domain)
 
-        matches.append((0, 0))
-        matched, available = [sum(m) for m in zip(*matches)]
-        return matched / available if available else 0.1
+    def filter_value(self, setting, data, domain, *args):
+        StructuredVariableSettingMixin.filter_value(self, setting, data, *args)
 
-    def match_list(self, setting, value, context, attrs, metas):
-        """Match a list of values with the given context.
-        returns a tuple containing number of matched and all values.
-        """
-        matched = 0
-        for item in value:
-            if self.is_valid_item(setting, item, attrs, metas):
-                matched += 1
-            elif setting.required == ContextSetting.REQUIRED:
-                raise IncompatibleContext()
-        return matched, len(value)
+    def encode_setting(self, context, setting, value):
+        return StructuredVariableSettingMixin.encode_setting(
+            self, context, setting, value)
 
-    def match_value(self, setting, value, attrs, metas):
-        """Match a single value """
-        if value[1] < 0:
-            return 0, 0
+    def decode_setting(self, setting, value, domain, *args):
+        return StructuredVariableSettingMixin.decode_setting(
+            self, setting, value, domain, *args)
 
-        if self._var_exists(setting, value, attrs, metas):
-            return 1, 1
-        elif setting.required == setting.OPTIONAL:
-            return 0, 1
-        else:
-            raise IncompatibleContext()
+    def match_variable(self, setting, value, domain):
+        assert isinstance(setting, ContextSetting)
 
-    def is_valid_item(self, setting, item, attrs, metas):
-        """Return True if given item can be used with attrs and metas
+        if not self.is_encoded_var(value):
+            return False
 
-        Subclasses can override this method to checks data in alternative
-        representations.
-        """
-        if not isinstance(item, tuple):
-            return True
-        return self._var_exists(setting, item, attrs, metas)
+        attr_name, attr_type = value
 
-    @staticmethod
-    def is_encoded_var(value):
-        return isinstance(value, tuple) \
-            and len(value) == 2 \
-            and isinstance(value[0], str) and isinstance(value[1], int) \
-            and value[1] >= 0
+        if attr_name not in domain:
+            return False
+
+        candidate = domain[attr_name]
+        idx = domain.index(candidate)
+        if (0 <= idx < len(domain.attributes) and setting.exclude_attributes
+                or idx >= len(domain.attributes) and setting.exclude_class_vars
+                or idx < 0 and setting.exclude_metas):
+            return False
+
+        return self.encode_variable(candidate)[1] == attr_type
+
+    def filter_value(self, setting, data, domain):
+        StructuredVariableSettingMixin.filter_value(self, setting, data, domain)
+
+    def match(self, context, domain):
+        return StructuredVariableSettingMixin.match(self, context, domain)
+
 
 class ClassValuesContextHandler(ContextHandler):
     """Context handler used for widgets that work with
@@ -358,7 +448,7 @@ class PerfectDomainContextHandler(DomainContextHandler):
         """Same as is domain context handler, but handles separately stored
         class_vars."""
 
-        if isinstance(setting, ContextSetting) and isinstance(value, str):
+        if isinstance(setting, WBContextSetting) and isinstance(value, str):
 
             def _candidate_variables():
                 if not setting.exclude_attributes:
