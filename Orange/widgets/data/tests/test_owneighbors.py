@@ -486,6 +486,28 @@ class TestOWNeighbors(WidgetTest):
         dst = self.get_output(self.widget.Outputs.data).get_column("distance").tolist()
         self.assertTrue(dst == sorted(dst))  # check distance in ascending order
 
+    def test_unknowns_data(self):
+        self.widget.metric_id = Mahalanobis
+        self.assertFalse(MetricDefs[self.widget.metric_id].metric.supports_missing)
+        domain = Domain([ContinuousVariable(x) for x in "ab"])
+        reference = Table.from_numpy(domain, [[1, 0]])
+        data = Table.from_numpy(domain, [[1, "NaN"], [2, 0], [1, 0], [0, 0.1], [0.1, 0]])
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.reference, reference)
+        dst = self.get_output(self.widget.Outputs.data).get_column("distance")
+        self.assertFalse(np.any(np.isnan(dst)))
+
+    def test_unknowns_reference(self):
+        self.widget.metric_id = Mahalanobis
+        self.assertFalse(MetricDefs[self.widget.metric_id].metric.supports_missing)
+        domain = Domain([ContinuousVariable(x) for x in "ab"])
+        reference = Table.from_numpy(domain, [[1, "NaN"]])
+        data = Table.from_numpy(domain, [[1, 0.1], [2, 0], [1, 0], [0, 0.1], [0.1, 0]])
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.reference, reference)
+        dst = self.get_output(self.widget.Outputs.data).get_column("distance")
+        self.assertFalse(np.any(np.isnan(dst)))
+
     def test_migrate_to_2(self):
         for old, new in ((0, Euclidean), (1, Manhattan),
                          (2, Mahalanobis), (3, Cosine),
