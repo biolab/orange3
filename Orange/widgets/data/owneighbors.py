@@ -123,16 +123,14 @@ class OWNeighbors(OWWidget):
         metric_def = MetricDefs[self.metric_id]
         metric = metric_def.metric
 
-        # comparing only attributes, no metas and class-vars
-        new_domain = Domain(self.data.domain.attributes)
-        reference = self.reference.transform(new_domain)
-        data = self.data.transform(new_domain)
+        data = self.data
+        reference = self.reference
 
         if not metric.supports_missing and (bn.anynan(data.X) or bn.anynan(reference.X)):
             self.Warning.imputing_data()
-            all_data = Table.concatenate([reference, data], 0)
-            all_data = Impute()(RemoveNaNColumns()(all_data))
-            reference, data = all_data[:len(reference)], all_data[len(reference):]
+            data = Impute()(RemoveNaNColumns()(data))
+
+        reference = reference.transform(data.domain)
 
         kwargs = {"impute": True}
         if metric_def.normalize:
