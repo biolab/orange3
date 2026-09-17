@@ -10384,6 +10384,9 @@ widgets/model/owloadmodel.py:
             Open Model File: Odpri datoteko z modelom
         def `open_file`:
             rb: false
+        def `migrate_settings`:
+            recent_paths: null
+            active_path: null
     class `OWLoadModelDropHandler`:
         def `canDropFile`:
             .pkcls: false
