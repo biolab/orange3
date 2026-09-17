@@ -11403,6 +11403,9 @@ widgets/unsupervised/owdistancefile.py:
         def `send_report`:
             No data was loaded.: Podatki niso naloženi.
             File name: Ime datoteke
+        def `migrate_settings`:
+            recent_paths: null
+            active_path: null
     class `OWDistanceFileDropHandler`:
         def `parametersFromFile`:
             recent_paths: false
