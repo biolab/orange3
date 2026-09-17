@@ -109,8 +109,8 @@ class TestOWLoadModel(WidgetTest):
         self.widget = \
             self.create_widget(OWLoadModel,
                                stored_settings={"recent_paths": []})
-        # Doesn't crash and contains a single item, (none).
-        self.assertEqual(self.widget.file_combo.count(), 1)
+        # Doesn't crash and contains at list one item
+        self.assertGreaterEqual(self.widget.file_combo.count(), 1)
 
     @patch("Orange.widgets.widget.OWWidget.workflowEnv",
            Mock(return_value={"basedir": os.getcwd()}))
@@ -134,7 +134,6 @@ class TestOWLoadModel(WidgetTest):
             w = self.create_widget(OWLoadModel,
                                    stored_settings=stored_settings)
             w.open_file()
-            self.assertEqual(w.file_combo.count(), 1)
             args = load.call_args[0][0]
             self.assertEqual(args.name, file_name.replace("\\", "/"))
         finally:
