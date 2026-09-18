@@ -136,10 +136,6 @@ class OWSilhouettePlot(widget.OWWidget):
         self._silhouette = None  # type: Optional[np.ndarray]
         self._silplot = None     # type: Optional[SilhouettePlot]
 
-        info_box = gui.vBox(self.controlArea, "Info")
-        self.avg_silhouette_label = gui.widgetLabel(info_box, "")
-        self._update_avg_silhouette()
-
         self._distances_gui_box = distbox = gui.widgetBox(
             self.controlArea, "Distance"
         )
@@ -178,8 +174,10 @@ class OWSilhouettePlot(widget.OWWidget):
         ibox.setFixedWidth(ibox.sizeHint().width())
         warning.setVisible(False)
 
-
         gui.rubber(self.controlArea)
+        info_box = gui.vBox(self.controlArea, "Info")
+        self.avg_silhouette_label = gui.widgetLabel(info_box, "")
+        self._update_avg_silhouette()
 
         gui.auto_send(self.buttonsArea, self, "auto_commit")
 
