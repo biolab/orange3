@@ -153,6 +153,7 @@ class OWSelectRows(widget.OWWidget):
     purge_attributes = Setting(False, schema_only=True)
     purge_classes = Setting(False, schema_only=True)
     auto_commit = Setting(True)
+    cond_mode_conjunction = Setting(True)
 
     settings_version = 2
 
@@ -250,6 +251,9 @@ class OWSelectRows(widget.OWWidget):
         gui.rubber(box2)
 
         box_setting = gui.vBox(self.buttonsArea)
+        gui.checkBox(box_setting, self, "cond_mode_conjunction",
+                     "Conjunction mode",
+                     callback=self.conditions_changed)
         self.cb_pa = gui.checkBox(
             box_setting, self, "purge_attributes",
             "Remove unused values and constant features",
@@ -647,7 +651,8 @@ class OWSelectRows(widget.OWWidget):
                 conditions.append(filt)
 
             if conditions:
-                filters = data_filter.Values(conditions)
+                filters = data_filter.Values(
+                        conditions, conjunction=self.cond_mode_conjunction)
                 matching_output = filters(self.data)
                 filters.negate = True
                 non_matching_output = filters(self.data)
