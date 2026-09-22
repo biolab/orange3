@@ -110,7 +110,11 @@ class Updater:
         height = title_item.item.boundingRect().height() + 6 \
             if title_item.text else 0
         title_item.setMaximumHeight(height)
-        title_item.parentItem().layout.setRowFixedHeight(0, height)
+        parent = title_item.parentItem()
+        # Newer pyqtgraph has an attribute `layout_`,
+        # in older pyqtgraphs, layout is a property, not a method.
+        layout = parent.layout_ if hasattr(parent, "layout_") else parent.layout
+        layout.setRowFixedHeight(0, height)
         title_item.resizeEvent(None)
 
     @staticmethod
