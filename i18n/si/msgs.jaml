@@ -1446,6 +1446,9 @@ data/table.py:
             metas: false
             weights: false
         def `_update_locks`:
+            csr: false
+            csc: false
+            coo: false
             Unsupported sparse data type: false
         def `unlocked`:
             "'{name}' is a view into another table ": false
@@ -1570,6 +1573,8 @@ data/table.py:
         def `ninstances`:
             shape: false
         Leading dimension mismatch (%d != %d): false
+        csr: false
+        csc: false
         Array contains infinity.: false
     def `_check_inf`:
         AllFloat: false

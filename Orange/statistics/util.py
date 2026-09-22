@@ -10,7 +10,7 @@ from typing import Iterable
 import bottleneck as bn
 import numpy as np
 import pandas
-import scipy.stats.stats
+import scipy.stats
 from scipy import sparse as sp
 
 from sklearn.utils.sparsefuncs import mean_variance_axis

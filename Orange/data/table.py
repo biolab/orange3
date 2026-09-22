@@ -621,9 +621,9 @@ class Table(Sequence, Storage):
                 if part is None:
                     continue
                 writeable = bool(self._unlocked & flag)
-                if sp.isspmatrix_csr(part) or sp.isspmatrix_csc(part):
+                if sp.issparse(part) and part.format in ("csr", "csc"):
                     sync(part.data, part.indices, part.indptr)
-                elif sp.isspmatrix_coo(part):
+                elif sp.issparse(part) and part.format == "coo":
                     sync(part.data, part.row, part.col)
                 elif sp.issparse(part):
                     raise ValueError("Unsupported sparse data type")
@@ -2461,7 +2461,7 @@ def _check_arrays(*arrays, dtype=None, shape_1=None):
                              % (ninstances(array), shape_1))
 
         if sp.issparse(array):
-            if not (sp.isspmatrix_csr(array) or sp.isspmatrix_csc(array)):
+            if array.format not in ("csr", "csc"):
                 array = array.tocsr()
             array.data = np.asarray(array.data)
             array = _dereferenced(array)
