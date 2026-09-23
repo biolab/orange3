@@ -240,6 +240,7 @@ class OWConcatenate(widget.OWWidget):
             source_ids = np.array(list(flatten(
                 [i] * len(table) for i, table in enumerate(tables)))).reshape((-1, 1))
 
+        data = None  # introduce variable
         if not tables:
             data = None
         elif self.primary_data is not None and self.ignore_names:
@@ -254,14 +255,24 @@ class OWConcatenate(widget.OWWidget):
                 self.Error.incompatible_domains()
                 data = None
             else:
-                data = type(tables[0]).concatenate(tables, ignore_domains=True)
                 if source_var is not None:
                     if self.source_column_role == self.ClassRole:
-                        sdata = data.Table.from_numpy(
-                            data.Domain([], source_var),
-                            np.zeros(len(source_ids, 0)), source_ids)
-                        data = type(tables[0].concatenate(sdata, axis=1))
+                        class_vars = list(domain.class_vars) + [source_var]
+                        new_domain = Orange.data.Domain(
+                            domain.attributes, class_vars, domain.metas
+                        )
+                        data = Orange.data.Table.concatenate([
+                            table.transform(new_domain) for table in tables
+                        ])
+
+                        # aka data.Y.ndim == 1
+                        if len(domain.class_vars) == 0:
+                            data.Y[:] = source_ids.T
+                        else:
+                            data.Y[:, -1] = source_ids.T
                     else:
+                        data = type(tables[0]).concatenate(tables,
+                                                           ignore_domains=True)
                         data = data.add_column(
                             source_var, source_ids.flatten(),
                             to_metas=self.source_column_role == self.MetaRole)
