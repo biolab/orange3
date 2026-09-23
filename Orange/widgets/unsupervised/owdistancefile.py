@@ -6,19 +6,20 @@ from AnyQt.QtWidgets import QSizePolicy, QStyle, QMessageBox, QFileDialog
 from AnyQt.QtCore import QTimer, QUrl
 
 from orangewidget.settings import Setting
+from orangewidget.utils.filedialogs import LocalRecentPathsWComboMixin
 from orangewidget.widget import Msg
 from orangewidget.workflow.drophandler import SingleFileDropHandler
 
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.data import get_sample_datasets_dir
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, RecentPath, \
+from Orange.widgets.utils.filedialogs import RecentPath, \
     stored_recent_paths_prepend, OWUrlDropBase
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
 
-class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
+class OWDistanceFile(OWUrlDropBase, LocalRecentPathsWComboMixin):
     name = "Distance File"
     id = "orange.widgets.unsupervised.distancefile"
     description = "Read distances from a file."
@@ -40,9 +41,11 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
 
     auto_symmetric = Setting(True)
 
+    settings_version = 2
+
     def __init__(self):
         super().__init__()
-        RecentPathsWComboMixin.__init__(self)
+        LocalRecentPathsWComboMixin.__init__(self)
         self.distances = None
 
         vbox = gui.vBox(self.controlArea, "Distance File")
@@ -111,7 +114,7 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
     def open_file(self):
         self.Error.clear()
         self.distances = None
-        fn = self.last_path()
+        fn = self.active_path.abspath
         if fn and not os.path.exists(fn):
             dir_name, basename = os.path.split(fn)
             if os.path.exists(os.path.join(".", basename)):
@@ -119,6 +122,7 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
         if fn and fn != "(none)":
             try:
                 distances = DistMatrix.from_file(fn)
+                self.set_file_list()
             except Exception as exc:
                 err = str(exc)
                 self.Error.invalid_file(" \n"[len(err) > 40] + err)
@@ -157,6 +161,14 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
         if url.isLocalFile():
             self.add_path(url.toLocalFile())
             self.open_file()
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            paths = settings.pop("recent_paths", [])
+            if paths:
+                cls.merge_paths(paths)
+                settings["active_path"] = paths[0]
 
 
 class OWDistanceFileDropHandler(SingleFileDropHandler):
