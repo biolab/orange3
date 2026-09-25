@@ -7,6 +7,7 @@ from enum import IntEnum
 from collections import OrderedDict
 
 import numpy as np
+from scipy.special import logsumexp
 
 from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem,
@@ -871,6 +872,7 @@ class OWNomogram(OWWidget):
         self.update_scene()
 
     def update_controls(self):
+        is_logistic = isinstance(self.classifier, LogisticRegressionClassifier)
         self.class_combo.clear()
         self.norm_check.setHidden(True)
         self.cont_feature_dim_combo.setEnabled(True)
@@ -881,14 +883,14 @@ class OWNomogram(OWWidget):
                 self.target_class_index = 0
             if len(self.domain.attributes) > self.MAX_N_ATTRS:
                 self.display_index = 1
-            if len(self.domain.class_vars[0].values) > 2:
+            # softmax probabilities of logistic regression already sum to 1
+            if len(self.domain.class_vars[0].values) > 2 and not is_logistic:
                 self.norm_check.setHidden(False)
             if not self.domain.has_continuous_attributes():
                 self.cont_feature_dim_combo.setEnabled(False)
                 self.cont_feature_dim_index = 0
         model = self.sort_combo.model()
 
-        is_logistic = isinstance(self.classifier, LogisticRegressionClassifier)
         inapplicable = (SortBy.POSITIVE, SortBy.NEGATIVE)
         if is_logistic and self.sort_index in inapplicable:
             self.sort_index = SortBy.ABSOLUTE
@@ -1210,8 +1212,16 @@ class OWNomogram(OWWidget):
         # pylint: disable=invalid-unary-operand-type
         eps, d_ = 0.05, 1
         k = - np.log(self.p / (1 - self.p)) if self.p is not None else - self.b0
-        min_sum = k[self.target_class_index] - np.log((1 - eps) / eps)
-        max_sum = k[self.target_class_index] - np.log(eps / (1 - eps))
+        cls_var, cls_index = self.domain.class_var, self.target_class_index
+        min_sum = k[cls_index] - np.log((1 - eps) / eps)
+        max_sum = k[cls_index] - np.log(eps / (1 - eps))
+        # Multinomial logistic regression computes probabilities with softmax,
+        # which depends on the scores of all class values, so the ruler must
+        # also cover all totals that can be reached
+        softmax = self.b0 is not None and len(cls_var.values) > 2
+        if softmax:
+            min_sum = min(min_sum, sum(minimums))
+            max_sum = max(max_sum, sum(p[cls_index].max() for p in self.points))
         if self.align == OWNomogram.ALIGN_LEFT:
             max_sum = max_sum - sum(minimums)
             min_sum = min_sum - sum(minimums)
@@ -1226,10 +1236,18 @@ class OWNomogram(OWWidget):
         min_sum, max_sum = min(values), max(values)
         diff_ = np.nan_to_num(max_sum - min_sum)
         scale_x = max_width / diff_ if diff_ else max_width
-        cls_var, cls_index = self.domain.class_var, self.target_class_index
         nomogram_footer = NomogramItem()
 
+        def get_softmax_scores(val=None):
+            totals = self.__get_totals_for_class_values(minimums)
+            if val is not None:
+                totals[cls_index] = val
+            return totals / d_ - k
+
         def get_normalized_probabilities(val):
+            if softmax:
+                scores = get_softmax_scores(val)
+                return 1 / np.sum(np.exp(scores - scores[cls_index]))
             if not self.normalize_probabilities:
                 return 1 / (1 + np.exp(k[cls_index] - val / d_))
             totals = self.__get_totals_for_class_values(minimums)
@@ -1237,6 +1255,10 @@ class OWNomogram(OWWidget):
             return 1 / (1 + np.exp(k[cls_index] - val / d_)) / p_sum
 
         def get_points(prob):
+            if softmax:
+                scores = np.delete(get_softmax_scores(), cls_index)
+                return (k[cls_index] + np.log(prob / (1 - prob))
+                        + logsumexp(scores)) * d_
             if not self.normalize_probabilities:
                 return (k[cls_index] - np.log(1 / prob - 1)) * d_
             totals = self.__get_totals_for_class_values(minimums)

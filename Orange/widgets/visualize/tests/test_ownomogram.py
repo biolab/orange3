@@ -98,7 +98,34 @@ class TestOWNomogram(WidgetTest):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons for multiclass data"""
         cls = LogisticRegressionLearner(max_iter=100)(self.lenses)
-        self._test_helper(cls, [18, 56, 78])
+        self._test_helper(cls, [4, 25, 70])
+
+    def test_probabilities_lr_multiclass(self):
+        """Check that probabilities for multinomial logistic regression
+        match the model's predictions"""
+        w = self.widget
+        # the ruler must be wide enough to show the totals
+        w.resize(1000, 600)
+        w.show()
+        data = Table("iris")
+        cls = LogisticRegressionLearner()(data)
+        self.send_signal(w.Inputs.classifier, cls)
+        for i in (0, 53, 120):
+            self.send_signal(w.Inputs.data, data[i:i + 1])
+            probs = cls(data[i], cls.Probs)
+            for scale in (0, 1):
+                w.controls.scale.buttons[scale].click()
+                for cls_index, prob in enumerate(probs):
+                    simulate.combobox_activate_index(w.class_combo, cls_index)
+                    dot = [item for item in w.scene.items()
+                           if isinstance(item, ProbabilitiesDotItem)][0]
+                    total = w.scale_marker_values(w.feature_marker_values).sum()
+                    self.assertAlmostEqual(dot.get_probabilities(total), prob)
+                    ruler = dot.parentItem()
+                    self.assertLessEqual(ruler.min_val, total)
+                    self.assertGreaterEqual(ruler.max_val, total)
+        # softmax probabilities already sum to 1
+        self.assertTrue(w.norm_check.isHidden())
 
     def test_nomogram_with_instance_nb(self):
         """Check initialized marker values and feature sorting for naive bayes
