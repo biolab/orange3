@@ -7854,6 +7854,7 @@ widgets/data/owrank.py:
     scorer: false
     problem_type: false
     is_default: false
+    id: false
     Information Gain: Informacijski prispevek
     Info. gain: Inf. prisp
     Information Gain Ratio: Delež inform. prispevka
@@ -7921,9 +7922,9 @@ widgets/data/owrank.py:
         def `migrate_settings`:
             headerState: false
             sorting: false
+            selected_methods: false
     __main__: false
     heart_disease.tab: false
-    Learner: false
 widgets/data/owsave.py:
     ~{os.sep}: false
     class `OWSave`:
