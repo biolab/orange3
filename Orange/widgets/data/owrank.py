@@ -49,30 +49,31 @@ class ProblemType:
                 cls.REGRESSION if isinstance(variable, ContinuousVariable) else
                 cls.UNSUPERVISED)
 
-ScoreMeta = namedtuple("score_meta", ["name", "shortname", "scorer", 'problem_type', 'is_default'])
+ScoreMeta = namedtuple("score_meta", ["name", "shortname", "scorer",
+                                      'problem_type', 'is_default', "id"])
 
 # Default scores.
 CLS_SCORES = [
     ScoreMeta("Information Gain", "Info. gain",
-              score.InfoGain, ProblemType.CLASSIFICATION, False),
+              score.InfoGain, ProblemType.CLASSIFICATION, False, 1),
     ScoreMeta("Information Gain Ratio", "Gain ratio",
-              score.GainRatio, ProblemType.CLASSIFICATION, True),
+              score.GainRatio, ProblemType.CLASSIFICATION, True, 2),
     ScoreMeta("Gini Decrease", "Gini",
-              score.Gini, ProblemType.CLASSIFICATION, True),
+              score.Gini, ProblemType.CLASSIFICATION, True, 3),
     ScoreMeta("ANOVA", "ANOVA",
-              score.ANOVA, ProblemType.CLASSIFICATION, False),
+              score.ANOVA, ProblemType.CLASSIFICATION, False, 4),
     ScoreMeta("χ²", "χ²",
-              score.Chi2, ProblemType.CLASSIFICATION, False),
+              score.Chi2, ProblemType.CLASSIFICATION, False, 5),
     ScoreMeta("ReliefF", "ReliefF",
-              score.ReliefF, ProblemType.CLASSIFICATION, False),
+              score.ReliefF, ProblemType.CLASSIFICATION, False, 6),
     ScoreMeta("FCBF", "FCBF",
-              score.FCBF, ProblemType.CLASSIFICATION, False)
+              score.FCBF, ProblemType.CLASSIFICATION, False, 7)
 ]
 REG_SCORES = [
     ScoreMeta("Univariate Regression", "Univar. reg.",
-              score.UnivariateLinearRegression, ProblemType.REGRESSION, True),
+              score.UnivariateLinearRegression, ProblemType.REGRESSION, True, 8),
     ScoreMeta("RReliefF", "RReliefF",
-              score.RReliefF, ProblemType.REGRESSION, True)
+              score.RReliefF, ProblemType.REGRESSION, True, 9)
 ]
 SCORES = CLS_SCORES + REG_SCORES
 
@@ -230,7 +231,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
     sorting = Setting((0, enum2int(Qt.DescendingOrder)))
     selected_methods = Setting(set())
 
-    settings_version = 4
+    settings_version = 5
     settingsHandler = DomainContextHandler()
     selected_attrs = ContextSetting([], schema_only=True)
     selectionMethod = ContextSetting(SelectNBest)
@@ -261,7 +262,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         self.methods_results = {}
 
         if not self.selected_methods:
-            self.selected_methods = {method.name for method in SCORES
+            self.selected_methods = {method.id for method in SCORES
                                      if method.is_default}
 
         # GUI
@@ -292,8 +293,8 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
                 box.layout().addWidget(QCheckBox(
                     method.name, self,
                     objectName=method.shortname,  # To be easily found in tests
-                    checked=method.name in self.selected_methods,
-                    stateChanged=partial(self.methodSelectionChanged, method_name=method.name)))
+                    checked=method.id in self.selected_methods,
+                    stateChanged=partial(self.methodSelectionChanged, method_id=method.id)))
             gui.rubber(box)
 
         gui.rubber(self.controlArea)
@@ -400,7 +401,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         self.scorers[index] = ScoreMeta(
             scorer.name, scorer.name, scorer,
             ProblemType.from_variable(scorer.class_type),
-            False
+            False, 100 + index
         )
         self.scorers_results = {}
 
@@ -409,7 +410,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         self.scorers.insert(index, ScoreMeta(
             scorer.name, scorer.name, scorer,
             ProblemType.from_variable(scorer.class_type),
-            False
+            False, 100 + index
         ))
         self.scorers_results = {}
 
@@ -423,7 +424,7 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
             method
             for method in SCORES
             if (
-                method.name in self.selected_methods
+                method.id in self.selected_methods
                 and method.problem_type == self.problem_type_mode
                 and (
                     not issparse(self.data.X)
@@ -568,12 +569,12 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
         sort_column = self.ranksModel.sortColumn() - 2  # -2 for name and '#' columns
         self.sorting = (sort_column, sort_order)
 
-    def methodSelectionChanged(self, state: int, method_name):
+    def methodSelectionChanged(self, state: int, method_id: int):
         state = Qt.CheckState(state)
         if state == Qt.Checked:
-            self.selected_methods.add(method_name)
-        elif method_name in self.selected_methods:
-            self.selected_methods.remove(method_name)
+            self.selected_methods.add(method_id)
+        else:
+            self.selected_methods.discard(method_id)
 
         self.update_scores()
 
@@ -649,6 +650,13 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
             column, order = settings["sorting"]
             settings["sorting"] = (column, enum2int(order))
 
+        if version < 5 and "selected_methods" in settings:
+            selected_names = settings["selected_methods"]
+            settings["selected_methods"] = {
+                method.id for method in SCORES
+                if method.name in selected_names
+            }
+
     @classmethod
     def migrate_context(cls, context, version):
         if version is None or version < 3:
@@ -659,15 +667,6 @@ class OWRank(OWWidget, ConcurrentWidgetMixin):
 
 if __name__ == "__main__":  # pragma: no cover
     from Orange.classification import RandomForestLearner
-    previewer = WidgetPreview(OWRank)
-    previewer.run(Table("heart_disease.tab"), no_exit=True)
-    previewer.send_signals(
-        set_learner=(RandomForestLearner(), (3, 'Learner', None)))
-    previewer.run()
-
-    # pylint: disable=pointless-string-statement
-    """
     WidgetPreview(OWRank).run(
-        set_learner=(RandomForestLearner(), (3, 'Learner', None)),
+        insert_learner=(0, RandomForestLearner()),
         set_data=Table("heart_disease.tab"))
-    """
