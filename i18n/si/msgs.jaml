@@ -13963,6 +13963,7 @@ widgets/visualize/owbarplot.py:
         def `__init__`:
             bottom: false
             left: false
+            layout_: false
         def `update_axes`:
             left: false
             bottom: false
@@ -15144,6 +15145,8 @@ widgets/visualize/owscatterplot.py:
     iris: false
 widgets/visualize/owscatterplotgraph.py:
     class `LegendItem`:
+        def `__init__`:
+            layout_: false
         def `addItem`:
             left: false
     class `ScatterPlotItem`:
@@ -15815,6 +15818,8 @@ widgets/visualize/utils/customizableplot.py:
         Dot line: Pikčasta črta
         Dash dot line: Črta - pika
         Dash dot dot line: Črta - pika - pika
+        def `plot_title_resize`:
+            layout_: false
         def `update_axes_titles_font`:
             foreground: false
             normal: false

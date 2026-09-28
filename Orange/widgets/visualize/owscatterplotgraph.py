@@ -46,10 +46,15 @@ class LegendItem(PgLegendItem):
             self, size=None, offset=None, pen=None, brush=None,
     ):
         super().__init__(size, offset)
+        # Workaround for backward incompatibility in pyqtgraph
+        # This can be removed after we require pyqtgraph>0.14.0
+        if not hasattr(self, "layout_"):
+            self.layout_ = self.layout
+
         self.items = []
-        self.layout.setContentsMargins(5, 5, 5, 5)
-        self.layout.setHorizontalSpacing(15)
-        self.layout.setColumnAlignment(1, Qt.AlignLeft | Qt.AlignVCenter)
+        self.layout_.setContentsMargins(5, 5, 5, 5)
+        self.layout_.setHorizontalSpacing(15)
+        self.layout_.setColumnAlignment(1, Qt.AlignLeft | Qt.AlignVCenter)
         if pen is not None:
             pen = QPen(pen)
         if brush is not None:
@@ -87,8 +92,8 @@ class LegendItem(PgLegendItem):
         items = list(self.items)
         self.items = []
         for sample, label in items:
-            self.layout.removeItem(sample)
-            self.layout.removeItem(label)
+            self.layout_.removeItem(sample)
+            self.layout_.removeItem(label)
             sample.hide()
             label.hide()
 

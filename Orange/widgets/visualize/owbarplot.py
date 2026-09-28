@@ -167,6 +167,10 @@ class BarPlotGraph(PlotWidget):
                                           rotate_ticks=True),
                        "left": AxisItem(orientation="left")}
         )
+        plotitem = self.getPlotItem()
+        if not hasattr(plotitem, "layout_"):
+            plotitem.layout_ = plotitem.layout
+
         self.hideAxis("left")
         self.hideAxis("bottom")
         self.getPlotItem().buttonsHidden = True
@@ -176,7 +180,7 @@ class BarPlotGraph(PlotWidget):
         self.group_axis = AxisItem("bottom")
         self.group_axis.hide()
         self.group_axis.linkToView(self.getViewBox())
-        self.getPlotItem().layout.addItem(self.group_axis, 4, 1)
+        self.getPlotItem().layout_.addItem(self.group_axis, 4, 1)
 
         self.legend = self._create_legend()
 
