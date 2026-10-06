@@ -318,6 +318,10 @@ class OWSelectRows(widget.OWWidget):
 
     def remove_one_row(self, rownum):
         self.cond_list.removeRow(rownum)
+        # Rows below the removed one moved up; update the row their combos use
+        for row in range(rownum, self.cond_list.rowCount()):
+            for col in (0, 1):
+                self.cond_list.cellWidget(row, col).row = row
         if self.cond_list.model().rowCount() == 0:
             self.remove_all_button.setDisabled(True)
 
