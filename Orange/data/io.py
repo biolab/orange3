@@ -9,7 +9,7 @@ from typing import List, Iterable
 
 from functools import lru_cache
 from importlib import import_module
-from itertools import chain
+from itertools import chain, dropwhile
 
 from os import path, remove
 from tempfile import NamedTemporaryFile
@@ -307,7 +307,9 @@ class ExcelReader(_BaseExcelReader):
         max_col = sheet.max_column
         cells = ([str_(cell.value) for cell in row[min_col - 1: max_col]]
                  for row in sheet.iter_rows(sheet.min_row, sheet.max_row + 1))
-        return filter(any, cells)
+        # Keep empty rows after the first non-empty one: the third header row
+        # (flags) may be empty. Empty data rows are skipped in data_table.
+        return dropwhile(lambda row: not any(row), cells)
 
     def _get_active_sheet(self) -> openpyxl.worksheet.worksheet.Worksheet:
         if self.sheet:
@@ -375,10 +377,12 @@ class XlsReader(_BaseExcelReader):
         first_col = next(i for i in range(sheet.ncols)
                          if sheet.cell_value(first_row, i))
         row_len = sheet.row_len(first_row)
-        return filter(any, ([str_(sheet.cell(row, col))
-                             if col < sheet.row_len(row) else ''
-                             for col in range(first_col, row_len)]
-                            for row in range(first_row, sheet.nrows)))
+        # Keep empty rows: the third header row (flags) may be empty.
+        # Empty data rows are skipped in data_table.
+        return ([str_(sheet.cell(row, col))
+                 if col < sheet.row_len(row) else ''
+                 for col in range(first_col, row_len)]
+                for row in range(first_row, sheet.nrows))
 
     def _get_active_sheet(self) -> xlrd.sheet.Sheet:
         if self.sheet:
