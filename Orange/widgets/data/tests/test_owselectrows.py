@@ -542,9 +542,10 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(cond_list.cellWidget(1, 1).currentText(), "is below")
 
         simulate.combobox_activate_item(
-            cond_list.cellWidget(1, 1), "is not", delay=0)
+            cond_list.cellWidget(1, 1), "is between", delay=0)
         self.assertEqual(cond_list.cellWidget(0, 1).currentText(), "is")
-        self.assertEqual(cond_list.cellWidget(1, 1).currentText(), "is not")
+        self.assertEqual(cond_list.cellWidget(1, 1).currentText(), "is between")
+        self.assertEqual(len(self.__get_value_widgets(1)), 2)
 
     def test_calendar_dates(self):
         data = Table(test_filename("datasets/cyber-security-breaches.tab"))
