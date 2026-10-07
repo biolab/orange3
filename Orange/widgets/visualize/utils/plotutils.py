@@ -614,6 +614,14 @@ class StyledAxisItem(pg.AxisItem):
         super().__init__(*args, **kwargs)
         self.label.setDefaultTextColor(self.palette().color(QPalette.Text))
 
+    def getSIPrefixEnableRanges(self):
+        # Since pyqtgraph 0.14, axes without units also get an SI prefix for
+        # values below 1 (e.g. "(x0.001)"). Keep the behaviour of pyqtgraph
+        # 0.13 (which does not call this method): no prefix from 1e-3 to 1e6.
+        if self.labelUnits == "":
+            return (0, 1e-3), (1e6, np.inf)
+        return super().getSIPrefixEnableRanges()
+
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.FontChange:
             self.picture = None
