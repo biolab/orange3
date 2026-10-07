@@ -475,11 +475,19 @@ class OWDataProjectionWidget(OWProjectionWidgetBase, openclass=True):
         self._domain_invalidated = not (
             data_existed and self.data is not None and
             effective_data.domain.checksum()
-            == self.effective_data.domain.checksum())
+            == self.effective_data.domain.checksum() and
+            # the checksum ignores the values of discrete variables
+            self._discrete_values(effective_data.domain)
+            == self._discrete_values(self.effective_data.domain))
         if self._invalidated:
             self.clear()
             self.input_changed.emit(data)
         self.enable_controls()
+
+    @staticmethod
+    def _discrete_values(domain):
+        return [var.values for var in domain.variables + domain.metas
+                if var.is_discrete]
 
     def check_data(self):
         self.clear_messages()
