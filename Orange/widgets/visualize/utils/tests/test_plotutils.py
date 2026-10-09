@@ -40,6 +40,12 @@ class TestAxisItem(GuiTest):
         axis.setRange(0, 5e6)
         self.assertEqual(axis.autoSIPrefixScale, 1e-6)
 
+    def test_si_prefix_with_units(self):
+        axis = AxisItem("bottom")
+        axis.setLabel("a", units="s")
+        axis.setRange(0, 0.5)
+        self.assertEqual(axis.autoSIPrefixScale, 1000)
+
 
 if __name__ == '__main__':
     unittest.main()
