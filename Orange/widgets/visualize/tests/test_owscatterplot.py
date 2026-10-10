@@ -1208,6 +1208,20 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(spacing, 1582953776 - 1581953776)
         self.assertTrue(not ticks.size or 1581953776 <= ticks[0] <= 1582953776)
 
+    def test_discrete_axis_values_changed(self):
+        def data(values):
+            domain = Domain([DiscreteVariable("category", values=values),
+                             ContinuousVariable("value")])
+            return Table.from_numpy(domain, np.array([[0, 0], [1, 0.5]]))
+
+        x_axis = self.widget.graph.plot_widget.plotItem.getAxis("bottom")
+        self.send_signal(self.widget.Inputs.data, data(("1", "2")))
+        self.assertEqual(x_axis._tickLevels, [[(0, "1"), (1, "2")]])
+
+        # same variable names and numbers, but renamed values
+        self.send_signal(self.widget.Inputs.data, data(("a", "b")))
+        self.assertEqual(x_axis._tickLevels, [[(0, "a"), (1, "b")]])
+
     def test_clear_plot(self):
         self.widget.cb_class_density.setChecked(True)
         self.send_signal(self.widget.Inputs.data, self.data)
