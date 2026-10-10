@@ -9,6 +9,9 @@ assignees: ''
 
 <!-- 
 Thanks for taking the time to report a bug!
+
+Please report only bugs that you actually encountered, not problems discovered by checking the code with AI agents, which are unlikely (or even impossible) to ever occur in actual use.
+
 If you're raising an issue about an add-on (i.e., installed via Options > Add-ons), raise an issue in the relevant add-on's issue tracker instead. See: https://github.com/biolab?q=orange3
 To fix the bug, we need to be able to reproduce it. Please answer the following questions to the best of your ability.
 -->
