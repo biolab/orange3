@@ -6503,6 +6503,9 @@ widgets/data/owfile.py:
             Format: Oblika
             Data: Podatki
             Resource: Vir
+        def `migrate_settings`:
+            recent_paths: false
+            active_path: false
     class `OWFileDropHandler`:
         def `canDropUrl`:
             http: false
@@ -10387,6 +10390,9 @@ widgets/model/owloadmodel.py:
             Open Model File: Odpri datoteko z modelom
         def `open_file`:
             rb: false
+        def `migrate_settings`:
+            recent_paths: false
+            active_path: false
     class `OWLoadModelDropHandler`:
         def `canDropFile`:
             .pkcls: false
@@ -11403,6 +11409,9 @@ widgets/unsupervised/owdistancefile.py:
         def `send_report`:
             No data was loaded.: Podatki niso naloženi.
             File name: Ime datoteke
+        def `migrate_settings`:
+            recent_paths: false
+            active_path: false
     class `OWDistanceFileDropHandler`:
         def `parametersFromFile`:
             recent_paths: false
