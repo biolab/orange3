@@ -2,11 +2,12 @@ import time
 import warnings
 from itertools import chain
 from typing import List
-from functools import singledispatch
+from functools import singledispatch, partial
 from enum import IntEnum
 from collections import OrderedDict
 
 import numpy as np
+from scipy.special import logsumexp
 
 from AnyQt.QtWidgets import (
     QGraphicsView, QGraphicsScene, QGraphicsItem,
@@ -156,6 +157,8 @@ class MovableDotItem(DotItem):
         self._probs_dot = None
         self._vertical_line = None
         self._mousePressFunc = None
+        # called with the new value when the marker is dragged
+        self.on_moved = None
 
     @property
     def vertical_line(self):
@@ -225,6 +228,8 @@ class MovableDotItem(DotItem):
         elif self.x() + delta_x > self._max_x:
             self.move(self._max_x)
         self._show_vertical_line_and_point_dot()
+        if self.on_moved is not None:
+            self.on_moved(self.value)
         self.probs_dot.move_to_sum()
 
     def mouseReleaseEvent(self, event):
@@ -703,7 +708,10 @@ class OWNomogram(OWWidget):
         self.points = []
         self.feature_items = {}
         self.feature_marker_values = []
+        # points of all class values at the markers (logistic regression)
+        self.class_marker_values = None
         self.scale_marker_values = lambda x: x
+        self.unscale_marker_value = lambda _, x: x
         self.nomogram_main = None
         self.vertical_line = None
         self.hidden_vertical_line = None
@@ -854,6 +862,12 @@ class OWNomogram(OWWidget):
         )
 
     def _class_combo_changed(self):
+        if self.class_marker_values is not None:
+            self.feature_marker_values = \
+                self.class_marker_values[:, self.target_class_index].copy()
+            self.update_scene()
+            self.old_target_class_index = self.target_class_index
+            return
         with np.errstate(invalid='ignore'):
             coeffs = [np.nan_to_num(p[self.target_class_index] /
                                     p[self.old_target_class_index])
@@ -871,6 +885,7 @@ class OWNomogram(OWWidget):
         self.update_scene()
 
     def update_controls(self):
+        is_logistic = isinstance(self.classifier, LogisticRegressionClassifier)
         self.class_combo.clear()
         self.norm_check.setHidden(True)
         self.cont_feature_dim_combo.setEnabled(True)
@@ -881,14 +896,14 @@ class OWNomogram(OWWidget):
                 self.target_class_index = 0
             if len(self.domain.attributes) > self.MAX_N_ATTRS:
                 self.display_index = 1
-            if len(self.domain.class_vars[0].values) > 2:
+            # softmax probabilities of logistic regression already sum to 1
+            if len(self.domain.class_vars[0].values) > 2 and not is_logistic:
                 self.norm_check.setHidden(False)
             if not self.domain.has_continuous_attributes():
                 self.cont_feature_dim_combo.setEnabled(False)
                 self.cont_feature_dim_index = 0
         model = self.sort_combo.model()
 
-        is_logistic = isinstance(self.classifier, LogisticRegressionClassifier)
         inapplicable = (SortBy.POSITIVE, SortBy.NEGATIVE)
         if is_logistic and self.sort_index in inapplicable:
             self.sort_index = SortBy.ABSOLUTE
@@ -908,6 +923,7 @@ class OWNomogram(OWWidget):
     def set_data(self, data):
         self.instances = data
         self.feature_marker_values = []
+        self.class_marker_values = None
         self.set_feature_marker_values()
         self.update_scene()
 
@@ -928,6 +944,7 @@ class OWNomogram(OWWidget):
                          else None)
         self.points = self.log_odds_ratios or self.log_reg_coeffs
         self.feature_marker_values = []
+        self.class_marker_values = None
         self.old_target_class_index = self.target_class_index
         self.update_scene()
 
@@ -1026,26 +1043,22 @@ class OWNomogram(OWWidget):
         minimums = [p[self.target_class_index].min() for p in self.points]
         if self.scale == OWNomogram.POINT_SCALE:
             points = [p * d for p in points]
-
-            if self.align == OWNomogram.ALIGN_LEFT:
-                self.scale_marker_values = lambda x: (x - minimums) * d
-            else:
-                self.scale_marker_values = lambda x: x * d
-        else:
-            if self.align == OWNomogram.ALIGN_LEFT:
-                self.scale_marker_values = lambda x: x - minimums
-            else:
-                self.scale_marker_values = lambda x: x
+        shift = np.array(minimums) if self.align == OWNomogram.ALIGN_LEFT \
+            else np.zeros(len(minimums))
+        scale = d if self.scale == OWNomogram.POINT_SCALE else 1
+        self.scale_marker_values = lambda x: (x - shift) * scale
+        self.unscale_marker_value = lambda i, x: x / scale + shift[i]
 
         point_item, nomogram_head = self.create_main_nomogram(
             attributes, attr_inds,
             name_items, points, max_width, point_text, name_offset)
         probs_item, nomogram_foot = self.create_footer_nomogram(
             probs_text, d, minimums, max_width, name_offset)
-        for item in self.feature_items.values():
+        for i, item in self.feature_items.items():
             item.dot.point_dot = point_item.dot
             item.dot.probs_dot = probs_item.dot
             item.dot.vertical_line = self.hidden_vertical_line
+            item.dot.on_moved = partial(self._marker_moved, i)
 
         self.dot_animator.setGraphicsItems(
             [item.dot for item in self.feature_items.values()]
@@ -1210,8 +1223,16 @@ class OWNomogram(OWWidget):
         # pylint: disable=invalid-unary-operand-type
         eps, d_ = 0.05, 1
         k = - np.log(self.p / (1 - self.p)) if self.p is not None else - self.b0
-        min_sum = k[self.target_class_index] - np.log((1 - eps) / eps)
-        max_sum = k[self.target_class_index] - np.log(eps / (1 - eps))
+        cls_var, cls_index = self.domain.class_var, self.target_class_index
+        min_sum = k[cls_index] - np.log((1 - eps) / eps)
+        max_sum = k[cls_index] - np.log(eps / (1 - eps))
+        # Multinomial logistic regression computes probabilities with softmax,
+        # which depends on the scores of all class values, so the ruler must
+        # also cover all totals that can be reached
+        softmax = self.b0 is not None and len(cls_var.values) > 2
+        if softmax:
+            min_sum = min(min_sum, sum(minimums))
+            max_sum = max(max_sum, sum(p[cls_index].max() for p in self.points))
         if self.align == OWNomogram.ALIGN_LEFT:
             max_sum = max_sum - sum(minimums)
             min_sum = min_sum - sum(minimums)
@@ -1226,20 +1247,33 @@ class OWNomogram(OWWidget):
         min_sum, max_sum = min(values), max(values)
         diff_ = np.nan_to_num(max_sum - min_sum)
         scale_x = max_width / diff_ if diff_ else max_width
-        cls_var, cls_index = self.domain.class_var, self.target_class_index
         nomogram_footer = NomogramItem()
 
+        def get_softmax_scores(val):
+            # scores (logits) of all class values at the markers;
+            # the target's score is computed from the total `val`
+            scores = self.class_marker_values.sum(axis=0) + self.b0
+            scores[cls_index] = val / d_ - k[cls_index]
+            return scores
+
         def get_normalized_probabilities(val):
+            if softmax:
+                scores = get_softmax_scores(val)
+                return np.exp(scores[cls_index] - logsumexp(scores))
             if not self.normalize_probabilities:
                 return 1 / (1 + np.exp(k[cls_index] - val / d_))
-            totals = self.__get_totals_for_class_values(minimums)
+            totals = self.__get_totals_for_class_values(minimums, d)
             p_sum = np.sum(1 / (1 + np.exp(k - totals / d_)))
             return 1 / (1 + np.exp(k[cls_index] - val / d_)) / p_sum
 
         def get_points(prob):
+            if softmax:
+                scores = np.delete(get_softmax_scores(0), cls_index)
+                return (k[cls_index] + np.log(prob / (1 - prob))
+                        + logsumexp(scores)) * d_
             if not self.normalize_probabilities:
                 return (k[cls_index] - np.log(1 / prob - 1)) * d_
-            totals = self.__get_totals_for_class_values(minimums)
+            totals = self.__get_totals_for_class_values(minimums, d)
             p_sum = np.sum(1 / (1 + np.exp(k - totals / d_)))
             return (k[cls_index] - np.log(1 / (prob * p_sum) - 1)) * d_
 
@@ -1251,7 +1285,7 @@ class OWNomogram(OWWidget):
         nomogram_footer.add_items([probs_item])
         return probs_item, nomogram_footer
 
-    def __get_totals_for_class_values(self, minimums):
+    def __get_totals_for_class_values(self, minimums, d):
         cls_index = self.target_class_index
         marker_values = self.scale_marker_values(self.feature_marker_values)
         totals = np.full(len(self.domain.class_var.values), np.nan)
@@ -1266,7 +1300,7 @@ class OWNomogram(OWWidget):
             if self.align == OWNomogram.ALIGN_LEFT:
                 points = [p - m for m, p in zip(minimums, points)]
                 total -= sum([min(p) for p in [p[i] for p in self.points]])
-            d = 100 / max(max(abs(p)) for p in points)
+            # use the same scale as for the shown features
             if self.scale == OWNomogram.POINT_SCALE:
                 total *= d
             totals[i] = total
@@ -1297,6 +1331,8 @@ class OWNomogram(OWWidget):
         instances = self.instances.transform(self.domain) \
             if self.instances else None
         values = []
+        class_values = np.zeros((len(self.domain.attributes),
+                                 len(self.domain.class_var.values)))
         for i, attr in enumerate(self.domain.attributes):
             value, feature_val = 0, None
             if len(self.log_reg_coeffs):
@@ -1313,11 +1349,33 @@ class OWNomogram(OWWidget):
                 feature_val = instances[0][attr]
 
             if feature_val is not None:
-                value = (self.points[i][cls_index][int(feature_val)]
-                         if attr.is_discrete else
-                         self.log_reg_coeffs_orig[i][cls_index][0] * feature_val)
+                class_values[i] = (
+                    self.points[i][:, int(feature_val)] if attr.is_discrete
+                    else self.log_reg_coeffs_orig[i][:, 0] * feature_val)
+                value = class_values[i][cls_index]
             values.append(value)
-        self.feature_marker_values = np.asarray(values)
+        self.feature_marker_values = np.asarray(values, dtype=float)
+        if self.b0 is not None:
+            self.class_marker_values = class_values
+
+    def _marker_moved(self, attr_index, value):
+        """Store the position of a dragged marker, so that it is kept when
+        the scene is redrawn and used for the totals of other class values"""
+        cls_index = self.target_class_index
+        target_value = self.unscale_marker_value(attr_index, value)
+        self.feature_marker_values[attr_index] = target_value
+        if self.class_marker_values is None:
+            return
+        points = self.points[attr_index]
+        if np.ptp(points[cls_index]) == 0:
+            # the marker can't move; keep the points of other class values
+            return
+        # between neighbouring values (or data extremes), points of other
+        # class values change linearly with the points of the target
+        order = np.argsort(points[cls_index])
+        self.class_marker_values[attr_index] = [
+            np.interp(target_value, points[cls_index][order], p[order])
+            for p in points]
 
     def clear_scene(self):
         self.feature_items = {}

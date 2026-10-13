@@ -5,7 +5,10 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
-from AnyQt.QtCore import QPoint, QPropertyAnimation
+from AnyQt.QtCore import QPoint, QPropertyAnimation, Qt
+from AnyQt.QtTest import QTest
+
+from orangecanvas.gui.test import mouseMove
 
 from Orange.data import Table, Domain, ContinuousVariable, DiscreteVariable
 from Orange.classification import (
@@ -98,7 +101,129 @@ class TestOWNomogram(WidgetTest):
         """Check probabilities for logistic regression classifier for various
         values of classes and radio buttons for multiclass data"""
         cls = LogisticRegressionLearner(max_iter=100)(self.lenses)
-        self._test_helper(cls, [18, 56, 78])
+        self._test_helper(cls, [4, 25, 70])
+
+    def _shown_probability(self):
+        dot = [item for item in self.widget.scene.items()
+               if isinstance(item, ProbabilitiesDotItem)][0]
+        ruler = dot.parentItem()
+        total = self.widget.scale_marker_values(
+            self.widget.feature_marker_values).sum()
+        # the dot is clipped to the ruler, so the ruler must cover the total
+        self.assertLessEqual(ruler.min_val, total)
+        self.assertGreaterEqual(ruler.max_val, total)
+        self.assertAlmostEqual(dot.value, total)
+        return dot.get_probabilities(dot.value)
+
+    def _check_lr_probabilities(self, cls, data, indices):
+        """Check that the nomogram shows the model's probabilities for all
+        target classes, both scales and any number of shown features"""
+        w = self.widget
+        # the ruler must be wide enough to show the totals
+        w.resize(1000, 600)
+        w.show()
+        self.send_signal(w.Inputs.classifier, cls)
+        # sort alphabetically, so that the most important feature is hidden
+        simulate.combobox_activate_index(w.sort_combo, SortBy.NAME)
+        n_attrs = len(data.domain.attributes)
+        for i in indices:
+            self.send_signal(w.Inputs.data, data[i:i + 1])
+            probs = cls(data[i], cls.Probs)
+            for scale in (0, 1):
+                w.controls.scale.buttons[scale].click()
+                for n in range(1, n_attrs + 1):
+                    w.n_spin.setValue(n)
+                    for cls_index, prob in enumerate(probs):
+                        simulate.combobox_activate_index(w.class_combo,
+                                                         cls_index)
+                        self.assertAlmostEqual(self._shown_probability(), prob)
+
+    def test_probabilities_lr_multiclass(self):
+        """Check that probabilities for multinomial logistic regression
+        match the model's predictions"""
+        data = Table("iris")
+        cls = LogisticRegressionLearner()(data)
+        self._check_lr_probabilities(cls, data, (0, 53, 120))
+        # softmax probabilities already sum to 1
+        self.assertTrue(self.widget.norm_check.isHidden())
+
+    def test_probabilities_lr_multiclass_zero_coefficients(self):
+        """Check probabilities for multinomial logistic regression when some
+        or all coefficients of class values are zero"""
+        data = Table("iris")
+        # C=0.05: some coefficients of setosa and virginica are zero, all
+        # coefficients of versicolor are zero; C=0.01: all coefficients of
+        # versicolor and virginica are zero; C=0.004: all coefficients are zero
+        for c in (0.05, 0.01, 0.004):
+            cls = LogisticRegressionLearner(penalty="l1", C=c)(data)
+            self._check_lr_probabilities(cls, data, (0, 53))
+
+    def _drag_dot(self, dot, value):
+        """Drag a feature marker with the mouse to the given value (in
+        displayed points)"""
+        viewport = self.widget.view.viewport()
+        start = self.widget.view.mapFromScene(dot.sceneBoundingRect().center())
+        end = start + QPoint(round((value - dot.value) * dot._scale), 0)
+        QTest.mousePress(viewport, Qt.LeftButton, Qt.NoModifier, start)
+        mouseMove(viewport, Qt.LeftButton, pos=end)
+        QTest.mouseRelease(viewport, Qt.LeftButton, Qt.NoModifier, end)
+
+    def test_probabilities_lr_multiclass_dragged_marker(self):
+        """Check that probabilities for multinomial logistic regression match
+        the model's predictions after a feature marker is dragged"""
+        w = self.widget
+        w.resize(1000, 600)
+        w.show()
+        data = Table("iris")
+        cls = LogisticRegressionLearner()(data)
+        self.send_signal(w.Inputs.classifier, cls)
+        self.send_signal(w.Inputs.data, data[:1])
+        w.controls.scale.buttons[0].click()
+        simulate.combobox_activate_index(w.class_combo, 1)
+
+        # drag the marker of petal length from 1.4 towards 5
+        attr_index = data.domain.index("petal length")
+        coef = w.log_reg_coeffs_orig[attr_index][1][0]
+        values = np.array(w.feature_marker_values, dtype=float)
+        start = w.scale_marker_values(values)[attr_index]
+        d = w.scale_marker_values(values + 1)[attr_index] - start
+        dot = w.feature_items[attr_index].dot
+        self._drag_dot(dot, start + (5 - 1.4) * coef * d)
+        # the value of petal length at the marker's new position
+        new_value = (values[attr_index] + (dot.value - start) / d) / coef
+        self.assertGreater(new_value, 4)
+
+        inst = data[:1].copy()
+        with inst.unlocked(inst.X):
+            inst.X[0, attr_index] = new_value
+        probs = cls(inst[0], cls.Probs)
+        self.assertAlmostEqual(self._shown_probability(), probs[1])
+
+        # the dragged marker is kept when the target or the scale change
+        for scale in (1, 0):
+            w.controls.scale.buttons[scale].click()
+            for cls_index, prob in enumerate(probs):
+                simulate.combobox_activate_index(w.class_combo, cls_index)
+                self.assertAlmostEqual(self._shown_probability(), prob)
+
+    def test_normalized_probabilities_hidden_features(self):
+        """Normalized probabilities must not depend on the number of shown
+        features"""
+        w = self.widget
+        w.resize(1000, 600)
+        w.show()
+        cls = NaiveBayesLearner()(self.lenses)
+        self.send_signal(w.Inputs.classifier, cls)
+        w.controls.normalize_probabilities.setChecked(True)
+        simulate.combobox_activate_index(w.sort_combo, SortBy.NAME)
+        w.controls.scale.buttons[0].click()
+        for cls_index in range(len(self.lenses.domain.class_var.values)):
+            simulate.combobox_activate_index(w.class_combo, cls_index)
+            w.n_spin.setValue(4)
+            expected = self._shown_probability()
+            for n in (1, 2, 3):
+                w.n_spin.setValue(n)
+                self.assertAlmostEqual(self._shown_probability(), expected)
 
     def test_nomogram_with_instance_nb(self):
         """Check initialized marker values and feature sorting for naive bayes
