@@ -275,7 +275,7 @@ class OWSelectRows(widget.OWWidget):
             minimumContentsLength=12,
             sizeAdjustPolicy=QComboBox.AdjustToMinimumContentsLengthWithIcon)
         attr_combo.setModel(self.variable_model)
-        attr_combo.row = row
+        attr_cell_index = QPersistentModelIndex(model.index(row, 3))
         attr_combo.setCurrentIndex(self.variable_model.indexOf(attr) if attr
                                    else len(self.AllTypes) + 1)
         self.cond_list.setCellWidget(row, 0, attr_combo)
@@ -288,10 +288,10 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list.setCellWidget(row, 3, temp_button)
 
         self.remove_all_button.setDisabled(False)
-        self.set_new_operators(attr_combo, attr is not None,
+        self.set_new_operators(attr_cell_index, attr is not None,
                                condition_type, condition_value)
         attr_combo.currentIndexChanged.connect(
-            lambda _: self.set_new_operators(attr_combo, False))
+            lambda _: self.set_new_operators(attr_cell_index, False))
 
         self.cond_list.resizeRowToContents(row)
 
@@ -332,12 +332,13 @@ class OWSelectRows(widget.OWWidget):
         self.cond_list.setRowCount(0)
         self.remove_all_button.setDisabled(True)
 
-    def set_new_operators(self, attr_combo, adding_all,
+    def set_new_operators(self, attr_cell_index, adding_all,
                           selected_index=None, selected_values=None):
-        old_combo = self.cond_list.cellWidget(attr_combo.row, 1)
+        row = attr_cell_index.row()
+        old_combo = self.cond_list.cellWidget(row, 1)
         prev_text = old_combo.currentText() if old_combo else ""
         oper_combo = QComboBox()
-        oper_combo.row = attr_combo.row
+        attr_combo = self.cond_list.cellWidget(row, 0)
         oper_combo.attr_combo = attr_combo
         attr_name = attr_combo.currentText()
         if attr_name in self.AllTypes:
@@ -350,10 +351,11 @@ class OWSelectRows(widget.OWWidget):
             if selected_index == -1:
                 selected_index = 0
         oper_combo.setCurrentIndex(selected_index)
-        self.cond_list.setCellWidget(oper_combo.row, 1, oper_combo)
-        self.set_new_values(oper_combo, adding_all, selected_values)
+        self.cond_list.setCellWidget(row, 1, oper_combo)
+        oper_cell_index = QPersistentModelIndex(self.cond_list.model().index(row, 1))
+        self.set_new_values(oper_cell_index, adding_all, selected_values)
         oper_combo.currentIndexChanged.connect(
-            lambda _: self.set_new_values(oper_combo, False))
+            lambda _: self.set_new_values(oper_cell_index, False))
 
     @staticmethod
     def _get_lineedit_contents(box):
@@ -410,7 +412,7 @@ class OWSelectRows(widget.OWWidget):
                 return QDoubleValidator.Invalid, input_, pos
             return super().validate(input_, pos)
 
-    def set_new_values(self, oper_combo, adding_all, selected_values=None):
+    def set_new_values(self, oper_cell_index, adding_all, selected_values=None):
         # def remove_children():
         #     for child in box.children()[1:]:
         #         box.layout().removeWidget(child)
@@ -431,7 +433,9 @@ class OWSelectRows(widget.OWWidget):
             le.setValidator(OWSelectRows.QDoubleValidatorEmpty())
             return le
 
-        box = self.cond_list.cellWidget(oper_combo.row, 2)
+        row = oper_cell_index.row()
+        oper_combo = self.cond_list.cellWidget(row, 1)
+        box = self.cond_list.cellWidget(row, 2)
         lc = ["", ""]
         oper = oper_combo.currentIndex()
         attr_name = oper_combo.attr_combo.currentText()
@@ -451,14 +455,14 @@ class OWSelectRows(widget.OWWidget):
         if "defined" in oper_combo.currentText():
             label = QLabel()
             label.var_type = vtype
-            self.cond_list.setCellWidget(oper_combo.row, 2, label)
+            self.cond_list.setCellWidget(row, 2, label)
         elif var is not None and var.is_discrete:
             if oper_combo.currentText().endswith(" one of"):
                 if selected_values:
                     lc = list(selected_values)
                 button = DropDownToolButton(self, var, lc)
                 button.var_type = vtype
-                self.cond_list.setCellWidget(oper_combo.row, 2, button)
+                self.cond_list.setCellWidget(row, 2, button)
             else:
                 combo = ComboBoxSearch()
                 combo.addItems(("", ) + var.values)
@@ -467,12 +471,12 @@ class OWSelectRows(widget.OWWidget):
                 else:
                     combo.setCurrentIndex(0)
                 combo.var_type = vartype(var)
-                self.cond_list.setCellWidget(oper_combo.row, 2, combo)
+                self.cond_list.setCellWidget(row, 2, combo)
                 combo.currentIndexChanged.connect(self.conditions_changed)
         else:
             box = gui.hBox(self.cond_list, addToLayout=False)
             box.var_type = vtype
-            self.cond_list.setCellWidget(oper_combo.row, 2, box)
+            self.cond_list.setCellWidget(row, 2, box)
             if vtype == 2:  # continuous:
                 box.controls = [add_numeric(lc[0])]
                 if oper > 5:
