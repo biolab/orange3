@@ -392,25 +392,35 @@ class TestOWConcatenate(WidgetTest):
 
         widget.ignore_names = True
         widget.append_source_column = True
-        widget.source_column_role = widget.AttributeRole
-        self.send_signal(widget.Inputs.primary_data, abcj)
-        self.send_signal(widget.Inputs.additional_data, defk, 1)
-        self.send_signal(widget.Inputs.additional_data, ghil, 2)
+        for role in [widget.ClassRole, widget.MetaRole, widget.AttributeRole]:
+            widget.source_column_role = role
+            self.send_signal(widget.Inputs.primary_data, abcj)
+            self.send_signal(widget.Inputs.additional_data, defk, 1)
+            self.send_signal(widget.Inputs.additional_data, ghil, 2)
 
-        self.assertTrue(widget.controls.ignore_names.isEnabled())
-        self.assertFalse(widget.controls.ignore_compute_value.isEnabled())
-        self.assertFalse(widget.Error.incompatible_domains.is_shown())
-        out = self.get_output()
-        self.assertEqual(out.domain.attributes[:2], (a, b))
-        self.assertIs(out.domain.class_var, c)
-        self.assertEqual(out.domain.metas, (j, ))
-        np.testing.assert_equal(out.X, [[0, 1, 0],
-                                        [4, 5, 0],
-                                        [3, 4, 1],
-                                        [6, 7, 1],
-                                        [7, 8, 2]])
-        np.testing.assert_equal(out.Y, [2, 6, 5, 8, 9])
-        np.testing.assert_equal(out.metas, [[0], [2], [1], [2], [0]])
+            self.assertTrue(widget.controls.ignore_names.isEnabled())
+            self.assertFalse(widget.controls.ignore_compute_value.isEnabled())
+            self.assertFalse(widget.Error.incompatible_domains.is_shown())
+            out = self.get_output()
+            self.assertEqual(len(out.domain), 5)
+            self.assertEqual(out.domain.attributes[:2], (a, b))
+            self.assertIn(c, out.domain.class_vars)
+            self.assertEqual(out.domain.metas[:1], (j, ))
+            np.testing.assert_equal(out.X[:,:2], [[0, 1],
+                                            [4, 5],
+                                            [3, 4],
+                                            [6, 7],
+                                            [7, 8]])
+            sources = [0, 0, 1, 1, 2]
+            Y = out.Y if out.Y.ndim == 2 else np.atleast_2d(out.Y).T
+            np.testing.assert_equal(Y[:, 0], [2, 6, 5, 8, 9])
+            np.testing.assert_equal(out.metas[:, 0], [0, 2, 1, 2, 0])
+            if role == widget.AttributeRole:
+                np.testing.assert_equal(out.X[:, -1], sources)
+            if role == widget.ClassRole:
+                np.testing.assert_equal(Y[:, -1], sources)
+            if role == widget.MetaRole:
+                np.testing.assert_equal(out.metas[:, -1], sources)
 
         self.send_signal(widget.Inputs.primary_data, None)
         self.assertFalse(widget.controls.ignore_names.isEnabled())

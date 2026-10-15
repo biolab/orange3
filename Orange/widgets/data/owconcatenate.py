@@ -257,10 +257,10 @@ class OWConcatenate(widget.OWWidget):
                 data = type(tables[0]).concatenate(tables, ignore_domains=True)
                 if source_var is not None:
                     if self.source_column_role == self.ClassRole:
-                        sdata = data.Table.from_numpy(
-                            data.Domain([], source_var),
-                            np.zeros(len(source_ids, 0)), source_ids)
-                        data = type(tables[0].concatenate(sdata, axis=1))
+                        sdata = Orange.data.Table.from_numpy(
+                            Orange.data.Domain([], source_var),
+                            np.zeros((len(source_ids), 0)), source_ids)
+                        data = type(tables[0]).concatenate((data, sdata), axis=1)
                     else:
                         data = data.add_column(
                             source_var, source_ids.flatten(),

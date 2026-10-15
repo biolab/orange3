@@ -25,7 +25,7 @@ from Orange.regression import LinearRegressionLearner
 from Orange.projection import PCA
 from Orange.widgets import gui
 from Orange.widgets.data.owrank import OWRank, ProblemType, CLS_SCORES, \
-    REG_SCORES, RankTableModel
+    REG_SCORES, RankTableModel, SCORES
 from Orange.widgets.tests.base import WidgetTest, datasets
 from Orange.widgets.widget import AttributeList
 
@@ -36,6 +36,11 @@ class SlowScorer(Scorer):
     def score_data(self, data, feature=None):
         time.sleep(1)
         return np.ones((1, len(data.domain.attributes)))
+
+
+class TestScoreMeta(unittest.TestCase):
+    def test_unique_ids(self):
+        self.assertEqual(len({score.id for score in SCORES}), len(SCORES))
 
 
 class TestRankModel(GuiTest):
@@ -645,6 +650,13 @@ class TestOWRank(WidgetTest):
         self.wait_until_finished()
         output = self.get_output(self.widget.Outputs.reduced_data)
         self.assertEqual(len(output), len(self.housing))
+
+    def test_migration_to_5(self):
+        settings = {
+            'selected_methods': {'Information Gain', 'ANOVA', 'FCBF', 'RReliefF'}
+        }
+        OWRank.migrate_settings(settings, version=4)
+        self.assertEqual(settings["selected_methods"], {1, 4, 7, 9})
 
 
 if __name__ == "__main__":

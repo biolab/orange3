@@ -29,8 +29,3 @@ For the best chance at our team considering your request, please answer the foll
 
 
 **Are there any alternative solutions?**
-
-
-
-
-
