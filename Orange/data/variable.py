@@ -1051,10 +1051,6 @@ class TimeVariable(ContinuousVariable):
         "00:00:00": (("%H:%M", "%H:%M:%S", "%H:%M:%S.%f"), 0, 1),
         "000000": (("%H%M", "%H%M%S", "%H%M%S.%f"), 0, 1),
         "2021": (("%Y",), 1, 0),
-        "11-25": (("%m-%d",), 1, 0),
-        "25.11.": (("%d.%m.", "%d. %m."), 1, 0),
-        "11/25": (("%m/%d",), 1, 0),
-        "1125": (("%m%d",), 1, 0),
     }
 
     class InvalidDateTimeFormatError(ValueError):

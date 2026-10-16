@@ -858,12 +858,6 @@ class TestTimeVariable(VariableTest):
         years = {
             "2021": (2022,),
         }
-        expected_day = datetime(1900, 2, 7)
-        days = {
-            "11-25": ("02-07",),
-            "25.11.": ("07.02.", "07. 02.", "7.2.", "7. 2."),
-            "11/25": ("02/07", "2/7"),
-        }
         data = (
             (expected_date, dates),
             (expected_date_time, date_times),
@@ -871,7 +865,6 @@ class TestTimeVariable(VariableTest):
             (expected_time, times),
             (expected_time2, times2),
             (expected_year, years),
-            (expected_day, days),
         )
         for expected, dts in data:
             for k, dt in dts.items():
