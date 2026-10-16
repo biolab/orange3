@@ -296,7 +296,7 @@ def _create_lambda(
         args=ast.arguments(
             posonlyargs=[],
             args=[ast.arg(arg=arg) for arg in [name] + params],
-            varargs=None,
+            vararg=None,
             kwonlyargs=[],
             kw_defaults=[],
             defaults=[],
