@@ -6,18 +6,19 @@ from AnyQt.QtWidgets import QSizePolicy, QStyle, QFileDialog
 from AnyQt.QtCore import QTimer, QUrl
 
 from orangewidget.workflow.drophandler import SingleFileDropHandler
+from orangewidget.utils.filedialogs import LocalRecentPathsWComboMixin
 
 from Orange.base import Model
 from Orange.widgets import widget, gui
 from Orange.widgets.model import owsavemodel
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, RecentPath, \
-    stored_recent_paths_prepend, OWUrlDropBase
+
+from Orange.widgets.utils.filedialogs import RecentPath, OWUrlDropBase
 from Orange.widgets.utils import stdpaths
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Output
 
 
-class OWLoadModel(OWUrlDropBase, RecentPathsWComboMixin):
+class OWLoadModel(OWUrlDropBase, LocalRecentPathsWComboMixin):
     name = "Load Model"
     description = "Load a model from an input file."
     priority = 3050
@@ -37,10 +38,11 @@ class OWLoadModel(OWUrlDropBase, RecentPathsWComboMixin):
     buttons_area_orientation = None
     resizing_enabled = False
 
+    settings_version = 2
+
     def __init__(self):
         super().__init__()
-        RecentPathsWComboMixin.__init__(self)
-        self.loaded_file = ""
+        LocalRecentPathsWComboMixin.__init__(self)
 
         vbox = gui.vBox(self.controlArea, "File")
         box = gui.hBox(vbox)
@@ -85,11 +87,20 @@ class OWLoadModel(OWUrlDropBase, RecentPathsWComboMixin):
         try:
             with open(fn, "rb") as f:
                 model = pickle.load(f)
+            self.set_file_list()
         except (pickle.UnpicklingError, OSError, EOFError):
             self.Error.load_error(os.path.split(fn)[-1])
             self.Outputs.model.send(None)
         else:
             self.Outputs.model.send(model)
+
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            paths = settings.pop("recent_paths", [])
+            if paths:
+                cls.merge_paths(paths)
+                settings["active_path"] = paths[0]
 
     def canDropUrl(self, url: QUrl) -> bool:
         if url.isLocalFile():
@@ -112,7 +123,8 @@ class OWLoadModelDropHandler(SingleFileDropHandler):
     def parametersFromFile(self, path: str) -> Dict[str, Any]:
         r = RecentPath(os.path.abspath(path), None, None,
                        os.path.basename(path))
-        return {"recent_paths": stored_recent_paths_prepend(self.WIDGET, r)}
+        self.WIDGET.merge_paths([r])
+        return {"active_path": r}
 
 
 if __name__ == "__main__":  # pragma: no cover
