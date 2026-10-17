@@ -166,7 +166,7 @@ class TestOWLoadModelDropHandler(unittest.TestCase):
     def test_parametersFromFile(self):
         handler = OWLoadModelDropHandler()
         res = handler.parametersFromFile("test.pkcls")
-        self.assertEqual(res["recent_paths"][0].basename, "test.pkcls")
+        self.assertEqual(res["active_path"].basename, "test.pkcls")
 
 
 if __name__ == "__main__":

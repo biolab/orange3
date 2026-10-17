@@ -24,9 +24,7 @@ from Orange.widgets.settings import Setting, ContextSetting, \
     PerfectDomainContextHandler, SettingProvider
 from Orange.widgets.utils.domaineditor import DomainEditor
 from Orange.widgets.utils.itemmodels import PyListModel
-from Orange.widgets.utils.filedialogs import \
-    open_filename_dialog, stored_recent_paths_prepend
-from Orange.widgets.utils.filedialogs import OWUrlDropBase
+from Orange.widgets.utils.filedialogs import OWUrlDropBase, open_filename_dialog
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output, Msg
 from Orange.widgets.utils.combobox import TextEditCombo
@@ -729,8 +727,9 @@ class OWFileDropHandler(SingleUrlDropHandler):
             path = url.toLocalFile()
             r = RecentPath(os.path.abspath(path), None, None,
                            os.path.basename(path))
+            self.WIDGET.merge_paths([r])
             return {
-                "recent_paths": stored_recent_paths_prepend(self.WIDGET, r),
+                "active_path": r,
                 "source": OWFile.LOCAL_FILE,
             }
         else:

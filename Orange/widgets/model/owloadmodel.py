@@ -12,8 +12,7 @@ from Orange.base import Model
 from Orange.widgets import widget, gui
 from Orange.widgets.model import owsavemodel
 
-from Orange.widgets.utils.filedialogs import RecentPath, \
-    stored_recent_paths_prepend, OWUrlDropBase
+from Orange.widgets.utils.filedialogs import RecentPath, OWUrlDropBase
 from Orange.widgets.utils import stdpaths
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Msg, Output
@@ -124,7 +123,8 @@ class OWLoadModelDropHandler(SingleFileDropHandler):
     def parametersFromFile(self, path: str) -> Dict[str, Any]:
         r = RecentPath(os.path.abspath(path), None, None,
                        os.path.basename(path))
-        return {"recent_paths": stored_recent_paths_prepend(self.WIDGET, r)}
+        self.WIDGET.merge_paths([r])
+        return {"active_path": r}
 
 
 if __name__ == "__main__":  # pragma: no cover

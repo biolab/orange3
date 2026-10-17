@@ -6512,7 +6512,7 @@ widgets/data/owfile.py:
             https: false
             ftp: false
         def `parametersFromUrl`:
-            recent_paths: false
+            active_path: false
             source: false
             recent_urls: false
     __main__: false
@@ -10396,7 +10396,7 @@ widgets/model/owloadmodel.py:
         def `canDropFile`:
             .pkcls: false
         def `parametersFromFile`:
-            recent_paths: false
+            active_path: false
     __main__: false
 widgets/model/owlogisticregression.py:
     class `OWLogisticRegression`:
@@ -11413,7 +11413,7 @@ widgets/unsupervised/owdistancefile.py:
             active_path: false
     class `OWDistanceFileDropHandler`:
         def `parametersFromFile`:
-            recent_paths: false
+            active_path: false
         def `canDropFile`:
             .dst: false
             .xlsx: false
