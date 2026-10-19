@@ -13,10 +13,6 @@ from Orange.data import ContinuousVariable, DiscreteVariable, TimeVariable, Tabl
 from Orange.data.pandas_compat import OrangeDataFrame, table_from_frame
 from Orange.data.tests.test_variable import TestTimeVariable
 
-if pd.__version__ < "2":
-    import pytz
-else:
-    pytz = None
 
 class TestPandasCompat(unittest.TestCase):
     def test_patch_for_to_dense(self):
@@ -333,7 +329,7 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        tz = pytz.utc if pytz is not None else timezone.utc
+        tz = timezone.utc
         self.assertEqual(tz, table.domain.variables[0].timezone)
         np.testing.assert_equal(
             table.X,
@@ -352,8 +348,7 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        tz = pytz.FixedOffset(60) if pytz is not None else \
-            timezone(timedelta(seconds=3600))
+        tz = timezone(timedelta(seconds=3600))
         self.assertEqual(tz, table.domain.variables[0].timezone)
         np.testing.assert_equal(
             table.X,
@@ -380,7 +375,7 @@ class TestPandasCompat(unittest.TestCase):
             ]
         )
         table = table_from_frame(df)
-        tz = pytz.utc if pytz is not None else timezone.utc
+        tz = timezone.utc
         self.assertEqual(tz, table.domain.variables[0].timezone)
         np.testing.assert_equal(
             table.X,
@@ -789,6 +784,7 @@ class TestDenseTablePandas(TestTablePandas):
         self.assertTrue(np.shares_memory(df.values, table.Y))
         self.assertTrue(np.shares_memory(df.values, table2.Y))
 
+    @unittest.skipIf(pd.__version__ > "3", "cannot round trip contiguous metas array")
     def test_contiguous_metas(self):
         table = self.table
         df = table.metas_df
