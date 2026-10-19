@@ -12,6 +12,7 @@ from typing import Type, TypeVar, Optional
 
 import numpy as np
 import pandas as pd
+from pandas.api import types as pdtypes
 from numpy.testing import assert_array_equal
 
 from AnyQt.QtCore import QSettings, Qt, QUrl
@@ -548,10 +549,11 @@ class TestUtils(unittest.TestCase):
         )
         df = owcsvimport.load_csv(io.BytesIO(contents), opts)
         self.assertEqual(df.shape, (3, 5))
-        resolution = "ns" if pd.__version__ < "3.0" else "s"
+        dtypes = list(df.dtypes)
+        self.assertTrue(pdtypes.is_datetime64_dtype(dtypes[0]))
         self.assertSequenceEqual(
-            list(df.dtypes),
-            [np.dtype(f"M8[{resolution}]"), np.dtype(float), np.dtype(object),
+            dtypes[1:],
+            [np.dtype(float), np.dtype(object),
              "category", np.dtype(float)],
         )
         opts = owcsvimport.Options(

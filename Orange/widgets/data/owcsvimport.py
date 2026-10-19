@@ -1853,8 +1853,8 @@ def pandas_to_table(df):
             orangecol[mask] = np.nan
             var = Orange.data.TimeVariable.make(str(header))
             var.have_date = var.have_time = 1
-        elif pdtypes.is_object_dtype(series):
-            coldata = series.fillna('').values
+        elif pdtypes.is_string_dtype(series) or pdtypes.is_object_dtype(series):
+            coldata = series.fillna('').to_numpy()
             assert isinstance(coldata, np.ndarray)
             orangecol = coldata
             var = Orange.data.StringVariable.make(str(header))
