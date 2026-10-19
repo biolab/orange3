@@ -1363,6 +1363,7 @@ data/pandas_compat.py:
     def `table_to_frame`:
         def `_column_to_series`:
             s: false
+            M8[us]: false
     def `amend_table_with_frame`:
         'Leading dimension mismatch ': false
         (not {arr.shape[0]} == {df.shape[0]}): false

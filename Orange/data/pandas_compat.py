@@ -480,7 +480,13 @@ def table_to_frame(tab, include_metas=False):
                 codes=codes, categories=col.values, ordered=True
             ))
         elif col.is_time:
-            result = (col.name, pd.to_datetime(vals, unit='s').to_series().reset_index()[0])
+            col_dt = pd.to_datetime(vals, unit='s')
+            # to_datetime with unit='s' will create M8[s] if `vals` have no
+            # fractional part. This will be a problem for downstream math ops
+            # (mean, std, ...) which would have diminished resolution. Explicit
+            # convert to microsecond resolution.
+            col_dt = col_dt.astype("M8[us]")
+            result = (col.name, col_dt.to_series().reset_index()[0])
         elif col.is_continuous:
             dt = float
             # np.nan are not compatible with int column
