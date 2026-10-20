@@ -19,6 +19,7 @@ requests
 scikit-learn>=1.5.1
 scipy>=1.9
 serverfiles		# for Data Sets synchronization
+tzdata
 xgboost>=1.7.4,<2.1; sys_platform=="darwin"
 xgboost>=1.7.4; sys_platform!="darwin"
 # Reading Excel files
