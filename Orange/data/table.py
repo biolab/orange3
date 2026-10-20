@@ -1134,7 +1134,7 @@ class Table(Sequence, Storage):
             if example.domain == domain:
                 self.X[row] = example._x
                 if self._Y.ndim == 1:
-                    self._Y[row] = float(example._y)
+                    self._Y[row] = float(example._y.item())
                 else:
                     self._Y[row] = np.atleast_1d(example._y)
                 self.metas[row] = example._metas
