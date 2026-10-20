@@ -112,7 +112,7 @@ class Vim(QObject):
     modeIndicationChanged = pyqtSignal(QColor, str)
 
     def __init__(self, qpart):
-        QObject.__init__(self)
+        QObject.__init__(self, qpart)
         self._qpart = qpart
         self._mode = Normal(self, qpart)
 
