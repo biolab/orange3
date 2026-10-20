@@ -20,7 +20,7 @@ from Orange.data.util import get_unique_names_duplicates, get_unique_names
 from Orange.data.filter import FilterContinuous, FilterDiscrete, Values
 from Orange.statistics.util import (nanmin, nanmax, nanunique, nansum, nanvar,
                                     nanmean, nanmedian, nanmode, bincount)
-from Orange.util import Enum
+from Orange.util import Enum, as_scalar
 from Orange.widgets import gui
 from Orange.widgets.settings import (Setting, ContextSetting,
                                      DomainContextHandler)
@@ -240,12 +240,12 @@ class Pivot:
                     # the whole column is already set
                     X[:, j] = group_tab.X[:, self._indepen_agg_done[fun] - offset]
                 else:
-                    X[i, j] = fun(sub_table)
+                    X[i, j] = as_scalar(fun(sub_table))
             for k, (v, fun) in enumerate(var_dep_funs, j + 1):
                 if fun in self._depen_agg_done:
                     X[:, k] = group_tab.X[:, self._depen_agg_done[fun][v] - offset]
                 else:
-                    X[i, k] = fun(sub_table.get_column(v))
+                    X[i, k] = as_scalar(fun(sub_table.get_column(v)))
 
         #rename leading vars (seems the easiest) if needed
         current = [var.name for var in attrs]
