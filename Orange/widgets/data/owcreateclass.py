@@ -440,8 +440,8 @@ class OWCreateClass(widget.OWWidget):
             _add_line()
         while len(self.line_edits) > n:
             _remove_line()
-        _fix_tab_order()
 
+        QTimer.singleShot(0, _fix_tab_order)
         QTimer.singleShot(0, self._refit_rules_area)
 
     def _refit_rules_area(self):
