@@ -510,10 +510,11 @@ class ProbabilitiesRulerItem(QGraphicsWidget):
             text.setPos(x, 10 + self.y_diff)
             x = pts * self.scale + self.offset
             tick.setLine(x, 0 + self.y_diff, x, self.tick_height + self.y_diff)
-            text.setParentItem(None)
-            tick.setParentItem(None)
-            text.setVisible(False)
-            tick.setVisible(False)
+            for item in (text, tick):
+                item.setParentItem(None)
+                item.setVisible(False)
+                if item.scene() is not None:
+                    item.scene().removeItem(item)
             if self.min_val < pts < self.max_val:
                 tick.setParentItem(self)
                 tick.setVisible(True)

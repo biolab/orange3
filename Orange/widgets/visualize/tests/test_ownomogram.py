@@ -206,6 +206,23 @@ class TestOWNomogram(WidgetTest):
                 simulate.combobox_activate_index(w.class_combo, cls_index)
                 self.assertAlmostEqual(self._shown_probability(), prob)
 
+    def test_hidden_probability_ticks_not_in_scene(self):
+        """Probability ticks outside the ruler must not extend the scene,
+        which would scroll the feature names out of the view"""
+        w = self.widget
+        w.resize(900, 600)
+        w.show()
+        data = Table("iris")
+        self.send_signal(w.Inputs.classifier,
+                         LogisticRegressionLearner()(data))
+        self.send_signal(w.Inputs.data, data[5:6])
+        for cls_index in range(len(data.domain.class_var.values)):
+            simulate.combobox_activate_index(w.class_combo, cls_index)
+            for item in w.scene.items():
+                self.assertIs(item.topLevelItem(), w.nomogram)
+            scroll = w.view.horizontalScrollBar()
+            self.assertEqual(scroll.value(), scroll.minimum())
+
     def test_normalized_probabilities_hidden_features(self):
         """Normalized probabilities must not depend on the number of shown
         features"""
