@@ -1487,6 +1487,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         widget = self.widget
         graph = self.widget.graph
 
+        graph.aggregate_dense_regions = True
+
         self.send_signal(widget.Inputs.data, self.data)
 
         self.assertTrue(graph.allow_aggregation())

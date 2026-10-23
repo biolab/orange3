@@ -343,7 +343,7 @@ class TSNERunner:
 
 
 class OWtSNEGraph(OWScatterPlotBase):
-    aggregate_dense_regions = Setting(True)
+    aggregate_dense_regions = Setting(False)
 
     def update_coordinates(self):
         super().update_coordinates()
