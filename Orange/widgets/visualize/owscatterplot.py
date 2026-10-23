@@ -317,7 +317,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         points = np.vstack([x, y]).T
         mu = np.mean(points, axis=0)
         cov = np.cov(*(points - mu).T)
-        vals, vects = np.linalg.eig(cov)
+        vals, vects = np.linalg.eigh(cov)
         angle = math.atan2(vects[1, 0], vects[0, 0])
         matrix = np.array([[np.cos(angle), -np.sin(angle)],
                            [np.sin(angle), np.cos(angle)]])
