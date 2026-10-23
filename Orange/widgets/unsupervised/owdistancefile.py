@@ -6,19 +6,19 @@ from AnyQt.QtWidgets import QSizePolicy, QStyle, QMessageBox, QFileDialog
 from AnyQt.QtCore import QTimer, QUrl
 
 from orangewidget.settings import Setting
+from orangewidget.utils.filedialogs import LocalRecentPathsWComboMixin
 from orangewidget.widget import Msg
 from orangewidget.workflow.drophandler import SingleFileDropHandler
 
 from Orange.misc import DistMatrix
 from Orange.widgets import widget, gui
 from Orange.data import get_sample_datasets_dir
-from Orange.widgets.utils.filedialogs import RecentPathsWComboMixin, RecentPath, \
-    stored_recent_paths_prepend, OWUrlDropBase
+from Orange.widgets.utils.filedialogs import RecentPath, OWUrlDropBase
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.widget import Output
 
 
-class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
+class OWDistanceFile(OWUrlDropBase, LocalRecentPathsWComboMixin):
     name = "Distance File"
     id = "orange.widgets.unsupervised.distancefile"
     description = "Read distances from a file."
@@ -40,9 +40,11 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
 
     auto_symmetric = Setting(True)
 
+    settings_version = 2
+
     def __init__(self):
         super().__init__()
-        RecentPathsWComboMixin.__init__(self)
+        LocalRecentPathsWComboMixin.__init__(self)
         self.distances = None
 
         vbox = gui.vBox(self.controlArea, "Distance File")
@@ -119,6 +121,7 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
         if fn and fn != "(none)":
             try:
                 distances = DistMatrix.from_file(fn)
+                self.set_file_list()
             except Exception as exc:
                 err = str(exc)
                 self.Error.invalid_file(" \n"[len(err) > 40] + err)
@@ -158,6 +161,14 @@ class OWDistanceFile(OWUrlDropBase, RecentPathsWComboMixin):
             self.add_path(url.toLocalFile())
             self.open_file()
 
+    @classmethod
+    def migrate_settings(cls, settings, version):
+        if version < 2:
+            paths = settings.pop("recent_paths", [])
+            if paths:
+                cls.merge_paths(paths)
+                settings["active_path"] = paths[0]
+
 
 class OWDistanceFileDropHandler(SingleFileDropHandler):
     WIDGET = OWDistanceFile
@@ -165,7 +176,8 @@ class OWDistanceFileDropHandler(SingleFileDropHandler):
     def parametersFromFile(self, path):
         r = RecentPath(os.path.abspath(path), None, None,
                        os.path.basename(path))
-        return {"recent_paths": stored_recent_paths_prepend(self.WIDGET, r)}
+        self.WIDGET.merge_paths([r])
+        return {"active_path": r}
 
     def canDropFile(self, path: str) -> bool:
         return os.path.splitext(path)[1].lower() in (".dst", ".xlsx")
