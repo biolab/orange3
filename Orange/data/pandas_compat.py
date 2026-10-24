@@ -10,6 +10,7 @@ from pandas.core.arrays import SparseArray
 import pandas.core.arrays.sparse.accessor
 from pandas.api.types import (
     is_object_dtype,
+    is_string_dtype,
     is_datetime64_any_dtype,
     is_numeric_dtype,
     is_integer_dtype,
@@ -23,6 +24,9 @@ from Orange.data.table import Role
 
 __all__ = ['table_from_frame', 'table_to_frame']
 
+
+def is_orange_object_type(s):
+    return is_string_dtype(s) or is_object_dtype(s)
 
 # Patch a bug in pandas SparseFrameAccessor.to_dense
 # As of pandas=3.0.0.dev0+1524.g23c497bb2f, to_dense ignores _constructor
@@ -168,7 +172,7 @@ def _reset_index(df: pd.DataFrame) -> pd.DataFrame:
         and (
             # startswith is slow (for long dfs) - firs check if col has strings
             isinstance(df.index, pd.MultiIndex)
-            or not is_object_dtype(df.index)
+            or not is_orange_object_type(df.index)
             or not any(str(i).startswith("_o") for i in df.index)
         )
     ):
@@ -179,7 +183,7 @@ def _reset_index(df: pd.DataFrame) -> pd.DataFrame:
 def _is_discrete(s, force_nominal):
     return (
         isinstance(s.dtype, pd.CategoricalDtype)
-        or is_object_dtype(s)
+        or is_orange_object_type(s)
         and (force_nominal or s.nunique() < s.size**0.666)
     )
 
@@ -188,7 +192,7 @@ def _is_datetime(s):
     if is_datetime64_any_dtype(s):
         return True
     try:
-        if is_object_dtype(s):
+        if is_orange_object_type(s):
             # pd.to_datetime would successfully parse column of numbers to datetime
             # but for column of object dtype with numbers we want to be either
             # discrete or string - following code try to parse column to numeric
@@ -377,7 +381,7 @@ def table_from_frame(df, *, force_nominal=False, variables=None):
         if len(W) != len(df.index):
             W = None
         attributes = df.orange_attributes
-        if isinstance(df.index, pd.MultiIndex) or not is_object_dtype(df.index):
+        if isinstance(df.index, pd.MultiIndex) or not is_orange_object_type(df.index):
             # we can skip checking for Orange indices when MultiIndex an when
             # not string dtype and so speedup the conversion
             ids = None
@@ -476,7 +480,13 @@ def table_to_frame(tab, include_metas=False):
                 codes=codes, categories=col.values, ordered=True
             ))
         elif col.is_time:
-            result = (col.name, pd.to_datetime(vals, unit='s').to_series().reset_index()[0])
+            col_dt = pd.to_datetime(vals, unit='s')
+            # to_datetime with unit='s' will create M8[s] if `vals` have no
+            # fractional part. This will be a problem for downstream math ops
+            # (mean, std, ...) which would have diminished resolution. Explicit
+            # convert to microsecond resolution.
+            col_dt = col_dt.astype("M8[us]")
+            result = (col.name, col_dt.to_series().reset_index()[0])
         elif col.is_continuous:
             dt = float
             # np.nan are not compatible with int column

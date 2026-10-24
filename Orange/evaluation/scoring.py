@@ -19,7 +19,7 @@ from sklearn.metrics import confusion_matrix
 
 from Orange.data import DiscreteVariable, ContinuousVariable, Domain
 from Orange.misc.wrapper_meta import WrapperMeta
-from Orange.util import OrangeDeprecationWarning
+from Orange.util import OrangeDeprecationWarning, as_scalar
 
 
 __all__ = ["CA", "Precision", "Recall", "F1", "PrecisionRecallFSupport", "AUC",
@@ -115,14 +115,6 @@ class Score(metaclass=ScoreMetaType):
 
     @staticmethod
     def from_predicted(results, score_function, **kwargs):
-        def as_scalar(e):
-            if np.isscalar(e):
-                return e
-            elif len(e) == 1:
-                return e[0]
-            else:
-                raise ValueError("len(e) > 1")
-
         scores = (score_function(results.actual, predicted, **kwargs)
                   for predicted in results.predicted)
         # np.fromiter needs flat iter of scalars, some scoring function calls

@@ -1363,6 +1363,7 @@ data/pandas_compat.py:
     def `table_to_frame`:
         def `_column_to_series`:
             s: false
+            M8[us]: false
     def `amend_table_with_frame`:
         'Leading dimension mismatch ': false
         (not {arr.shape[0]} == {df.shape[0]}): false
@@ -6503,13 +6504,16 @@ widgets/data/owfile.py:
             Format: Oblika
             Data: Podatki
             Resource: Vir
+        def `migrate_settings`:
+            recent_paths: false
+            active_path: false
     class `OWFileDropHandler`:
         def `canDropUrl`:
             http: false
             https: false
             ftp: false
         def `parametersFromUrl`:
-            recent_paths: false
+            active_path: false
             source: false
             recent_urls: false
     __main__: false
@@ -10387,11 +10391,14 @@ widgets/model/owloadmodel.py:
             Open Model File: Odpri datoteko z modelom
         def `open_file`:
             rb: false
+        def `migrate_settings`:
+            recent_paths: false
+            active_path: false
     class `OWLoadModelDropHandler`:
         def `canDropFile`:
             .pkcls: false
         def `parametersFromFile`:
-            recent_paths: false
+            active_path: false
     __main__: false
 widgets/model/owlogisticregression.py:
     class `OWLogisticRegression`:
@@ -11403,9 +11410,12 @@ widgets/unsupervised/owdistancefile.py:
         def `send_report`:
             No data was loaded.: Podatki niso naloženi.
             File name: Ime datoteke
+        def `migrate_settings`:
+            recent_paths: false
+            active_path: false
     class `OWDistanceFileDropHandler`:
         def `parametersFromFile`:
-            recent_paths: false
+            active_path: false
         def `canDropFile`:
             .dst: false
             .xlsx: false
@@ -13964,6 +13974,7 @@ widgets/visualize/owbarplot.py:
         def `__init__`:
             bottom: false
             left: false
+            layout_: false
         def `update_axes`:
             left: false
             bottom: false
@@ -15145,6 +15156,8 @@ widgets/visualize/owscatterplot.py:
     iris: false
 widgets/visualize/owscatterplotgraph.py:
     class `LegendItem`:
+        def `__init__`:
+            layout_: false
         def `addItem`:
             left: false
     class `ScatterPlotItem`:
@@ -15816,6 +15829,8 @@ widgets/visualize/utils/customizableplot.py:
         Dot line: Pikčasta črta
         Dash dot line: Črta - pika
         Dash dot dot line: Črta - pika - pika
+        def `plot_title_resize`:
+            layout_: false
         def `update_axes_titles_font`:
             foreground: false
             normal: false

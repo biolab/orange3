@@ -57,7 +57,7 @@ def run_freeviz(data: Table, projector: FreeViz, state: TaskState):
 
 class OWFreeVizGraph(OWGraphWithAnchors):
     hide_radius = settings.Setting(0)
-    aggregate_dense_regions = settings.Setting(True)
+    aggregate_dense_regions = settings.Setting(False)
 
     @property
     def scaled_radius(self):
