@@ -179,7 +179,7 @@ def guess_data_type(orig_values, namask=None):
         # was before recognized as a discrete
         tvar = TimeVariable('_')
         # introducing new variable prevent overwriting orig_values and values
-        temp_values = np.empty_like(orig_values, dtype=float)
+        temp_values = _as_string_array(np.empty_like(orig_values, dtype=float))
         try:
             temp_values[~namask] = [
                 tvar.parse_exact_iso(i) for i in orig_values[~namask]]
