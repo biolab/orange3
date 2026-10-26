@@ -692,7 +692,7 @@ class OWDataSets(OWWidget):
                 self.__awaiting_state = None
 
             if not di.islocal:
-                pr = Progress()
+                pr = Progress(self)
                 pr.advance.connect(self.__progress_advance, Qt.QueuedConnection)
 
                 self.progressBarInit()
