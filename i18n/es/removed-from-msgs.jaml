@@ -1,0 +1,83 @@
+widgets/data/owcontinuize.py:
+    Use preset: Use preajuste
+    Treat the variable as defined in preset: Trate la variable como se define en el ajuste preestablecido
+    Treat the variable as defined in 'default setting': Trate la variable como se define en la 'configuración predeterminada'
+    class `DefaultContModel`:
+        def `data`:
+            'Preset: {self.method}': Preajuste: {self.method}
+    class `OWContinuize`:
+        def `send_report`:
+            Preset: Preajuste
+            'Any unlisted attributes default to preset option, and ': 'Cualquier atributo no enumerado toma la opción predeterminada, y '
+widgets/data/owcreateclass.py:
+    class `OWCreateClass`:
+        def `__init__`:
+            Match by Substring: Coincidir por subcadena
+            From column:: Desde la columna:
+widgets/data/owdatainfo.py:
+    class `OWDataInfo`:
+        def `_p_size`:
+            ~{n} {pl(n, 'row')}: ~{n} {pl(n, 'fila')}
+widgets/data/owdiscretize.py:
+    Use default setting: Use la configuración predeterminada
+    default: predeterminado
+    Treat the variable as defined in 'default setting': Trate la variable como se define en la 'configuración predeterminada'
+    class `DefaultDiscModel`:
+        def `data`:
+            'Default setting: ': 'Configuración predeterminada: '
+    class `OWDiscretize`:
+        def `_discretize_var`:
+            ': ': true
+widgets/data/owneighbors.py:
+    Euclidean: Euclidiana
+    Manhattan: true
+    Mahalanobis: true
+    Cosine: Coseno
+    Jaccard: true
+    Spearman: true
+    Absolute Spearman: Spearman absoluto
+    Pearson: true
+    Absolute Pearson: Pearson absoluto
+widgets/data/owsplit.py:
+    class `OWSplit`:
+        text to columns: texto a columnas
+        word encoding: codificación de palabras
+        questionnaire: cuestionario
+        survey: encuesta
+        term: término
+        word presence: presencia de palabras
+        word counts: conteos de palabras
+        categorical encoding: codificación categórica
+        indicator variables: variables indicadoras
+widgets/data/owtranspose.py:
+    class `OWTranspose`:
+        def `__init__`:
+            Feature names: Nombres de las variables
+            From variable:: Desde la variable:
+widgets/data/utils/tablesummary.py:
+    def `format_summary`:
+        ~{ninst} {pl(ninst, 'instance')}: ~{ninst} {pl(ninst, 'instancia')}
+widgets/unsupervised/owdistances.py:
+    Euclidean (normalized): Euclidiana (normalizada)
+    Square root of summed difference between normalized values: Raíz cuadrada de la diferencia sumada entre valores normalizados
+    Euclidean: Euclidiana
+    Square root of summed difference between values: Raíz cuadrada de la diferencia sumada entre valores
+    Manhattan (normalized): Manhattan (normalizada)
+    Sum of absolute differences between normalized values: Suma de diferencias absolutas entre valores normalizados
+    Manhattan: true
+    Sum of absolute differences between values: Suma de diferencias absolutas entre valores
+    Mahalanobis: true
+    Mahalanobis distance: Distancia de Mahalanobis
+    Hamming: true
+    Hamming distance: Distancia de Hamming
+    Cosine: Coseno
+    Cosine distance: Distancia Cosine
+    Pearson: true
+    Pearson correlation; distance = 1 - ρ/2: Correlación de Pearson; distancia = 1 - ρ/2
+    Pearson (absolute): Pearson (absoluto)
+    Absolute value of Pearson correlation; distance = 1 - |ρ|: Valor absoluto de la correlación de Pearson; distancia = 1 - |ρ|
+    Spearman: true
+    Spearman correlation; distance = 1 - ρ/2: Correlación de Spearman; distancia = 1 - ρ/2
+    Spearman (absolute): Spearman (absoluto)
+    Jaccard: true
+    Jaccard distance: Distancia de Jaccard

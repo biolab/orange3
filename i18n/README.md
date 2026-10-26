@@ -1,5 +1,5 @@
 This directory contains messsage files and configuration files for translating
-Orange to other languages. Currently, Orange is translated to Slovenian.
+Orange to other languages. Currently, Orange is translated to Slovenian and Spanish.
 
 Orange is translated using `trubar`, which is pip-installable.
 
