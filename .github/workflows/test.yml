@@ -20,7 +20,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Install Tox
         run: |
@@ -47,7 +47,7 @@ jobs:
             tox_env: orange-latest
             name: Latest
           - os: ubuntu-22.04
-            python-version: '3.11'
+            python-version: '3.12'
             tox_env: orange-oldest
             name: Oldest dependencies
           - os: ubuntu-latest
