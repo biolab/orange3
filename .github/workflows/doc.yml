@@ -14,8 +14,8 @@ jobs:
     strategy:
       fail-fast: False
       matrix:
-        python: ['3.11']
-        os: [ubuntu-22.04]
+        python: ['3.12']
+        os: [ubuntu-24.04]
 
     steps:
       - uses: actions/checkout@v6
@@ -27,7 +27,7 @@ jobs:
           python-version: ${{ matrix.python }}
 
       - name: Install linux system dependencies
-        run: sudo apt-get install -y libxkbcommon-x11-0
+        run: sudo apt-get install -y libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 libxcb-shape0 libxcb-cursor0 glibc-tools libegl1
 
       - name: Install Tox
         run: pip install tox
