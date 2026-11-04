@@ -52,8 +52,8 @@ jobs:
             name: Oldest dependencies
           - os: ubuntu-latest
             python-version: '3.13'
-            tox_env: pyqt6
-            name: PyQt6
+            tox_env: pyqt5
+            name: PyQt5
           - os: ubuntu-latest
             python-version: '3.14'
             tox_env: beta
@@ -136,12 +136,12 @@ jobs:
             name: Latest
           - os: windows-latest
             python-version: '3.13'
-            tox_env: pyqt6
-            name: PyQt6
+            tox_env: pyqt5
+            name: PyQt5
           - os: macos-latest
             python-version: '3.13'
-            tox_env: pyqt6
-            name: PyQt6
+            tox_env: pyqt5
+            name: PyQt5
 
     steps:
       - uses: actions/checkout@v6
