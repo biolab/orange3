@@ -1,6 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_array
 
 from AnyQt.QtCore import Qt
 from Orange.widgets.model.owsvm import OWSVM
@@ -99,7 +99,7 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
         self.assertFalse(self.widget.Warning.sparse_data.is_shown())
 
         with data.unlocked():
-            data.X = csr_matrix(data.X)
+            data.X = csr_array(data.X)
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.sparse_data.is_shown())
 

@@ -244,7 +244,7 @@ class DomainEditor(QTableView):
         """Transform list of values to sparse/dense column array."""
         x = np.asarray(x, dtype=dtype).reshape(-1, 1)
         if to_sparse:
-            x = sp.csc_matrix(x)
+            x = sp.csc_array(x)
         return x
 
     @staticmethod
@@ -257,7 +257,7 @@ class DomainEditor(QTableView):
             return np.hstack(cols)
         if force_dense:
             return np.hstack([c.toarray() if sp.issparse(c) else c for c in cols])
-        sparse_cols = [c if sp.issparse(c) else sp.csc_matrix(c) for c in cols]
+        sparse_cols = [c if sp.issparse(c) else sp.csc_array(c) for c in cols]
         return sp.hstack(sparse_cols).tocsr()
 
     def get_domain(self, domain, data, deduplicate=False):

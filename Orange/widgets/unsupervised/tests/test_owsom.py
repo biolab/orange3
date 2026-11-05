@@ -157,7 +157,7 @@ class TestOWSOM(WidgetTest):
     def test_sparse_data(self):
         widget = self.widget
         with self.iris.unlocked():
-            self.iris.X = sp.csc_matrix(self.iris.X)
+            self.iris.X = sp.csc_array(self.iris.X)
 
         # Table.from_table can decide to return dense data
         with patch.object(Table, "from_table", lambda _, x: x):
@@ -165,7 +165,7 @@ class TestOWSOM(WidgetTest):
             widget.update_output = Mock()
             self.send_signal(widget.Inputs.data, self.iris)
         self.assertIs(widget.data, self.iris)
-        self.assertTrue(sp.isspmatrix_csr(widget.cont_x))
+        self.assertTrue(sp.issparse(widget.cont_x) and widget.cont_x.format == 'csr')
         self.assertEqual(widget.cont_x.shape, (150, 4))
 
     @_patch_recompute_som

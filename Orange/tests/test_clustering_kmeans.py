@@ -5,7 +5,7 @@ import unittest
 import warnings
 
 import numpy as np
-from scipy.sparse import csc_matrix, csr_matrix
+from scipy.sparse import csc_array, csr_array
 
 import Orange
 from Orange.clustering.kmeans import KMeans, KMeansModel
@@ -45,14 +45,14 @@ class TestKMeans(unittest.TestCase):
 
     def test_predict_sparse_csc(self):
         with self.iris.unlocked():
-            self.iris.X = csc_matrix(self.iris.X[::20])
+            self.iris.X = csc_array(self.iris.X[::20])
         c = self.kmeans(self.iris)
         self.assertEqual(np.ndarray, type(c))
         self.assertEqual(len(self.iris), len(c))
 
     def test_predict_spares_csr(self):
         with self.iris.unlocked():
-            self.iris.X = csr_matrix(self.iris.X[::20])
+            self.iris.X = csr_array(self.iris.X[::20])
         c = self.kmeans(self.iris)
         self.assertEqual(np.ndarray, type(c))
         self.assertEqual(len(self.iris), len(c))
@@ -80,7 +80,7 @@ class TestKMeans(unittest.TestCase):
         Test with sparse array as an input in model.
         """
         c = self.kmeans.get_model(self.iris)
-        c1 = c(csc_matrix(self.iris.X))
+        c1 = c(csc_array(self.iris.X))
         # prediction of the model must be same since data are same
         np.testing.assert_array_almost_equal(c.labels, c1)
 
@@ -89,7 +89,7 @@ class TestKMeans(unittest.TestCase):
         Test with sparse array as an input in model.
         """
         c = self.kmeans.get_model(self.iris)
-        c1 = c(csr_matrix(self.iris.X))
+        c1 = c(csr_array(self.iris.X))
         # prediction of the model must be same since data are same
         np.testing.assert_array_almost_equal(c.labels, c1)
 

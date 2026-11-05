@@ -449,14 +449,14 @@ class Model(Reprable):
         else:
             one_d = False
 
-        # if sparse convert to csr_matrix
+        # if sparse convert to csr_array
         if scipy.sparse.issparse(data):
             data = data.tocsr()
 
         # Call the predictor
         backmappers = None
         n_values = []
-        if isinstance(data, (np.ndarray, scipy.sparse.csr_matrix)):
+        if isinstance(data, (np.ndarray, scipy.sparse.csr_array)):
             prediction = self.predict(data)
         elif isinstance(data, Table):
             backmappers, n_values = self.get_backmappers(data)
@@ -695,6 +695,8 @@ class CatGBModel(Model, metaclass=WrapperMeta):
     def predict(self, X):
         if self.cat_features:
             X = X.astype(str)
+        if isinstance(X, scipy.sparse.sparray):
+            X = scipy.sparse.csr_matrix(X)
         value = self.cat_model.predict(X).flatten()
         if hasattr(self.cat_model, "predict_proba"):
             probs = self.cat_model.predict_proba(X)
@@ -862,6 +864,8 @@ class CatGBBaseLearner(Learner, metaclass=WrapperMeta):
                             if attr.is_discrete]
             if cat_features:
                 X = X.astype(str)
+            if isinstance(X, scipy.sparse.sparray):
+                X = scipy.sparse.csr_matrix(X)
             cat_model = clf.fit(X, Y, cat_features=cat_features, sample_weight=W)
             return self.__returns__(cat_model, cat_features, domain)
 

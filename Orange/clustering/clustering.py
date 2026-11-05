@@ -27,8 +27,8 @@ class ClusteringModel:
         if isinstance(data, np.ndarray):
             one_d = data.ndim == 1
             prediction = self.predict(np.atleast_2d(data))
-        elif isinstance(data, scipy.sparse.csr_matrix) or \
-                isinstance(data, scipy.sparse.csc_matrix):
+        elif isinstance(data, scipy.sparse.csr_array) or \
+                isinstance(data, scipy.sparse.csc_array):
             prediction = self.predict(data)
         elif isinstance(data, (Table, Instance)):
             if isinstance(data, Instance):

@@ -2,7 +2,7 @@ import unittest
 from math import sqrt
 
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_array
 
 from Orange.data import ContinuousVariable, DiscreteVariable, StringVariable,\
     Domain, Table
@@ -41,7 +41,7 @@ class CommonTests:
         domain = Domain([ContinuousVariable(c) for c in "abc"])
         dense_data = Table.from_list(
             domain, [[1, 0, 2], [-1, 5, 0], [0, 1, 1], [7, 0, 0]])
-        sparse_data = Table(domain, csr_matrix(dense_data.X))
+        sparse_data = Table(domain, csr_array(dense_data.X))
 
         if not self.Distance.supports_sparse:
             self.assertRaises(TypeError, self.Distance, sparse_data)
@@ -904,7 +904,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
              [1, 1, 1],
              [1, 0, 1],
              [1, 0, 0]])
-        self.sparse_data = Table.from_numpy(self.domain, csr_matrix(self.data.X))
+        self.sparse_data = Table.from_numpy(self.domain, csr_array(self.data.X))
 
     def test_jaccard_rows(self):
         assert_almost_equal = np.testing.assert_almost_equal
@@ -985,7 +985,7 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
         domain = Domain([ContinuousVariable(c) for c in "abc"])
         dense_data = Table.from_list(
             domain, [[0, 0, 0], [0, 0, 0], [0, 0, 1]])
-        sparse_data = Table(domain, csr_matrix(dense_data.X))
+        sparse_data = Table(domain, csr_array(dense_data.X))
         dist_dense = self.Distance(dense_data)
         dist_sparse = self.Distance(sparse_data)
 
