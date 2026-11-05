@@ -5,7 +5,7 @@ import unittest
 
 import numpy as np
 import networkx
-from scipy.sparse import csc_matrix, csr_matrix
+from scipy.sparse import csc_array, csr_array
 
 from Orange.clustering.clustering import ClusteringModel
 from Orange.clustering.louvain import matrix_to_knn_graph
@@ -45,14 +45,14 @@ class TestLouvain(unittest.TestCase):
 
     def test_predict_sparse_csc(self):
         with self.iris.unlocked():
-            self.iris.X = csc_matrix(self.iris.X[::5])
+            self.iris.X = csc_array(self.iris.X[::5])
         c = self.louvain(self.iris)
         self.assertEqual(np.ndarray, type(c))
         self.assertEqual(len(self.iris), len(c))
 
     def test_predict_sparse_csr(self):
         with self.iris.unlocked():
-            self.iris.X = csr_matrix(self.iris.X[::5])
+            self.iris.X = csr_array(self.iris.X[::5])
         c = self.louvain(self.iris)
         self.assertEqual(np.ndarray, type(c))
         self.assertEqual(len(self.iris), len(c))
@@ -76,7 +76,7 @@ class TestLouvain(unittest.TestCase):
         Test with sparse array as an input in model.
         """
         c = self.louvain.get_model(self.iris)
-        self.assertRaises(NotImplementedError, c, csr_matrix(self.iris.X))
+        self.assertRaises(NotImplementedError, c, csr_array(self.iris.X))
 
     def test_model_instance(self):
         """

@@ -968,7 +968,7 @@ class AnchorProjectionWidgetTestMixin(ProjectionWidgetTestMixin):
     def test_sparse_data(self, timeout=DEFAULT_TIMEOUT):
         table = Table("iris")
         with table.unlocked():
-            table.X = sp.csr_matrix(table.X)
+            table.X = sp.csr_array(table.X)
         self.assertTrue(sp.issparse(table.X))
         self.send_signal(self.widget.Inputs.data, table)
         self.assertTrue(self.widget.Error.sparse_data.is_shown())

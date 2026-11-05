@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import numpy as np
 import scipy.sparse as sp
-from scipy.sparse import csr_matrix, csc_matrix
+from scipy.sparse import csr_array, csc_array
 
 from Orange.data import DiscreteVariable, Table, Domain
 from Orange.statistics import contingency
@@ -251,7 +251,7 @@ class TestDiscrete(unittest.TestCase):
                    3, 5, 6,
                    2, 5, 6, 13]
         indptr = [0, 11, 20, 23, 23, 27]
-        X = sp.csr_matrix((sdata, indices, indptr), shape=(5, 20))
+        X = sp.csr_array((sdata, indices, indptr), shape=(5, 20))
         X.data = X.data.copy()  # make it the owner of it's data
         Y = np.array([[1, 2, 1, 0, 0]]).T
         return data.Table.from_numpy(domain, X, Y)
@@ -355,7 +355,7 @@ class TestDiscrete(unittest.TestCase):
         # make X sparse
         d = self.test9.copy()
         with d.unlocked():
-            d.X = csr_matrix(d.X)
+            d.X = csr_array(d.X)
         var1, var2 = d.domain[0], d.domain[1]
         cont = contingency.Discrete(d, var1, var2)
         assert_dist_equal(cont, [[1, 0], [1, 0], [1, 0], [1, 0],
@@ -366,7 +366,7 @@ class TestDiscrete(unittest.TestCase):
 
         d = self.test9.copy()
         with d.unlocked():
-            d.X = csc_matrix(d.X)
+            d.X = csc_array(d.X)
         cont = contingency.Discrete(d, var1, var2)
         assert_dist_equal(cont, [[1, 0], [1, 0], [1, 0], [1, 0],
                                  [0, 1], [0, 1], [0, 1], [0, 1]])

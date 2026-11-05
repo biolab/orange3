@@ -1,3 +1,4 @@
+import inspect
 from functools import partial
 
 from concurrent import futures
@@ -396,13 +397,29 @@ class OWLouvainClustering(widget.OWWidget):
         self.Outputs.annotated_data.send(new_table)
 
         if Network is not None:
-            n_edges = self.graph.number_of_edges()
-            n_nodes = self.graph.number_of_nodes()
-            edges = sp.coo_matrix(
-                (np.ones(n_edges), np.array(self.graph.edges()).T),
-                shape=(n_nodes, n_nodes))
-            graph = Network(new_table, edges)
-            self.Outputs.graph.send(graph)
+            self._send_network_data(new_table)
+
+    def _send_network_data(self, new_table):
+        # Network addon uses sparse matrices at least until 1.11
+        # We detect this by checking the annotation
+        assert Network is not None
+        arr_type = sp.coo_array
+        try:
+            edge_type = inspect.get_annotations(Network.__init__)["edges"]
+        except KeyError:
+            pass
+        else:
+            if issubclass(sp.csr_matrix, edge_type):
+                arr_type = sp.coo_matrix
+
+        n_edges = self.graph.number_of_edges()
+        n_nodes = self.graph.number_of_nodes()
+        edges = arr_type(
+            (np.ones(n_edges), np.array(self.graph.edges()).T),
+            shape=(n_nodes, n_nodes))
+        edges = edges.tocsr()
+        graph = Network(new_table, edges)
+        self.Outputs.graph.send(graph)
 
     @Inputs.data
     def set_data(self, data):

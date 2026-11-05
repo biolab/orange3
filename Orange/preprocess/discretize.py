@@ -35,7 +35,7 @@ class Discretizer(Transformation):
             if len(bins):
                 x.data = np.digitize(x.data, bins)
             else:
-                x = sp.csr_matrix(x.shape)
+                x = sp.csr_array(x.shape)
             return x
         else:
             return np.digitize(x, bins) if len(bins) else [0]*len(x)

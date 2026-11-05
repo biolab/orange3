@@ -364,7 +364,7 @@ class TestOWKMeans(WidgetTest):
         widget.normalize = True
         norm_check = widget.controls.normalize
 
-        x = sp.csr_matrix(np.random.randint(0, 2, (5, 10)))
+        x = sp.csr_array(np.random.randint(0, 2, (5, 10)))
         data = Table.from_numpy(None, x)
 
         self.send_signal(widget.Inputs.data, data)

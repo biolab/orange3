@@ -6,8 +6,8 @@ from itertools import chain
 from functools import partial, wraps
 
 import numpy as np
-from scipy.sparse import csr_matrix, issparse, lil_matrix, csc_matrix, \
-    SparseEfficiencyWarning
+from scipy.sparse import csr_array, issparse, lil_array, csc_array, \
+    SparseEfficiencyWarning, issparse
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.util import assure_array_dense
@@ -27,7 +27,7 @@ def dense_sparse(test_case):
 
         def sparse_with_explicit_zero(x, array):
             """Inject one explicit zero into a sparse array."""
-            np_array, sp_array = np.atleast_2d(x), array(x)
+            np_array, sp_array = x, array(x)
             assert issparse(sp_array), 'Can not inject explicit zero into non-sparse matrix'
 
             zero_indices = np.argwhere(np_array == 0)
@@ -40,6 +40,11 @@ def dense_sparse(test_case):
 
             return sp_array
 
+        def wscs_array(arr):
+            if isinstance(arr, list) and not isinstance(arr[0], list):
+                arr = [arr]
+            return csc_array(arr)
+
         # Make sure to call setUp and tearDown methods in between test runs so
         # any widget state doesn't interfere between tests
         def _setup_teardown():
@@ -48,13 +53,13 @@ def dense_sparse(test_case):
 
         test_case(self, np.array)
         _setup_teardown()
-        test_case(self, csr_matrix)
+        test_case(self, csr_array)
         _setup_teardown()
-        test_case(self, csc_matrix)
+        test_case(self, wscs_array)
         _setup_teardown()
-        test_case(self, partial(sparse_with_explicit_zero, array=csr_matrix))
+        test_case(self, partial(sparse_with_explicit_zero, array=csr_array))
         _setup_teardown()
-        test_case(self, partial(sparse_with_explicit_zero, array=csc_matrix))
+        test_case(self, partial(sparse_with_explicit_zero, array=wscs_array))
 
     return _wrapper
 
@@ -106,7 +111,7 @@ class TestUtil(unittest.TestCase):
                                            [np.inf, -np.inf, 0, 0, 0, 0]])
 
     def test_stats_sparse(self):
-        X = csr_matrix(np.identity(5))
+        X = csr_array(np.identity(5))
         np.testing.assert_equal(stats(X), [[0, 1, .2, 0, 0, 5],
                                            [0, 1, .2, 0, 0, 5],
                                            [0, 1, .2, 0, 0, 5],
@@ -144,13 +149,13 @@ class TestUtil(unittest.TestCase):
 
     def test_stats_nans_neutral_weights_sparse(self):
         X = np.arange(4).reshape(2, 2).astype(float)
-        X = csr_matrix(X)
+        X = csr_array(X)
         X[0, 0] = np.nan
         np.testing.assert_equal(stats(X, weights=np.array([1, 1])), stats(X))
 
     def test_stats_weights_sparse(self):
         X = np.arange(4).reshape(2, 2).astype(float)
-        X = csr_matrix(X)
+        X = csr_array(X)
         weights = np.array([1, 3])
         np.testing.assert_equal(stats(X, weights), [[0, 2, 1.5, 0, 0, 2],
                                                     [1, 3, 2.5, 0, 0, 2]])
@@ -181,7 +186,7 @@ class TestUtil(unittest.TestCase):
                     [0, 9, 3, (6 ** 2 + 3 ** 2 + 3 ** 2) / 3, 1, 3]]
         np.testing.assert_almost_equal(stats(arr, compute_variance=True), expected)
 
-        sparr = csc_matrix(arr)
+        sparr = csc_array(arr)
         np.testing.assert_almost_equal(stats(sparr, compute_variance=True), expected)
 
         sparr = sparr.tocsr()
@@ -198,7 +203,7 @@ class TestUtil(unittest.TestCase):
         np.testing.assert_almost_equal(
             stats(arr, weights=weights, compute_variance=True), expected)
 
-        sparr = csc_matrix(arr)
+        sparr = csc_array(arr)
         np.testing.assert_almost_equal(
             stats(sparr, weights=weights, compute_variance=True), expected)
 
@@ -243,7 +248,7 @@ class TestUtil(unittest.TestCase):
     def test_nanmin_nanmax(self):
         warnings.filterwarnings("ignore", r".*All-NaN slice encountered.*")
         for X in self.data:
-            X_sparse = csr_matrix(X)
+            X_sparse = csr_array(X)
             for axis in [None, 0, 1]:
                 np.testing.assert_array_equal(
                     nanmin(X, axis=axis),
@@ -273,7 +278,7 @@ class TestUtil(unittest.TestCase):
         # This warning is not unexpected and it's correct
         warnings.filterwarnings("ignore", r".*mean\(\) resulted in nan.*")
         for X in self.data:
-            X_sparse = csr_matrix(X)
+            X_sparse = csr_array(X)
             np.testing.assert_array_equal(
                 mean(X_sparse),
                 np.mean(X))
@@ -315,7 +320,7 @@ class TestUtil(unittest.TestCase):
             for axis in chain((None,), range(len(data.shape))):
                 # Can't use array_equal here due to differences on 1e-16 level
                 np.testing.assert_array_almost_equal(
-                    var(csr_matrix(data), axis=axis),
+                    var(csr_array(data), axis=axis),
                     np.var(data, axis=axis)
                 )
 
@@ -324,7 +329,7 @@ class TestUtil(unittest.TestCase):
         for axis in [None, 0, 1]:
             np.testing.assert_almost_equal(
                 np.var(x, axis=axis, ddof=10),
-                var(csr_matrix(x), axis=axis, ddof=10),
+                var(csr_array(x), axis=axis, ddof=10),
             )
 
     @dense_sparse
@@ -341,7 +346,7 @@ class TestUtil(unittest.TestCase):
         for axis in [None, 0, 1]:
             np.testing.assert_almost_equal(
                 np.nanvar(x, axis=axis, ddof=10),
-                nanvar(csr_matrix(x), axis=axis, ddof=10),
+                nanvar(csr_array(x), axis=axis, ddof=10),
             )
 
     def test_std(self):
@@ -349,7 +354,7 @@ class TestUtil(unittest.TestCase):
             for axis in chain((None,), range(len(data.shape))):
                 # Can't use array_equal here due to differences on 1e-16 level
                 np.testing.assert_array_almost_equal(
-                    std(csr_matrix(data), axis=axis),
+                    std(csr_array(data), axis=axis),
                     np.std(data, axis=axis)
                 )
 
@@ -358,7 +363,7 @@ class TestUtil(unittest.TestCase):
         for axis in [None, 0, 1]:
             np.testing.assert_almost_equal(
                 np.std(x, axis=axis, ddof=10),
-                std(csr_matrix(x), axis=axis, ddof=10),
+                std(csr_array(x), axis=axis, ddof=10),
             )
 
     @dense_sparse
@@ -374,7 +379,7 @@ class TestUtil(unittest.TestCase):
         for axis in [None, 0, 1]:
             np.testing.assert_almost_equal(
                 np.nanstd(x, axis=axis, ddof=10),
-                nanstd(csr_matrix(x), axis=axis, ddof=10),
+                nanstd(csr_array(x), axis=axis, ddof=10),
             )
 
     def test_FDR(self):
@@ -602,19 +607,21 @@ class TestDigitize(unittest.TestCase):
     @dense_sparse
     def test_digitize_1d_array(self, array):
         """A consistent return shape must be returned for both sparse and dense."""
-        x_original = np.array([0, 1, 1, 0, np.nan, 0, 1])
+        x_original = [0, 1, 1, 0, np.nan, 0, 1]
         x = array(x_original)
         bins = np.arange(-2, 2)
 
-        x_shape = x_original.shape
+        expected = np.digitize(x_original, bins)
+        if issparse(x) and x.format == "csc":
+            expected = np.atleast_2d(expected)
         np.testing.assert_array_equal(
-            [np.digitize(x_original.flatten(), bins).reshape(x_shape)],
+            expected,
             digitize(x, bins),
         )
 
     def test_digitize_sparse_zeroth_bin(self):
         # Setup the data so that the '0's will fit into the '0'th bin.
-        data = csr_matrix([
+        data = csr_array([
             [0, 0, 0, 1, 1, 0, 0, 1, 0],
             [0, 0, 1, 1, 0, 0, 1, 0, 0],
         ])
@@ -636,10 +643,9 @@ class TestCountnans(unittest.TestCase):
 
         self.assertEqual(countnans(x, axis=0), expected)
 
-    @dense_sparse
-    def test_1d_array_with_axis_1_raises_exception(self, array):
-        with self.assertRaises(ValueError):
-            countnans(array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1]), axis=1)
+    def test_1d_array_with_axis_1_raises_exception(self):
+        with self.assertRaises(np.exceptions.AxisError):
+            countnans(np.array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1]), axis=1)
 
     @dense_sparse
     def test_shape_matches_dense_and_sparse(self, array):
@@ -666,7 +672,7 @@ class TestCountnans(unittest.TestCase):
         np.testing.assert_equal(countnans(x, axis=1), expected)
 
     @dense_sparse
-    def test_2d_matrix(self, array):
+    def test_2d_array(self, array):
         x = array([[1, np.nan, 1, 2],
                    [2, np.nan, 2, 3]])
         expected = 2
@@ -841,13 +847,13 @@ class TestUnique(unittest.TestCase):
         np.testing.assert_equal(counts, expected_counts)
 
     def test_sparse_explicit_zeros(self):
-        # Use `lil_matrix` to fix sparse warning for matrix construction
-        x = lil_matrix(np.eye(3))
+        # Use `lil_array` to fix sparse warning for matrix construction
+        x = lil_array(np.eye(3))
         x[0, 1] = 0
         x[1, 0] = 0
         x = x.tocsr()
         # Test against identity matrix
-        y = csr_matrix(np.eye(3))
+        y = csr_array(np.eye(3))
 
         np.testing.assert_array_equal(
             unique(y, return_counts=True),

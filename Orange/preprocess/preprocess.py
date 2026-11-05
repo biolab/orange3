@@ -592,7 +592,7 @@ class RemoveSparse(Preprocess):
 
         if self.filter0:
             if sp.issparse(data.X):
-                data_csc = sp.csc_matrix(data.X)
+                data_csc = sp.csc_array(data.X)
                 h, w = data_csc.shape
                 sparseness = [h - data_csc[:, i].count_nonzero()
                               for i in range(w)]
@@ -600,7 +600,7 @@ class RemoveSparse(Preprocess):
                 sparseness = data.X.shape[0] - np.count_nonzero(data.X, axis=0)
         else:  # filter by nans
             if sp.issparse(data.X):
-                data_csc = sp.csc_matrix(data.X)
+                data_csc = sp.csc_array(data.X)
                 sparseness = [np.sum(np.isnan(data.X[:, i].data))
                               for i in range(data_csc.shape[1])]
             else:

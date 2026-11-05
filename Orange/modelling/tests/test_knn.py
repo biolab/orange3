@@ -32,7 +32,7 @@ class Test(unittest.TestCase):
         fit.reset_mock()
 
         with self.data.unlocked():
-            self.data.X = sparse.csr_matrix(self.data.X)
+            self.data.X = sparse.csr_array(self.data.X)
             learner(self.data)
             X = fit.call_args[0][0]
             np.testing.assert_allclose(np.sum(X ** 2, axis=1), 1)
