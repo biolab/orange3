@@ -125,15 +125,15 @@ class TestNaiveBayesLearner(unittest.TestCase):
         self._test_predictions(sparse=None, absent_class=True)
         self._test_predict_missing_attributes(sparse=None)
 
-    def test_predictions_csr_matrix(self):
-        self._test_predictions(sparse=sp.csr_matrix)
-        self._test_predictions(sparse=sp.csr_matrix, absent_class=True)
-        self._test_predict_missing_attributes(sparse=sp.csr_matrix)
+    def test_predictions_csr_array(self):
+        self._test_predictions(sparse=sp.csr_array)
+        self._test_predictions(sparse=sp.csr_array, absent_class=True)
+        self._test_predict_missing_attributes(sparse=sp.csr_array)
 
-    def test_predictions_csc_matrix(self):
-        self._test_predictions(sparse=sp.csc_matrix)
-        self._test_predictions(sparse=sp.csc_matrix, absent_class=True)
-        self._test_predict_missing_attributes(sparse=sp.csc_matrix)
+    def test_predictions_csc_array(self):
+        self._test_predictions(sparse=sp.csc_array)
+        self._test_predictions(sparse=sp.csc_array, absent_class=True)
+        self._test_predict_missing_attributes(sparse=sp.csc_array)
 
     @staticmethod
     def _create_prediction_data(sparse, absent_class=False):
@@ -163,7 +163,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
         # Classifiers reject csc matrices in the base class
         # Naive bayesian classifier supports them if predict_storage is
         # called directly, which we do below
-        if sparse is not None and sparse is not sp.csc_matrix:
+        if sparse is not None and sparse is not sp.csc_array:
             test_x = sparse(test_x)
         test_y = np.full((6, ), np.nan)
 
@@ -215,8 +215,8 @@ class TestNaiveBayesLearner(unittest.TestCase):
             assert_predictions_equal(inst, model, exp_prob)
 
         # Test prediction by directly calling predict. This is needed to test
-        # csc_matrix, but doesn't hurt others
-        if sparse is sp.csc_matrix:
+        # csc_array, but doesn't hurt others
+        if sparse is sp.csc_array:
             test_x = sparse(test_x)
         values, probs = model.predict(test_x)
         np.testing.assert_almost_equal(probs, exp_probs)
@@ -239,7 +239,7 @@ class TestNaiveBayesLearner(unittest.TestCase):
         test_x = np.array([[np.nan, np.nan, np.nan],
                            [np.nan, 0, np.nan],
                            [0, np.nan, np.nan]])
-        if sparse is not None and sparse is not sp.csc_matrix:
+        if sparse is not None and sparse is not sp.csc_array:
             test_x = sparse(test_x)
         exp_probs = np.array([[(3 + 1) / (7 + 2), (4 + 1) / (7 + 2)],
                               [(1 + 1) / (2 + 2), (1 + 1) / (2 + 2)],

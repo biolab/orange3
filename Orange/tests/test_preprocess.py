@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import Mock
 
 import numpy as np
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_array
 
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.preprocess import EntropyMDL, DoNotImpute, Default, Average, \
@@ -96,7 +96,7 @@ class TestRemoveNaNColumns(unittest.TestCase):
     def test_column_filtering_sparse(self):
         data = Table("iris")
         with data.unlocked():
-            data.X = csr_matrix(data.X)
+            data.X = csr_array(data.X)
 
         new_data = RemoveNaNColumns()(data)
         self.assertEqual(data, new_data)
@@ -174,7 +174,7 @@ class TestAdaptiveNormalize(unittest.TestCase):
 
     def test_sparse_pps(self):
         with self.data.unlocked():
-            self.data.X = csr_matrix(self.data.X)
+            self.data.X = csr_array(self.data.X)
         out = AdaptiveNormalize()(self.data)
         true_out = Scale(center=Scale.NoCentering, scale=Scale.Span)(self.data)
         np.testing.assert_array_equal(out, true_out)
@@ -203,9 +203,9 @@ class TestRemoveSparse(unittest.TestCase):
         with self.data.unlocked():
             self.data[1:, 1] = 7
             true_out = self.data[:, 1].copy()
-            self.data.X = csr_matrix(self.data.X)
+            self.data.X = csr_array(self.data.X)
         with true_out.unlocked(true_out.X):
-            true_out.X = csr_matrix(true_out.X)
+            true_out.X = csr_array(true_out.X)
         out = RemoveSparse(0.5, True)(self.data).X
         np.testing.assert_array_equal(out, true_out)
 
@@ -232,8 +232,8 @@ class TestRemoveSparse(unittest.TestCase):
             true_out = self.data[:, 0].copy()
             with true_out.unlocked(true_out.X):
                 true_out.X = true_out.X.reshape(-1, 1)
-                true_out.X = csr_matrix(true_out.X)
-            self.data.X = csr_matrix(self.data.X)
+                true_out.X = csr_array(true_out.X)
+            self.data.X = csr_array(self.data.X)
         out = RemoveSparse(0.5, False)(self.data)
         np.testing.assert_array_equal(out, true_out)
 

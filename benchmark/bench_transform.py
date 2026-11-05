@@ -47,17 +47,17 @@ class BenchTransform(Benchmark):
     @benchmark(setup=partial(setup_sparse, rows=10000, cols=100), number=5)
     def bench_copy_sparse_long(self):
         t = add_unknown_attribute(self.table)
-        self.assertIsInstance(t.X, scipy.sparse.csr_matrix)
+        self.assertIsInstance(t.X, scipy.sparse.csr_array)
 
     @benchmark(setup=partial(setup_sparse, rows=1000, cols=1000), number=5)
     def bench_copy_sparse_square(self):
         t = add_unknown_attribute(self.table)
-        self.assertIsInstance(t.X, scipy.sparse.csr_matrix)
+        self.assertIsInstance(t.X, scipy.sparse.csr_array)
 
     @benchmark(setup=partial(setup_sparse, rows=100, cols=10000), number=2)
     def bench_copy_sparse_wide(self):
         t = add_unknown_attribute(self.table)
-        self.assertIsInstance(t.X, scipy.sparse.csr_matrix)
+        self.assertIsInstance(t.X, scipy.sparse.csr_array)
 
     @benchmark(setup=partial(setup_dense, rows=10000, cols=100), number=5)
     def bench_subarray_dense_long(self):

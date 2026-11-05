@@ -111,7 +111,7 @@ class ModelTest(unittest.TestCase):
         a_tuple = ((0, ) * 5,) * 42
         m = MockModel(domain)
 
-        for inp in (data, x, sp.csr_matrix(x), a_list, a_tuple):
+        for inp in (data, x, sp.csr_array(x), a_list, a_tuple):
             msg = f"in test for type '{type(inp)}'"
             # two-dimensional
             self.assertEqual(m(inp, ret=m.Value).shape, (42, ), msg)
@@ -121,7 +121,7 @@ class ModelTest(unittest.TestCase):
             self.assertEqual(probs.shape, (42, 2), msg)
 
             # one-dimensional
-            if not isinstance(inp, sp.csr_matrix):
+            if not isinstance(inp, sp.csr_array):
                 self.assertEqual(m(inp[0], ret=m.Value).shape, (), msg)
                 self.assertEqual(m(inp[0], ret=m.Probs).shape, (2, ), msg)
                 values, probs = m(inp[0], ret=m.ValueProbs)

@@ -4,7 +4,7 @@ from itertools import zip_longest
 
 import numpy as np
 from scipy import sparse as sp
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_array
 import pandas as pd
 from pandas.core.arrays import SparseArray
 import pandas.core.arrays.sparse.accessor
@@ -89,7 +89,7 @@ class OrangeDataFrame(pd.DataFrame):
 
         if sp.issparse(data):
             data = data.asformat('csc')
-            sparrays = [SparseArray.from_spmatrix(data[:, i]) for i in range(data.shape[1])]
+            sparrays = [SparseArray(data[:, i], fill_value=0) for i in range(data.shape[1])]
             data = dict(enumerate(sparrays))
             super().__init__(data, index=index, **kwargs)
             self.columns = columns
@@ -335,7 +335,7 @@ def vars_from_df(df, role=None, force_nominal=False, variables=None):
             # if all c in columns table will share memory with dataframe
             a_df = df if all(c in a_cols for c in df.columns) else df[a_cols]
             if all(isinstance(a, pd.SparseDtype) for a in a_df.dtypes):
-                arr = csr_matrix(a_df.sparse.to_coo())
+                arr = csr_array(a_df.sparse.to_coo())
             else:
                 arr = np.asarray(a_df)
         else:

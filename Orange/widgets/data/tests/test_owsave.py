@@ -168,7 +168,7 @@ class TestOWSave(OWSaveTestBase):
         widget.writer.reset_mock()
 
         with self.iris.unlocked():
-            self.iris.X = sp.csr_matrix(self.iris.X)
+            self.iris.X = sp.csr_array(self.iris.X)
         widget.save_file()
         widget.writer.write.assert_not_called()
 
@@ -241,7 +241,7 @@ class TestOWSave(OWSaveTestBase):
         self.assertFalse(err.is_shown())
 
         with self.iris.unlocked():
-            widget.data.X = sp.csr_matrix(widget.data.X)
+            widget.data.X = sp.csr_array(widget.data.X)
         widget.update_messages()
         self.assertTrue(err.is_shown())
 
@@ -267,7 +267,7 @@ class TestOWSave(OWSaveTestBase):
         self.assertEqual(widget.get_filters(), widget.valid_filters())
 
         with self.iris.unlocked():
-            widget.data.X = sp.csr_matrix(widget.data.X)
+            widget.data.X = sp.csr_array(widget.data.X)
         valid = widget.valid_filters()
         self.assertNotEqual(widget.get_filters(), {})
         # false positive, pylint: disable=no-member
@@ -286,7 +286,7 @@ class TestOWSave(OWSaveTestBase):
         self.assertIs(widget.filter, widget.default_valid_filter())
 
         with self.iris.unlocked():
-            widget.data.X = sp.csr_matrix(widget.data.X)
+            widget.data.X = sp.csr_array(widget.data.X)
         self.assertTrue(
             widget.get_filters()[widget.default_valid_filter()]
             .SUPPORT_SPARSE_DATA)
@@ -412,7 +412,7 @@ class TestFunctionalOWSave(WidgetTest):
 
         spiris = Table("iris")
         with spiris.unlocked():
-            spiris.X = sp.csr_matrix(spiris.X)
+            spiris.X = sp.csr_array(spiris.X)
 
         for selected_filter, writer in widget.get_filters().items():
             widget.write = writer

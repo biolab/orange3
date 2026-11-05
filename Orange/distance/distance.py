@@ -523,7 +523,7 @@ class JaccardModel(FittedDistanceModel):
     def _compute_sparse(self, x1, x2=None):
         callback = self.callback or (lambda x: x)
         symmetric = x2 is None
-        mtype = sp.csr_matrix if self.axis == 1 else sp.csc_matrix
+        mtype = sp.csr_array if self.axis == 1 else sp.csc_array
         x1 = mtype(x1, copy=True)
         x1.eliminate_zeros()
         if symmetric:
@@ -568,7 +568,7 @@ class Jaccard(FittedDistance):
         frequencies of non-zero values per each column.
         """
         if sp.issparse(x):
-            ps = x.getnnz(axis=0)
+            ps = x.count_nonzero(axis=0)
         else:
             ps = np.fromiter(
                 (_distance.p_nonzero(x[:, col]) for col in range(len(n_vals))),
