@@ -300,6 +300,20 @@ def variabletest(varcls):
 
 @variabletest(DiscreteVariable)
 class TestDiscreteVariable(VariableTest):
+    def test_eq(self):
+        var1 = DiscreteVariable("a", values=["a", "b"])
+        var2 = DiscreteVariable("a", values=["c", "d", "e"])
+        var3 = ContinuousVariable("a")
+
+        self.assertEqual(
+            var1, var2,
+            "Values are not a part of DiscreteVariable's identity, by design")
+        self.assertNotEqual(var1, var3)
+
+        self.assertEqual(
+            hash(var1), hash(var2),
+            "Values are not a part of DiscreteVariable's identity, by design")
+
     def test_to_val(self):
         values = ["F", "M"]
         var = DiscreteVariable(name="Feature 0", values=values)
