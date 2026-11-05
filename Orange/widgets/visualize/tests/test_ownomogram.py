@@ -155,7 +155,7 @@ class TestOWNomogram(WidgetTest):
         # coefficients of versicolor are zero; C=0.01: all coefficients of
         # versicolor and virginica are zero; C=0.004: all coefficients are zero
         for c in (0.05, 0.01, 0.004):
-            cls = LogisticRegressionLearner(penalty="l1", C=c)(data)
+            cls = LogisticRegressionLearner(l1_ratio=0, C=c)(data)
             self._check_lr_probabilities(cls, data, (0, 53))
 
     def _drag_dot(self, dot, value):

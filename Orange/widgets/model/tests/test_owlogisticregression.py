@@ -42,13 +42,14 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         c_slider = self.widget.c_slider
 
         def setter(val):
+            self.widget.penalty_type = 1
             index = self.widget.C_s.index(val)
             self.widget.C_s[c_slider.value()]
             c_slider.setValue(index)
 
         self.parameters = [
-            ParameterMapping('penalty', self.widget.penalty_combo,
-                             self.widget.penalty_types_short[:2]),
+            ParameterMapping('l1_ratio', self.widget.penalty_combo,
+                             self.widget.l1_ratios),
             ParameterMapping('C', c_slider,
                              values=[self.widget.C_s[0], self.widget.C_s[-1]],
                              getter=lambda: self.widget.C_s[c_slider.value()],
@@ -128,7 +129,7 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         self.widget.set_penalty(None)
         self.click_apply()
         lr = self.get_output(self.widget.Outputs.learner)
-        self.assertEqual(lr.penalty, None)
+        self.assertEqual(lr.l1_ratio, np.inf)
         self.assertEqual(lr.C, 1.0)
         self.assertEqual(self.widget.c_label.text(), "N/A")
         self.assertFalse(self.widget.c_slider.isEnabledTo(self.widget))
@@ -136,6 +137,6 @@ class TestOWLogisticRegression(WidgetTest, WidgetLearnerTestMixin):
         self.widget.set_penalty("l2")
         self.click_apply()
         lr = self.get_output(self.widget.Outputs.learner)
-        self.assertEqual(lr.penalty, "l2")
+        self.assertEqual(lr.l1_ratio, 0)
         self.assertEqual(self.widget.c_label.text(), "C=1")
         self.assertTrue(self.widget.c_slider.isEnabledTo(self.widget))

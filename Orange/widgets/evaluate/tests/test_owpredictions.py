@@ -1358,7 +1358,7 @@ class TestOWPredictions(WidgetTest):
         log_reg = LogisticRegressionLearner()
         self.send_signal(self.widget.Inputs.predictors, log_reg(data), 0)
         self.send_signal(self.widget.Inputs.predictors,
-                         LogisticRegressionLearner(penalty="l1", max_iter=1000)(data), 1)
+                         LogisticRegressionLearner(l1_ratio=1, max_iter=1000)(data), 1)
         with data.unlocked(data.Y):
             data.Y[1] = np.nan
         self.send_signal(self.widget.Inputs.data, data)
