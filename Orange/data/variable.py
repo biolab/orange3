@@ -419,6 +419,8 @@ class Variable(Reprable, metaclass=VariableMeta):
         )
 
     def __hash__(self):
+        # Discrete variable's values are not a part of their identity and
+        # are not included in __hash__
         var = self._get_identical_source(self)
         return hash((self.name, var.name, type(self), var._compute_value))
 
@@ -696,6 +698,10 @@ class DiscreteVariable(Variable):
         super().__init__(name, compute_value, sparse=sparse)
         self._values = values
         self._value_index = {value: i for i, value in enumerate(values)}
+
+    # no def __eq__ and def __hash__` for DiscreteVariable
+    # Discrete variable's values are not a part of their identity and
+    # are not included in __hash__
 
     @property
     def values(self):
