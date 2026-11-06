@@ -336,7 +336,7 @@ class OWManifoldLearning(OWWidget):
                     self.Error.manifold_error(e.args[0])
             except MemoryError:
                 self.Error.out_of_memory()
-            except np.linalg.linalg.LinAlgError as e:
+            except np.linalg.LinAlgError as e:
                 self.Error.manifold_error(str(e))
             finally:
                 warnings.warn = builtin_warn
