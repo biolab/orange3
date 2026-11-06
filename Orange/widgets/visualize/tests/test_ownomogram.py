@@ -30,7 +30,7 @@ class TestOWNomogram(WidgetTest):
         super().setUpClass()
         cls.data = Table("heart_disease")
         cls.nb_cls = NaiveBayesLearner()(cls.data)
-        cls.lr_cls = LogisticRegressionLearner(max_iter=1000)(cls.data)
+        cls.lr_cls = LogisticRegressionLearner(max_iter=10000, tol=0.00001)(cls.data)
         cls.titanic = Table("titanic")
         cls.lenses = Table(test_filename("datasets/lenses.tab"))
 
