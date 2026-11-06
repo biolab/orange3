@@ -30,7 +30,7 @@ class TestOWNomogram(WidgetTest):
         super().setUpClass()
         cls.data = Table("heart_disease")
         cls.nb_cls = NaiveBayesLearner()(cls.data)
-        cls.lr_cls = LogisticRegressionLearner(max_iter=1000)(cls.data)
+        cls.lr_cls = LogisticRegressionLearner(max_iter=10000, tol=0.00001)(cls.data)
         cls.titanic = Table("titanic")
         cls.lenses = Table(test_filename("datasets/lenses.tab"))
 
@@ -121,7 +121,6 @@ class TestOWNomogram(WidgetTest):
         w = self.widget
         # the ruler must be wide enough to show the totals
         w.resize(1000, 600)
-        w.show()
         self.send_signal(w.Inputs.classifier, cls)
         # sort alphabetically, so that the most important feature is hidden
         simulate.combobox_activate_index(w.sort_combo, SortBy.NAME)
@@ -173,7 +172,6 @@ class TestOWNomogram(WidgetTest):
         the model's predictions after a feature marker is dragged"""
         w = self.widget
         w.resize(1000, 600)
-        w.show()
         data = Table("iris")
         cls = LogisticRegressionLearner()(data)
         self.send_signal(w.Inputs.classifier, cls)
@@ -228,7 +226,6 @@ class TestOWNomogram(WidgetTest):
         features"""
         w = self.widget
         w.resize(1000, 600)
-        w.show()
         cls = NaiveBayesLearner()(self.lenses)
         self.send_signal(w.Inputs.classifier, cls)
         w.controls.normalize_probabilities.setChecked(True)
