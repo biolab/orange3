@@ -1328,6 +1328,7 @@ data/pandas_compat.py:
         def `__init__`:
             orange_role: false
             _o: false
+            3: false
             csc: false
             copy: false
         def `__finalize__`:

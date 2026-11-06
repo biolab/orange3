@@ -644,7 +644,9 @@ class TestCountnans(unittest.TestCase):
         self.assertEqual(countnans(x, axis=0), expected)
 
     def test_1d_array_with_axis_1_raises_exception(self):
-        with self.assertRaises(np.exceptions.AxisError):
+        exception_type = ValueError if np.version.version < "1.25" \
+            else np.exceptions.AxisError
+        with self.assertRaises(exception_type):
             countnans(np.array([0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1]), axis=1)
 
     @dense_sparse

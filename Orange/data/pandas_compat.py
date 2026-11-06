@@ -88,8 +88,10 @@ class OrangeDataFrame(pd.DataFrame):
         columns = list(varsdict.keys())
 
         if sp.issparse(data):
+            adapt = (lambda x: x.toarray()) if pandas.__version__ < "3" else (lambda x: x)
             data = data.asformat('csc')
-            sparrays = [SparseArray(data[:, i], fill_value=0) for i in range(data.shape[1])]
+            sparrays = [SparseArray(adapt(data[:, i]), fill_value=0)
+                        for i in range(data.shape[1])]
             data = dict(enumerate(sparrays))
             super().__init__(data, index=index, **kwargs)
             self.columns = columns
