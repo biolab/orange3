@@ -12571,17 +12571,7 @@ widgets/utils/buttons.py:
 widgets/utils/classdensity.py:
     def `compute_density`:
         C_CONTIGUOUS: false
-widgets/utils/colorgradientselection.py:
-    class `ColorGradientSelection`:
-        def `__init__`:
-            gradient-combo-box: false
-            Low gradient threshold: Spodnja meja gradienta
-            'Applying a low threshold will squeeze the ': 'Določa vrednost, pri kateri se začne '
-            gradient from the lower end: barva spreminjati
-            Range:: Razpon:
-        def `__update_center_visibility`:
-            Center at:: Središče v:
-widgets/utils/colorpalettes.py:
+widgets/utils/color.py:
     Palette: false
     IndexedPalette: false
     DiscretePalette: false
@@ -12598,12 +12588,15 @@ widgets/utils/colorpalettes.py:
     BinnedContinuousPalette: false
     DefaultContinuousPalette: false
     DefaultContinuousPaletteName: false
-    ColorIcon: false
-    get_default_curve_colors: false
     patch_variable_colors: false
+    patch_variable_colors_with_palettes: false
     NAN_COLOR: false
     class `Palette`:
         PaletteFlags: false
+        NoFlags: false
+        ColorBlindSafe: false
+        Diverging: false
+        Discrete: false
         Palette.Flags: false
         def `__init__`:
             _: false
@@ -12657,7 +12650,7 @@ widgets/utils/colorpalettes.py:
     Other: Druge
     rainbow_bgyr_35_85_c73: false
     Rainbow: Mavrica
-    def `patch_variable_colors`:
+    def `patch_variable_colors_with_palettes`:
         def `set_colors`:
             palette: false
         def `continuous_set_colors`:
@@ -12682,6 +12675,40 @@ widgets/utils/colorpalettes.py:
         def `discrete_get_palette`:
             palette: false
             colors: false
+widgets/utils/colorgradientselection.py:
+    class `ColorGradientSelection`:
+        def `__init__`:
+            gradient-combo-box: false
+            Low gradient threshold: Spodnja meja gradienta
+            'Applying a low threshold will squeeze the ': 'Določa vrednost, pri kateri se začne '
+            gradient from the lower end: barva spreminjati
+            Range:: Razpon:
+        def `__update_center_visibility`:
+            Center at:: Središče v:
+widgets/utils/colorpalettes.py:
+    default: false
+    dark: false
+    glasbey: false
+    Palette: false
+    IndexedPalette: false
+    DiscretePalette: false
+    LimitedDiscretePalette: false
+    DiscretePalettes: false
+    DefaultDiscretePalette: false
+    DefaultDiscretePaletteName: false
+    HuePalette: false
+    DefaultRGBColors: false
+    Dark2Colors: false
+    Glasbey: false
+    ContinuousPalette: false
+    ContinuousPalettes: false
+    BinnedContinuousPalette: false
+    DefaultContinuousPalette: false
+    DefaultContinuousPaletteName: false
+    ColorIcon: false
+    get_default_curve_colors: false
+    patch_variable_colors: false
+    NAN_COLOR: false
 widgets/utils/combobox.py:
     ComboBoxSearch: false
     ComboBox: false

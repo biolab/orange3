@@ -1,0 +1,24 @@
+widgets/utils/colorpalettes.py:
+    class `DiscretePalette`:
+        def `from_colors`:
+            Custom: Paleta
+    class `ContinuousPalette`:
+        def `from_colors`:
+            Custom: Paleta
+    Default: Privzeta
+    Dark: Temna
+    Blue-Green-Yellow: Modra-Zelena-Rumena
+    Blue-Magenta-Yellow: Modra-Vijolična-Rumena
+    Dim gray: Temno siva
+    Inferno: true
+    Viridis: true
+    Coolwarm: Hladno-topla
+    Green-Red: Zelena-Rdeča
+    Diverging protanopic: Divergentna protanopična
+    Color-blind friendly: Prijazna do barvno slepih
+    Diverging tritanopic: Divergentna triptanopična
+    Linear protanopic: Linearna protanopična
+    Linear tritanopic: Linearna tritanopična
+    Isoluminant: Enako svetla
+    Other: Druge
+    Rainbow: Mavrica
