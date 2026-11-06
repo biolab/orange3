@@ -164,10 +164,7 @@ class OWDistanceFile(OWUrlDropBase, LocalRecentPathsWComboMixin):
     @classmethod
     def migrate_settings(cls, settings, version):
         if version < 2:
-            paths = settings.pop("recent_paths", [])
-            if paths:
-                cls.merge_paths(paths)
-                settings["active_path"] = paths[0]
+            cls.migrate_to_local_recent_paths(settings)
 
 
 class OWDistanceFileDropHandler(SingleFileDropHandler):
