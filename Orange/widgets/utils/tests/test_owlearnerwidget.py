@@ -128,7 +128,7 @@ class TestOWBaseLearner(WidgetTest):
         )
         data = self.iris.transform(pp(self.iris)).copy()
         with data.unlocked():
-            data.Y = sp.csr_matrix(data.Y)
+            data.Y = sp.csr_array(data.Y)
 
         self.send_signal(w.Inputs.data, data, widget=w)
         self.assertFalse(any(w.Error.active))

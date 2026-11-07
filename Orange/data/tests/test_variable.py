@@ -451,13 +451,13 @@ class TestDiscreteVariable(VariableTest):
         arr = np.array([0, 0, 2, 1, 0, 1, np.nan])
 
         # 0 does map to 0 -> convert to dense
-        marr = mapper(sp.csr_matrix(arr))
+        marr = mapper(sp.csr_array(arr))
         self.assertIsInstance(marr, np.ndarray)
         np.testing.assert_array_equal(
             marr,
             np.array([2, 2, 1, np.nan, 2, np.nan, np.nan]))
 
-        marr = mapper(sp.csr_matrix(arr))
+        marr = mapper(sp.csr_array(arr))
         self.assertIsInstance(marr, np.ndarray)
         np.testing.assert_array_equal(
             marr,
@@ -470,15 +470,15 @@ class TestDiscreteVariable(VariableTest):
         arr_csr = sp.csr_matrix(arr)
         marr = mapper(arr_csr)
         self.assertIsNot(arr_csr, marr)
-        self.assertTrue(sp.isspmatrix_csr(marr))
+        self.assertTrue(sp.issparse(marr) and marr.format == "csr")
         np.testing.assert_array_equal(
             marr.todense(),
             np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan]]))
 
-        arr_csc = sp.csc_matrix(arr)
+        arr_csc = sp.csc_array(np.atleast_2d(arr))
         marr = mapper(arr_csc)
         self.assertIsNot(arr_csc, marr)
-        self.assertTrue(sp.isspmatrix_csc(marr))
+        self.assertTrue(sp.issparse(marr) and marr.format == "csc")
         np.testing.assert_array_equal(
             marr.todense(),
             np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan]]))
@@ -494,7 +494,7 @@ class TestDiscreteVariable(VariableTest):
         np.testing.assert_array_equal(
             arr, np.array([[2, 2, 1, np.nan, 2, np.nan, np.nan], s]).T)
 
-        self.assertRaises(ValueError, mapper, sp.csr_matrix(arr), 0)
+        self.assertRaises(ValueError, mapper, sp.csr_array(arr), 0)
         self.assertRaises(ValueError, mapper, [1, 2, 3], 0)
         self.assertRaises(ValueError, mapper, 1, 0)
 
@@ -506,13 +506,13 @@ class TestDiscreteVariable(VariableTest):
         np.testing.assert_array_equal(
             arr, np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan], s]).T)
 
-        arr = sp.csr_matrix(np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T)
+        arr = sp.csr_array(np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T)
         mapper(arr, 0)
         np.testing.assert_array_equal(
             arr.todense(),
             np.array([[0, 0, 1, np.nan, 0, np.nan, np.nan], s]).T)
 
-        arr = sp.csc_matrix(np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T)
+        arr = sp.csc_array(np.array([[0, 0, 2, 1, 0, 1, np.nan], s]).T)
         mapper(arr, 0)
         np.testing.assert_array_equal(
             arr.todense(),
@@ -524,8 +524,8 @@ class TestDiscreteVariable(VariableTest):
         mapper = dca.get_mapper_from(abc)
 
         self.assertRaises(ValueError, mapper, np.zeros((7, 2)))
-        self.assertRaises(ValueError, mapper, sp.csr_matrix(np.zeros((7, 2))))
-        self.assertRaises(ValueError, mapper, sp.csc_matrix(np.zeros((7, 2))))
+        self.assertRaises(ValueError, mapper, sp.csr_array(np.zeros((7, 2))))
+        self.assertRaises(ValueError, mapper, sp.csc_array(np.zeros((7, 2))))
 
     def test_mapper_from_no_values(self):
         abc = DiscreteVariable("a", values=())
@@ -536,18 +536,18 @@ class TestDiscreteVariable(VariableTest):
         self.assertIsNot(mapper(arr), arr)
         np.testing.assert_array_equal(mapper(arr), arr)
 
-        arr_csr = sp.csr_matrix(arr)
+        arr_csr = sp.csr_array(arr)
         self.assertIsNot(arr_csr, mapper(arr_csr))
         np.testing.assert_array_equal(
-            mapper(arr_csr).todense(), np.atleast_2d(arr))
+            mapper(arr_csr).todense(), arr)
 
-        arr_csc = sp.csc_matrix(arr)
+        arr_csc = sp.csc_array(np.atleast_2d(arr))
         self.assertIsNot(arr_csc, mapper(arr_csc))
         np.testing.assert_array_equal(
             mapper(arr_csc).todense(), np.atleast_2d(arr))
 
-        self.assertRaises(ValueError, mapper, sp.csr_matrix(arr), 0)
-        self.assertRaises(ValueError, mapper, sp.csc_matrix(arr), 0)
+        self.assertRaises(ValueError, mapper, sp.csr_array(arr), 0)
+        self.assertRaises(ValueError, mapper, sp.csc_array(np.atleast_2d(arr)), 0)
 
     def varcls_modified(self, name):
         var = super().varcls_modified(name)

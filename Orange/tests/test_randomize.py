@@ -108,7 +108,7 @@ class TestRandomizer(unittest.TestCase):
                       [4, 5, 6, 7]])
         randomize = Randomize().randomize
 
-        randomized = randomize(sp.csr_matrix(x), rand_state=1)
+        randomized = randomize(sp.csr_array(x), rand_state=1)
         randomized = randomized.toarray()
         # Data is shuffled (rand_seed=1 should always shuffle it)
         self.assertFalse(np.all(x == randomized))
@@ -125,11 +125,11 @@ class TestRandomizer(unittest.TestCase):
                       [0, 0, 0, 0],
                       [0, 0, 0, 0]])
 
-        randomized = randomize(sp.csr_matrix(x), rand_state=0x393f)
+        randomized = randomize(sp.csr_array(x), rand_state=0x393f)
         self.assertFalse(np.all(x == randomized.todense()))
 
         # Do not just assign some indices. I.e. make sure that the shuffling is
         # dependent in the input's non-zero indices.
-        r_once = randomize(sp.csr_matrix(x), rand_state=1)
+        r_once = randomize(sp.csr_array(x), rand_state=1)
         r_twice = randomize(r_once.copy(), rand_state=1)
         self.assertFalse(np.all(r_once.todense() == r_twice.todense()))

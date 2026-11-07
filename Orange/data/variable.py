@@ -728,7 +728,7 @@ class DiscreteVariable(Variable):
                         "In-place mapping of sparse matrices must map 0 to 0")
 
                 # CSR requires mapping of non-contiguous area
-                if sp.isspmatrix_csr(value):
+                if sp.issparse(value) and value.format == "csr":
                     col = value.indices == col_idx
                     nans = np.isnan(value.data) * col
                     value.data[nans] = 0
@@ -739,7 +739,7 @@ class DiscreteVariable(Variable):
                 # Dense and CSC map a contiguous area
                 if isinstance(value, np.ndarray) and value.ndim == 2:
                     col = value[:, col_idx]
-                elif sp.isspmatrix_csc(value):
+                elif sp.issparse(value) and value.format == "csc":
                     col = value.data[value.indptr[col_idx]
                                      :value.indptr[col_idx + 1]]
                 else:
@@ -776,7 +776,7 @@ class DiscreteVariable(Variable):
                 value[nans] = np.nan
                 return value
             if sp.issparse(value):
-                if min(value.shape) != 1:
+                if value.ndim == 2 and min(value.shape) != 1:
                     raise ValueError("Column mapping can't map "
                                      f"{value.ndim}-dimensional objects")
                 if mapping[0] != 0 and not np.isnan(mapping[0]):

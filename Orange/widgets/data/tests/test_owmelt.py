@@ -25,7 +25,7 @@ def data_without_commit(f=None, *, sparse=False):
             data = self.data
             if sparse:
                 data = Table.from_numpy(
-                    data.domain, sp.csr_matrix(data.X), None, data.metas)
+                    data.domain, sp.csr_array(data.X), None, data.metas)
             self.send_signal(self.widget.Inputs.data, data)
             f(self)
     if f is None:

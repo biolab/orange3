@@ -591,7 +591,7 @@ class TableTestCase(unittest.TestCase):
     def test_concatenate_sparse(self):
         iris = Table("iris")
         with iris.unlocked():
-            iris.X = sp.csc_matrix(iris.X)
+            iris.X = sp.csc_array(iris.X)
         new = Table.concatenate([iris, iris])
         self.assertEqual(len(new), 300)
         self.assertTrue(sp.issparse(new.X), "Concatenated X is not sparse.")
@@ -1186,13 +1186,13 @@ class TableTestCase(unittest.TestCase):
         self.assertFalse(table.is_sparse())
 
         with table.unlocked():
-            table.X = sp.csr_matrix(table.X)
+            table.X = sp.csr_array(table.X)
             self.assertTrue(table.is_sparse())
 
     def test_repr_sparse_with_one_row(self):
         table = data.Table("iris")[:1]
         with table.unlocked_reference():
-            table.X = sp.csr_matrix(table.X)
+            table.X = sp.csr_array(table.X)
         r = repr(table)     # make sure repr does not crash
         self.assertEqual(r.replace("\n", ""),
                          "[[sepal length=5.1, sepal width=3.5, "
@@ -1220,7 +1220,7 @@ class TableTestCase(unittest.TestCase):
     def test_str_sparse(self):
         iris = Table("iris")
         with iris.unlocked_reference():
-            iris.X = sp.csr_matrix(iris.X)
+            iris.X = sp.csr_array(iris.X)
         # instance
         s0 = "[sepal length=5.1, sepal width=3.5, " \
              "petal length=1.4, petal width=0.2 | Iris-setosa]"
@@ -2400,8 +2400,8 @@ class TestTableStats(TableTests):
                 self.assertEqual(table.get_nan_frequency_class(), cl / np.prod(y.shape))
                 self.assertEqual(table.get_nan_frequency_metas(), me / np.prod(metas.shape))
                 with table.unlocked():
-                    table.X = sp.csr_matrix(x)
-                    table.Y = sp.csr_matrix(y)
+                    table.X = sp.csr_array(x)
+                    table.Y = sp.csr_array(y)
             with table.unlocked():
                 table.X, table.Y = x, y
 
@@ -2479,8 +2479,8 @@ class TestRowInstance(unittest.TestCase):
         self.assertEqual(row[1], 1)
 
         with table.unlocked():
-            table.X = sp.csr_matrix(table.X)
-            table.Y = sp.csr_matrix(table.Y)
+            table.X = sp.csr_array(table.X)
+            table.Y = sp.csr_array(table.Y)
         sparse_row = table[1]
         self.assertTrue(sp.issparse(sparse_row.sparse_x))
         self.assertEqual(sparse_row[0], 0)
@@ -3375,7 +3375,7 @@ class TestTableTranspose(unittest.TestCase):
 
 class SparseCV:
     def __call__(self, data):
-        return sp.csr_matrix((len(data), 1))
+        return sp.csr_array((len(data), 1))
 
 
 class TestTableSparseDense(unittest.TestCase):
