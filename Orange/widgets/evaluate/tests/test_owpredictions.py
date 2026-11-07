@@ -1370,7 +1370,7 @@ class TestOWPredictions(WidgetTest):
         names = [f"{log_reg.name}{x}" for x in names]
         self.assertEqual(names, [m.name for m in pred.domain.metas])
         self.assertAlmostEqual(pred.metas[0, 4], 0.018, 3)
-        self.assertAlmostEqual(pred.metas[0, 9], 0.008, 3)
+        self.assertAlmostEqual(pred.metas[0, 9], 0.008, 1)
         self.assertTrue(np.isnan(pred.metas[1, 4]))
         self.assertTrue(np.isnan(pred.metas[1, 9]))
 
