@@ -3,11 +3,11 @@ from collections import OrderedDict
 import random
 
 import numpy as np
-from Orange.widgets.visualize.utils.tree.treeadapter import BaseTreeAdapter
 
 from Orange.misc.cache import memoize_method
 from Orange.preprocess.transformation import Indicator
-from Orange.widgets.visualize.utils.tree.rules import (
+from Orange.utils.tree.treeadapter import BaseTreeAdapter
+from Orange.utils.tree.rules import (
     DiscreteRule,
     ContinuousRule
 )

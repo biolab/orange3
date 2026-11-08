@@ -1137,11 +1137,9 @@ def make_lambda(expression, args, env=None):
         args=ast.arguments(
             posonlyargs=[],
             args=[ast.arg(arg=arg, annotation=None) for arg in args],
-            varargs=None,
-            varargannotation=None,
+            vararg=None,
             kwonlyargs=[],
             kwarg=None,
-            kwargannotation=None,
             defaults=[],
             kw_defaults=[]),
         body=expression.body,
@@ -1152,17 +1150,15 @@ def make_lambda(expression, args, env=None):
         args=ast.arguments(
             posonlyargs=[],
             args=[ast.arg(arg=name, annotation=None) for name in (env or {})],
-            varargs=None,
-            varargannotation=None,
+            vararg=None,
             kwonlyargs=[],
             kwarg=None,
-            kwargannotation=None,
             defaults=[],
             kw_defaults=[],
         ),
         body=lambda_,
     )
-    exp = ast.Expression(body=outer, lineno=1, col_offset=0)
+    exp = ast.Expression(body=outer)
     ast.fix_missing_locations(exp)
     GLOBALS = __GLOBALS.copy()
     GLOBALS["__builtins__"] = {}

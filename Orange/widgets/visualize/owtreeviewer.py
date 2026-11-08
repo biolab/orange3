@@ -31,8 +31,8 @@ from Orange.widgets.settings import ContextSetting, ClassValuesContextHandler, \
     Setting
 from Orange.widgets.utils.annotated_data import (create_annotated_table,
                                                  ANNOTATED_DATA_SIGNAL_NAME)
-from Orange.widgets.visualize.utils.tree.skltreeadapter import SklTreeAdapter
-from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
+from Orange.utils.tree.skltreeadapter import SklTreeAdapter
+from Orange.utils.tree.treeadapter import TreeAdapter
 
 
 class PieChart(QGraphicsRectItem):
@@ -371,6 +371,7 @@ class OWTreeGraph(OWTreeViewer2D):
             nunique, var = max(
                 ((len(set(self.dataset.get_column(v))), v)
                  for v in self.domain.metas if v.is_string),
+                key=lambda x: x[0],
                 default=(0, None))
             if nunique > 0.8 * len(self.dataset):
                 self.node_labels = var

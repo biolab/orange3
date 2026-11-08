@@ -149,12 +149,11 @@ class RowInstance(Instance):
                 if self.sparse_x is not None:
                     self._x[key] = value
             else:
-                if self.sparse_y is not None:
+                if self.table._Y.ndim == 2:
                     self.table._Y[self.row_index, key - len(self._x)] = value
                 else:
                     self.table._Y[self.row_index] = value
-                    if self.table._Y.ndim == 1:  # if _y is not a view
-                        self._y[0] = value
+                    self._y[0] = value  # _y is not a view
         else:
             self.table.metas[self.row_index, -1 - key] = value
             if self.sparse_metas is not None:
@@ -622,9 +621,9 @@ class Table(Sequence, Storage):
                 if part is None:
                     continue
                 writeable = bool(self._unlocked & flag)
-                if sp.isspmatrix_csr(part) or sp.isspmatrix_csc(part):
+                if sp.issparse(part) and part.format in ("csr", "csc"):
                     sync(part.data, part.indices, part.indptr)
-                elif sp.isspmatrix_coo(part):
+                elif sp.issparse(part) and part.format == "coo":
                     sync(part.data, part.row, part.col)
                 elif sp.issparse(part):
                     raise ValueError("Unsupported sparse data type")
@@ -1135,7 +1134,7 @@ class Table(Sequence, Storage):
             if example.domain == domain:
                 self.X[row] = example._x
                 if self._Y.ndim == 1:
-                    self._Y[row] = float(example._y)
+                    self._Y[row] = float(example._y.item())
                 else:
                     self._Y[row] = np.atleast_1d(example._y)
                 self.metas[row] = example._metas
@@ -2462,7 +2461,7 @@ def _check_arrays(*arrays, dtype=None, shape_1=None):
                              % (ninstances(array), shape_1))
 
         if sp.issparse(array):
-            if not (sp.isspmatrix_csr(array) or sp.isspmatrix_csc(array)):
+            if array.format not in ("csr", "csc"):
                 array = array.tocsr()
             array.data = np.asarray(array.data)
             array = _dereferenced(array)

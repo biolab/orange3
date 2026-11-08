@@ -188,7 +188,7 @@ class SpectralEmbeddingParametersEditor(ManifoldParametersEditor):
 class OWManifoldLearning(OWWidget):
     name = "Manifold Learning"
     description = "Nonlinear dimensionality reduction."
-    icon = "icons/Manifold.svg"
+    icon = "icons/Manifold-symbolic.svg"
     priority = 2200
     keywords = "manifold learning"
     settings_version = 2
@@ -336,7 +336,7 @@ class OWManifoldLearning(OWWidget):
                     self.Error.manifold_error(e.args[0])
             except MemoryError:
                 self.Error.out_of_memory()
-            except np.linalg.linalg.LinAlgError as e:
+            except np.linalg.LinAlgError as e:
                 self.Error.manifold_error(str(e))
             finally:
                 warnings.warn = builtin_warn

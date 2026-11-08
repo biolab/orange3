@@ -904,27 +904,32 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
              [1, 1, 1],
              [1, 0, 1],
              [1, 0, 0]])
+        self.sparse_data = Table.from_numpy(self.domain, csr_matrix(self.data.X))
 
     def test_jaccard_rows(self):
         assert_almost_equal = np.testing.assert_almost_equal
 
-        model = distance.Jaccard().fit(self.data)
-        assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
-        assert_almost_equal(
-            model(self.data),
-            1 - np.array([[1, 2/3, 1/3, 0],
-                          [2/3, 1, 2/3, 1/3],
-                          [1/3, 2/3, 1, 1/2],
-                          [0, 1/3, 1/2, 1]]))
+        for data, name in [(self.data, "dense"), (self.sparse_data, "sparse")]:
+            with self.subTest(name):
+                model = distance.Jaccard().fit(data)
+                if name == "dense":
+                    assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
+                assert_almost_equal(
+                    model(data),
+                    1 - np.array([[1, 2/3, 1/3, 0],
+                                  [2/3, 1, 2/3, 1/3],
+                                  [1/3, 2/3, 1, 1/2],
+                                  [0, 1/3, 1/2, 1]]))
 
-        model = distance.Jaccard(similarity=True).fit(self.data)
-        assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
-        assert_almost_equal(
-            model(self.data),
-            np.array([[1, 2/3, 1/3, 0],
-                      [2/3, 1, 2/3, 1/3],
-                      [1/3, 2/3, 1, 1/2],
-                      [0, 1/3, 1/2, 1]]))
+                model = distance.Jaccard(similarity=True).fit(data)
+                if name == "dense":
+                    assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
+                assert_almost_equal(
+                    model(data),
+                    np.array([[1, 2/3, 1/3, 0],
+                              [2/3, 1, 2/3, 1/3],
+                              [1/3, 2/3, 1, 1/2],
+                              [0, 1/3, 1/2, 1]]))
 
         X = self.data.X
         with self.data.unlocked():
@@ -941,22 +946,26 @@ class JaccardDistanceTest(unittest.TestCase, CommonFittedTests):
 
     def test_jaccard_cols(self):
         assert_almost_equal = np.testing.assert_almost_equal
-        model = distance.Jaccard(axis=0).fit(self.data)
-        assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
-        assert_almost_equal(
-            model(self.data),
-            1 - np.array([[1, 1/4, 1/2],
-                          [1/4, 1, 2/3],
-                          [1/2, 2/3, 1]]))
+        for data, name in [(self.data, "dense"), (self.sparse_data, "sparse")]:
+            with self.subTest(name):
+                model = distance.Jaccard(axis=0).fit(data)
+                if name == "dense":
+                    assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
+                assert_almost_equal(
+                    model(data),
+                    1 - np.array([[1, 1/4, 1/2],
+                                  [1/4, 1, 2/3],
+                                  [1/2, 2/3, 1]]))
 
-        assert_almost_equal = np.testing.assert_almost_equal
-        model = distance.Jaccard(axis=0, similarity=True).fit(self.data)
-        assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
-        assert_almost_equal(
-            model(self.data),
-            np.array([[1, 1/4, 1/2],
-                      [1/4, 1, 2/3],
-                      [1/2, 2/3, 1]]))
+                assert_almost_equal = np.testing.assert_almost_equal
+                model = distance.Jaccard(axis=0, similarity=True).fit(data)
+                if name == "dense":
+                    assert_almost_equal(model.ps, [0.75, 0.5, 0.75])
+                assert_almost_equal(
+                    model(data),
+                    np.array([[1, 1/4, 1/2],
+                              [1/4, 1, 2/3],
+                              [1/2, 2/3, 1]]))
 
         with self.data.unlocked():
             self.data.X = np.array([[0, 1, 1],

@@ -27,8 +27,8 @@ from AnyQt.QtWidgets import (
 )
 
 from Orange.widgets.utils import to_html
-from Orange.widgets.visualize.utils.tree.rules import Rule
-from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
+from Orange.utils.tree.rules import Rule
+from Orange.utils.tree.treeadapter import TreeAdapter
 
 # z index range, increase if needed
 Z_STEP = 5000000
@@ -42,9 +42,7 @@ class PythagorasTreeViewer(QGraphicsWidget):
 
     Examples
     --------
-    >>> from Orange.widgets.visualize.utils.tree.treeadapter import (
-    ...     TreeAdapter
-    ... )
+    >>> from Orange.utils.tree.treeadapter import TreeAdapter
     Pass tree through constructor.
     >>> tree_view = PythagorasTreeViewer(parent=scene, adapter=tree_adapter)
 

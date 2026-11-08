@@ -18,7 +18,7 @@ class OWSVM(OWBaseLearner):
     name = 'SVM'
     description = "Support Vector Machines map inputs to higher-dimensional " \
                   "feature spaces."
-    icon = "icons/SVM.svg"
+    icon = "icons/SVM-symbolic.svg"
     replaces = [
         "Orange.widgets.classify.owsvmclassification.OWSVMClassification",
         "Orange.widgets.regression.owsvmregression.OWSVMRegression",

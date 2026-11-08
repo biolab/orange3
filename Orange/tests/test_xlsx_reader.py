@@ -9,7 +9,7 @@ from typing import Callable
 
 import numpy as np
 
-from Orange.data import io, ContinuousVariable, DiscreteVariable, Table
+from Orange.data import io, ContinuousVariable, DiscreteVariable, Domain, Table
 
 
 def get_dataset(name):
@@ -75,6 +75,24 @@ class TestExcelReader(unittest.TestCase):
         np.testing.assert_array_equal(data.W, read_data.W)
 
         os.unlink(filename)
+
+    def test_write_file_without_flags(self):
+        # Without class, metas and weights, the third header row is empty
+        fd, filename = mkstemp(suffix=".xlsx")
+        os.close(fd)
+
+        data = Table("iris")
+        data = data.transform(Domain(data.domain.attributes))
+        io.ExcelReader.write_file(filename, data, with_annotations=True)
+
+        read_data = io.ExcelReader(filename).read()
+        os.unlink(filename)
+
+        self.assertEqual(len(read_data), len(data))
+        self.assertEqual(read_data.domain.attributes, data.domain.attributes)
+        self.assertEqual(read_data.domain.class_vars, ())
+        self.assertEqual(read_data.domain.metas, ())
+        np.testing.assert_array_equal(read_data.X, data.X)
 
 
 class TestExcelHeader0(unittest.TestCase):
@@ -228,6 +246,24 @@ class TestExcelHeader3(unittest.TestCase):
             table.metas[:, 1], np.array([0, 1, 2, 3] * 5 + [0, 1, 2]))
         np.testing.assert_equal(
             table.metas[:, 2], np.array(list("abcdefghijklmnopqrstuvw")))
+
+    @test_xlsx_xls
+    def test_read_empty_flags(self, reader: Callable[[str], io.FileFormat]):
+        table = read_file(reader, "header_3_no_flags")
+        domain = table.domain
+
+        self.assertEqual(len(table), 3)
+        self.assertEqual(len(domain.attributes), 2)
+        self.assertIsNone(domain.class_var)
+        self.assertEqual(len(domain.metas), 0)
+        attr = domain.attributes[0]
+        self.assertEqual(attr.name, "a")
+        self.assertIsInstance(attr, ContinuousVariable)
+        np.testing.assert_almost_equal(table.X[:, 0], [1, 2, 3])
+        attr = domain.attributes[1]
+        self.assertEqual(attr.name, "b")
+        self.assertIsInstance(attr, DiscreteVariable)
+        self.assertEqual(attr.values, ("x", "y"))
 
 
 class TestMissingValues(unittest.TestCase):

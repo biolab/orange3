@@ -426,7 +426,10 @@ class VariableListModel(PyListModel):
     def discrete_variable_tooltip(self, var):
         text = "<b>%s</b><br/>Categorical with %i values: " %\
                (safe_text(var.name), len(var.values))
-        text += ", ".join("%r" % safe_text(v) for v in var.values)
+        values, nmore = var.values[:10], len(var.values) - 10
+        text += ", ".join("%r" % safe_text(v) for v in values)
+        if nmore > 0:
+            text += " (%i more)" % nmore
         text += self.variable_labels_tooltip(var)
         return text
 
@@ -907,7 +910,7 @@ class TableModel(AbstractSortTableModel):
         # column basic statistics (VariableStatsRole), computed when
         # first needed.
         self.__stats = None
-        self.__rowCount = sourcedata.approx_len()
+        self.__rowCount = len(sourcedata)
         self.__columnCount = len(self.columns)
 
         if self.__rowCount > (2 ** 31 - 1):

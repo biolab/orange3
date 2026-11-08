@@ -23,7 +23,7 @@ def check_sql_input(f):
         widget.Error.add_message("download_sql_data", _download_sql_data)
         widget.Error.download_sql_data.clear()
         if isinstance(data, SqlTable):
-            if data.approx_len() < AUTO_DL_LIMIT:
+            if len(data) < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
                 widget.Error.download_sql_data()
@@ -35,7 +35,7 @@ def check_sql_input(f):
 
 def check_sql_input_sequence(f):
     """
-    Wrapper for widget's set_data/insert_data methodss that first checks
+    Wrapper for widget's set_data/insert_data methods that first checks
     if the input is a SqlTable and:
     - if small enough, download all data and convert to Table
     - for large sql tables, show an error
@@ -48,7 +48,7 @@ def check_sql_input_sequence(f):
         widget.Error.add_message("download_sql_data", _download_sql_data)
         widget.Error.download_sql_data.clear()
         if isinstance(data, SqlTable):
-            if data.approx_len() < AUTO_DL_LIMIT:
+            if len(data) < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
                 widget.Error.download_sql_data()

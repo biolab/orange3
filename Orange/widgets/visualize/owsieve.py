@@ -70,7 +70,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
     name = "Sieve Diagram"
     description = "Visualize the observed and expected frequencies " \
                   "for a combination of values."
-    icon = "icons/SieveDiagram.svg"
+    icon = "icons/SieveDiagram-symbolic.svg"
     priority = 200
     keywords = "sieve diagram"
 
@@ -162,7 +162,7 @@ class OWSieveDiagram(OWWidget, VizRankMixin(SieveRank)):
         Args:
             data (Table): input data
         """
-        if isinstance(data, SqlTable) and data.approx_len() > LARGE_TABLE:
+        if isinstance(data, SqlTable) and len(data) > LARGE_TABLE:
             data = data.sample_time(DEFAULT_SAMPLE_TIME)
 
         self.closeContext()

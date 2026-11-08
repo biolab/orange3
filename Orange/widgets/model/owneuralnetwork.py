@@ -68,7 +68,7 @@ class OWNNLearner(OWBaseLearner):
     name = "Neural Network"
     description = "A multi-layer perceptron (MLP) algorithm with " \
                   "backpropagation."
-    icon = "icons/NN.svg"
+    icon = "icons/NN-symbolic.svg"
     priority = 90
     keywords = "neural network, mlp"
 

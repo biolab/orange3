@@ -2,8 +2,6 @@ from typing import Union
 
 import numpy as np
 
-from orangewidget.utils.signals import LazyValue
-
 from Orange.data import Domain, DiscreteVariable, Table
 from Orange.data.util import get_unique_names
 
@@ -82,6 +80,7 @@ def create_annotated_table(data, selected_indices):
 
 def lazy_annotated_table(data, selected_indices):
     domain, _ = domain_with_annotation_column(data)
+    from orangewidget.utils.signals import LazyValue
     return LazyValue[Table](
         lambda: create_annotated_table(data, selected_indices),
         length=len(data), domain=domain)
@@ -113,6 +112,7 @@ def lazy_groups_table(data, selection, include_unselected=True,
     length = len(data) if include_unselected else np.sum(selection != 0)
     values, _ = group_values(selection, include_unselected, values)
     domain, _ = domain_with_annotation_column(data, values, var_name)
+    from orangewidget.utils.signals import LazyValue
     return LazyValue[Table](
         lambda: create_groups_table(data, selection, include_unselected,
                                     var_name, values),

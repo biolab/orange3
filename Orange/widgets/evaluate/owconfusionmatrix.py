@@ -86,7 +86,7 @@ class OWConfusionMatrix(widget.OWWidget):
     name = "Confusion Matrix"
     description = "Display a confusion matrix constructed from " \
                   "the results of classifier evaluations."
-    icon = "icons/ConfusionMatrix.svg"
+    icon = "icons/ConfusionMatrix-symbolic.svg"
     priority = 1001
     keywords = "confusion matrix"
 

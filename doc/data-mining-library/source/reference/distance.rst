@@ -134,10 +134,7 @@ Cosine similarity is the dot product divided by the product
 of lengths (where the length is the square of dot product of a row/column with
 itself). Cosine distance is computed by subtracting the similarity from one.
 
-In calculation of dot products, missing values are replaced by means. In
-calculation of lengths, the contribution of a missing value equals the square
-of the mean plus the variance. (The difference comes from the fact that in
-the former case the missing values are independent.)
+Missing values are replaced by means.
 
 Non-zero discrete values are replaced by 1. This introduces the notion of a
 "base value", which is the first in the list of possible values. In most cases,

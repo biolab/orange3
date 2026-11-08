@@ -1,4 +1,5 @@
 """Various small utilities that might be useful everywhere"""
+from __future__ import annotations
 import logging
 import os
 import time
@@ -28,8 +29,7 @@ import numpy as np
 from Orange.data.util import scale  # pylint: disable=unused-import
 
 if TYPE_CHECKING:
-    from numpy.typing import DTypeLike
-
+    from numpy.typing import DTypeLike, NDArray
 
 log = logging.getLogger(__name__)
 
@@ -771,6 +771,17 @@ def nan_hash_stand(value):
     except TypeError:
         pass
     return value
+
+def as_scalar(e: NDArray[A] | A) -> A:
+    """
+    Convert an array of size 1 to its scalar equivalent. If `e` is already a
+    scalar (`np.isscalar`) return it unchanged.
+    """
+    if isinstance(e, np.ndarray):
+        return e.item()
+    elif np.isscalar(e):
+        return e
+    raise TypeError  # pragma: no cover
 
 
 # For best result, keep this at the bottom

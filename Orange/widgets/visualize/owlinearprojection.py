@@ -98,6 +98,7 @@ class LinearProjectionVizRank(VizRankDialogNAttrs):
 
 class OWLinProjGraph(OWGraphWithAnchors):
     hide_radius = Setting(0)
+    aggregate_dense_regions = Setting(False)
 
     @property
     def always_show_axes(self):
@@ -180,7 +181,7 @@ class OWLinearProjection(OWAnchorProjectionWidget,
     name = "Linear Projection"
     description = "A multi-axis projection of data onto " \
                   "a two-dimensional plane."
-    icon = "icons/LinearProjection.svg"
+    icon = "icons/LinearProjection-symbolic.svg"
     priority = 240
     keywords = "linear projection"
 

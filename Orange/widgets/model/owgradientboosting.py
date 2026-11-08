@@ -287,7 +287,7 @@ class XGBRFLearnerEditor(XGBBaseEditor):
 class OWGradientBoosting(OWBaseLearner):
     name = "Gradient Boosting"
     description = "Predict using gradient boosting on decision trees."
-    icon = "icons/GradientBoosting.svg"
+    icon = "icons/GradientBoosting-symbolic.svg"
     priority = 45
     keywords = "gradient boosting, catboost, gradient, boost, tree, forest, xgb, gb, extreme"
 

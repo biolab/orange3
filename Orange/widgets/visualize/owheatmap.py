@@ -135,7 +135,7 @@ def create_list_model(
 class OWHeatMap(widget.OWWidget):
     name = "Heat Map"
     description = "Plot a data matrix heatmap."
-    icon = "icons/Heatmap.svg"
+    icon = "icons/Heatmap-symbolic.svg"
     priority = 260
     keywords = "heat map"
 
@@ -575,7 +575,7 @@ class OWHeatMap(widget.OWWidget):
         self.clear_messages()
 
         if isinstance(data, SqlTable):
-            if data.approx_len() < 4000:
+            if len(data) < 4000:
                 data = Table(data)
             else:
                 self.Information.sampled()

@@ -797,6 +797,24 @@ class TestTableGetColumnView(TableColumnViewTests):
         self.assertEqual(data.get_column("y").dtype, float)
 
 
+class TestRowInstance(unittest.TestCase):
+    def test_multiclass_set(self):
+        foo = ContinuousVariable("Foo")
+        cont = ContinuousVariable("Cont Var")
+        disc = DiscreteVariable("Disc Var", values=("0", "1"))
+        domain = Domain([foo], [cont, disc], [])
+
+        X = np.array([[1], [2]])
+        Y = np.array([
+            [float("nan"), float("nan")],
+            [float("nan"), float("nan")]
+        ], dtype=float)
+        data = Table(domain, X, Y, None)
+        row = data[1]
+        with data.unlocked():
+            row[1] = 4
+        np.testing.assert_equal(row._y, [4, np.nan])
+
 
 if __name__ == "__main__":
     unittest.main()

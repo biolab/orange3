@@ -540,6 +540,7 @@ class OWColor(widget.OWWidget):
     name = "Color"
     description = "Set color legend for variables."
     icon = "icons/Colors.svg"
+    keywords = "palette, legend"
 
     class Inputs:
         data = Input("Data", Orange.data.Table)

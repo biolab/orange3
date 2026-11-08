@@ -388,7 +388,7 @@ class OWMosaicDisplay(OWWidget, VizRankMixin(MosaicVizRank)):
 
     @Inputs.data
     def set_data(self, data):
-        if isinstance(data, SqlTable) and data.approx_len() > LARGE_TABLE:
+        if isinstance(data, SqlTable) and len(data) > LARGE_TABLE:
             data = data.sample_time(DEFAULT_SAMPLE_TIME)
 
         self.closeContext()

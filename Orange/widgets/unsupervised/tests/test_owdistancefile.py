@@ -66,4 +66,4 @@ class TestOWDistanceFileDropHandler(unittest.TestCase):
     def test_parametersFromFile(self):
         handler = OWDistanceFileDropHandler()
         r = handler.parametersFromFile("test.dst")
-        self.assertEqual(r["recent_paths"][0].basename, "test.dst")
+        self.assertEqual(r["active_path"].basename, "test.dst")

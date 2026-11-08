@@ -27,7 +27,7 @@ LINE_NAMES = ["component variance", "cumulative variance"]
 class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
     name = "PCA"
     description = "Principal component analysis with a scree-diagram."
-    icon = "icons/PCA.svg"
+    icon = "icons/PCA-symbolic.svg"
     priority = 3050
     keywords = "pca, principal component analysis, linear transformation"
 
@@ -125,7 +125,7 @@ class OWPCA(widget.OWWidget, ConcurrentWidgetMixin):
         if not data:
             self.clear_outputs()
         if isinstance(data, SqlTable):
-            if data.approx_len() < AUTO_DL_LIMIT:
+            if len(data) < AUTO_DL_LIMIT:
                 data = Table(data)
             else:
                 self.information("Data has been sampled")

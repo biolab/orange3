@@ -8,8 +8,9 @@ import numpy as np
 from Orange import distance
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.misc import DistMatrix
-from Orange.widgets.unsupervised.owdistances import OWDistances, \
-    DistanceRunner, MetricDefs, Cosine, Mahalanobis, Jaccard, MetricDef, \
+from Orange.widgets.unsupervised.owdistances import OWDistances, DistanceRunner
+from Orange.widgets.unsupervised.utils import \
+    MetricDefs, Cosine, Mahalanobis, Jaccard, MetricDef, \
     ManhattanNormalized, EuclideanNormalized, Manhattan, Spearman, Pearson, \
     Hamming, SpearmanAbsolute, PearsonAbsolute, Euclidean
 from Orange.widgets.tests.base import WidgetTest

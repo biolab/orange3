@@ -664,6 +664,8 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         data = Table("heart_disease")
         self.send_signal(self.widget.Inputs.data, data)
         widget = self.widget
+        widget.graph.aggregate_dense_regions = False
+
         graph = widget.graph
         scatterplot_item = graph.scatterplot_item
 
@@ -1206,6 +1208,20 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(spacing, 1582953776 - 1581953776)
         self.assertTrue(not ticks.size or 1581953776 <= ticks[0] <= 1582953776)
 
+    def test_discrete_axis_values_changed(self):
+        def data(values):
+            domain = Domain([DiscreteVariable("category", values=values),
+                             ContinuousVariable("value")])
+            return Table.from_numpy(domain, np.array([[0, 0], [1, 0.5]]))
+
+        x_axis = self.widget.graph.plot_widget.plotItem.getAxis("bottom")
+        self.send_signal(self.widget.Inputs.data, data(("1", "2")))
+        self.assertEqual(x_axis._tickLevels, [[(0, "1"), (1, "2")]])
+
+        # same variable names and numbers, but renamed values
+        self.send_signal(self.widget.Inputs.data, data(("a", "b")))
+        self.assertEqual(x_axis._tickLevels, [[(0, "a"), (1, "b")]])
+
     def test_clear_plot(self):
         self.widget.cb_class_density.setChecked(True)
         self.send_signal(self.widget.Inputs.data, self.data)
@@ -1481,6 +1497,44 @@ class TestOWScatterPlot(WidgetTest, ProjectionWidgetTestMixin,
         self.assertEqual(list(error_bar_item.opts["left"][:3].round(1)),
                          [0.1] * 3)
 
+    def test_allow_aggregation(self):
+        widget = self.widget
+        graph = self.widget.graph
+
+        graph.aggregate_dense_regions = True
+
+        self.send_signal(widget.Inputs.data, self.data)
+
+        self.assertTrue(graph.allow_aggregation())
+
+        self._select_data()
+        self.assertFalse(graph.allow_aggregation())
+
+        graph.unselect_all()
+        self.assertTrue(graph.allow_aggregation())
+
+        self.send_signal(widget.Inputs.data_subset, self.data[:5])
+        self.assertFalse(graph.allow_aggregation())
+
+        self.send_signal(widget.Inputs.data_subset, None)
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.jitter_size = 1
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.jitter_continuous = True
+        self.assertFalse(graph.allow_aggregation())
+
+        graph.jitter_size = 0
+        self.assertTrue(graph.allow_aggregation())
+
+        graph.jitter_size = 1
+        graph.jitter_continuous = False
+        self.send_signal(widget.Inputs.data, Table("titanic"))
+        self.assertFalse(graph.allow_aggregation())
+
+        graph.jitter_size = 0
+        self.assertTrue(graph.allow_aggregation())
 
 if __name__ == "__main__":
     import unittest

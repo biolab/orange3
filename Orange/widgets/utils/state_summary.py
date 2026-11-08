@@ -179,7 +179,7 @@ def _nobr(s):
 @summarize.register
 def summarize_table(data: Table):  # pylint: disable=function-redefined
     return PartialSummary(
-        data.approx_len(),
+        len(data),
         format_summary_details(data, format=Qt.RichText),
         lambda: _table_previewer(data))
 

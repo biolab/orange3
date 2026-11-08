@@ -832,7 +832,7 @@ class TestModelsAndViews(GuiTest):
         spy = QSignalSpy(model.dataChanged)
         model.setMethod("mega encoding")
         self.assertEqual(spy[0][0].row(), 0)
-        self.assertEqual(ind.data(), "Preset: mega encoding")
+        self.assertEqual(ind.data(), "General preset: mega encoding")
         self.assertIsNotNone(ind.data(Qt.DecorationRole))
         self.assertIsNotNone(ind.data(Qt.ToolTipRole))
 
@@ -841,15 +841,10 @@ class TestListViewDelegate(unittest.TestCase):
     def test_displaytext(self):
         delegate = ListViewSearch.Delegate()
         self.assertEqual(delegate.displayText(("a", "foo", False), Mock()),
-                         "a")
+                         "a: foo")
         self.assertEqual(delegate.displayText(("a", "foo", True), Mock()),
                          "a: foo")
-        delegate.set_default_hints(True)
-        self.assertEqual(delegate.displayText(("a", "foo", False), Mock()),
-                         "a: foo")
-        delegate.set_default_hints(False)
-        self.assertEqual(delegate.displayText(("a", "foo", False), Mock()),
-                         "a")
+        self.assertIsNone(delegate.displayText(None, Mock()))
 
     @patch.object(SeparatedListDelegate, "initStyleOption")
     def test_bold(self, _):

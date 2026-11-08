@@ -10,6 +10,7 @@ from Orange.widgets.widget import OWWidget
 class TestMultiTargetDecorator(WidgetTest):
     class MockWidget(OWWidget):
         name = "MockWidget"
+        keywords = "mockwidget"
 
         NotCalled = object()
 

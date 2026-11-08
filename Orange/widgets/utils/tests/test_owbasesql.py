@@ -23,6 +23,7 @@ class BrokenBackend(Backend):  # pylint: disable=abstract-method
 
 class TestableSqlWidget(OWBaseSql):
     name = "SQL"
+    keywords = "mockwidget"
 
     def __init__(self):
         self.mocked_backend = Mock()

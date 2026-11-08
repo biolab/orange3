@@ -40,6 +40,12 @@ class TestOWTable(WidgetTest, WidgetOutputsTestMixin):
         output = self.get_output(self.widget.Outputs.annotated_data)
         self.assertIsNone(output)
 
+    def test_data_single_sparse(self):
+        data = self.data[:1].to_sparse()
+        self.send_signal(self.widget.Inputs.data, data)
+        self.assertIs(self.widget.input.table, data)
+        self.assertIs(self.widget.view.model().source, data)
+
     def test_data_model(self):
         self.send_signal(self.widget.Inputs.data, self.data)
         self.assertEqual(self.widget.view.model().rowCount(), len(self.data))
@@ -278,7 +284,6 @@ class TestOWTableSQL(TestOWTable, dbt):
     def test_input_data_empty(self):
         super().test_input_data_empty()
 
-    @unittest.skip("approx_len messes up row count")
     def test_data_model(self):
         super().test_data_model()
 

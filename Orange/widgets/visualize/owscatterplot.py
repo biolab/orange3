@@ -146,6 +146,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     orthonormal_regression = Setting(False)
     show_ellipse = Setting(False)
     jitter_continuous = Setting(False)
+    aggregate_dense_regions = Setting(False)
 
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
@@ -164,6 +165,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
 
     def update_coordinates(self):
         super().update_coordinates()
+        self.set_aggregation()
         self.update_axes()
         self.update_error_bars()
         # Don't update_regression line here: update_coordinates is always
@@ -315,7 +317,7 @@ class OWScatterPlotGraph(OWScatterPlotBase):
         points = np.vstack([x, y]).T
         mu = np.mean(points, axis=0)
         cov = np.cov(*(points - mu).T)
-        vals, vects = np.linalg.eig(cov)
+        vals, vects = np.linalg.eigh(cov)
         angle = math.atan2(vects[1, 0], vects[0, 0])
         matrix = np.array([[np.cos(angle), -np.sin(angle)],
                            [np.sin(angle), np.cos(angle)]])
@@ -346,6 +348,22 @@ class OWScatterPlotGraph(OWScatterPlotBase):
     def update_jittering(self):
         super().update_jittering()
         self.update_error_bars()
+        self.set_aggregation()
+
+    def allow_aggregation(self):
+        # Reimplemented to allow aggregation when jittering is zero, or when
+        # both axes are continuous and continuous jittering is disabled
+        return (
+            self.aggregate_dense_regions
+            and (self.selection is None or len(self.selection) == 0)
+            and not self.subset_is_shown
+            and (self.labels is None or len(self.labels) == 0)
+            and (self.jitter_size == 0
+                 or (self.master.attr_x.is_continuous
+                     and self.master.attr_y.is_continuous
+                     and not self.jitter_continuous)
+                 )
+        )
 
     def update_error_bars(self):
         for item in self.error_bars_items:
@@ -620,7 +638,7 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
         self.sampling.setVisible(False)
         self.sql_data = None
         if isinstance(self.data, SqlTable):
-            if self.data.approx_len() < 4000:
+            if len(self.data) < 4000:
                 self.data = Table(self.data)
             else:
                 self.Information.sampled_sql()
@@ -739,7 +757,7 @@ class OWScatterPlot(OWDataProjectionWidget, VizRankMixin(ScatterPlotVizRank)):
     def set_subset_data(self, subset: Optional[Table]):
         self.warning()
         if isinstance(subset, SqlTable):
-            if subset.approx_len() < AUTO_DL_LIMIT:
+            if len(subset) < AUTO_DL_LIMIT:
                 subset = Table(subset)
             else:
                 self.warning("Data subset does not support large Sql tables")

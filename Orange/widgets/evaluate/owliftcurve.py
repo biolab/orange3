@@ -127,7 +127,7 @@ class OWLiftCurve(widget.OWWidget):
     name = "Performance Curve"
     description = "Construct and display a performance curve " \
                   "from the evaluation of classifiers."
-    icon = "icons/LiftCurve.svg"
+    icon = "icons/LiftCurve-symbolic.svg"
     priority = 1020
     keywords = "performance curve, lift, cumulative gain, precision, recall, curve"
 

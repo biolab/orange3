@@ -147,8 +147,11 @@ class Tree(object):
         return iter((self.__value, self.__branches))
 
     def __repr__(self):
-        return ("{0.__name__}(value={1!r}, branches={2!r})"
-                .format(type(self), self.value, self.branches))
+        try:
+            return ("{0.__name__}(value={1!r}, branches={2!r})"
+                    .format(type(self), self.value, self.branches))
+        except RecursionError:
+            return ("{0.__name__}(...)".format(type(self)))
 
     @property
     def is_leaf(self):

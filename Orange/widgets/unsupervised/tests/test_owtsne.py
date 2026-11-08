@@ -716,6 +716,7 @@ class TestOWtSNE(WidgetTest, ProjectionWidgetTestMixin, WidgetOutputsTestMixin):
         self.send_signal("Distances", signal_data)
 
     def test_data_table_with_no_attributes_with_distance_matrix_works(self):
+        self.restore_mocked_functions()
         w = self.widget
         self.send_signal(w.Inputs.distances, self.towns)
         self.wait_until_finished()

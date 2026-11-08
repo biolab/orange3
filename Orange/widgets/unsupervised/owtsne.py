@@ -13,7 +13,7 @@ from Orange.preprocess import preprocess
 from Orange.projection import PCA
 from Orange.projection import manifold
 from Orange.widgets import gui
-from Orange.widgets.settings import SettingProvider, ContextSetting
+from Orange.widgets.settings import SettingProvider, Setting, ContextSetting
 from Orange.widgets.utils.concurrent import TaskState, ConcurrentWidgetMixin
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.owscatterplotgraph import OWScatterPlotBase
@@ -343,6 +343,8 @@ class TSNERunner:
 
 
 class OWtSNEGraph(OWScatterPlotBase):
+    aggregate_dense_regions = Setting(False)
+
     def update_coordinates(self):
         super().update_coordinates()
         if self.scatterplot_item is not None:
@@ -381,7 +383,7 @@ class invalidated:
 class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
     name = "t-SNE"
     description = "Two-dimensional data projection with t-SNE."
-    icon = "icons/TSNE.svg"
+    icon = "icons/TSNE-symbolic.svg"
     priority = 920
     keywords = "t-sne, tsne"
 
@@ -683,7 +685,9 @@ class OWtSNE(OWDataProjectionWidget, ConcurrentWidgetMixin):
         return embedding
 
     def _get_projection_variables(self):
-        if self.tsne_embedding is None:
+        if self.tsne_embedding is None or self.distance_matrix is not None:
+            # for a distance matrix avoid domain transformations, because there
+            # is no data; instead, pick positions from the computed visualization
             return super()._get_projection_variables()
         proposed = [a.name for a in self.tsne_embedding.domain.attributes]
         names = get_unique_names(self.data.domain, proposed)

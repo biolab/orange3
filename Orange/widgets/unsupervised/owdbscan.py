@@ -57,8 +57,9 @@ def get_kth_distances(data, metric, k=5):
 class OWDBSCAN(widget.OWWidget):
     name = "DBSCAN"
     description = "Density-based spatial clustering."
-    icon = "icons/DBSCAN.svg"
+    icon = "icons/DBSCAN-symbolic.svg"
     priority = 2150
+    keywords = "density based clustering, clustering"
 
     class Inputs:
         data = Input("Data", Table)

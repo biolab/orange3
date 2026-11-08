@@ -11,7 +11,7 @@ from Orange.widgets.utils.widgetpreview import WidgetPreview
 class OWKNNLearner(OWBaseLearner):
     name = "kNN"
     description = "Predict according to the nearest training instances."
-    icon = "icons/KNN.svg"
+    icon = "icons/KNN-symbolic.svg"
     replaces = [
         "Orange.widgets.classify.owknn.OWKNNLearner",
         "Orange.widgets.regression.owknnregression.OWKNNRegression",
@@ -22,10 +22,10 @@ class OWKNNLearner(OWBaseLearner):
     LEARNER = KNNLearner
 
     weights = ["uniform", "distance"]
-    metrics = ["euclidean", "manhattan", "chebyshev", "mahalanobis"]
+    metrics = ["euclidean", "manhattan", "chebyshev", "mahalanobis", "cosine"]
 
     weights_options = ["Uniform", "By Distances"]
-    metrics_options = ["Euclidean", "Manhattan", "Chebyshev", "Mahalanobis"]
+    metrics_options = ["Euclidean", "Manhattan", "Chebyshev", "Mahalanobis", "Cosine"]
 
     n_neighbors = Setting(5)
     metric_index = Setting(0)
@@ -50,6 +50,7 @@ class OWKNNLearner(OWBaseLearner):
     def create_learner(self):
         return self.LEARNER(
             n_neighbors=self.n_neighbors,
+            # false positive, pylint: disable=invalid-sequence-index
             metric=self.metrics[self.metric_index],
             weights=self.weights[self.weight_index],
             preprocessors=self.preprocessors)
@@ -57,6 +58,7 @@ class OWKNNLearner(OWBaseLearner):
     def get_learner_parameters(self):
         return (("Number of neighbours", self.n_neighbors),
                 ("Metric", self.metrics_options[self.metric_index]),
+                # false positive, pylint: disable=invalid-sequence-index
                 ("Weight", self.weights_options[self.weight_index]))
 
 

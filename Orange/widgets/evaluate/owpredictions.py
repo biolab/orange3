@@ -62,7 +62,7 @@ ERROR_TOOLTIPS = [
 
 class OWPredictions(OWWidget):
     name = "Predictions"
-    icon = "icons/Predictions.svg"
+    icon = "icons/Predictions-symbolic.svg"
     priority = 200
     description = "Display predictions of models for an input dataset."
     keywords = "predictions"

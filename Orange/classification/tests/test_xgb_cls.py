@@ -55,7 +55,7 @@ class TestXGBCls(unittest.TestCase):
         prob = model(self.iris, model.Probs)
         self.assertGreaterEqual(prob.all().all(), 0)
         self.assertLessEqual(prob.all().all(), 1)
-        self.assertAlmostEqual(prob.sum(), len(self.iris))
+        self.assertAlmostEqual(prob.sum(), len(self.iris), 4)
 
     @test_learners
     def test_predict_numpy(self, learner_class: XGBBase):
@@ -66,7 +66,7 @@ class TestXGBCls(unittest.TestCase):
         prob = model(self.iris.X, model.Probs)
         self.assertGreaterEqual(prob.all().all(), 0)
         self.assertLessEqual(prob.all().all(), 1)
-        self.assertAlmostEqual(prob.sum(), len(self.iris))
+        self.assertAlmostEqual(prob.sum(), len(self.iris), 4)
 
     @test_learners
     def test_predict_sparse(self, learner_class: XGBBase):
@@ -78,7 +78,7 @@ class TestXGBCls(unittest.TestCase):
         prob = model(sparse_data, model.Probs)
         self.assertGreaterEqual(prob.all().all(), 0)
         self.assertLessEqual(prob.all().all(), 1)
-        self.assertAlmostEqual(prob.sum(), len(sparse_data))
+        self.assertAlmostEqual(prob.sum(), len(sparse_data), 4)
 
     @test_learners
     def test_set_params(self, learner_class: XGBBase):

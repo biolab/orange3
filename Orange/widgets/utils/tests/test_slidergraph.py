@@ -10,6 +10,7 @@ from Orange.widgets.utils.slidergraph import SliderGraph
 
 class SimpleWidget(widget.OWWidget):
     name = "Simple widget"
+    keywords = "simplewidget"
 
     def __init__(self):
         super().__init__()

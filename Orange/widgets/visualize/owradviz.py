@@ -82,6 +82,8 @@ class RadvizVizRank(VizRankDialogNAttrs):
 
 
 class OWRadvizGraph(OWGraphWithAnchors):
+    aggregate_dense_regions = Setting(False)
+
     def __init__(self, scatter_widget, parent):
         super().__init__(scatter_widget, parent)
         self.anchors_scatter_item = None
@@ -182,7 +184,7 @@ class OWRadvizGraph(OWGraphWithAnchors):
 class OWRadviz(OWAnchorProjectionWidget, VizRankMixin(RadvizVizRank)):
     name = "Radviz"
     description = "Display Radviz projection"
-    icon = "icons/Radviz.svg"
+    icon = "icons/Radviz-symbolic.svg"
     priority = 241
     keywords = "radviz, viz"
 

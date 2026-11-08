@@ -7,6 +7,7 @@ from typing import Callable, Optional, NamedTuple, Type
 
 import numpy as np
 import scipy
+from sklearn.preprocessing import normalize
 
 from Orange.data import Table, Storage, Instance, Value, Domain
 from Orange.data.filter import HasClass
@@ -645,10 +646,18 @@ class KNNBase:
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
+    def _initialize_wrapped(self):
+        params = self.params.copy()
+        if params.get("metric") == "cosine":
+            params["metric"] = "euclidean"
+        return self.__wraps__(**params)
+
     def fit(self, X, Y, W=None):
         if self.params["metric_params"] is None and \
                         self.params.get("metric") == "mahalanobis":
             self.params["metric_params"] = {"V": np.cov(X.T)}
+        if self.params["metric"] == "cosine":
+            X = normalize(X, norm="l2", axis=1, copy=True)
         return super().fit(X, Y, W)
 
 

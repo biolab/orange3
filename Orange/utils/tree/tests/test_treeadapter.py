@@ -8,7 +8,7 @@ import numpy as np
 from Orange.data import Table, Domain, DiscreteVariable, ContinuousVariable
 from Orange.classification.tree import \
     TreeModel, Node, DiscreteNode, MappedDiscreteNode, NumericNode
-from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
+from Orange.utils.tree.treeadapter import TreeAdapter
 
 
 class TestTreeAdapter(unittest.TestCase):

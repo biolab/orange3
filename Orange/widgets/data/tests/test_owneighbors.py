@@ -5,7 +5,12 @@ from unittest.mock import Mock
 import numpy as np
 
 from Orange.data import Table, Domain, ContinuousVariable
-from Orange.widgets.data.owneighbors import OWNeighbors, METRICS
+from Orange.widgets.unsupervised.utils import (
+    MetricDefs, MetricDef,
+    Euclidean, Manhattan, Cosine, Mahalanobis,
+    Pearson, PearsonAbsolute, Spearman, SpearmanAbsolute, Jaccard
+)
+from Orange.widgets.data.owneighbors import OWNeighbors
 from Orange.widgets.tests.base import WidgetTest, ParameterMapping
 
 
@@ -65,7 +70,8 @@ class TestOWNeighbors(WidgetTest):
         """Check neighbors for various distance metrics"""
         widget = self.widget
         settings = [
-            ParameterMapping("", widget.controls.distance_index, METRICS),
+            ParameterMapping("", widget.controls._distance_index,
+                             [metric.name for metric in MetricDefs.values()]),
             ParameterMapping("", widget.controls.n_neighbors)]
         for setting in settings:
             for val in setting.values:
@@ -73,9 +79,7 @@ class TestOWNeighbors(WidgetTest):
                 self.send_signal(widget.Inputs.reference, self.iris[:10])
                 setting.set_value(val)
                 widget.apply_button.button.click()
-                if METRICS[widget.distance_index][0] != "Jaccard" \
-                        and widget.n_neighbors != 0:
-                    self.assertIsNotNone(self.get_output())
+                self.assertIsNotNone(self.get_output())
 
     def test_include_reference(self):
         widget = self.widget
@@ -149,12 +153,12 @@ class TestOWNeighbors(WidgetTest):
 
     def test_compute_distances_calls_distance(self):
         widget = self.widget
-        widget.distance_index = 2
         dists = np.random.random((10, 5))
         distance = Mock(return_value=dists)
+        metric = MetricDef(42, "foo", "", distance)
         try:
-            orig_metrics = METRICS[widget.distance_index]
-            METRICS[widget.distance_index] = ("foo", distance)
+            orig_metrics = MetricDefs[widget.metric_id]
+            MetricDefs[widget.metric_id] = metric
             data = Table("iris")
             data, refs = data[:10], data[-5:]
             self.send_signals([(widget.Inputs.data, data),
@@ -166,14 +170,15 @@ class TestOWNeighbors(WidgetTest):
             # false positive, pylint: disable=no-member
             np.testing.assert_almost_equal(widget.distances, dists.min(axis=1))
         finally:
-            METRICS[widget.distance_index] = orig_metrics
+            MetricDefs[widget.metric_id] = orig_metrics
 
     def test_compute_distances_distance_no_data(self):
         widget = self.widget
         distance = Mock()
+        metric = MetricDef(42, "foo", "", distance)
         try:
-            orig_metrics = METRICS[widget.distance_index]
-            METRICS[widget.distance_index] = ("foo", distance)
+            orig_metrics = MetricDefs[widget.metric_id]
+            MetricDefs[widget.metric_id] = metric
             data = Table("iris")
             data, refs = data[:10], data[-5:]
             self.send_signals([(widget.Inputs.data, data),
@@ -198,7 +203,7 @@ class TestOWNeighbors(WidgetTest):
             distance.assert_not_called()
             self.assertIsNone(widget.distances)
         finally:
-            METRICS[widget.distance_index] = orig_metrics
+            MetricDefs[widget.metric_id] = orig_metrics
 
     def test_compute_indices_without_reference(self):
         widget = self.widget
@@ -462,6 +467,7 @@ class TestOWNeighbors(WidgetTest):
         self.assertIsInstance(self.get_output(self.widget.Outputs.data), Table2)
 
     def test_order_by_distance(self):
+        self.widget.metric_id = Euclidean
         domain = Domain([ContinuousVariable(x) for x in "ab"])
         reference = Table.from_numpy(domain, [[1, 0]])
         data = Table.from_numpy(domain, [[1, 0.1], [2, 0], [1, 0], [0, 0.1], [0.1, 0]])
@@ -479,6 +485,39 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(self.widget.Inputs.reference, self.iris[:1])
         dst = self.get_output(self.widget.Outputs.data).get_column("distance").tolist()
         self.assertTrue(dst == sorted(dst))  # check distance in ascending order
+
+    def test_unknowns_data(self):
+        self.widget.metric_id = Mahalanobis
+        self.assertFalse(MetricDefs[self.widget.metric_id].metric.supports_missing)
+        domain = Domain([ContinuousVariable(x) for x in "ab"])
+        reference = Table.from_numpy(domain, [[1, 0]])
+        data = Table.from_numpy(domain, [[1, "NaN"], [2, 0], [1, 0], [0, 0.1], [0.1, 0]])
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.reference, reference)
+        dst = self.get_output(self.widget.Outputs.data).get_column("distance")
+        self.assertFalse(np.any(np.isnan(dst)))
+
+    def test_unknowns_reference(self):
+        self.widget.metric_id = Mahalanobis
+        self.assertFalse(MetricDefs[self.widget.metric_id].metric.supports_missing)
+        domain = Domain([ContinuousVariable(x) for x in "ab"])
+        reference = Table.from_numpy(domain, [[1, "NaN"]])
+        data = Table.from_numpy(domain, [[1, 0.1], [2, 0], [1, 0], [0, 0.1], [0.1, 0]])
+        self.send_signal(self.widget.Inputs.data, data)
+        self.send_signal(self.widget.Inputs.reference, reference)
+        dst = self.get_output(self.widget.Outputs.data).get_column("distance")
+        self.assertFalse(np.any(np.isnan(dst)))
+
+    def test_migrate_to_2(self):
+        for old, new in ((0, Euclidean), (1, Manhattan),
+                         (2, Mahalanobis), (3, Cosine),
+                         (4, Jaccard), (5, Spearman),
+                         (6, SpearmanAbsolute), (7, Pearson),
+                         (8, PearsonAbsolute)):
+            settings = dict(distance_index=old, __version__=0)
+            w = self.create_widget(OWNeighbors, stored_settings=settings)
+            self.assertEqual(w.metric_id, new,
+                             msg=f"at {old} to {MetricDefs[new].name}")
 
 
 if __name__ == "__main__":

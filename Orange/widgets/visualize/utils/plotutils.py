@@ -124,7 +124,7 @@ class AnchorItem(pg.GraphicsWidget):
 
         self._label.setPos(label_pos)
         self._label.setAnchor(pg.Point(*anchor))
-        self._label.setRotation(-angle if left_quad else 180 - angle)
+        self._label.setAngle(angle if left_quad else 180 + angle)
 
         self._arrow.setPos(self._spine.line().p2())
         self._arrow.setRotation(180 - angle)
@@ -175,6 +175,7 @@ class InteractiveViewBox(pg.ViewBox):
         self.init_history()
         pg.ViewBox.__init__(self, enableMenu=enable_menu)
         self.graph = graph
+        self.dragged_points = None
         self.setMouseMode(self.PanMode)
         self.grabGesture(Qt.PinchGesture)
 
@@ -256,7 +257,29 @@ class InteractiveViewBox(pg.ViewBox):
             self.axHistoryPointer += 1
             self.axHistory = self.axHistory[:self.axHistoryPointer] + [ax]
 
-        if self.graph.state == SELECT and axis is None:
+        def drag():
+            if ev.isFinish():
+                if self.dragged_points:
+                    self.graph.finish_dragging()
+                    self.dragged_points = None
+                self.graph.unsuspend_jittering()
+            else:
+                ev.accept()
+                p0 = self.mapToView(ev.buttonDownPos())
+                p1 = self.mapToView(ev.pos())
+                dist = p1 - p0
+                self.graph.move_dragged_points(self.dragged_points, dist)
+
+        if ev.isStart() and ev.button() & (Qt.LeftButton | Qt.MiddleButton) \
+                and hasattr(self.graph, "get_dragged_points"):
+            view_pos = self.mapSceneToView(ev.pos())
+            self.dragged_points = self.graph.get_dragged_points(view_pos)
+            if self.dragged_points is not None:
+                self.graph.suspend_jittering()
+
+        if self.dragged_points:
+            drag()
+        elif self.graph.state == SELECT and axis is None:
             select()
         elif self.graph.state == ZOOMING or self.graph.state == PANNING:
             # Inherited mouseDragEvent doesn't work for large zooms because it
@@ -590,6 +613,14 @@ class StyledAxisItem(pg.AxisItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.label.setDefaultTextColor(self.palette().color(QPalette.Text))
+
+    def getSIPrefixEnableRanges(self):
+        # Since pyqtgraph 0.14, axes without units also get an SI prefix for
+        # values below 1 (e.g. "(x0.001)"). Keep the behaviour of pyqtgraph
+        # 0.13 (which does not call this method): no prefix from 1e-3 to 1e6.
+        if self.labelUnits == "":
+            return (0, 1e-3), (1e6, np.inf)
+        return super().getSIPrefixEnableRanges()
 
     def changeEvent(self, event: QEvent) -> None:
         if event.type() == QEvent.FontChange:

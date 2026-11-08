@@ -11,8 +11,9 @@ from Orange.widgets.widget import Input, MultiInput
 class OWStackedLearner(OWBaseLearner):
     name = "Stacking"
     description = "Stack multiple models."
-    icon = "icons/Stacking.svg"
+    icon = "icons/Stacking-symbolic.svg"
     priority = 100
+    keywords = "stacking, ensemble"
 
     LEARNER = StackedFitter
 

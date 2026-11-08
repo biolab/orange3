@@ -234,7 +234,7 @@ class TestOWROCAnalysis(EvaluateTest):
             pos = item.mapToScene(0, 0.1)
             pos = view.mapFromScene(pos)
             mouseMove(view.viewport(), pos)
-            (_, text), _ = show_text.call_args
+            (_, text, *_), _ = show_text.call_args
             self.assertIn("(#1) 0.900", text)
             self.assertNotIn("#2", text)
 
@@ -242,13 +242,13 @@ class TestOWROCAnalysis(EvaluateTest):
             pos = item.mapToScene(0.0, 0.0)
             pos = view.mapFromScene(pos)
             mouseMove(view.viewport(), pos)
-            (_, text), _ = show_text.call_args
+            (_, text, *_), _ = show_text.call_args
             self.assertIn("(#1) 1.000\n(#2) 1.000", text)
 
             pos = item.mapToScene(0.1, 0.3)
             pos = view.mapFromScene(pos)
             mouseMove(view.viewport(), pos)
-            (_, text), _ = show_text.call_args
+            (_, text, *_), _ = show_text.call_args
             self.assertIn("(#1) 0.600\n(#2) 0.590", text)
             show_text.reset_mock()
 
@@ -256,7 +256,7 @@ class TestOWROCAnalysis(EvaluateTest):
             self.widget.roc_averaging = OWROCAnalysis.Threshold
             self.widget._replot()
             mouseMove(view.viewport(), pos)
-            (_, text), _ = show_text.call_args
+            (_, text, *_), _ = show_text.call_args
             self.assertIn("(#1) 0.600\n(#2) 0.590", text)
             show_text.reset_mock()
 

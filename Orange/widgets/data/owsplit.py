@@ -125,9 +125,7 @@ class OWSplit(OWWidget):
     description = "Split text or categorical variables into indicator variables"
     category = "Transform"
     icon = "icons/Split.svg"
-    keywords = ["text to columns", "word encoding", "questionnaire", "survey",
-                "term", "word presence", "word counts", "categorical encoding",
-                "indicator variables"]
+    keywords = "text, columns, word, encoding, questionnaire, survey, term, counts, indicator"
     priority = 700
 
     class Inputs:

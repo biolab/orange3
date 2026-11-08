@@ -305,6 +305,11 @@ class TextListBase(QGraphicsWidget):
             fm = QFontMetrics(font)
             fontheight = fm.height()
 
+        advance = cell_height + spacing
+        self.__remove_items((self.__strip, ), self.scene())
+        self.__strip = self.__color_strip(round(advance))
+        offset = int(round(advance * 1.3)) if self.__strip else 0
+
         if self.__autoScale and self.__effectiveFont != font \
                 and self.data(0, Qt.FontRole) is None:
             self.__effectiveFont = font
@@ -312,17 +317,20 @@ class TextListBase(QGraphicsWidget):
 
         if self.__elideMode != Qt.ElideNone:
             if self.__orientation == Qt.Vertical:
-                textwidth = math.ceil(crect.width())
+                textwidth = math.ceil(crect.width()) - offset
             else:
                 textwidth = math.ceil(crect.height())
             for row, item in enumerate(self.__textitems):
                 text = self.data(row)
-                textelide = fm.elidedText(
-                    text, self.__elideMode, textwidth, Qt.TextSingleLine
-                )
-                item.setText(textelide)
+                if text:
+                    fmr = QFontMetrics(self.data(row, Qt.FontRole) or font)
+                    textelide = fmr.elidedText(
+                        text, self.__elideMode, textwidth, Qt.TextSingleLine
+                    )
+                    item.setText(textelide)
+                else:
+                    item.setText(text)
 
-        advance = cell_height + spacing
         if align_vertical == Qt.AlignTop:
             align_dy = 0.
         elif align_vertical == Qt.AlignVCenter:
@@ -346,9 +354,6 @@ class TextListBase(QGraphicsWidget):
                     crect.top() + i * advance + align_dy
                 )
 
-        self.__remove_items((self.__strip, ), self.scene())
-        self.__strip = self.__color_strip(round(advance))
-        offset = int(round(advance * 1.3)) if self.__strip else 0
         if self.__orientation == Qt.Vertical:
             self.__group.setRotation(0)
             self.__group.setPos(offset, 0)

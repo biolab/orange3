@@ -522,6 +522,31 @@ class TestOWSelectRows(WidgetTest):
         self.assertEqual(
             self.widget.cond_list.cellWidget(0, 1).currentText(), "is")
 
+    def test_remove_condition_keeps_rows(self):
+        data = Table("heart_disease")
+        domain = data.domain
+
+        self.send_signal(self.widget.Inputs.data, data)
+
+        self.widget.remove_all_button.click()
+        for value in ("40", "50", "60"):
+            self.enterFilter(domain["age"], "is below", value)
+        cond_list = self.widget.cond_list
+        self.widget.remove_one(0)
+        self.assertEqual(cond_list.rowCount(), 2)
+
+        simulate.combobox_activate_item(
+            cond_list.cellWidget(0, 0), "chest pain", delay=0)
+        self.assertEqual(cond_list.cellWidget(0, 1).currentText(), "is")
+        self.assertEqual(cond_list.cellWidget(1, 0).currentText(), "age")
+        self.assertEqual(cond_list.cellWidget(1, 1).currentText(), "is below")
+
+        simulate.combobox_activate_item(
+            cond_list.cellWidget(1, 1), "is between", delay=0)
+        self.assertEqual(cond_list.cellWidget(0, 1).currentText(), "is")
+        self.assertEqual(cond_list.cellWidget(1, 1).currentText(), "is between")
+        self.assertEqual(len(self.__get_value_widgets(1)), 2)
+
     def test_calendar_dates(self):
         data = Table(test_filename("datasets/cyber-security-breaches.tab"))
         self.send_signal(self.widget.Inputs.data, data)

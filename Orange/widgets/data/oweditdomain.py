@@ -3122,7 +3122,7 @@ def apply_reinterpret_c(var, tr, data: MArray):
         tr = LookupMappingTransform(
             var, {v: i for i, v in enumerate(values)}, dtype=np.float64, unknown=np.nan
         )
-        values = tuple(as_string(values))
+        values = tuple(column_str_repr(var, values))
         rvar = Orange.data.DiscreteVariable(
             name=var.name, values=values, compute_value=tr
         )

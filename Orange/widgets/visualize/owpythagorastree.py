@@ -28,8 +28,8 @@ from Orange.widgets.visualize.utils.owlegend import (
 )
 from Orange.widgets.visualize.utils.scene import \
     UpdateItemsOnSelectGraphicsScene
-from Orange.widgets.visualize.utils.tree.skltreeadapter import SklTreeAdapter
-from Orange.widgets.visualize.utils.tree.treeadapter import TreeAdapter
+from Orange.utils.tree.skltreeadapter import SklTreeAdapter
+from Orange.utils.tree.treeadapter import TreeAdapter
 from Orange.widgets.visualize.utils.view import (
     PannableGraphicsView,
     ZoomableGraphicsView,
@@ -41,7 +41,7 @@ from Orange.widgets.widget import OWWidget
 class OWPythagorasTree(OWWidget):
     name = "Pythagorean Tree"
     description = 'Pythagorean Tree visualization for tree like-structures.'
-    icon = 'icons/PythagoreanTree.svg'
+    icon = 'icons/PythagoreanTree-symbolic.svg'
     keywords = "pythagorean tree, fractal"
 
     priority = 1000

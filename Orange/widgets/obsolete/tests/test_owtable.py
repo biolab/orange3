@@ -236,7 +236,6 @@ class TestOWDataTableSQL(TestOWDataTable, dbt):
     def test_input_data_empty(self):
         super().test_input_data_empty()
 
-    @unittest.skip("approx_len messes up row count")
     def test_data_model(self):
         super().test_data_model()
 
