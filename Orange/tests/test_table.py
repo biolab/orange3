@@ -2471,30 +2471,46 @@ class TestRowInstance(unittest.TestCase):
 
     def test_sparse_assignment(self):
         X = np.eye(4)
-        Y = X[2].copy()
-        table = data.Table.from_numpy(None, X, Y)
+        Y = np.arange(4)
+        metas = np.arange(10, 18).reshape((4, 2))
+        table = data.Table.from_numpy(None, X, Y, metas)
         row = table[1]
         self.assertFalse(sp.issparse(row.sparse_x))
         self.assertEqual(row[0], 0)
         self.assertEqual(row[1], 1)
+        self.assertEqual(row.y, 1)
+        self.assertEqual(row.metas[0], 12)
+        self.assertEqual(row.metas[1], 13)
 
         with table.unlocked():
             table.X = sp.csr_array(table.X)
             table.Y = sp.csr_array(table.Y)
+            table.metas = sp.csr_array(metas)
+
         sparse_row = table[1]
         self.assertTrue(sp.issparse(sparse_row.sparse_x))
         self.assertEqual(sparse_row[0], 0)
         self.assertEqual(sparse_row[1], 1)
 
+        self.assertTrue(sp.issparse(sparse_row.sparse_metas))
+        self.assertEqual(sparse_row.sparse_metas[0], 12)
+        self.assertEqual(sparse_row.sparse_metas[1], 13)
+        self.assertEqual(sparse_row._metas[0], 12)
+        self.assertEqual(sparse_row._metas[1], 13)
+
         with table.unlocked():
             sparse_row[1] = 0
         self.assertEqual(sparse_row[1], 0)
         self.assertEqual(table.X[1, 1], 0)
-        self.assertEqual(table[2][4], 1)
+        self.assertEqual(table[2][4], 2)
 
         with table.unlocked():
             table[2][4] = 0
         self.assertEqual(table[2][4], 0)
+
+        with table.unlocked():
+            table[2][-1] = 0
+        self.assertEqual(table[2].metas[0], 0)
 
 
 class TestTableTranspose(unittest.TestCase):
