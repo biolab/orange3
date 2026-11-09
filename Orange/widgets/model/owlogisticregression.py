@@ -50,6 +50,7 @@ class OWLogisticRegression(OWBaseLearner):
 
     penalty_types = ("Lasso (L1)", "Ridge (L2)", "None")
     penalty_types_short = ["l1", "l2", None]
+    l1_ratios = [1, 0, np.inf]
 
     class Warning(OWBaseLearner.Warning):
         class_weights_used = Msg("Weighting by class may decrease performance.")
@@ -115,7 +116,7 @@ class OWLogisticRegression(OWBaseLearner):
         else:
             C = self.strength_C
         return self.LEARNER(
-            penalty=penalty,
+            l1_ratio = self.l1_ratios[self.penalty_type],
             dual=self.dual,
             tol=self.tol,
             C=C,

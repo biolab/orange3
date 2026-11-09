@@ -591,7 +591,7 @@ class TableTestCase(unittest.TestCase):
     def test_concatenate_sparse(self):
         iris = Table("iris")
         with iris.unlocked():
-            iris.X = sp.csc_matrix(iris.X)
+            iris.X = sp.csc_array(iris.X)
         new = Table.concatenate([iris, iris])
         self.assertEqual(len(new), 300)
         self.assertTrue(sp.issparse(new.X), "Concatenated X is not sparse.")
@@ -1186,13 +1186,13 @@ class TableTestCase(unittest.TestCase):
         self.assertFalse(table.is_sparse())
 
         with table.unlocked():
-            table.X = sp.csr_matrix(table.X)
+            table.X = sp.csr_array(table.X)
             self.assertTrue(table.is_sparse())
 
     def test_repr_sparse_with_one_row(self):
         table = data.Table("iris")[:1]
         with table.unlocked_reference():
-            table.X = sp.csr_matrix(table.X)
+            table.X = sp.csr_array(table.X)
         r = repr(table)     # make sure repr does not crash
         self.assertEqual(r.replace("\n", ""),
                          "[[sepal length=5.1, sepal width=3.5, "
@@ -1220,7 +1220,7 @@ class TableTestCase(unittest.TestCase):
     def test_str_sparse(self):
         iris = Table("iris")
         with iris.unlocked_reference():
-            iris.X = sp.csr_matrix(iris.X)
+            iris.X = sp.csr_array(iris.X)
         # instance
         s0 = "[sepal length=5.1, sepal width=3.5, " \
              "petal length=1.4, petal width=0.2 | Iris-setosa]"
@@ -2400,8 +2400,8 @@ class TestTableStats(TableTests):
                 self.assertEqual(table.get_nan_frequency_class(), cl / np.prod(y.shape))
                 self.assertEqual(table.get_nan_frequency_metas(), me / np.prod(metas.shape))
                 with table.unlocked():
-                    table.X = sp.csr_matrix(x)
-                    table.Y = sp.csr_matrix(y)
+                    table.X = sp.csr_array(x)
+                    table.Y = sp.csr_array(y)
             with table.unlocked():
                 table.X, table.Y = x, y
 
@@ -2471,30 +2471,46 @@ class TestRowInstance(unittest.TestCase):
 
     def test_sparse_assignment(self):
         X = np.eye(4)
-        Y = X[2].copy()
-        table = data.Table.from_numpy(None, X, Y)
+        Y = np.arange(4)
+        metas = np.arange(10, 18).reshape((4, 2))
+        table = data.Table.from_numpy(None, X, Y, metas)
         row = table[1]
         self.assertFalse(sp.issparse(row.sparse_x))
         self.assertEqual(row[0], 0)
         self.assertEqual(row[1], 1)
+        self.assertEqual(row.y, 1)
+        self.assertEqual(row.metas[0], 12)
+        self.assertEqual(row.metas[1], 13)
 
         with table.unlocked():
-            table.X = sp.csr_matrix(table.X)
-            table.Y = sp.csr_matrix(table.Y)
+            table.X = sp.csr_array(table.X)
+            table.Y = sp.csr_array(table.Y)
+            table.metas = sp.csr_array(metas)
+
         sparse_row = table[1]
         self.assertTrue(sp.issparse(sparse_row.sparse_x))
         self.assertEqual(sparse_row[0], 0)
         self.assertEqual(sparse_row[1], 1)
 
+        self.assertTrue(sp.issparse(sparse_row.sparse_metas))
+        self.assertEqual(sparse_row.sparse_metas[0], 12)
+        self.assertEqual(sparse_row.sparse_metas[1], 13)
+        self.assertEqual(sparse_row._metas[0], 12)
+        self.assertEqual(sparse_row._metas[1], 13)
+
         with table.unlocked():
             sparse_row[1] = 0
         self.assertEqual(sparse_row[1], 0)
         self.assertEqual(table.X[1, 1], 0)
-        self.assertEqual(table[2][4], 1)
+        self.assertEqual(table[2][4], 2)
 
         with table.unlocked():
             table[2][4] = 0
         self.assertEqual(table[2][4], 0)
+
+        with table.unlocked():
+            table[2][-1] = 0
+        self.assertEqual(table[2].metas[0], 0)
 
 
 class TestTableTranspose(unittest.TestCase):
@@ -3375,7 +3391,7 @@ class TestTableTranspose(unittest.TestCase):
 
 class SparseCV:
     def __call__(self, data):
-        return sp.csr_matrix((len(data), 1))
+        return sp.csr_array((len(data), 1))
 
 
 class TestTableSparseDense(unittest.TestCase):

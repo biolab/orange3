@@ -92,8 +92,8 @@ class TestUtil(unittest.TestCase):
 
     def test_vstack(self):
         numpy = np.array([[1., 2.], [3., 4.]])
-        csr = sp.csr_matrix(numpy)
-        csc = sp.csc_matrix(numpy)
+        csr = sp.csr_array(numpy)
+        csc = sp.csc_array(numpy)
 
         self.assertCorrectArrayType(
             vstack([numpy, numpy]),
@@ -110,8 +110,8 @@ class TestUtil(unittest.TestCase):
 
     def test_hstack(self):
         numpy = np.array([[1., 2.], [3., 4.]])
-        csr = sp.csr_matrix(numpy)
-        csc = sp.csc_matrix(numpy)
+        csr = sp.csr_array(numpy)
+        csc = sp.csc_array(numpy)
 
         self.assertCorrectArrayType(
             hstack([numpy, numpy]),
@@ -140,7 +140,7 @@ class TestUtil(unittest.TestCase):
         # pylint: disable=import-outside-toplevel
         from Orange.data import Table
         data = Table("iris")
-        sparse_x = sp.csr_matrix(data.X)
+        sparse_x = sp.csr_array(data.X)
         self.assertTrue(stats(data.X).all() == stats(sparse_x).all())
 
     @dense_sparse
@@ -163,8 +163,8 @@ class TestUtil(unittest.TestCase):
         self.assertFalse(array_equal(a1, a3))
 
     def test_csc_array_equal(self):
-        a1 = sp.csc_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
-        a2 = sp.csc_matrix(([5, 1, 4], ([1, 0, 0], [2, 0, 2])), shape=(2, 3))
+        a1 = sp.csc_array(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        a2 = sp.csc_array(([5, 1, 4], ([1, 0, 0], [2, 0, 2])), shape=(2, 3))
         with warnings.catch_warnings():
             # this is just inefficiency in tests, not the tested code
             warnings.filterwarnings("ignore", ".*", sp.SparseEfficiencyWarning)
@@ -172,17 +172,17 @@ class TestUtil(unittest.TestCase):
         self.assertTrue(array_equal(a1, a2))
 
     def test_csc_scr_equal(self):
-        a1 = sp.csc_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
-        a2 = sp.csr_matrix(([5, 1, 4], ([1, 0, 0], [2, 0, 2])), shape=(2, 3))
+        a1 = sp.csc_array(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        a2 = sp.csr_array(([5, 1, 4], ([1, 0, 0], [2, 0, 2])), shape=(2, 3))
         self.assertTrue(array_equal(a1, a2))
 
-        a1 = sp.csc_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
-        a2 = sp.csr_matrix(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        a1 = sp.csc_array(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
+        a2 = sp.csr_array(([1, 4, 5], ([0, 0, 1], [0, 2, 2])), shape=(2, 3))
         self.assertTrue(array_equal(a1, a2))
 
     def test_csc_unordered_array_equal(self):
-        a1 = sp.csc_matrix(([1, 4, 5], [0, 0, 1], [0, 1, 1, 3]), shape=(2, 3))
-        a2 = sp.csc_matrix(([1, 5, 4], [0, 1, 0], [0, 1, 1, 3]), shape=(2, 3))
+        a1 = sp.csc_array(([1, 4, 5], [0, 0, 1], [0, 1, 1, 3]), shape=(2, 3))
+        a2 = sp.csc_array(([1, 5, 4], [0, 1, 0], [0, 1, 1, 3]), shape=(2, 3))
         self.assertTrue(array_equal(a1, a2))
 
     def test_wrap_callback(self):

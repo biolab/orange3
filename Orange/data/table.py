@@ -18,7 +18,7 @@ import bottleneck as bn
 import numpy as np
 
 from scipy import sparse as sp
-from scipy.sparse import issparse, csc_matrix
+from scipy.sparse import issparse, csc_array
 
 import Orange.data  # import for io.py
 from Orange.data import (
@@ -97,17 +97,17 @@ class RowInstance(Instance):
         self.id = table.ids[row_index]
         self._x = table.X[row_index]
         if sp.issparse(self._x):
-            self.sparse_x = sp.csr_matrix(self._x)
-            self._x = np.asarray(self._x.todense())[0]
+            self.sparse_x = sp.csr_array(self._x)
+            self._x = np.asarray(self._x.todense())
         self._y = table._Y[row_index]
         if sp.issparse(self._y):
-            self.sparse_y = sp.csr_matrix(self._y)
-            self._y = np.asarray(self._y.todense())[0]
+            self.sparse_y = sp.csr_array(self._y)
+            self._y = np.asarray(self._y.todense())
         self._y = np.atleast_1d(self._y)
         self._metas = table.metas[row_index]
         if sp.issparse(self._metas):
-            self.sparse_metas = sp.csr_matrix(self._metas)
-            self._metas = np.asarray(self._metas.todense())[0]
+            self.sparse_metas = sp.csr_array(self._metas)
+            self._metas = np.asarray(self._metas.todense())
 
     @property
     def weight(self):
@@ -248,7 +248,7 @@ class _ArrayConversion:
         n_rows = _selection_length(row_indices, len(source))
         if not len(self.src_cols):
             if self.is_sparse:
-                return sp.csr_matrix((n_rows, 0), dtype=source.X.dtype)
+                return sp.csr_array((n_rows, 0), dtype=source.X.dtype)
             else:
                 return np.zeros((n_rows, 0), dtype=source.X.dtype)
 
@@ -288,8 +288,8 @@ class _ArrayConversion:
             if Y.ndim == 1:
                 Y = Y[:, None]
             if self.is_sparse:
-                X = csc_matrix(X)
-                Y = csc_matrix(Y)
+                X = csc_array(X)
+                Y = csc_array(Y)
 
         if self.row_selection_needed:
             if row_indices is ...:
@@ -345,10 +345,10 @@ class _ArrayConversion:
             coo_row = []
             for i, col_array in enumerate(data):
                 coo_data.append(col_array.data)
-                coo_col.append(np.full(len(col_array.data), i))
+                coo_col.append(np.full(len(col_array.data), i, dtype=np.int32))
                 coo_row.append(col_array.indices)  # row indices should be same
             n_rows = col_array.shape[0]  # pylint: disable=undefined-loop-variable
-            out = sp.coo_matrix(
+            out = sp.coo_array(
                 (np.hstack(coo_data), (np.hstack(coo_row), np.hstack(coo_col))),
                 shape=(n_rows, len(self.src_cols)),
                 dtype=self.dtype
@@ -1654,7 +1654,7 @@ class Table(Sequence, Storage):
             # `index` below can be integer or a Variable
             warnings.warn("get_column_view is returning a dense copy column "
                           f"{index}")
-            col = np.asarray(col.todense())[:, 0]
+            col = np.asarray(col.todense())
 
         if isinstance(index, DiscreteVariable) \
                 and index.values != self.domain[col_index].values:
@@ -2103,7 +2103,11 @@ class Table(Sequence, Storage):
                 if W is not None:
                     if sp.issparse(x):
                         arg_sort = np.argsort(x.data)
-                        ranks = x.indices[arg_sort]
+                        if x.ndim == 1 and x.format == "coo":
+                            indices = x.coords[0]
+                        else:
+                            indices = x.indices
+                        ranks = indices[arg_sort]
                         vals = np.vstack((x.data[arg_sort], W[ranks]))
                     else:
                         ranks = np.argsort(x)
@@ -2210,7 +2214,7 @@ class Table(Sequence, Storage):
                 if W is not None:
                     W_ = W.astype(dtype=np.float64)
                 if sp.issparse(arr):
-                    arr = sp.csc_matrix(arr)
+                    arr = sp.csc_array(arr)
 
                 for col_i, arr_i, _ in cont_vars:
                     if sp.issparse(arr):

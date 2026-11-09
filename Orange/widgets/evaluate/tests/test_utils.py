@@ -13,7 +13,8 @@ from AnyQt.QtCore import QPoint, Qt
 
 import Orange
 from Orange.evaluation.scoring import Score, AUC, CA, F1, Specificity
-from Orange.widgets.evaluate.utils import ScoreTable, usable_scorers
+from Orange.widgets.evaluate.utils import ScoreTable, usable_scorers, \
+    results_for_preview
 from Orange.widgets.tests.base import GuiTest
 from Orange.data import Table, DiscreteVariable, ContinuousVariable
 from Orange.evaluation import scoring
@@ -156,6 +157,17 @@ class TestScoreTable(GuiTest):
         settings = dict(foo=False, shown_scores={"Sensitivity"})
         ScoreTable.migrate_to_show_scores_hints(settings)
         self.assertTrue(settings["show_score_hints"]["Sensitivity"])
+
+
+class TestUtils(unittest.TestCase):
+    def test_results_for_preview(self):
+        results = results_for_preview()
+        self.assertIsInstance(results, Orange.evaluation.Results)
+        self.assertEqual(results.data.name, "heart_disease")
+
+        results = results_for_preview("iris")
+        self.assertIsInstance(results, Orange.evaluation.Results)
+        self.assertEqual(results.data.name, "iris")
 
 
 if __name__ == "__main__":

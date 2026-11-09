@@ -60,7 +60,7 @@ class TestLogisticRegressionLearner(unittest.TestCase):
             # Do not skip the above test when this is implemented
 
     def test_probability(self):
-        learn = LogisticRegressionLearner(penalty='l1')
+        learn = LogisticRegressionLearner(l1_ratio=1)
         clf = learn(self.iris[:100])
         p = clf(self.iris[100:], ret=Model.Probs)
         self.assertLess(abs(p.sum(axis=1) - 1).all(), 1e-6)
@@ -137,22 +137,22 @@ class TestLogisticRegressionLearner(unittest.TestCase):
     def test_auto_solver(self):
         # These defaults are valid as of sklearn v0.23.0
         # lbfgs is default for l2 penalty
-        lr = LogisticRegressionLearner(penalty="l2", solver="auto")
+        lr = LogisticRegressionLearner(l1_ratio=0, solver="auto")
         skl_clf = lr._initialize_wrapped()
         self.assertEqual(skl_clf.solver, "lbfgs")
-        self.assertEqual(skl_clf.penalty, "l2")
+        self.assertEqual(skl_clf.l1_ratio, 0)
 
         # lbfgs is default for no penalty
-        lr = LogisticRegressionLearner(penalty=None, solver="auto")
+        lr = LogisticRegressionLearner(l1_ratio=np.inf, solver="auto")
         skl_clf = lr._initialize_wrapped()
         self.assertEqual(skl_clf.solver, "lbfgs")
-        self.assertEqual(skl_clf.penalty, None)
+        self.assertEqual(skl_clf.l1_ratio, np.inf)
 
         # liblinear is default for l2 penalty
-        lr = LogisticRegressionLearner(penalty="l1", solver="auto")
+        lr = LogisticRegressionLearner(l1_ratio=1, solver="auto")
         skl_clf = lr._initialize_wrapped()
         self.assertEqual(skl_clf.solver, "saga")
-        self.assertEqual(skl_clf.penalty, "l1")
+        self.assertEqual(skl_clf.l1_ratio, 1)
 
     def test_supports_weights(self):
         self.assertTrue(LogisticRegressionLearner().supports_weights)

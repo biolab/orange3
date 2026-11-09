@@ -111,7 +111,7 @@ def vstack(arrays):
     result is a sparse (csr) array.
     """
     if any(sp.issparse(arr) for arr in arrays):
-        arrays = [sp.csr_matrix(arr) for arr in arrays]
+        arrays = [sp.csr_array(arr) for arr in arrays]
         return sp.vstack(arrays)
     else:
         return np.vstack(arrays)
@@ -124,7 +124,7 @@ def hstack(arrays):
     result is a sparse (csc) array.
     """
     if any(sp.issparse(arr) for arr in arrays):
-        arrays = [sp.csc_matrix(arr) for arr in arrays]
+        arrays = [sp.csc_array(arr) for arr in arrays]
         return sp.hstack(arrays)
     else:
         return np.hstack(arrays)
@@ -152,7 +152,7 @@ def assure_array_dense(a):
     return np.asarray(a)
 
 
-def assure_array_sparse(a, sparse_class: Callable = sp.csc_matrix):
+def assure_array_sparse(a, sparse_class: Callable = sp.csc_array):
     if not sp.issparse(a):
         # since x can be a list, cast to np.array
         # since x can come from metas with string, cast to float
@@ -161,15 +161,15 @@ def assure_array_sparse(a, sparse_class: Callable = sp.csc_matrix):
 
 
 def assure_column_sparse(a):
-    # if x of shape (n, ) is passed to csc_matrix constructor or
+    # if x of shape (n, ) is passed to csc_array constructor or
     # sparse matrix with shape (1, n) is passed,
     # the resulting matrix is of shape (1, n) and hence we
     # need to transpose it to make it a column
     if a.ndim == 1 or a.shape[0] == 1:
         # csr matrix becomes csc when transposed
-        return assure_array_sparse(a, sparse_class=sp.csr_matrix).T
+        return assure_array_sparse(a, sparse_class=sp.csr_array).T
     else:
-        return assure_array_sparse(a, sparse_class=sp.csc_matrix)
+        return assure_array_sparse(a, sparse_class=sp.csc_array)
 
 
 def assure_column_dense(a):

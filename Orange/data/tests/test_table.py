@@ -96,20 +96,20 @@ class TestTableInit(unittest.TestCase):
         t = Table.from_numpy(domain, x, None, None)
         self.assertFalse(sp.issparse(t.X))
 
-        t = Table.from_numpy(domain, sp.csr_matrix(x))
-        self.assertTrue(sp.isspmatrix_csr(t.X))
+        t = Table.from_numpy(domain, sp.csr_array(x))
+        self.assertTrue(sp.issparse(t.X) and t.X.format == "csr")
 
-        t = Table.from_numpy(domain, sp.csc_matrix(x))
-        self.assertTrue(sp.isspmatrix_csc(t.X))
+        t = Table.from_numpy(domain, sp.csc_array(x))
+        self.assertTrue(sp.issparse(t.X) and t.X.format == "csc")
 
-        t = Table.from_numpy(domain, sp.coo_matrix(x))
-        self.assertTrue(sp.isspmatrix_csr(t.X))
+        t = Table.from_numpy(domain, sp.coo_array(x))
+        self.assertTrue(sp.issparse(t.X) and t.X.format == "csr")
 
-        t = Table.from_numpy(domain, sp.lil_matrix(x))
-        self.assertTrue(sp.isspmatrix_csr(t.X))
+        t = Table.from_numpy(domain, sp.lil_array(x))
+        self.assertTrue(sp.issparse(t.X) and t.X.format == "csr")
 
-        t = Table.from_numpy(domain, sp.bsr_matrix(x))
-        self.assertTrue(sp.isspmatrix_csr(t.X))
+        t = Table.from_numpy(domain, sp.bsr_array(x))
+        self.assertTrue(sp.issparse(t.X) and t.X.format == "csr")
 
     @staticmethod
     def _new_table(attrs, classes, metas, s):
@@ -620,7 +620,7 @@ class TestTableGetColumn(TableColumnViewTests):
         np.testing.assert_equal(col, [0, 0, 2])
 
         with data.unlocked(data.X):
-            data.X = sp.csr_matrix(data.X)
+            data.X = sp.csr_array(data.X)
         e = DiscreteVariable("d", values=("a", "c", "b"))
         assert e == d  # because that's how Variable mapping works
         col = data.get_column(e)
@@ -631,7 +631,7 @@ class TestTableGetColumn(TableColumnViewTests):
         data, y = self.data, self.data.domain["y"]
         with data.unlocked(data.X):
             orig_y = data.X[:, 0]
-            data.X = sp.csr_matrix(data.X)
+            data.X = sp.csr_array(data.X)
 
         col = data.get_column(y)
         self.assertFalse(sp.issparse(col))
@@ -754,7 +754,7 @@ class TestTableGetColumnView(TableColumnViewTests):
         data, y = self.data, self.data.domain["y"]
         with data.unlocked(data.X):
             orig_y = data.X[:, 0]
-            data.X = sp.csr_matrix(data.X)
+            data.X = sp.csr_array(data.X)
 
         # self.assertWarns does not work with multiple warnings
         warnings.filterwarnings("error", ".*dense copy.*")

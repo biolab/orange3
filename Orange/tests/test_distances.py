@@ -9,7 +9,7 @@ import numpy as np
 import scipy
 import scipy.spatial
 import scipy.stats
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_array
 
 from Orange.data import (Table, Domain, ContinuousVariable,
                          DiscreteVariable, StringVariable, Instance)
@@ -216,7 +216,7 @@ class TestEuclidean(TestCase):
     def setUpClass(cls):
         cls.iris = Table('iris')
         cls.sparse = Table.from_numpy(
-            None, csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+            None, csr_array([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
         cls.dist = Euclidean
 
     def test_euclidean_distance_one_example(self):
@@ -302,7 +302,7 @@ class TestManhattan(TestCase):
     def setUpClass(cls):
         cls.iris = Table('iris')
         cls.sparse = Table.from_numpy(
-            None, csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+            None, csr_array([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
         cls.dist = Manhattan
 
     def test_manhattan_distance_one_example(self):
@@ -391,7 +391,7 @@ class TestCosine(TestCase):
     def setUpClass(cls):
         cls.iris = Table('iris')
         cls.sparse = Table.from_numpy(
-            None, csr_matrix([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
+            None, csr_array([[1, 2, 0], [0, 0, 3], [4, 0, 5]]))
         cls.dist = Cosine
 
     def test_cosine_distance_one_example(self):
@@ -991,8 +991,9 @@ class TestBhattacharyya(TestCase):
         np.testing.assert_array_almost_equal(self.dist(data.X[:3]), true_out)
 
     def test_sparse_array(self):
-        data = csr_matrix([[0.5, 0.5], [0, 0.5]])
-        self.assertAlmostEqual(self.dist(data[0], data[1]), 0.3465735902799726, delta=1e-5)
+        data0 = csr_array([[0.5, 0.5]])
+        data1 = csr_array([[0, 0.5]])
+        self.assertAlmostEqual(self.dist(data0, data1), 0.3465735902799726, delta=1e-5)
 
     def test_columns(self):
         data = np.array([[0.5, 0.2], [0.5, 0.8]])
@@ -1001,13 +1002,13 @@ class TestBhattacharyya(TestCase):
         np.testing.assert_array_almost_equal(self.dist(data, axis=0), true_out)
 
     def test_negative_input(self):
-        a = np.array([0, np.nan])
-        b = np.array([1, 1])
+        a = np.array([[0, np.nan]])
+        b = np.array([[1, 1]])
         self.assertRaises(ValueError, self.dist, a, b)
-        a[1] = -1
+        a[0, 1] = -1
         self.assertRaises(ValueError, self.dist, a, b)
-        a = csr_matrix(a)
-        b = csr_matrix(b)
+        a = csr_array(a)
+        b = csr_array(b)
         self.assertRaises(ValueError, self.dist, a, b)
 
 

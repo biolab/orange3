@@ -192,7 +192,7 @@ class TreeModel(TreeModelInterface):
 
     def get_values(self, X):
         from Orange.classification import _tree_scorers
-        if sp.isspmatrix_csc(X):
+        if sp.issparse(X) and X.format == "csc":
             func = _tree_scorers.compute_predictions_csc
         elif sp.issparse(X):
             func = _tree_scorers.compute_predictions_csr

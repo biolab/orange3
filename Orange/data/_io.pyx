@@ -286,7 +286,7 @@ def sparse_read_float(fname):
              (Y_data, Y_rows, Y_cols, class_indices),
              (M_data, M_rows, M_cols, meta_indices)):
         if len(t_data):
-            mat = sp.coo_matrix((t_data, (t_rows, t_cols)), (line, len(ll))).tocsr()
+            mat = sp.coo_array((t_data, (t_rows, t_cols)), (line, len(ll))).tocsr()
             mat.sort_indices()
         else:
             mat = None

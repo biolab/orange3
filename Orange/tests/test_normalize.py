@@ -105,7 +105,7 @@ class TestNormalizer(unittest.TestCase):
         data = Table.from_numpy(domain, X).to_sparse()
 
         # pylint: disable=bad-whitespace
-        solution = sp.csr_matrix(np.array([
+        solution = sp.csr_array(np.array([
             [0, -1, -1],
             [0,  1,  1],
         ]))
@@ -116,7 +116,7 @@ class TestNormalizer(unittest.TestCase):
 
         # raise error for non-zero offsets
         with data.unlocked():
-            data.X = sp.csr_matrix(np.array([
+            data.X = sp.csr_array(np.array([
                 [0, 0, 0],
                 [0, 1, 3],
                 [0, 2, 4],
