@@ -6,7 +6,7 @@ from itertools import chain
 from functools import partial, wraps
 
 import numpy as np
-from scipy.sparse import csr_array, issparse, lil_array, csc_array, \
+from scipy.sparse import csr_array, issparse, lil_array, csc_array, coo_array, \
     SparseEfficiencyWarning, issparse
 
 from Orange.data import Table, Domain, ContinuousVariable
@@ -15,7 +15,8 @@ from Orange.statistics.distribution import get_distributions_for_columns
 from Orange.statistics.util import bincount, countnans, contingency, digitize, \
     mean, nanmax, nanmean, nanmedian, nanmin, nansum, nanunique, stats, std, \
     unique, var, nanstd, nanvar, nanmode, nan_to_num, FDR, isnan, any_nan, \
-    all_nan, nan_mean_var
+    all_nan, nan_mean_var, sparse_count_implicit_zeros, \
+    sparse_has_implicit_zeros, sparse_implicit_zero_weights
 from sklearn.utils import check_random_state
 
 
@@ -881,6 +882,42 @@ class TestUnique(unittest.TestCase):
         expected = [2, 6, 2, 1, 2, 1, 1, 1]
 
         np.testing.assert_equal(nanunique(x, return_counts=True)[1], expected)
+
+
+class TestCountImplicitZeros(unittest.TestCase):
+    @dense_sparse
+    def test_count_implicit_zeros(self, array):
+        x = array([[0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1],
+                   [1, 2, 2, 1, np.nan, 1, 2, np.nan, 0, 3]])
+        if not issparse(x):
+            self.assertRaises(TypeError, sparse_count_implicit_zeros, x)
+            return
+
+        self.assertEqual(sparse_count_implicit_zeros(x), 4)
+
+    @dense_sparse
+    def test_count_implicit_zeros(self, array):
+        d = [[0, 1, 0, 2, 2, np.nan, 1, np.nan, 0, 1],
+             [1, 2, 2, 1, np.nan, 1, 2, np.nan, 3, 3],
+             [1, 2, 2, 1, np.nan, 1, 2, np.nan, 3, 3]]
+
+        x = array(d)
+        if not issparse(x):
+            self.assertRaises(TypeError, sparse_count_implicit_zeros, x)
+            return
+
+        self.assertTrue(sparse_has_implicit_zeros(x))
+        self.assertFalse(sparse_has_implicit_zeros(array(d[1:])))
+
+    @dense_sparse
+    def test_sparse_implicit_zero_weights(self, array):
+        x = array([0, 1, 2, np.nan, 0])
+        weights = np.arange(10, 15)
+        if not issparse(x):
+            self.assertRaises(TypeError, sparse_count_implicit_zeros, x)
+            return
+
+        np.testing.assert_equal(sparse_implicit_zero_weights(x, weights), [10, 14])
 
 
 class TestNanToNum(unittest.TestCase):
