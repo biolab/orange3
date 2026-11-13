@@ -58,7 +58,7 @@ requirements:
     - python-louvain >=0.13
     - pyyaml
     - requests
-    - scikit-learn >=1.5.1,<1.10
+    - scikit-learn >=1.7,<1.10
     - scipy >=1.9
     - serverfiles
     - tzdata
