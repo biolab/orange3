@@ -6811,6 +6811,7 @@ widgets/data/owneighbors.py:
             Reference: Referenčni podatki
         class `Outputs`:
             Neighbors: Sosedi
+            Data with Distances: Podatki z razdaljami
         class `Info`:
             Input data includes reference instance(s).\n: Vhodni podatki vključujejo referenčne primere.\n
             Reference instances are not considered as neighbours.: Referenčni primeri niso šteti za sosede.
@@ -6832,8 +6833,8 @@ widgets/data/owneighbors.py:
             normalize: false
         def `commit`:
             ' (neighbors)': ' (sosedi)'
-        def `_data_with_similarity`:
-            distance: false
+        def `_domain_with_distance`:
+            distance: razdalja
         def `migrate_settings`:
             distance_index: false
             metric_id: false

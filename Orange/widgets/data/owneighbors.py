@@ -3,6 +3,8 @@ import bottleneck as bn
 
 from AnyQt.QtCore import Qt
 
+from orangewidget.utils.signals import LazyValue
+
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.util import get_unique_names
 from Orange.preprocess import RemoveNaNColumns, Impute
@@ -31,6 +33,7 @@ class OWNeighbors(OWWidget):
 
     class Outputs:
         data = Output("Neighbors", Table)
+        data_w_distances = Output("Data with Distances", Table)
 
     class Info(OWWidget.Warning):
         removed_references = \
@@ -146,7 +149,18 @@ class OWNeighbors(OWWidget):
         else:
             neighbors = self._data_with_similarity(indices)
             neighbors.name = self.data.name + " (neighbors)"
+
+        if self.distances is None:
+            distance_table = None
+        else:
+            _, domain = self._domain_with_distance()
+            length = len(self.data)
+            distance_table = LazyValue[Table](
+                lambda:  self._data_with_similarity(np.arange(length), False),
+                length=length, domain=domain)
+
         self.Outputs.data.send(neighbors)
+        self.Outputs.data_w_distances.send(distance_table)
 
     def _compute_indices(self):
         self.Warning.all_data_as_reference.clear()
@@ -174,14 +188,19 @@ class OWNeighbors(OWWidget):
         # map sorted indexes back to original index space
         return idx[sorted_subset_idx]
 
-    def _data_with_similarity(self, indices):
+    def _domain_with_distance(self):
         domain = self.data.domain
         dist_var = ContinuousVariable(get_unique_names(domain, "distance"))
         metas = domain.metas + (dist_var, )
-        domain = Domain(domain.attributes, domain.class_vars, metas)
+        return dist_var, Domain(domain.attributes, domain.class_vars, metas)
+
+    def _data_with_similarity(self, indices, include_reference=None):
+        dist_var, domain = self._domain_with_distance()
         neighbours = self.data.from_table(domain, self.data, row_indices=indices)
         distances = self.distances[indices]
-        if self.include_reference:
+        if include_reference is None:
+            include_reference = self.include_reference
+        if include_reference:
             neighbours = Table.concatenate(
                 [neighbours,
                  self.reference.transform(neighbours.domain)])
