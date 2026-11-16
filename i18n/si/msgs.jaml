@@ -6821,11 +6821,15 @@ widgets/data/owneighbors.py:
         class `Error`:
             Data and reference have different features: Podatki in referenčni podatki so opisani z različnimi značilkami.
         def `__init__`:
+            Distance metric: Vrsta razdalje
             _distance_index: false
-            'Distance metric: ': 'Vrsta razdalje: '
-            n_neighbors: false
-            Limit number of neighbors to:: Omeji število sosedov na:
+            checked: false
             limit_neighbors: false
+            checkCallback: false
+            label: false
+            Limit number of neighbors to:: Omeji število sosedov na:
+            Number of neighbors:: Število sosedov:
+            n_neighbors: false
             include_reference: false
             Include reference example: Vključi referenčni primer
         def `compute_distances`:
@@ -6838,6 +6842,8 @@ widgets/data/owneighbors.py:
         def `migrate_settings`:
             distance_index: false
             metric_id: false
+            limit_neighbors: false
+            backward_compatibility_limit: false
     __main__: false
     iris.tab: false
 widgets/data/owoutliers.py:

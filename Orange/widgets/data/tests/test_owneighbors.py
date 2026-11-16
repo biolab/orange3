@@ -552,6 +552,25 @@ class TestOWNeighbors(WidgetTest):
             self.assertEqual(w.metric_id, new,
                              msg=f"at {old} to {MetricDefs[new].name}")
 
+    def test_migrate_to_3(self):
+        settings = dict(limit_neighbors=False, n_neighbors=5, __version__=2)
+        w = self.create_widget(OWNeighbors, stored_settings=settings)
+        w.limit_neighbors = False
+        w.backward_compatibility_limit = True
+        self.send_signal(w.Inputs.data, self.iris[:30])
+        self.send_signal(w.Inputs.reference, self.iris[50:52])
+        self.assertEqual(len(self.get_output(w.Outputs.data)), 30)
+        self.assertTrue(hasattr(w.controls.n_neighbors, "cbox"))
+
+        settings = dict(limit_neighbors=True, n_neighbors=5, __version__=2)
+        w = self.create_widget(OWNeighbors, stored_settings=settings)
+        w.limit_neighbors = True
+        w.backward_compatibility_limit = False
+        self.send_signal(w.Inputs.data, self.iris[:30])
+        self.send_signal(w.Inputs.reference, self.iris[50:52])
+        self.assertEqual(len(self.get_output(w.Outputs.data)), 5)
+        self.assertFalse(hasattr(w.controls.n_neighbors, "cbox"))
+
 
 if __name__ == "__main__":
     unittest.main()

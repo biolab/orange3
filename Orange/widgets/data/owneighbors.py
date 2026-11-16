@@ -49,15 +49,19 @@ class OWNeighbors(OWWidget):
         diff_domains = Msg("Data and reference have different features")
 
     n_neighbors: int = Setting(10)
-    limit_neighbors = Setting(True)
     metric_id: int = Setting(EuclideanNormalized)
     include_reference = Setting(False)
     auto_apply = Setting(True)
 
+    # Backward compatibility for check box to limit the number of neighbours.
+    # The new GUI sets it to True and does not expose it
+    limit_neighbors = Setting(True)
+    backward_compatibility_limit = Setting(False, schema_only=True)
+
     want_main_area = False
     resizing_enabled = False
 
-    settings_version = 2
+    settings_version = 3
 
     def __init__(self):
         super().__init__()
@@ -70,19 +74,29 @@ class OWNeighbors(OWWidget):
         self._metric_index_to_id = {i: metric.id for i, metric in enumerate(MetricDefs.values())}
         self._distance_index = self._metric_id_to_index[self.metric_id]
 
-        box = gui.vBox(self.controlArea, box=True)
+        box = gui.vBox(self.controlArea, box="Distance metric")
         gui.comboBox(
             box, self, "_distance_index", orientation=Qt.Horizontal,
-            label="Distance metric: ",
             items=[metric.name for metric in MetricDefs.values()],
             tooltips=[metric.tooltip for metric in MetricDefs.values()],
             callback=self._metric_changed)
+
+        if self.backward_compatibility_limit:
+            kwargs = {
+                "checked": 'limit_neighbors',
+                "checkCallback": self.commit.deferred,
+                "label": "Limit number of neighbors to:"
+            }
+        else:
+            kwargs = {
+                "label": "Number of neighbors:",
+            }
+
+        box = gui.vBox(self.controlArea, box=True)
         gui.spin(
-            box, self, "n_neighbors", label="Limit number of neighbors to:",
-            step=1, spinType=int, minv=0, maxv=100, checked='limit_neighbors',
-            # call apply by gui.auto_commit, pylint: disable=unnecessary-lambda
-            checkCallback=self.commit.deferred,
-            callback=self.commit.deferred)
+            box, self, "n_neighbors", step=1, spinType=int, minv=0, maxv=100,
+            alignment=Qt.AlignRight,
+            callback=self.commit.deferred, **kwargs)
         gui.checkBox(
             box, self, "include_reference", label="Include reference example",
             callback=self.commit.deferred
@@ -179,6 +193,8 @@ class OWNeighbors(OWWidget):
         dist = np.copy(self.distances)
         dist[inrefs] = np.max(dist) + 1
         up_to = len(dist) - np.sum(inrefs)
+        # self.limit_neighbors is for backward compatibility;
+        # The new GUI sets it to True and does not expose it
         if self.limit_neighbors and self.n_neighbors < up_to:
             up_to = self.n_neighbors
         # get indexes of N neighbours in unsorted order - faster than argsort
@@ -220,6 +236,9 @@ class OWNeighbors(OWWidget):
                            Spearman, SpearmanAbsolute, Pearson, PearsonAbsolute]
             metric_id = old_metrics[metric_idx]
             settings["metric_id"] = metric_id
+        if  version < 3:
+            if not settings.get("limit_neighbors", True):
+                settings["backward_compatibility_limit"] = True
 
 
 if __name__ == "__main__":  # pragma: no cover
