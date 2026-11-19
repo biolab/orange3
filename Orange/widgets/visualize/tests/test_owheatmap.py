@@ -365,6 +365,20 @@ class TestOWHeatMap(WidgetTest, WidgetOutputsTestMixin):
         widget.set_annotation_color_var(None)
         self.assertFalse(widget.scene.widget.right_side_colors[0].isVisible())
 
+    def test_row_color_annotations_invalid_context(self):
+        widget = self.widget
+        data = self.brown_selected[::5]
+        self.send_signal(widget.Inputs.data, data, widget=widget)
+        widget.set_annotation_color_var(data.domain["function"])
+        self.assertTrue(widget.scene.widget.right_side_colors[0].isVisible())
+        # attributes are ignored in for annotation_color_var, so the following
+        # data should not match any context
+        data_attributes = self.brown_selected.transform(
+            Domain(data.domain.attributes + data.domain.class_vars))
+        self.send_signal(widget.Inputs.data, data_attributes, widget=widget)
+        self.assertEqual(widget.row_side_color_cb.currentText(), "(None)")
+        self.assertFalse(widget.scene.widget.right_side_colors[0].isVisible())
+
     def test_col_color_annotations(self):
         widget = self.widget
         data = self._brown_selected_10()
