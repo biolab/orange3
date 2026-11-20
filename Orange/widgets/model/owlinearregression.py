@@ -5,7 +5,7 @@ from AnyQt.QtWidgets import QLayout, QSizePolicy
 
 from Orange.data import Table, Domain, ContinuousVariable, StringVariable
 from Orange.regression.linear import (
-    LassoRegressionLearner, LinearRegressionLearner,
+    LassoRegressionLearner, LinearRegressionLearner, OLSRegressionLearner,
     RidgeRegressionLearner, ElasticNetLearner
 )
 from Orange.widgets import settings, gui
@@ -123,7 +123,7 @@ class OWLinearRegression(OWBaseLearner):
         args = dict(preprocessors=preprocessors,
                     fit_intercept=self.fit_intercept)
         if self.reg_type == OWLinearRegression.OLS:
-            learner = LinearRegressionLearner(**args)
+            learner = OLSRegressionLearner(**args)
         elif self.reg_type == OWLinearRegression.Ridge:
             learner = RidgeRegressionLearner(alpha=alpha, **args)
         elif self.reg_type == OWLinearRegression.Lasso:
@@ -137,14 +137,24 @@ class OWLinearRegression(OWBaseLearner):
         super().update_model()
         coef_table = None
         if self.model is not None:
-            domain = Domain(
-                [ContinuousVariable("coef")], metas=[StringVariable("name")])
+            no_reg = self.reg_type == OWLinearRegression.OLS
+
             coefs = list(self.model.coefficients)
             names = [attr.name for attr in self.model.domain.attributes]
             if self.fit_intercept:
                 coefs.insert(0, self.model.intercept)
                 names.insert(0, "intercept")
-            coef_table = Table.from_list(domain, list(zip(coefs, names)))
+
+            attrs = [ContinuousVariable("coef")]
+            if no_reg:
+                attrs.append(ContinuousVariable("p-value"))
+                p_values = list(self.model.p_values)
+                columns = (coefs, p_values, names)
+            else:
+                columns = (coefs, names)
+
+            domain = Domain(attrs, metas=[StringVariable("name")])
+            coef_table = Table.from_list(domain, list(zip(*columns)))
             coef_table.name = "coefficients"
         self.Outputs.coefficients.send(coef_table)
 
