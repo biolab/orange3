@@ -5,7 +5,7 @@ from unittest import skipIf
 
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_array
 import scipy.sparse as sp
 
 from Orange.data import ContinuousVariable, DiscreteVariable, TimeVariable, Table, Domain, \
@@ -872,8 +872,8 @@ class TestSparseTablePandas(TestTablePandas):
         )
         self.table = Table.from_numpy(
             self.domain,
-            csr_matrix(table.X),
-            csr_matrix(table.Y),
+            csr_array(table.X),
+            csr_array(table.Y),
             W=np.array([1, 0, 1, 0, 1, 1, 1])
         )
 

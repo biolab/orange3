@@ -59,7 +59,7 @@ requirements:
     - pyyaml
     - requests
     - scikit-learn >=1.7,<1.10
-    - scipy >=1.9
+    - scipy >=1.15
     - serverfiles
     - tzdata
     - xgboost >=1.7.4

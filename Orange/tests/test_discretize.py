@@ -210,14 +210,14 @@ class TestDiscretizer(TestCase):
     def test_discretizer_computation_sparse(self):
         dvar = discretize.Discretizer.create_discretized_var(
             self.var, [1, 2, 3])
-        X = sp.csr_matrix(np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5]))
+        X = sp.csr_array(np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5]))
         self.assertEqual((dvar.compute_value.transform(X) != X.floor()).nnz, 0)
 
     def test_discretizer_computation_sparse_no_points(self):
         dvar = discretize.Discretizer.create_discretized_var(
             self.var, [])
-        X = sp.csr_matrix(np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5]))
-        empty = sp.csr_matrix(X.shape)
+        X = sp.csr_array(np.array([0, 0.9, 1, 1.1, 1.9, 2, 2.5, 3, 3.5]))
+        empty = sp.csr_array(X.shape)
         self.assertEqual((dvar.compute_value.transform(X) != empty).nnz, 0)
 
     def test_transform(self):

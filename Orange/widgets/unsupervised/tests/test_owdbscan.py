@@ -2,7 +2,7 @@
 import unittest
 
 import numpy as np
-from scipy.sparse import csr_matrix, csc_matrix
+from scipy.sparse import csr_array, csc_array
 
 from Orange.data import Table, Domain
 from Orange.clustering import DBSCAN
@@ -158,7 +158,7 @@ class TestOWDBSCAN(WidgetTest):
 
     def test_sparse_csr_data(self):
         with self.iris.unlocked():
-            self.iris.X = csr_matrix(self.iris.X)
+            self.iris.X = csr_array(self.iris.X)
 
         w = self.widget
 
@@ -176,7 +176,7 @@ class TestOWDBSCAN(WidgetTest):
 
     def test_sparse_csc_data(self):
         with self.iris.unlocked():
-            self.iris.X = csc_matrix(self.iris.X)
+            self.iris.X = csc_array(self.iris.X)
 
         w = self.widget
 
