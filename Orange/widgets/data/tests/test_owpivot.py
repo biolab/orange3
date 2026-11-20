@@ -657,6 +657,30 @@ class TestPivot(unittest.TestCase):
                       [8, 1, np.nan, np.nan]])
         self.assert_table_equal(pivot_tab, Table(Domain(atts), X))
 
+        pivot = Pivot(self.table, [Pivot.Count_defined, Pivot.Count],
+                      domain[2], domain[0], domain[1])
+        pivot_tab = pivot.pivot_table
+        atts = (domain[2], Dv("Aggregate", ["Count", "Count defined"]),
+                Cv("a"),
+                Cv("b"))
+        X = np.array([[1, 0, 1, 0],
+                      [1, 1, 1, 0],
+                      [2, 0, 1, 0],
+                      [2, 1, 1, 0],
+                      [3, 0, 1, 0],
+                      [3, 1, 0, 0],
+                      [4, 0, 1, 0],
+                      [4, 1, 1, 0],
+                      [5, 0, 0, 1],
+                      [5, 1, 0, 1],
+                      [6, 0, 0, 1],
+                      [6, 1, 0, 1],
+                      [7, 0, 0, 1],
+                      [7, 1, 0, 1],
+                      [8, 0, 0, 0],
+                      [8, 1, 0, 0]])
+        self.assert_table_equal(pivot_tab, Table(Domain(atts), X))
+
     def test_pivot_time_val_var(self):
         domain = Domain([Dv("d1", ("a", "b")), Dv("d2", ("c", "d")),
                          Tv("t1", have_date=1)])

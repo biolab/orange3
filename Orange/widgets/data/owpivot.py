@@ -291,9 +291,12 @@ class Pivot:
             isinstance(val_var, TimeVariable) and \
             all(fun in self.TimeVarFunctions for fun in agg_funs)
         create_cont_var = \
-            not val_var or val_var.is_continuous and \
-            (not isinstance(val_var, TimeVariable) or
-             all(fun in self.FloatFunctions for fun in agg_funs))
+            not val_var \
+            or val_var.is_discrete and not any(fun in self.DiscVarFunctions
+                                               for fun in agg_funs) \
+            or val_var.is_continuous and (not isinstance(val_var, TimeVariable)
+                                          or all(fun in self.FloatFunctions
+                                                 for fun in agg_funs))
 
         vals = np.array(self._col_var.values)[self._col_var_groups.astype(int)]
         if create_time_var:
