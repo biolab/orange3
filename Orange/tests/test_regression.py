@@ -8,6 +8,7 @@ import traceback
 
 import Orange
 from Orange.data import Table
+from Orange.base import SklLearner
 from Orange.regression import Learner, CurveFitLearner
 from Orange.tests import test_filename
 
@@ -24,7 +25,9 @@ def all_learners():
             continue
 
         for _, class_ in inspect.getmembers(module, inspect.isclass):
-            if issubclass(class_, Learner) and 'base' not in class_.__module__:
+            if issubclass(class_, Learner) and 'base' not in class_.__module__ \
+                    and not (issubclass(class_, SklLearner)
+                             and class_.__wraps__ is None):
                 yield class_
 
 
@@ -55,9 +58,10 @@ class TestRegression(unittest.TestCase):
     def test_missing_class(self):
         table = Table(test_filename("datasets/imports-85.tab"))
         for learner in all_learners():
-            learner = init_learner(learner, table)
-            model = learner(table)
-            model(table)
+            with self.subTest(learner=learner.__name__):
+                learner = init_learner(learner, table)
+                model = learner(table)
+                model(table)
 
 
 if __name__ == "__main__":
