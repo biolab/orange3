@@ -1,14 +1,30 @@
 import sklearn.svm as skl_svm
 
-from Orange.classification import SklLearner
+from Orange.classification import SklLearner, SklModel
 from Orange.preprocess import AdaptiveNormalize
+
 
 __all__ = ["SVMLearner", "LinearSVMLearner", "NuSVMLearner"]
 
 svm_pps = SklLearner.preprocessors + [AdaptiveNormalize()]
 
 
+class SVMModel(SklModel):
+    # If the model does not provide support vectors, this will raise an
+    # AttributeError, which is the expected behavior.
+    @property
+    def support_(self):
+        return self.used_instances_ids[self.skl_model.support_]
+
+    @property
+    def support_vectors_(self):
+        return self.original_data.X[self.support_]
+
+
 class SVMLearner(SklLearner):
+    __returns__ = SVMModel
+
+class SVMLearner(SVMLearner):
     __wraps__ = skl_svm.SVC
     preprocessors = svm_pps
 
@@ -19,8 +35,7 @@ class SVMLearner(SklLearner):
         super().__init__(preprocessors=preprocessors)
         self.params = vars()
 
-
-class LinearSVMLearner(SklLearner):
+class LinearSVMLearner(SVMLearner):
     __wraps__ = skl_svm.LinearSVC
     preprocessors = svm_pps
 
@@ -32,7 +47,7 @@ class LinearSVMLearner(SklLearner):
         self.params = vars()
 
 
-class NuSVMLearner(SklLearner):
+class NuSVMLearner(SVMLearner):
     __wraps__ = skl_svm.NuSVC
     preprocessors = svm_pps
 

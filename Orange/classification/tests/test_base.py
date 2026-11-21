@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 
 from Orange.data import Table, DiscreteVariable, Domain
-from Orange.classification import LogisticRegressionLearner, TreeLearner
+from Orange.classification import Learner, LogisticRegressionLearner, TreeLearner
 
 
 class TestModelMapping(unittest.TestCase):
@@ -198,6 +198,24 @@ class TestModelMapping(unittest.TestCase):
             self.assertTupleEqual((len(self.iris),), pred.shape)
             pred = model(iris_sparse.X.tocoo())
             self.assertTupleEqual((len(self.iris),), pred.shape)
+
+
+class TestLearner(unittest.TestCase):
+    def test_preprocessor_original_indices(self):
+        X = np.arange(30).reshape(6, 5)
+        data = Table.from_numpy(None, X)
+
+        learner = Learner()
+        new_data = learner.preprocess(data)
+        np.testing.assert_array_equal(new_data.original_indices, np.arange(6))
+
+        learner = Learner(preprocessors=[lambda data: data[[1, 2, 5]]])
+        new_data = learner.preprocess(data)
+        np.testing.assert_array_equal(new_data.original_indices, [1, 2, 5])
+
+        learner = Learner(preprocessors=[lambda data: data[[1, 2, 5, 0, 4, 3]]])
+        new_data = learner.preprocess(data)
+        np.testing.assert_array_equal(new_data.original_indices, [1, 2, 5, 0, 4, 3])
 
 
 if __name__ == '__main__':
