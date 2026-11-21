@@ -151,7 +151,7 @@ class Learner(ReprableWithPreprocessors):
         model = self._fit_model(data)
         model.used_vals = [np.unique(y).astype(int) for y in data.Y[:, None].T]
         if not hasattr(model, "domain") or model.domain is None:
-            # some models set domain themself and it should be respected
+            # some models set domain themselves, and it should be respected
             # e.g. calibration learners set the base_learner's domain which
             # would be wrongly overwritten if we set it here for any model
             model.domain = data.domain
@@ -159,6 +159,7 @@ class Learner(ReprableWithPreprocessors):
         model.name = self.name
         model.original_domain = origdomain
         model.original_data = origdata
+        model.used_instances_ids = data.original_indices
         progress_callback(1)
         return model
 
@@ -174,10 +175,16 @@ class Learner(ReprableWithPreprocessors):
         if progress_callback is None:
             progress_callback = dummy_callback
         n_pps = len(list(self.active_preprocessors))
+        orig_ids = data.ids
         for i, pp in enumerate(self.active_preprocessors):
             progress_callback(i / n_pps)
             data = pp(data)
         progress_callback(1)
+        if data.ids.shape == orig_ids.shape and np.all(data.ids == orig_ids):
+            data.original_indices = np.arange(len(data))
+        else:
+            indices = {id: i for i, id in enumerate(orig_ids)}
+            data.original_indices = np.array([indices.get(id, -1) for id in data.ids])
         return data
 
     @property
@@ -236,7 +243,9 @@ class Model(Reprable):
             self.original_domain = original_domain
         else:
             self.original_domain = domain
+        self.original_data = None
         self.used_vals = None
+        self.used_instances_ids = None
 
     def predict(self, X):
         if type(self).predict_storage is Model.predict_storage:

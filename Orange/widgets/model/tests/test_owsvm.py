@@ -1,5 +1,6 @@
 # Test methods with long descriptive names can omit docstrings
 # pylint: disable=missing-docstring
+import numpy as np
 from scipy.sparse import csr_matrix
 
 from AnyQt.QtCore import Qt
@@ -113,6 +114,17 @@ class TestOWSVMClassification(WidgetTest, WidgetLearnerTestMixin):
         self.click_apply()
         self.wait_until_stop_blocking()
         self.assertFalse(self.widget.Error.fitting_failed.is_shown())
+
+    def test_support_vectors(self):
+        data = Table("iris")
+        with data.unlocked():
+            data.Y[::2] = np.nan
+
+        self.send_signal(self.widget.Inputs.data, data)
+        support = self.get_output(self.widget.Outputs.support_vectors)
+        # If support vectors are indexed incorrectly, it is unlikely that
+        # all of them will have a non-nan class value
+        self.assertFalse(np.any(np.isnan(support.Y)))
 
     def test_migrate_degree(self):
         settings = {}
