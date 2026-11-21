@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.stats import t
 
 import sklearn.linear_model as skl_linear_model
 import sklearn.preprocessing as skl_preprocessing
@@ -37,6 +38,49 @@ class LinearRegressionLearner(SklLearner, _FeatureScorerMixin):
     def fit(self, X, Y, W=None):
         model = super().fit(X, Y, W)
         return LinearModel(model.skl_model)
+
+
+class OLSRegressionLearner(LinearRegressionLearner):
+    def fit(self, X, Y, W=None):
+        model = super().fit(X, Y, W)
+        try:
+            model.skl_model.p_values = self._compute_pvalues(model.skl_model, X, Y)
+        except ValueError:
+            model.skl_model.p_values = np.full(
+                X.shape[1] + int(model.skl_model.fit_intercept),
+                np.nan)
+        return LinearModel(model.skl_model)
+
+    @staticmethod
+    def _compute_pvalues(model, X, y):
+        assert y.ndim == 1
+        assert model.coef_.ndim == 1
+        assert not model.positive
+
+        X = np.asarray(X)
+        y = np.asarray(y)
+        if model.fit_intercept:
+            X = np.column_stack((np.ones(len(X)), X))
+
+        n, p = X.shape
+        rank = np.linalg.matrix_rank(X)
+        df = n - rank
+        if rank != p or df <= 0:
+            raise ValueError("Design matrix must have full column rank and "
+                             "positive residual degrees of freedom")
+
+        residuals = y - model.predict(X[:, 1:] if model.fit_intercept else X)
+        sigma2 = residuals @ residuals / df
+
+        cov = sigma2 * np.linalg.inv(X.T @ X)
+        se = np.sqrt(np.diag(cov))
+
+        coef = np.r_[model.intercept_, model.coef_] if model.fit_intercept \
+            else model.coef_
+        t_values = coef / se
+        p_values = 2 * t.sf(np.abs(t_values), df)
+
+        return p_values
 
 
 class RidgeRegressionLearner(LinearRegressionLearner):
@@ -145,6 +189,12 @@ class LinearModel(SklModel):
     @property
     def coefficients(self):
         return self.skl_model.coef_
+
+    @property
+    def p_values(self):
+        # If the skl_model does not have p-values (we add them only to
+        # OLSRegressionLearner), this will raise an AttributeError, which is OK.
+        return self.skl_model.p_values
 
     def __str__(self):
         return 'LinearModel {}'.format(self.skl_model)
