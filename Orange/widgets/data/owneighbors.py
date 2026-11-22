@@ -54,6 +54,8 @@ class OWNeighbors(OWWidget):
         imputing_data = Msg("Missing values were imputed")
         ignored_references = \
             Msg("Some reference instances are not in the distance matrix and were ignored")
+        no_distance_matrix_data = \
+            Msg("Distance matrix does not include a data table.")
 
     class Error(OWWidget.Error):
         diff_number = \
@@ -212,20 +214,25 @@ class OWNeighbors(OWWidget):
     def act_data(self):
         if self.data is not None:
             return self.data
-        if self.distance_matrix is not None:
+        if self.distance_matrix is not None \
+                and isinstance(self.distance_matrix.row_items, Table):
             return self.distance_matrix.row_items
         return None
+
+    @property
+    def dimension(self):
+        if self.act_data is not None:
+            return len(self.act_data)
+        if self.distance_matrix is not None:
+            return len(self.distance_matrix)
+        return 0
 
     def handleNewSignals(self):
         self.Error.diff_number(shown=self.mismatching_input_sizes)
 
         data = self.act_data
-        if not data:
-            self.controls.n_neighbors.setMaximum(100)
-            domain = None
-        else:
-            self.controls.n_neighbors.setMaximum(len(data))
-            domain = data.domain
+        self.controls.n_neighbors.setMaximum(self.dimension or 100)
+        domain = data.domain if data else None
 
         self.closeContext()
 
@@ -251,10 +258,8 @@ class OWNeighbors(OWWidget):
     def _update_labels(self):
         if self.label is not None:
             labels = self.act_data.get_column(self.label)
-        elif self.act_data is not None:
-            labels = range(1, 1 + len(self.act_data))
         else:
-            labels = []
+            labels = range(1, 1 + self.dimension)
         self.label_model[:] = [str(x) for x in labels]
 
         if self.selected_item_hint is not None \
@@ -280,7 +285,8 @@ class OWNeighbors(OWWidget):
         self.Warning.ignored_references.clear()
         self.Error.no_references.clear()
 
-        if not self.act_data or self.mismatching_input_sizes:
+        if not self.data and self.distance_matrix is None\
+                or self.mismatching_input_sizes:
             self.distances = None
         elif self.distance_matrix is not None:
             if self.reference is not None:
@@ -351,22 +357,27 @@ class OWNeighbors(OWWidget):
 
     @gui.deferred
     def commit(self):
+        self.Warning.no_distance_matrix_data.clear()
+
         indices = self._compute_indices()
 
         if indices is None:
             neighbors = None
         else:
             neighbors = self._data_with_similarity(indices)
-            neighbors.name = self.act_data.name + " (neighbors)"
+            if self.act_data:
+                neighbors.name = self.act_data.name + " (neighbors)"
+            else:
+                neighbors.name = "Neighbors' indices"
 
         if self.distances is None:
             distance_table = None
         else:
             _, domain = self._domain_with_distance()
-            length = len(self.act_data)
             distance_table = LazyValue[Table](
-                lambda:  self._data_with_similarity(np.arange(length), False),
-                length=length, domain=domain)
+                lambda: self._data_with_similarity(np.arange(self.dimension),
+                                                   include_reference=False),
+                length=self.dimension, domain=domain)
 
         self.Outputs.data.send(neighbors)
         self.Outputs.data_w_distances.send(distance_table)
@@ -386,7 +397,7 @@ class OWNeighbors(OWWidget):
             if np.any(inrefs):
                 self.Info.removed_references()
         else:
-            inrefs = np.full(len(self.act_data), False)
+            inrefs = np.full(self.dimension, False)
             inrefs[self.label_model.indexOf(self.selected_item)] = True
 
         dist = np.copy(self.distances)
@@ -404,6 +415,11 @@ class OWNeighbors(OWWidget):
         return idx[sorted_subset_idx]
 
     def _domain_with_distance(self):
+        if not self.act_data:
+            dist_var = ContinuousVariable("distance")
+            domain = Domain([ContinuousVariable("row_number"), dist_var])
+            return dist_var, domain
+
         domain = self.act_data.domain
         dist_var = ContinuousVariable(get_unique_names(domain, "distance"))
         metas = domain.metas + (dist_var, )
@@ -412,11 +428,17 @@ class OWNeighbors(OWWidget):
     def _data_with_similarity(self, indices, include_reference=None):
         dist_var, domain = self._domain_with_distance()
         data = self.act_data
-        neighbours = data.from_table(domain, data, row_indices=indices)
         distances = self.distances[indices]
         if self.transform_to_similarity:
             distances = np.max(distances) - distances
 
+        if data is None:
+            self.Warning.no_distance_matrix_data()
+            return Table.from_numpy(
+                domain,
+                np.vstack((indices + 1, distances)).T)
+
+        neighbours = data.from_table(domain, data, row_indices=indices)
         if include_reference is None:
             include_reference = self.include_reference
         if include_reference:
@@ -452,7 +474,8 @@ if __name__ == "__main__":  # pragma: no cover
     iris = Table("iris.tab")
     zoo = Table("zoo.tab")
     distances = distance.Euclidean(zoo)
+    # distances.row_items = distances.col_items = None
     # WidgetPreview(OWNeighbors).run(set_data=iris, set_ref=iris[:3])
-    WidgetPreview(OWNeighbors).run(set_data=zoo)
+    # WidgetPreview(OWNeighbors).run(set_data=zoo)
     # WidgetPreview(OWNeighbors).run(set_distances=distances, set_ref=zoo[:1])
-    # WidgetPreview(OWNeighbors).run(set_distances=distances)
+    WidgetPreview(OWNeighbors).run(set_distances=distances)
