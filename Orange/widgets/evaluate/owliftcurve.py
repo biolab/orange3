@@ -148,6 +148,7 @@ class OWLiftCurve(widget.OWWidget):
     class Information(widget.OWWidget.Information):
         no_output = Msg("Can't output a model: {}")
 
+    SETTINGS_PICKLE_TYPES = [f"{__name__}:CurveTypes"]
     settingsHandler = EvaluationResultsContextHandler()
     target_index = settings.ContextSetting(0)
     selected_classifiers = settings.ContextSetting([])

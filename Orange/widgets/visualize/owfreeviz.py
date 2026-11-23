@@ -136,6 +136,7 @@ class OWFreeViz(OWAnchorProjectionWidget, ConcurrentWidgetMixin):
     priority = 240
     keywords = "freeviz, viz"
 
+    SETTINGS_PICKLE_TYPES = [f"{__name__}:InitType"]
     settings_version = 3
     initialization = settings.Setting(InitType.Circular)
     balance = settings.Setting(False)

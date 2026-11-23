@@ -189,6 +189,10 @@ class OWLinearProjection(OWAnchorProjectionWidget,
                        Placement.LDA: "Linear Discriminant Analysis",
                        Placement.PCA: "Principal Component Analysis"}
 
+    SETTINGS_PICKLE_TYPES = [
+        f"{__name__}:Placement",
+        f"{__name__}:OWLinearProjection.Placement",
+    ]
     settings_version = 6
 
     placement = Setting(Placement.Circular)

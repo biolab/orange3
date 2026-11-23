@@ -548,6 +548,14 @@ class OWColor(widget.OWWidget):
     class Outputs:
         data = Output("Data", Orange.data.Table)
 
+    SETTINGS_PICKLE_TYPES = [
+        f"{__name__}:DiscAttrDesc",
+        f"{__name__}:ContAttrDesc",
+        "Orange.data.variable:make_variable",
+        "Orange.data.variable:ContinuousVariable",
+        "Orange.data.variable:DiscreteVariable",
+        "Orange.data.variable:TimeVariable",
+    ]
     settingsHandler = settings.PerfectDomainContextHandler(
         match_values=settings.PerfectDomainContextHandler.MATCH_VALUES_ALL)
     disc_descs = settings.ContextSetting([])

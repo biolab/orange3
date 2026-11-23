@@ -674,6 +674,8 @@ class OWNomogram(OWWidget):
     ALIGN_LEFT = 0
     ALIGN_ZERO = 1
     ACCEPTABLE = (NaiveBayesModel, LogisticRegressionClassifier)
+
+    SETTINGS_PICKLE_TYPES = [f"{__name__}:SortBy"]
     settingsHandler = ClassValuesContextHandler()
     target_class_index = ContextSetting(0)
     normalize_probabilities = Setting(False)
