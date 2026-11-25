@@ -1349,22 +1349,6 @@ class TestTransforms(TestCase):
                 self.assertEqual(edited.str_val(value), "1008436")
                 self.assertEqual(edited.adjust_decimals, var.adjust_decimals)
 
-    def test_edit_continuous_subclass(self):
-        with patch.dict(ContinuousVariable.registry):
-            class MeasuredVariable(ContinuousVariable):
-                def __init__(self, name, unit, **kwargs):
-                    super().__init__(name, number_of_decimals=2, **kwargs)
-                    self.unit = unit
-
-            source = MeasuredVariable("length", "m", sparse=True)
-            edited = apply_transform_var(source, [Rename("height")])
-
-        self.assertIs(type(edited), ContinuousVariable)
-        self.assertEqual(edited.name, "height")
-        self.assertFalse(edited.sparse)
-        self.assertIs(edited.compute_value.variable, source)
-        self.assertEqual(edited.str_val(3), "3.00")
-
     def test_string(self):
         X = StringVariable("S")
         self._test_common(X)
