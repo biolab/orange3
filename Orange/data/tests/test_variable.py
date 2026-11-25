@@ -638,6 +638,14 @@ class TestContinuousVariable(VariableTest):
         self.assertEqual(a.str_val(4.65), "4.65")
         self.assertEqual(a.str_val(5), "5.00")
 
+    def test_copy_format_from(self):
+        source = ContinuousVariable("source", number_of_decimals=2)
+        source.format_str = "%+.2f"
+        target = ContinuousVariable("target", number_of_decimals=5)
+        target.copy_format_from(source)
+        self.assertEqual(target.str_val(4 + 1e-9), "+4.00")
+        self.assertEqual(target.str_val(4.12345), source.str_val(4.12345))
+
     def varcls_modified(self, name):
         var = super().varcls_modified(name)
         var.number_of_decimals = 5

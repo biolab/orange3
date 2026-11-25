@@ -651,19 +651,23 @@ class ContinuousVariable(Variable):
 
     str_val = repr_val
 
+    def copy_format_from(self, other):
+        """Copy the numeric display format and decimal adjustment settings."""
+        # The number_of_decimals setter would recompute the formatting state.
+        # pylint: disable=protected-access
+        self._number_of_decimals = other._number_of_decimals
+        self._max_round_diff = other._max_round_diff
+        self.adjust_decimals = other.adjust_decimals
+        self.format_str = other._format_str
+
     def copy(self, compute_value=Variable._CopyComputeValue,
              *, name=None, **kwargs):
-        # pylint understand not that `var` is `DiscreteVariable`:
-        # pylint: disable=protected-access
         number_of_decimals = kwargs.pop("number_of_decimals", None)
         var = super().copy(compute_value=compute_value, name=name, **kwargs)
         if number_of_decimals is not None:
             var.number_of_decimals = number_of_decimals
         else:
-            var._number_of_decimals = self._number_of_decimals
-            var._max_round_diff = self._max_round_diff
-            var.adjust_decimals = self.adjust_decimals
-            var.format_str = self._format_str
+            var.copy_format_from(self)
         return var
 
 
