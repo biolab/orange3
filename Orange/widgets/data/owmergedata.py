@@ -243,15 +243,26 @@ class MergeDataContextHandler(ContextHandler):
 
 class OWMergeData(widget.OWWidget):
     name = "Merge Data"
-    description = "Merge datasets based on the values of selected features."
+    description = (
+        "Merge two datasets by matching selected features. "
+        "Connect the primary table to Data and the second table to "
+        "Extra Data (second table)."
+    )
     category = "Transform"
     icon = "icons/MergeData.svg"
     priority = 1110
     keywords = "merge data, join"
 
     class Inputs:
-        data = Input("Data", Orange.data.Table, default=True, replaces=["Data A"])
-        extra_data = Input("Extra Data", Orange.data.Table, replaces=["Data B"])
+        data = Input(
+            "Data", Orange.data.Table, default=True,
+            doc="Primary / left table. Rows you usually want to keep.",
+            replaces=["Data A"])
+        extra_data = Input(
+            "Extra Data (second table)", Orange.data.Table,
+            doc="Second / right table to merge from. "
+                "Connect a different widget here - not the same link as Data.",
+            replaces=["Extra Data", "Data B"])
 
     class Outputs:
         data = Output("Data",
@@ -260,7 +271,7 @@ class OWMergeData(widget.OWWidget):
                       dynamic=False)
 
     LeftJoin, InnerJoin, OuterJoin = range(3)
-    OptionNames = ("Append columns from Extra data",
+    OptionNames = ("Append columns from Extra Data",
                    "Find matching pairs of rows",
                    "Concatenate tables")
     OptionDescriptions = (
@@ -291,6 +302,12 @@ class OWMergeData(widget.OWWidget):
 
     want_main_area = False
     resizing_enabled = False
+
+    class Information(widget.OWWidget.Information):
+        need_both_tables = Msg(
+            "Connect both inputs: Data (main table) and "
+            "Extra Data (second table).\n"
+            "Each must come from a different source.")
 
     class Warning(widget.OWWidget.Warning):
         renamed_vars = Msg("Some variables have been renamed "
@@ -331,6 +348,10 @@ class OWMergeData(widget.OWWidget):
             DomainModel.ATTRIBUTES, DomainModel.CLASSES, DomainModel.METAS]
         self.model = DomainModelWithTooltips(content)
         self.extra_model = DomainModelWithTooltips(content)
+
+        gui.label(
+            self.controlArea, self,
+            "Inputs: Data = main table · Extra Data = second table to merge")
 
         grp = gui.radioButtons(
             self.controlArea, self, "merging", box="Merging",
@@ -397,6 +418,8 @@ class OWMergeData(widget.OWWidget):
     @gui.deferred
     def commit(self):
         self.clear_messages()
+        if bool(self.data) ^ bool(self.extra_data):
+            self.Information.need_both_tables()
         merged = self.merge() if self.data and self.extra_data else None
         self.Outputs.data.send(merged)
 
