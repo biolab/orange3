@@ -2992,10 +2992,8 @@ def apply_transform_continuous(var, trs):
             name = tr.name
         elif isinstance(tr, Annotate):
             annotations = _parse_attributes(tr.annotations)
-    variable = Orange.data.ContinuousVariable(
-        name=name, compute_value=Identity(var)
-    )
-    variable.attributes.update(annotations)
+    variable = var.renamed(name)
+    variable.attributes = dict(annotations)
     return variable
 
 
