@@ -34,6 +34,7 @@ from Orange.widgets.utils.signals import Input, Output
 from Orange.widgets.utils.widgetpreview import WidgetPreview
 from Orange.widgets.visualize.utils import CanvasRectangle, CanvasText
 from Orange.widgets.visualize.utils.plotutils import wrap_legend_items
+from orangewidget.utils import enum_as_int
 
 
 def _categorical_entropy(x):
@@ -749,6 +750,11 @@ class OWFeatureStatistics(widget.OWWidget):
 
     want_main_area = False
 
+    SETTINGS_PICKLE_TYPES = [
+        # These are for backward compatibility only.
+        "PyQt6.QtCore:Qt.SortOrder",
+        "PyQt5.QtCore:Qt.SortOrder",
+    ]
     settingsHandler = DomainContextHandler()
     settings_version = 2
 
@@ -756,7 +762,7 @@ class OWFeatureStatistics(widget.OWWidget):
     color_var = ContextSetting(None)  # type: Optional[Variable]
     # filter_string = ContextSetting('')
 
-    sorting = Setting((0, Qt.AscendingOrder))
+    sorting = Setting((0, enum_as_int(Qt.AscendingOrder)))
     selected_vars = ContextSetting([], schema_only=True)
 
     def __init__(self):
@@ -858,7 +864,8 @@ class OWFeatureStatistics(widget.OWWidget):
 
     def __restore_sorting(self):
         """Restore the sort column and order from saved settings."""
-        sort_column, sort_order = self.sorting
+        sort_column, _sort_order = self.sorting
+        sort_order = Qt.SortOrder(_sort_order)
         if self.model.n_attributes and sort_column < self.model.columnCount():
             self.model.sort(sort_column, sort_order)
             self.table_view.horizontalHeader().setSortIndicator(sort_column, sort_order)
@@ -868,7 +875,7 @@ class OWFeatureStatistics(widget.OWWidget):
         # Store the header states
         sort_order = self.model.sortOrder()
         sort_column = self.model.sortColumn()
-        self.sorting = sort_column, sort_order
+        self.sorting = sort_column, enum_as_int(sort_order)
 
     @pyqtSlot(int)
     def __color_var_changed(self, *_):
