@@ -201,7 +201,7 @@ class OWSVM(OWBaseLearner):
         super().update_model()
         sv = None
         if self.model is not None:
-            sv = self.data[self.model.skl_model.support_]
+            sv = self.data[self.model.support_]
         self.Outputs.support_vectors.send(sv)
 
     def _on_kernel_changed(self):
