@@ -4,10 +4,14 @@ from unittest.mock import Mock, patch
 
 import numpy as np
 
-from Orange.data import Table, Domain, ContinuousVariable
+from orangewidget.tests.utils import simulate
+
+from Orange import distance
+from Orange.data import Table, Domain, ContinuousVariable, StringVariable
+from Orange.misc.distmatrix import DistMatrix
 from Orange.widgets.unsupervised.utils import (
     MetricDefs, MetricDef,
-    Euclidean, Manhattan, Cosine, Mahalanobis,
+    Euclidean, EuclideanNormalized, Manhattan, Cosine, Mahalanobis,
     Pearson, PearsonAbsolute, Spearman, SpearmanAbsolute, Jaccard
 )
 from Orange.widgets.data.owneighbors import OWNeighbors
@@ -16,9 +20,10 @@ from Orange.widgets.tests.base import WidgetTest, ParameterMapping
 
 class TestOWNeighbors(WidgetTest):
     def setUp(self):
-        self.widget = self.create_widget(OWNeighbors,
-                                         stored_settings={"auto_apply": False})
+        self.widget = self.create_widget(OWNeighbors)
         self.iris = Table("iris")
+        self.zoo = Table("zoo")
+        self.distances = distance.Euclidean(self.iris)
 
     def test_input_data(self):
         """Check widget's data with data on the input"""
@@ -42,18 +47,6 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(widget.Inputs.reference, self.iris)
         self.assertEqual(widget.reference, self.iris)
 
-    def test_input_reference_disconnect(self):
-        """Check reference after disconnecting reference on the input"""
-        widget = self.widget
-        self.send_signal(widget.Inputs.data, self.iris)
-        self.send_signal(widget.Inputs.reference, self.iris)
-        self.assertEqual(widget.reference, self.iris)
-        self.send_signal(widget.Inputs.reference, None)
-        self.assertEqual(widget.reference, None)
-        widget.apply_button.button.click()
-        self.assertIsNone(self.get_output(widget.Outputs.data))
-        self.assertIsNone(self.get_output(widget.Outputs.data_w_distances))
-
     def test_output_neighbors(self):
         """Check if neighbors are on the output after apply"""
         widget = self.widget
@@ -61,7 +54,6 @@ class TestOWNeighbors(WidgetTest):
         self.assertIsNone(self.get_output(widget.Outputs.data_w_distances))
         self.send_signals(((widget.Inputs.data, self.iris),
                            (widget.Inputs.reference, self.iris[:10])))
-        widget.apply_button.button.click()
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
         self.assertIsNotNone(self.get_output(widget.Outputs.data_w_distances))
         self.assertIsInstance(self.get_output(widget.Outputs.data), Table)
@@ -146,8 +138,9 @@ class TestOWNeighbors(WidgetTest):
             self.send_signal(widget.Inputs.data, None)
             self.assertIsNone(self.get_output(widget.Outputs.data_w_distances))
 
-    def test_missing_values(self):
+    def test_missing_values_in_ref(self):
         widget = self.widget
+        widget.metric_id = Mahalanobis
         data = Table("iris")
         reference = data[:3]
         with data.unlocked():
@@ -157,6 +150,19 @@ class TestOWNeighbors(WidgetTest):
         widget.apply_button.button.click()
         self.assertIsNotNone(self.get_output(widget.Outputs.data))
         self.assertIsNotNone(self.get_output(widget.Outputs.data_w_distances))
+
+    def test_missing_values_in_data(self):
+        widget = self.widget
+        widget.metric_id = Mahalanobis
+        data = Table("iris")
+        with data.unlocked():
+            data.X[0:10, 0] = np.nan
+        self.send_signal(widget.Inputs.data, data)
+        self.assertTrue(widget.Warning.imputing_data.is_shown())
+        self.assertIsNotNone(self.get_output(widget.Outputs.data))
+
+        self.send_signal(widget.Inputs.data, None)
+        self.assertFalse(widget.Warning.imputing_data.is_shown())
 
     def test_compute_distances_apply_called(self):
         """Check compute distances and apply are called when receiving signal"""
@@ -187,9 +193,10 @@ class TestOWNeighbors(WidgetTest):
         dists = np.random.random((10, 5))
         distance = Mock(return_value=dists)
         metric = MetricDef(42, "foo", "", distance)
+        metric_id = widget.metric_id
+        orig_metrics = MetricDefs[metric_id]
         try:
-            orig_metrics = MetricDefs[widget.metric_id]
-            MetricDefs[widget.metric_id] = metric
+            MetricDefs[metric_id] = metric
             data = Table("iris")
             data, refs = data[:10], data[-5:]
             self.send_signals([(widget.Inputs.data, data),
@@ -201,79 +208,7 @@ class TestOWNeighbors(WidgetTest):
             # false positive, pylint: disable=no-member
             np.testing.assert_almost_equal(widget.distances, dists.min(axis=1))
         finally:
-            MetricDefs[widget.metric_id] = orig_metrics
-
-    def test_compute_distances_distance_no_data(self):
-        widget = self.widget
-        distance = Mock()
-        metric = MetricDef(42, "foo", "", distance)
-        try:
-            orig_metrics = MetricDefs[widget.metric_id]
-            MetricDefs[widget.metric_id] = metric
-            data = Table("iris")
-            data, refs = data[:10], data[-5:]
-            self.send_signals([(widget.Inputs.data, data),
-                               (widget.Inputs.reference, None)])
-            distance.assert_not_called()
-            self.assertIsNone(widget.distances)
-            self.send_signal(widget.Inputs.data, data)
-            distance.assert_not_called()
-            self.assertIsNone(widget.distances)
-            self.send_signals([(widget.Inputs.data, None),
-                               (widget.Inputs.reference, refs)])
-            distance.assert_not_called()
-            self.assertIsNone(widget.distances)
-            self.send_signals([(widget.Inputs.data, data),
-                               (widget.Inputs.reference, None)])
-            distance.assert_not_called()
-            self.assertIsNone(widget.distances)
-
-            data, refs = data[:0], data[:0]
-            self.send_signals([(widget.Inputs.data, data),
-                               (widget.Inputs.reference, None)])
-            distance.assert_not_called()
-            self.assertIsNone(widget.distances)
-        finally:
-            MetricDefs[widget.metric_id] = orig_metrics
-
-    def test_compute_indices_without_reference(self):
-        widget = self.widget
-        widget.limit_neighbours = True
-
-        # Indices for easier reading: 0 1  2  3  4  5  6  7  8  9 10 11 12
-        widget.distances = np.array([4, 1, 7, 0, 5, 2, 4, 0, 2, 2, 2, 9, 8])
-
-        widget.data = Mock()
-        widget.data.ids = np.arange(13)
-        widget.reference = Mock()
-        widget.reference.ids = np.array([1, 3])
-
-        widget.n_neighbors = 5
-        self.assertEqual(sorted(widget._compute_indices()), [5, 7, 8, 9, 10])
-
-        widget.n_neighbors = 1
-        self.assertEqual(list(widget._compute_indices()), [7])
-
-        widget.n_neighbors = 3
-        ind = set(widget._compute_indices())
-        self.assertEqual(len(ind), 3)
-        self.assertIn(7, ind)
-        self.assertTrue(len({5, 8, 9, 10} & ind) == 2)
-
-        widget.n_neighbors = 100
-        self.assertEqual(
-            sorted(widget._compute_indices()),
-            [0, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12])
-
-        widget.n_neighbors = 10
-        self.assertEqual(
-            sorted(widget._compute_indices()),
-            [0, 2, 4, 5, 6, 7, 8, 9, 10, 12])
-
-        widget.limit_neighbours = False
-        self.assertEqual(
-            sorted(widget._compute_indices()),
-            [0, 2, 4, 5, 6, 7, 8, 9, 10, 12])
+            MetricDefs[metric_id] = orig_metrics
 
     def test_data_with_similarity(self):
         widget = self.widget
@@ -340,6 +275,8 @@ class TestOWNeighbors(WidgetTest):
         domains.
         """
         w = self.widget
+        self.widget.metric_id = Mahalanobis
+
 
         domain = Domain([ContinuousVariable("a")])
         domain_ref = Domain([ContinuousVariable("b")])
@@ -349,47 +286,39 @@ class TestOWNeighbors(WidgetTest):
 
         # no error if one or both of the signals is missing
         self.send_signal(w.Inputs.data, data)
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
 
         self.send_signal(w.Inputs.data, None)
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
 
         self.send_signal(w.Inputs.reference, data[:1])
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
 
         # same domain - no error
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, data[:1])
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
 
         # one attribute different attribute name
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
-        self.assertTrue(w.Error.diff_domains.is_shown())
-
-        # different number of attributes
-        domain_ref = Domain([ContinuousVariable("a"), ContinuousVariable("b")])
-        reference = Table(domain_ref, np.random.rand(1, len(domain_ref.variables)))
+        self.assertTrue(w.Error.diff_domains_or_missing.is_shown())
 
         # error disappears when data is set to None
-        self.send_signal(w.Inputs.data, data)
-        self.send_signal(w.Inputs.reference, reference)
-        self.assertTrue(w.Error.diff_domains.is_shown())
-
         self.send_signal(w.Inputs.data, None)
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
 
         # error disappears when reference is set to None
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
-        self.assertTrue(w.Error.diff_domains.is_shown())
+        self.assertTrue(w.Error.diff_domains_or_missing.is_shown())
 
         self.send_signal(w.Inputs.reference, None)
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
 
     def test_different_metas(self):
         """
-        Test weather widget do not show error when data and a reference have
+        Test whether widget does not show error when data and a reference have
         domain that differ only in metas
         """
         w = self.widget
@@ -403,7 +332,7 @@ class TestOWNeighbors(WidgetTest):
         # same domain with same metas no error
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, data[:1])
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
         output = self.get_output(w.Outputs.data)
         self.assertEqual(10, len(output))
 
@@ -415,7 +344,7 @@ class TestOWNeighbors(WidgetTest):
             metas=np.random.rand(1, len(domain.metas)))
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
         output = self.get_output(w.Outputs.data)
         self.assertEqual(10, len(output))
 
@@ -425,7 +354,7 @@ class TestOWNeighbors(WidgetTest):
             domain_ref, np.random.rand(1, len(domain_ref.attributes)))
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
         output = self.get_output(w.Outputs.data)
         self.assertEqual(10, len(output))
 
@@ -438,21 +367,9 @@ class TestOWNeighbors(WidgetTest):
             metas=np.random.rand(1, len(domain_ref.metas)))
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, reference)
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
         output = self.get_output(w.Outputs.data)
         self.assertEqual(10, len(output))
-
-        # different domain with same metas - error shown
-        domain_ref = Domain(domain.attributes + (ContinuousVariable("e"),),
-                            metas=[ContinuousVariable("c")])
-        reference = Table(
-            domain_ref, np.random.rand(1, len(domain_ref.attributes)),
-            metas=np.random.rand(1, len(domain_ref.metas)))
-        self.send_signal(w.Inputs.data, data)
-        self.send_signal(w.Inputs.reference, reference)
-        self.assertTrue(w.Error.diff_domains.is_shown())
-        output = self.get_output(w.Outputs.data)
-        self.assertIsNone(output)
 
     def test_different_domains_same_names(self):
         """
@@ -473,7 +390,7 @@ class TestOWNeighbors(WidgetTest):
             metas=np.random.rand(2, len(domain2.metas)))
         self.send_signal(w.Inputs.data, data)
         self.send_signal(w.Inputs.reference, ref)
-        self.assertFalse(w.Error.diff_domains.is_shown())
+        self.assertFalse(w.Error.diff_domains_or_missing.is_shown())
         output = self.get_output(w.Outputs.data)
         self.assertEqual(10, len(output))
 
@@ -540,6 +457,447 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(self.widget.Inputs.reference, reference)
         dst = self.get_output(self.widget.Outputs.data).get_column("distance")
         self.assertFalse(np.any(np.isnan(dst)))
+
+    def test_set_distances_checks_same_table(self):
+        w = self.widget
+        w.handleNewSignals = Mock()
+
+        distances = Mock()
+        distances.col_items = distances_row_items = None
+        w.set_distances(distances)
+        self.assertFalse(w.Error.not_same_table.is_shown())
+        self.assertIs(w.distance_matrix, distances)
+
+        distances.row_items = Mock()
+        w.set_distances(distances)
+        self.assertFalse(w.Error.not_same_table.is_shown())
+        self.assertIs(w.distance_matrix, distances)
+
+        distances.col_items = Mock()
+        w.set_distances(distances)
+        self.assertTrue(w.Error.not_same_table.is_shown())
+        self.assertIsNone(w.distance_matrix)
+
+        distances.col_items = distances.row_items
+        w.set_distances(distances)
+        self.assertFalse(w.Error.not_same_table.is_shown())
+        self.assertIs(w.distance_matrix, distances)
+
+        distances.col_items = Mock()
+        w.set_distances(distances)
+        self.assertTrue(w.Error.not_same_table.is_shown())
+        self.assertIsNone(w.distance_matrix)
+
+        w.set_distances(None)
+        self.assertFalse(w.Error.not_same_table.is_shown())
+        self.assertIsNone(w.distance_matrix)
+
+    def test_mismatching_input_sizes(self):
+        w = self.widget
+        distances = DistMatrix(np.array([[1, 2], [3, 4]]))
+        self.send_signal(w.Inputs.data, self.iris)
+        self.send_signal(w.Inputs.distances, distances)
+        self.assertTrue(w.mismatching_input_sizes)
+        self.assertTrue(w.Error.diff_number.is_shown())
+
+        self.send_signal(w.Inputs.distances, self.distances)
+        self.assertFalse(w.mismatching_input_sizes)
+        self.assertFalse(w.Error.diff_number.is_shown())
+
+    def test_act_data_and_dimension(self):
+        w = self.widget
+        siri = self.iris[::-1]
+        iris50 = self.iris[:50]
+
+        self.distances.row_items = siri
+
+        self.send_signal(w.Inputs.distances, self.distances)
+        self.assertIs(w.act_data, siri)
+        self.assertEqual(w.dimension, 150)
+
+        self.send_signal(w.Inputs.data, iris50)
+        self.assertIs(w.act_data, iris50)
+        self.assertEqual(w.dimension, 50)
+
+        self.send_signal(w.Inputs.distances, None)
+        self.assertIs(w.act_data, iris50)
+        self.assertEqual(w.dimension, 50)
+
+        self.send_signal(w.Inputs.distances, self.distances)
+        self.send_signal(w.Inputs.data, iris50)
+        self.assertIs(w.act_data, iris50)
+        self.assertEqual(w.dimension, 50)
+
+        self.send_signal(w.Inputs.data, None)
+        self.assertIs(w.act_data, siri)
+        self.assertEqual(w.dimension, 150)
+
+        self.send_signal(w.Inputs.distances, None)
+        self.assertIsNone(w.act_data)
+        self.assertEqual(w.dimension, 0)
+
+    def test_update_variable_model(self):
+        w = self.widget
+
+        self.assertEqual(list(self.widget.variable_model), [None])
+        self.assertIsNone(w.label)
+
+        domain = Domain(
+            [ContinuousVariable(x) for x in "abc"],
+            None,
+            metas=[StringVariable("m1"), StringVariable("m2"), ContinuousVariable("m3")]
+        )
+        data = Table(
+            domain,
+            np.random.rand(2, 3),
+            metas=[["x", "y", 0], ["v", "w", 1]]
+        )
+        self.send_signal(w.Inputs.data, data)
+
+        self.assertEqual(
+            list(self.widget.variable_model),
+            [None, data.domain.metas[0], data.domain.metas[1]])
+        self.assertEqual(
+            list(w.label_model),
+            ["x", "v"])
+
+        self.assertTrue(w.controls.label.isEnabled())
+        self.assertIs(w.label, data.domain.metas[0])
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertEqual(list(self.widget.variable_model), [None])
+        self.assertFalse(w.controls.label.isEnabled())
+        self.assertIsNone(w.label)
+        self.assertEqual(
+            list(w.label_model),
+            [str(i) for i in range(1, 1 + len(self.iris))])
+
+        self.send_signal(w.Inputs.data, data)
+        self.assertNotEqual(list(self.widget.variable_model), [None])
+        self.assertIsNotNone(w.label)
+        self.assertTrue(w.controls.label.isEnabled())
+        self.assertIsNotNone(w.label)
+
+        self.send_signal(w.Inputs.data, None)
+        self.assertEqual(list(self.widget.variable_model), [None])
+        self.assertIsNone(w.label)
+        self.assertFalse(w.controls.label.isEnabled())
+        self.assertIsNone(w.label)
+
+    def test_update_labels(self):
+        w = self.widget
+        w.selected_item_hint = "v"
+
+        domain = Domain(
+            [ContinuousVariable(x) for x in "abc"],
+            None,
+            metas=[StringVariable("m1"), StringVariable("m2"), ContinuousVariable("m3")]
+        )
+        data = Table(
+            domain,
+            np.random.rand(2, 3),
+            metas=[["x", "y", 0], ["v", "w", 1]]
+        )
+        self.send_signal(w.Inputs.data, data)
+
+        self.assertEqual(w.selected_item, "v")
+
+        simulate.combobox_activate_index(w.controls.label, 0)
+        self.assertEqual(w.selected_item, "1")
+        self.assertEqual(w.selected_item_hint, "1")
+
+        simulate.combobox_activate_index(w.controls.label, 1)
+        self.assertEqual(w.selected_item, "x")
+
+        self.send_signal(w.Inputs.data, None)
+        self.assertIsNone(w.selected_item)
+
+    def test_update_labels_inapplicable_hint(self):
+        w = self.widget
+        w.selected_item_hint = "v"
+
+        self.send_signal(w.Inputs.data, self.zoo)
+        self.assertEqual(w.selected_item, self.zoo[0, "name"])
+
+    def test_update_info(self):
+        w = self.widget
+
+        self.assertFalse(w.metric_box.isHidden())
+        self.assertTrue(w.metric_info.isHidden())
+        self.assertFalse(w.reference_box.isHidden())
+        self.assertTrue(w.reference_info.isHidden())
+
+        self.send_signal(w.Inputs.reference, self.iris[10:12])
+        self.assertFalse(w.metric_box.isHidden())
+        self.assertTrue(w.metric_info.isHidden())
+        self.assertTrue(w.reference_box.isHidden())
+        self.assertFalse(w.reference_info.isHidden())
+
+        self.send_signal(w.Inputs.distances, self.distances)
+        self.assertTrue(w.metric_box.isHidden())
+        self.assertFalse(w.metric_info.isHidden())
+        self.assertTrue(w.reference_box.isHidden())
+        self.assertFalse(w.reference_info.isHidden())
+
+        self.send_signal(w.Inputs.reference, None)
+        self.assertTrue(w.metric_box.isHidden())
+        self.assertFalse(w.metric_info.isHidden())
+        self.assertFalse(w.reference_box.isHidden())
+        self.assertTrue(w.reference_info.isHidden())
+
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.metric_box.isHidden())
+        self.assertTrue(w.metric_info.isHidden())
+        self.assertFalse(w.reference_box.isHidden())
+        self.assertTrue(w.reference_info.isHidden())
+
+    def test_item_changed(self):
+        w = self.widget
+        w.auto_apply = True
+        w.n_neighbors = 1
+        w.include_reference = True
+
+        self.send_signal(w.Inputs.data, self.zoo)
+        out = self.get_output(w.Outputs.data)
+        self.assertEqual(out[1, "name"], self.zoo[0, "name"])
+
+        simulate.combobox_activate_index(w.controls.selected_item, 100)
+        out = self.get_output(w.Outputs.data)
+        self.assertEqual(out[1, "name"], self.zoo[100, "name"])
+
+    def test_mapping_back_and_forth(self):
+        # Test that reference example is mapped from data to distance matrix
+        # and that neighbors are mapped from distance matrix to data.
+        w = self.widget
+
+        self.send_signal(w.Inputs.data, self.iris[:, :2])
+        self.send_signal(w.Inputs.distances, self.distances)
+        simulate.combobox_activate_index(w.controls.selected_item, 149)
+        self.assertIsNone(w.mapping)
+
+        out = self.get_output(w.Outputs.data)
+
+        self.send_signal(w.Inputs.data, self.iris[50:, :2])
+        np.testing.assert_equal(w.mapping, np.arange(50, 150))
+
+        simulate.combobox_activate_index(w.controls.selected_item, 99)
+
+        out2 = self.get_output(w.Outputs.data)
+        np.testing.assert_equal(out.X, out2.X)
+
+    def test_mapping_not_needed(self):
+        w = self.widget
+        self.assertIsNone(w.mapping)
+
+        # No distances
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertIsNone(w.mapping)
+
+        # Same ids
+        self.send_signal(w.Inputs.distances, self.distances)
+        self.assertIsNone(w.mapping)
+
+        # Different size: mapping is needed!
+        self.send_signal(w.Inputs.data, self.iris[1:130])
+        np.testing.assert_equal(w.mapping, np.arange(1, 130))
+
+        # No data
+        self.send_signal(w.Inputs.data, None)
+        self.assertIsNone(w.mapping)
+
+        # Different order: mapping is needed!
+        self.send_signal(w.Inputs.data, self.iris[::-1])
+        np.testing.assert_equal(w.mapping, np.arange(0, 150)[::-1])
+
+    def test_mapping_fails(self):
+        w = self.widget
+
+        iris50 = self.iris[:50]
+        distance_50 = distance.Euclidean(self.iris[-50:])
+
+        self.send_signal(w.Inputs.data, iris50)
+        self.send_signal(w.Inputs.distances, distance_50)
+        self.assertIs(w.mapping, False)
+        self.assertTrue(w.Error.dist_data_id_mismatch.is_shown())
+        self.assertFalse(w.Error.missing_distances.is_shown())
+
+        self.send_signal(w.Inputs.data, self.iris)
+        self.assertIs(w.mapping, False)
+        self.assertFalse(w.Error.dist_data_id_mismatch.is_shown())
+        self.assertTrue(w.Error.missing_distances.is_shown())
+
+        self.send_signal(w.Inputs.distances, None)
+        self.assertIsNone(w.mapping)
+        self.assertFalse(w.Error.dist_data_id_mismatch.is_shown())
+        self.assertFalse(w.Error.missing_distances.is_shown())
+
+    def test_computation_combinations(self):
+        w = self.widget
+        w.metric_id = Euclidean
+        w.n_neighbors = 2
+
+        self.send_signal(w.Inputs.data, self.iris[50:])
+        simulate.combobox_activate_index(w.controls.selected_item, 99)
+        dist_data_noref = w.distances
+        out_data_noref = self.get_output(w.Outputs.data)
+
+        self.send_signal(w.Inputs.reference, self.iris[149:])
+        dist_data_ref = w.distances
+        out_data_ref = self.get_output(w.Outputs.data)
+
+        self.send_signal(w.Inputs.distances, self.distances)
+        dist_data_dist_ref = w.distances
+        out_data_dist_ref = self.get_output(w.Outputs.data)
+
+        self.send_signal(w.Inputs.reference, None)
+        dist_data_dist_noref = w.distances
+        out_data_dist_noref = self.get_output(w.Outputs.data)
+
+        np.testing.assert_almost_equal(dist_data_noref[:10], dist_data_ref[:10])
+        np.testing.assert_almost_equal(dist_data_noref[:10], dist_data_dist_ref[:10])
+        np.testing.assert_almost_equal(dist_data_noref[:10], dist_data_dist_noref[:10])
+        np.testing.assert_equal(out_data_noref.X, out_data_ref.X)
+        np.testing.assert_equal(out_data_noref.X, out_data_dist_ref.X)
+        np.testing.assert_equal(out_data_noref.X, out_data_dist_noref.X)
+
+    def test_missing_references_in_distances(self):
+        w = self.widget
+
+        distances = distance.Euclidean(self.iris[50:])
+        self.send_signal(w.Inputs.distances, distances)
+
+        self.assertFalse(w.Error.no_references.is_shown())
+        self.assertFalse(w.Warning.ignored_references.is_shown())
+
+        self.send_signal(w.Inputs.reference, self.iris[45:55])
+        self.assertFalse(w.Error.no_references.is_shown())
+        self.assertTrue(w.Warning.ignored_references.is_shown())
+        self.assertIsNotNone(self.get_output(w.Outputs.data))
+        self.assertIsNotNone(w.distances)
+
+        self.send_signal(w.Inputs.reference, self.iris[45:50])
+        self.assertTrue(w.Error.no_references.is_shown())
+        self.assertFalse(w.Warning.ignored_references.is_shown())
+        self.assertIsNone(self.get_output(w.Outputs.data))
+        self.assertIsNone(w.distances)
+
+    def test_no_reference_in_distances(self):
+        w = self.widget
+
+        distances = distance.Euclidean(self.iris[50:])
+        self.send_signal(w.Inputs.distances, distances)
+
+        self.assertFalse(w.Error.no_references.is_shown())
+        self.assertFalse(w.Warning.ignored_references.is_shown())
+
+        self.send_signal(w.Inputs.reference, self.iris[45:50])
+        self.assertTrue(w.Error.no_references.is_shown())
+        self.assertFalse(w.Warning.ignored_references.is_shown())
+        self.assertIsNone(self.get_output(w.Outputs.data))
+        self.assertIsNone(w.distances)
+
+    def test_reference_from_pairwise_distances(self):
+        w = self.widget
+
+        self.send_signal(w.Inputs.distances, self.distances)
+        self.send_signal(w.Inputs.data, self.iris)
+        self.send_signal(w.Inputs.reference, self.iris[11:12])
+        out = self.get_output(w.Outputs.data)
+
+        w2 = self.create_widget(OWNeighbors)
+        self.distances.row_items = self.distances.col_items = None
+        self.send_signal(w2.Inputs.distances, self.distances)
+        self.send_signal(w2.Inputs.data, self.iris)
+        self.send_signal(w2.Inputs.reference, self.iris[11:12])
+        self.assertTrue(w2.Warning.neighbor_by_indices.is_shown())
+
+        out2 = self.get_output(w2.Outputs.data)
+        np.testing.assert_equal(out.X, out2.X)
+
+    def test_metric_fails(self):
+        w = self.widget
+
+        distance = Mock(side_effect=RuntimeError)
+        metric = MetricDef(42, "foo", "", distance)
+        metric_id = w.metric_id
+        orig_metrics = MetricDefs[metric_id]
+        try:
+            MetricDefs[metric_id] = metric
+            self.send_signal(w.Inputs.data, self.zoo)
+            self.assertIsNone(self.get_output(w.Outputs.data))
+            self.assertIsNone(w.distances)
+            self.assertTrue(w.Error.metric_failed.is_shown())
+
+            simulate.combobox_activate_index(
+                w.controls._distance_index, int(not w._distance_index))
+            self.assertIsNotNone(self.get_output(w.Outputs.data))
+            self.assertIsNotNone(w.distances)
+            self.assertFalse(w.Error.metric_failed.is_shown())
+        finally:
+            MetricDefs[metric_id] = orig_metrics
+
+    def test_no_distance_matrix_data(self):
+        w = self.widget
+        w.n_neighbors = 3
+
+        distances = DistMatrix([
+            [0, 6, 4, 3, 1, 2, 7],
+            [6, 0, 3, 3, 3, 3, 3],
+            [4, 3, 0, 3, 3, 3, 3],
+            [1, 3, 3, 0, 3, 3, 3],
+            [2, 3, 3, 3, 0, 3, 3],
+            [3, 3, 3, 3, 3, 0, 3],
+            [7, 3, 3, 3, 3, 3, 0]
+        ])
+        self.send_signal(w.Inputs.distances, distances)
+        self.assertTrue(w.Warning.no_distance_matrix_data.is_shown())
+        self.assertFalse(w.Warning.neighbor_by_indices.is_shown())
+        out = self.get_output(w.Outputs.data)
+        np.testing.assert_equal(
+            out.X,
+            np.array([[5, 6, 4], [1, 2, 3]]).T)
+
+        self.send_signal(w.Inputs.data, self.zoo[:7])
+        self.assertFalse(w.Warning.no_distance_matrix_data.is_shown())
+        self.assertTrue(w.Warning.neighbor_by_indices.is_shown())
+
+        out = self.get_output(w.Outputs.data)
+        np.testing.assert_equal(out.X, self.zoo.X[[4, 5, 3]])
+
+    def test_nothing_to_match_reference(self):
+        w = self.widget
+
+        self.distances.row_items = self.distances.col_items = None
+        self.send_signal(w.Inputs.distances, self.distances)
+        self.assertFalse(w.Error.no_references.is_shown())
+        self.send_signal(w.Inputs.reference, self.iris[50:52])
+        self.assertTrue(w.Error.no_references.is_shown())
+        self.send_signal(w.Inputs.distances, None)
+        self.assertFalse(w.Error.no_references.is_shown())
+
+    def test_output_similarity(self):
+        w = self.widget
+
+        self.distances.row_items = self.distances.col_items = None
+        self.send_signal(w.Inputs.distances, self.distances)
+        out_dist = self.get_output(w.Outputs.data)
+        out_dist_w = self.get_output(w.Outputs.data_w_distances)
+
+        w.controls.transform_to_similarity.click()
+        out_dist2 = self.get_output(w.Outputs.data)
+        out_dist_w2 = self.get_output(w.Outputs.data_w_distances)
+
+        np.testing.assert_equal(out_dist2.X[:, 1], np.max(out_dist.X[:, 1]) - out_dist.X[:, 1])
+        np.testing.assert_equal(out_dist_w2.X[:, 1], np.max(out_dist_w.X[:, 1]) - out_dist_w.X[:, 1])
+
+        np.testing.assert_equal(out_dist2.X[:, 0], out_dist.X[:, 0])
+        np.testing.assert_equal(out_dist_w2.X[:, 0], out_dist_w.X[:, 0])
+
+    def test_invalid_setting(self):
+        w = self.create_widget(
+            OWNeighbors, stored_settings={"metric_id": 42, "__version__": 3})
+        self.assertEqual(w.metric_id, EuclideanNormalized)
+        self.assertEqual(w._distance_index, 0)
 
     def test_migrate_to_2(self):
         for old, new in ((0, Euclidean), (1, Manhattan),

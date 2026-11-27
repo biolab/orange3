@@ -6817,6 +6817,7 @@ widgets/data/owneighbors.py:
         knn, nearest neighbors, distance, similarity: knn, nearest neighbors, distance, similarity, najbližji sosedje, razdalja, podobnost
         class `Inputs`:
             Data: Podatki
+            Distances: Razdalje
             Reference: Referenčni podatki
         class `Outputs`:
             Neighbors: Sosedi
@@ -6827,11 +6828,34 @@ widgets/data/owneighbors.py:
         class `Warning`:
             Every data instance is same as some reference: Vsi podatki se pojavijo tudi med referenčnimi.
             Missing values were imputed: Manjkajoče vrednosti so bile nadomeščene
+            Some reference instances are not in the distance matrix and were ignored: Nekaterih referenčnih primerov ni mogoče najti v matriki razdalj in so bili prezrti.
+            Distance matrix does not contain a data table.: Matrika razdalj ne vsebuje tabele podatkov.
+            Rows from data are assumed to match the rows in distance matrix: Gradnik predpostavlja, da se vrstice v podatkih ujemajo z vrsticami v matriki razdalj.
         class `Error`:
-            Data and reference have different features: Podatki in referenčni podatki so opisani z različnimi značilkami.
-        def `__init__`:
-            Distance metric: Vrsta razdalje
+            Distance matrix and data table have mismatching number of items.\n: Matrika razdalj in tabela podatkov imata različno število primerov.\n
+            If the matrix that does not include a related data table, it is\n: Če matrika ne vključuje pripadajoče tabele podatkov, gradnik
+            assumed that its rows correspond to the rows of the input table.: predpostavlja, da se njene vrstice ujemajo z vrsticami vhodne tabele.
+            Distance matrix and data table do not refer to the same data.: Matrika razdalj in tabela podatkov se nanašata na različne podatke.
+            'Reference has different features than data ': 'Referenčni podatki imajo drugačne spremenljivke kot podatki '
+            or missing values that cannot be imputed.: ali pa vsebujejo neznane vrednosti, ki jih ni mogoče nadomestiti.
+            Distance matrix is not computed from a (single) table.: Matrika razdalj ni izračunana iz (ene same) tabele.
+            Distance matrix does not include any reference instance(s).: Matrika razdalj ne vključuje nobenega referenčnega primera.
+            'Distance matrix does not contain distances between ': 'Matrika razdalj ne vsebuje razdalj med '
+            (all) rows of a data table.: (vsemi) vrsticami tabele podatkov.
+            Distance metric failed to compute distances:\n{}: Računanje razdalj ni uspelo:\n{}
+        def `_metric_box`:
+            Distance Metric: Metrika razdalje
             _distance_index: false
+        def `_reference_box`:
+            Reference Example: Referenčni primer
+            Row index: Številka vrstice
+            label: false
+            Select reference example based on the value of a variable.: Izberi referenčni primer glede na vrednost spremenljivke.
+            Variable:: Spremenljivka:
+            selected_item: false
+            Value:: Vrednost:
+            Reference is provided on the input.: Referenčni primer je podan na vhodu.
+        def `_options_box`:
             checked: false
             limit_neighbors: false
             checkCallback: false
@@ -6839,22 +6863,38 @@ widgets/data/owneighbors.py:
             Limit number of neighbors to:: Omeji število sosedov na:
             Number of neighbors:: Število sosedov:
             n_neighbors: false
+            Number of neighbors, excluding the reference example: Število, razen referenčnega primera
             include_reference: false
-            Include reference example: Vključi referenčni primer
-        def `compute_distances`:
+            Append reference example(s): Dodaj referenčni primer
+            Append the reference example to the output table of neighbors: Dodaj referenčni primer k izhodni tabeli sosedov
+            transform_to_similarity: false
+            Output similarity instead of distance: Na izhodu izračunaj podobnost namesto razdalje
+            Subtract all distances from the maximum distance: Odštej vse razdalje od največje razdalje
+        def `_update_info`:
+            '
+                    <p style = "line-height: 130%;" >
+                      Neighbours are selected from input data,<br/>
+                      based on the distance matrix provided as input.
+                   </p>': '<p style = "line-height: 130%;" >Sosede izberemo iz vhodnih podatkov,<br/>na podlagi matrike razdalj, ki je podana na vhodu.</p>'
+            Distances are provided on the input.: Razdalje so podane na vhodu.
+        def `_compute_from_data_instance`:
             impute: false
             normalize: false
         def `commit`:
             ' (neighbors)': ' (sosedi)'
+            Neighbors' indices: Številke vrstic sosedov
         def `_domain_with_distance`:
             distance: razdalja
+            row_number: false
         def `migrate_settings`:
             distance_index: false
             metric_id: false
             limit_neighbors: false
             backward_compatibility_limit: false
+    def `main`:
+        iris.tab: false
+        zoo.tab: false
     __main__: false
-    iris.tab: false
 widgets/data/owoutliers.py:
     def `run`:
         Initializing...: Zaganjam...
