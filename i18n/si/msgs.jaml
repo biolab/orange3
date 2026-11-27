@@ -3280,6 +3280,10 @@ regression/linear.py:
     ElasticNetLearner: false
     ElasticNetCVLearner: false
     PolynomialLearner: false
+    class `OLSRegressionLearner`:
+        def `_compute_pvalues`:
+            'Design matrix must have full column rank and ': true
+            positive residual degrees of freedom: true
     class `RidgeRegressionLearner`:
         def `__init__`:
             auto: false
@@ -10371,9 +10375,10 @@ widgets/model/owlinearregression.py:
         def `_set_l2_ratio_label`:
             '{:.{}f} : {:.{}f}': false
         def `update_model`:
-            coef: false
-            name: false
             intercept: false
+            coef: false
+            p-value: false
+            name: false
             coefficients: koeficienti
         def `get_learner_parameters`:
             No Regularization: Brez regularizacije
