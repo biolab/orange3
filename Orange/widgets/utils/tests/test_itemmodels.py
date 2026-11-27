@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import patch
 
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_array
 
 from AnyQt.QtCore import Qt, QModelIndex
 from AnyQt.QtTest import QSignalSpy
@@ -617,7 +617,7 @@ class TestTableModel(unittest.TestCase, dbt):
 
         # X: sparse_bool
         table = Table.from_numpy(Domain(table.domain.class_vars, metas=table.domain.attributes),
-                                 csr_matrix(table.Y), metas=table.X)
+                                 csr_array(table.Y), metas=table.X)
         model = TableModel(table)
         data, index = model.data, model.index
 

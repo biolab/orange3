@@ -167,7 +167,7 @@ class TestIndicator(unittest.TestCase):
         transform = Indicator(var, 2).transform
         expected = [0, 0, 1, np.nan, 1, 0]
         np.testing.assert_equal(transform(col), expected)
-        sparse = transform(sp.csr_matrix(col))
+        sparse = transform(sp.csr_array(col))
         self.assertTrue(sp.issparse(sparse))
         np.testing.assert_equal(sparse.toarray().ravel(), expected)
         self.assertEqual(transform(1), 0)
@@ -177,7 +177,7 @@ class TestIndicator(unittest.TestCase):
         transform = Indicator(var, 0).transform
         expected = [0, 0, 0, np.nan, 0, 1]
         np.testing.assert_equal(transform(col), expected)
-        sparse = transform(sp.csr_matrix(col))
+        sparse = transform(sp.csr_array(col))
         # Currently, this always returns dense array
         assert not sp.issparse(sparse)
         np.testing.assert_equal(sparse, expected)
@@ -188,7 +188,7 @@ class TestIndicator(unittest.TestCase):
         transform = Indicator1(var, 2).transform
         expected = [-1, -1, 1, np.nan, 1, -1]
         np.testing.assert_equal(transform(col), expected)
-        np.testing.assert_equal(transform(sp.csr_matrix(col).toarray().ravel()),
+        np.testing.assert_equal(transform(sp.csr_array(col).toarray().ravel()),
                                 expected)
         self.assertEqual(transform(1), -1)
         self.assertEqual(transform(2), 1)

@@ -1,7 +1,9 @@
 # pylint: disable=protected-access
-from unittest.mock import patch
+from typing import Union
+from unittest.mock import patch, Mock
 
 import numpy as np
+import scipy as sp
 from sklearn.utils import check_random_state
 
 from orangewidget.settings import Context
@@ -255,6 +257,22 @@ class TestOWLouvain(WidgetTest):
         self.send_signal(w.Inputs.data, None)
         graph = self.get_output(w.Outputs.graph)
         self.assertIsNone(graph)
+
+    def test_graph_output_adapts_to_network_addon(self):
+        widget = self.widget
+        self.send_signal(widget.Inputs.data, self.iris)
+        self.get_output()
+
+        with patch.object(OWLouvainClustering.Outputs, "graph", Mock(), create=True):
+            for sp_type in (sp.sparse.csr_matrix, sp.sparse.csr_array):
+                class Network:
+                    def __init__(self_, _, edges: Union[int, sp_type]):
+                        self.assertIsInstance(edges, sp_type)
+
+                with patch(
+                        "Orange.widgets.unsupervised.owlouvainclustering.Network",
+                        new=Network):
+                    widget._send_network_data(Mock())
 
     def test_migrate_settings(self):
         # any context settings are removed

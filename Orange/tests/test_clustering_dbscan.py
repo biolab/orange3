@@ -4,7 +4,7 @@
 import unittest
 
 import numpy as np
-from scipy.sparse import csc_matrix, csr_matrix
+from scipy.sparse import csc_array, csr_array
 
 from Orange.clustering.clustering import ClusteringModel
 from Orange.data import Table
@@ -43,14 +43,14 @@ class TestDBSCAN(unittest.TestCase):
 
     def test_predict_sparse_csc(self):
         with self.iris.unlocked():
-            self.iris.X = csc_matrix(self.iris.X[::20])
+            self.iris.X = csc_array(self.iris.X[::20])
         c = self.dbscan(self.iris)
         self.assertEqual(np.ndarray, type(c))
         self.assertEqual(len(self.iris), len(c))
 
     def test_predict_spares_csr(self):
         with self.iris.unlocked():
-            self.iris.X = csr_matrix(self.iris.X[::20])
+            self.iris.X = csr_array(self.iris.X[::20])
         c = self.dbscan(self.iris)
         self.assertEqual(np.ndarray, type(c))
         self.assertEqual(len(self.iris), len(c))
@@ -74,7 +74,7 @@ class TestDBSCAN(unittest.TestCase):
         Test with sparse array as an input in model.
         """
         c = self.dbscan.get_model(self.iris)
-        self.assertRaises(NotImplementedError, c, csr_matrix(self.iris.X))
+        self.assertRaises(NotImplementedError, c, csr_array(self.iris.X))
 
     def test_model_instance(self):
         """
