@@ -12,6 +12,20 @@ from Orange.data import DiscreteVariable, ContinuousVariable, Variable
 from Orange.preprocess.discretize import decimal_binnings
 # pylint: disable=wildcard-import,unused-wildcard-import
 from Orange.widgets.utils.colorpalettes import *
+from Orange.widgets.utils import color as colorpalettes_core
+
+
+class CorePaletteTest(unittest.TestCase):
+    def test_core_palette_is_qt_independent(self):
+        palette = colorpalettes_core.DiscretePalette.from_colors(
+            [(1, 2, 3), (4, 5, 6)])
+
+        self.assertFalse(hasattr(palette, "qcolors"))
+        np.testing.assert_equal(palette.values_to_colors([1]), [[4, 5, 6]])
+        self.assertTrue(issubclass(DiscretePalette,
+                                   colorpalettes_core.DiscretePalette))
+        self.assertIsInstance(DefaultRGBColors,
+                              colorpalettes_core.DiscretePalette)
 
 
 class PaletteTest(unittest.TestCase):

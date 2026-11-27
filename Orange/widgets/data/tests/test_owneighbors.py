@@ -1,6 +1,6 @@
 #pylint: disable=missing-docstring,protected-access,unsubscriptable-object
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 
@@ -51,17 +51,20 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(widget.Inputs.reference, None)
         self.assertEqual(widget.reference, None)
         widget.apply_button.button.click()
-        self.assertIsNone(self.get_output())
+        self.assertIsNone(self.get_output(widget.Outputs.data))
+        self.assertIsNone(self.get_output(widget.Outputs.data_w_distances))
 
     def test_output_neighbors(self):
         """Check if neighbors are on the output after apply"""
         widget = self.widget
-        self.assertIsNone(self.get_output())
+        self.assertIsNone(self.get_output(widget.Outputs.data))
+        self.assertIsNone(self.get_output(widget.Outputs.data_w_distances))
         self.send_signals(((widget.Inputs.data, self.iris),
                            (widget.Inputs.reference, self.iris[:10])))
         widget.apply_button.button.click()
-        self.assertIsNotNone(self.get_output())
-        self.assertIsInstance(self.get_output(), Table)
+        self.assertIsNotNone(self.get_output(widget.Outputs.data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.data_w_distances))
+        self.assertIsInstance(self.get_output(widget.Outputs.data), Table)
         self.assertTrue(all([i in self.iris.ids for i in
                              self.get_output(widget.Outputs.data).ids])
                         )
@@ -79,7 +82,7 @@ class TestOWNeighbors(WidgetTest):
                 self.send_signal(widget.Inputs.reference, self.iris[:10])
                 setting.set_value(val)
                 widget.apply_button.button.click()
-                self.assertIsNotNone(self.get_output())
+                self.assertIsNotNone(self.get_output(widget.Outputs.data))
 
     def test_include_reference(self):
         widget = self.widget
@@ -92,6 +95,8 @@ class TestOWNeighbors(WidgetTest):
         self.assertEqual(len(neighbors), 10)
         for inst in reference:
             self.assertNotIn(inst, neighbors)
+        andata = self.get_output(widget.Outputs.data_w_distances)
+        self.assertEqual(len(andata), 150)
 
         self.widget.include_reference = True
         widget.commit.now()
@@ -101,6 +106,8 @@ class TestOWNeighbors(WidgetTest):
             self.assertNotIn(inst, neighbors[:10])
         for inst in reference:
             self.assertIn(inst, neighbors[10:])
+        andata = self.get_output(widget.Outputs.data_w_distances)
+        self.assertEqual(len(andata), 150)
 
     def test_similarity(self):
         widget = self.widget
@@ -108,13 +115,36 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(widget.Inputs.data, self.iris)
         self.send_signal(widget.Inputs.reference, reference)
         widget.apply_button.button.click()
-        neighbors = self.get_output()
+        neighbors = self.get_output(widget.Outputs.data)
         self.assertEqual(self.iris.domain.attributes,
                          neighbors.domain.attributes)
         self.assertEqual(self.iris.domain.class_vars,
                          neighbors.domain.class_vars)
         self.assertIn("distance", neighbors.domain)
         self.assertTrue(all(100 >= ins["distance"] >= 0 for ins in neighbors))
+
+    def test_annotated_data(self):
+        widget = self.widget
+        widget.limit_neighbors = True
+        widget.n_neighbors = 3
+        reference = self.iris[10:11]
+        widget.metric_id = Euclidean
+        mock_distances = np.array([[5, 6, 8, 1, 3, 2, 4, 7, 6, 6]]).T
+        with patch(
+                "Orange.distance.distance.EuclideanRowsModel.compute_distances",
+                new=Mock(return_value=mock_distances)):
+            self.send_signal(widget.Inputs.data, self.iris[20:30])
+            self.send_signal(widget.Inputs.reference, reference)
+            data = self.get_output(widget.Outputs.data)
+            np.testing.assert_equal(data.X, self.iris[[23, 25, 24]].X)
+
+            andata = self.get_output(widget.Outputs.data_w_distances)
+            np.testing.assert_equal(andata.X, self.iris[20:30].X)
+            np.testing.assert_equal(andata.get_column("distance"),
+                                    mock_distances.flatten())
+
+            self.send_signal(widget.Inputs.data, None)
+            self.assertIsNone(self.get_output(widget.Outputs.data_w_distances))
 
     def test_missing_values(self):
         widget = self.widget
@@ -125,7 +155,8 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(widget.Inputs.data, self.iris)
         self.send_signal(widget.Inputs.reference, reference)
         widget.apply_button.button.click()
-        self.assertIsNotNone(self.get_output())
+        self.assertIsNotNone(self.get_output(widget.Outputs.data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.data_w_distances))
 
     def test_compute_distances_apply_called(self):
         """Check compute distances and apply are called when receiving signal"""
@@ -296,6 +327,7 @@ class TestOWNeighbors(WidgetTest):
         self.assertTrue(widget.Warning.all_data_as_reference.is_shown())
         self.assertFalse(widget.Info.removed_references.is_shown())
         self.assertIsNone(self.get_output(widget.Outputs.data))
+        self.assertIsNotNone(self.get_output(widget.Outputs.data_w_distances))
 
         self.send_signal(widget.Inputs.data, data[:15])
         self.assertFalse(widget.Warning.all_data_as_reference.is_shown())
@@ -465,6 +497,7 @@ class TestOWNeighbors(WidgetTest):
         self.send_signal(self.widget.Inputs.data, data)
         self.send_signal(self.widget.Inputs.reference, data[0:1])
         self.assertIsInstance(self.get_output(self.widget.Outputs.data), Table2)
+        self.assertIsInstance(self.get_output(self.widget.Outputs.data_w_distances), Table2)
 
     def test_order_by_distance(self):
         self.widget.metric_id = Euclidean
@@ -518,6 +551,25 @@ class TestOWNeighbors(WidgetTest):
             w = self.create_widget(OWNeighbors, stored_settings=settings)
             self.assertEqual(w.metric_id, new,
                              msg=f"at {old} to {MetricDefs[new].name}")
+
+    def test_migrate_to_3(self):
+        settings = dict(limit_neighbors=False, n_neighbors=5, __version__=2)
+        w = self.create_widget(OWNeighbors, stored_settings=settings)
+        w.limit_neighbors = False
+        w.backward_compatibility_limit = True
+        self.send_signal(w.Inputs.data, self.iris[:30])
+        self.send_signal(w.Inputs.reference, self.iris[50:52])
+        self.assertEqual(len(self.get_output(w.Outputs.data)), 30)
+        self.assertTrue(hasattr(w.controls.n_neighbors, "cbox"))
+
+        settings = dict(limit_neighbors=True, n_neighbors=5, __version__=2)
+        w = self.create_widget(OWNeighbors, stored_settings=settings)
+        w.limit_neighbors = True
+        w.backward_compatibility_limit = False
+        self.send_signal(w.Inputs.data, self.iris[:30])
+        self.send_signal(w.Inputs.reference, self.iris[50:52])
+        self.assertEqual(len(self.get_output(w.Outputs.data)), 5)
+        self.assertFalse(hasattr(w.controls.n_neighbors, "cbox"))
 
 
 if __name__ == "__main__":

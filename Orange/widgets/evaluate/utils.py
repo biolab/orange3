@@ -78,8 +78,8 @@ def results_for_preview(data_name=""):
     data = Table(data_name or "heart_disease")
     results = CrossValidation(
         data,
-        [LogisticRegressionLearner(penalty="l2"),
-         LogisticRegressionLearner(penalty="l1"),
+        [LogisticRegressionLearner(l1_ratio=0),
+         LogisticRegressionLearner(l1_ratio=1),
          SVMLearner(probability=True),
          NuSVMLearner(probability=True)
         ],

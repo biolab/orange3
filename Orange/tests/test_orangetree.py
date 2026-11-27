@@ -414,7 +414,7 @@ class TestTreeModel(unittest.TestCase):
         self.assertEqual(model._thresholds.shape, (8,))
 
         nan = float("nan")
-        x = sp.csr_matrix(np.array(
+        x = sp.csr_array(np.array(
             [[nan, 0, 0],
              [13, nan, 0],
              [13, 0, 0],
@@ -426,7 +426,7 @@ class TestTreeModel(unittest.TestCase):
         ))
         np.testing.assert_equal(model.get_values(x), expected_values)
 
-        x = sp.csc_matrix(np.array(
+        x = sp.csc_array(np.array(
             [[nan, 0, 0],
              [13, nan, 0],
              [13, 0, 0],
@@ -438,7 +438,7 @@ class TestTreeModel(unittest.TestCase):
         ))
         np.testing.assert_equal(model.get_values(x), expected_values)
 
-        x = sp.lil_matrix(np.array(
+        x = sp.lil_array(np.array(
             [[nan, 0, 0],
              [13, nan, 0],
              [13, 0, 0],

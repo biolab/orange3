@@ -5,6 +5,61 @@ Change Log
 ------------
 
 
+[3.41.0] - 2026-11-08
+--------------------
+##### Enhancements
+* Add Python 3.15 support ([#7348](../../pull/7348))
+* OWSilhouettePlot: display average silhouette ([#7327](../../pull/7327))
+* Neighbors: unify available metrics with Distances ([#7320](../../pull/7320))
+* kNN with the Cosine metric ([#7309](../../pull/7309))
+* Make dark mode icons support explicit  ([#7273](../../pull/7273))
+* utils: Minimize imports for utils ([#7246](../../pull/7246))
+* Add Spanish translation ([#7354](../../pull/7354))
+* Add View Options (title and axis titles) to Distributions widget ([#7302](../../pull/7302))
+* Scatterplotgraph: Implement manual repositioning of points ([#7286](../../pull/7286))
+* ScatterplotGraph: Group points within dense cells ([#7224](../../pull/7224))
+* OWCSVFileImport: Auto-resolve paths within workflow directory ([#7278](../../pull/7278))
+* Hierarchical clustering: Elide annotations, replace newlines with spaces ([#7260](../../pull/7260))
+* Discretize and Continuize: Unify design ([#7232](../../pull/7232))
+
+##### Bugfixes
+* Manifold Learning: Deprecated np.linalg.linalg module ([#7362](../../pull/7362))
+* Scatter Plot: Update axis labels when discrete values change ([#7336](../../pull/7336))
+* t-SNE with distance matrix inputs ([#7342](../../pull/7342))
+* Fix segfault in Datasets ([#7345](../../pull/7345))
+* Nomogram: Use softmax for multinomial logistic regression ([#7331](../../pull/7331))
+* Plot axes: No SI prefix for values below 1 with pyqtgraph 0.14 ([#7337](../../pull/7337))
+* Excel readers: Keep empty flags row of three-line header ([#7334](../../pull/7334))
+* File, Load Model, Distance File: do not leak recent files into a saved workflow ([#7228](../../pull/7228))
+* Select Rows: Keep condition rows in sync after removing one ([#7335](../../pull/7335))
+* Concatenate: fix source ID as class problem ([#7340](../../pull/7340))
+* Rank: Fix loading workflow created with another language ([#7332](../../pull/7332))
+* itemmodels: Limit VariableModel's tooltip length ([#7317](../../pull/7317))
+* Create Class: Remove context settings in favour of schema-only non-context ([#7231](../../pull/7231))
+* Distributions: Fix mislabelled gamma parameter ([#7312](../../pull/7312))
+* oweditdomain: Use variable repr for continuous to discrete transform ([#7301](../../pull/7301))
+* Linux Wayland fixes ([#7304](../../pull/7304))
+* Distance Map: point size ([#7285](../../pull/7285))
+* PLS.svg: Convert text element to path ([#7283](../../pull/7283))
+* Freeviz: Fix disappearing label at angles close to a multiple of 90 ([#7241](../../pull/7241))
+* util.countnans: Don't treat single-row sparse matrices as 1-d ([#7219](../../pull/7219))
+* Cosine distances: Fix docs on missing values (-> replaces by means) ([#7223](../../pull/7223))
+* Fix an incompatibility planned in a future pyqtgraph (layout -> layout_) ([#7329](../../pull/7329))
+* Update quantile calculation method in owboxplot.py ([#7305](../../pull/7305))
+* Print "..." in deep subtrees of a Tree instead of raising RecursionError ([#7303](../../pull/7303))
+* RowInstance: Fix setting class when there are multiple classes ([#7293](../../pull/7293))
+* ElasticNetCVLearner: Fix parameter alphas ([#7294](../../pull/7294))
+* Lookup: Fix __eq__ for transformation to string variable ([#7269](../../pull/7269))
+* Tree Viewer: Fix heuristic for choosing the node label ([#7275](../../pull/7275))
+* Jaccard Distance: Fix distance over columns ([#7247](../../pull/7247))
+* io: fix for chardet >= 7 ([#7253](../../pull/7253))
+* Feature Statistics: Disable stretching of distribution column, set minimal width ([#7226](../../pull/7226))
+* KMeans: Scale silhouette bars ([#7230](../../pull/7230))
+* Transpose: Rename output column ([#7233](../../pull/7233))
+* Nomogram: Fix dark mode ([#7227](../../pull/7227))
+* Nomogram: Disable sorting by pos/neg influence for logistic regression ([#7225](../../pull/7225))
+
+
 [3.40.0] - 2025-12-20
 --------------------
 ##### Enhancements
@@ -1958,7 +2013,8 @@ Change Log
 * Initial version based on Python 1.5.2 and Qt 2.3
 
 
-[next]: https://github.com/biolab/orange3/compare/3.40.0..HEAD
+[next]: https://github.com/biolab/orange3/compare/3.41.0..HEAD
+[3.41.0]: https://github.com/biolab/orange3/compare/3.40.0...3.41.0
 [3.40.0]: https://github.com/biolab/orange3/compare/3.39.0...3.40.0
 [3.39.0]: https://github.com/biolab/orange3/compare/3.38.1...3.39.0
 [3.38.1]: https://github.com/biolab/orange3/compare/3.38.0...3.38.1

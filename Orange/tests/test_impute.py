@@ -28,7 +28,7 @@ class TestReplaceUnknowns(unittest.TestCase):
         np.testing.assert_equal(ia, [0, 42, 2, 3, 4, 42, 6, 7, 8, 9])
 
     def test_sparse(self):
-        m = sp.csr_matrix(np.eye(10))
+        m = sp.csr_array(np.eye(10))
         rm = preprocess.ReplaceUnknowns(None, value=42).transform(m)
         self.assertEqual((m != rm).nnz, 0)
 
@@ -38,7 +38,7 @@ class TestReplaceUnknowns(unittest.TestCase):
         GH-2295
         GH-2178
         """
-        m = sp.csr_matrix(np.ones((3, 3)))
+        m = sp.csr_array(np.ones((3, 3)))
         m[0, :] = np.nan
         self.assertTrue(np.isnan(m.data).any())
         preprocess.ReplaceUnknowns(None, value=42.).transform(m)
@@ -209,7 +209,7 @@ class TestAsValue(unittest.TestCase):
         table = self._create_table()
         domain = table.domain
         with table.unlocked():
-            table.X = sp.csr_matrix(table.X)
+            table.X = sp.csr_array(table.X)
 
         v1, v2 = impute.AsValue()(table, domain[1])
         self.assertTrue(np.all(np.isfinite(v2.compute_value(table))))

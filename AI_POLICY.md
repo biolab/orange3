@@ -4,7 +4,7 @@ Orange maintainers embrace AI tools as a productive tool in their workflow.
 As a project, we welcome AI as a tool.
 
 However, we notice drive-by pull requests that are clearly produced by AI:
-they fix trivial or irrelevant issues, and the include verbose descriptions
+they fix trivial or irrelevant issues, and they include verbose descriptions
 that nevertheless need to be read by a human.
 It is rude and disrespectful to submit a drive-by pull request that
 took a minute to generate, and put the burden of validation

@@ -86,7 +86,7 @@ class TestOWPaintData(WidgetTest):
         """
         data = Table("iris")[::25].copy()
         with data.unlocked():
-            data.X = sp.csr_matrix(data.X)
+            data.X = sp.csr_array(data.X)
         self.send_signal(self.widget.Inputs.data, data)
         self.assertTrue(self.widget.Warning.sparse_not_supported.is_shown())
         self.send_signal(self.widget.Inputs.data, None)

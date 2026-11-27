@@ -119,7 +119,7 @@ class NaiveBayesModel(Model):
         dat[np.isnan(dat)] = n_vals - 1
         dat = dat.astype(int)
 
-        if sp.isspmatrix_csr(data):
+        if sp.issparse(data) and data.format == "csr":
             for row, start, end in zip(probs, data.indptr, data.indptr[1:]):
                 row += log_prob[data.indices[start:end],
                                 dat[start:end]].sum(axis=0)

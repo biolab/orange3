@@ -29,6 +29,16 @@ def _eliminate_zeros(x):
 
 def _count_nans_per_row_sparse(X, weights, dtype=None):
     """ Count the number of nans (undefined) values per row. """
+    if X.ndim == 1:
+        nonzero = np.isnan(X.data)
+        if weights is None:
+            return np.sum(nonzero)
+        elif X.format == "coo":
+            indices = X.coords[0]
+        else:
+            indices = X.indices
+        return np.sum(weights[indices[nonzero]])
+
     if weights is not None:
         X = X.tocoo(copy=False)
         nonzero_mask = np.isnan(X.data)
@@ -39,11 +49,11 @@ def _count_nans_per_row_sparse(X, weights, dtype=None):
         else:
             data_weights = weights[nan_rows, nan_cols]
 
-        w = sp.coo_matrix((data_weights, (nan_rows, nan_cols)), shape=X.shape)
+        w = sp.coo_array((data_weights, (nan_rows, nan_cols)), shape=X.shape)
         w = w.tocsr()
         return np.asarray(w.sum(axis=1), dtype=dtype).ravel()
 
-    if isinstance(X, (sp.csr_matrix, sp.csc_matrix)):
+    if isinstance(X, (sp.csr_array, sp.csc_array)):
         X = type(X)((np.isnan(X.data), X.indices, X.indptr), X.shape)
         return np.asarray(X.sum(axis=1), dtype=dtype).ravel()
     else:  # pragma: no cover
@@ -70,16 +80,21 @@ def sparse_implicit_zero_weights(x, weights):
         raise TypeError('The matrix provided was not sparse.')
 
     if weights.ndim == 1:
-        # Match weights and x axis so `indices` will be set appropriately
-        if x.shape[0] == weights.shape[0]:
-            x = x.tocsc()
-        elif x.shape[1] == weights.shape[0]:
-            x = x.tocsr()
+        if x.ndim == 2:
+            # Match weights and x axis so `indices` will be set appropriately
+            if x.shape[0] == weights.shape[0]:
+                x = x.tocsc()
+            elif x.shape[1] == weights.shape[0]:
+                x = x.tocsr()
+        if x.ndim == 1 and x.format == "coo":
+            indices = x.coords[0]
+        else:
+            indices = x.indices
         n_items = np.prod(x.shape)
-        zero_indices = np.setdiff1d(np.arange(n_items), x.indices, assume_unique=True)
+        zero_indices = np.setdiff1d(np.arange(n_items), indices, assume_unique=True)
         return weights[zero_indices]
     else:
-        # Can easily be implemented using a coo_matrix
+        # Can easily be implemented using a coo_array
         raise NotImplementedError(
             'Computing zero weights on ndimensinal weight matrix is not implemented'
         )
@@ -126,13 +141,19 @@ def bincount(x, weights=None, max_val=None, minlength=0):
     if sp.issparse(x):
         if weights is not None:
             # Match weights and x axis so `indices` will be set appropriately
-            if x.shape[0] == weights.shape[0]:
-                x = x.tocsc()
-            elif x.shape[1] == weights.shape[0]:
-                x = x.tocsr()
+            if x.ndim == 2:
+                if x.shape[0] == weights.shape[0]:
+                    x = x.tocsc()
+                elif x.shape[1] == weights.shape[0]:
+                    x = x.tocsr()
+
+            if x.ndim == 1 and x.format == "coo":
+                indices = x.coords[0]
+            else:
+                indices = x.indices
 
             zero_weights = sparse_implicit_zero_weights(x, weights).sum()
-            weights = weights[x.indices]
+            weights = weights[indices]
         else:
             zero_weights = sparse_count_implicit_zeros(x)
 
@@ -156,7 +177,7 @@ def bincount(x, weights=None, max_val=None, minlength=0):
     bc = np.bincount(
         x.astype(np.int32, copy=False), weights=weights, minlength=minlength
     ).astype(float)
-    # Since `csr_matrix.values` only contain non-zero values or explicit
+    # Since `csr_array.values` only contain non-zero values or explicit
     # zeros, we must count implicit zeros separately and add them to the
     # explicit ones found before
     if sp.issparse(x_original):
@@ -607,49 +628,37 @@ def digitize(x, bins, right=False):
     If a sparse matrix is provided and the '0's belong to the '0'th bin, then
     a sparse matrix is returned.
 
-    Because this can return both sparse and dense matrices, we must keep the
-    return shape consistent. Since sparse matrices don't support 1d matrices,
-    we reshape any returned 1d numpy array to a 2d matrix, with the first
-    dimension shape being 1. This is equivalent to the behaviour of sparse
-    matrices.
-
     Parameters
     ----------
-    x : Union[np.ndarry, sp.csr_matrix, sp.csc_matrix]
+    x : Union[np.ndarry, sp.csr_array, sp.csc_array]
     bins : np.ndarray
     right : Optional[bool]
 
     Returns
     -------
-    Union[np.ndarray, sp.csr_matrix]
+    Union[np.ndarray, sp.csr_array]
 
     """
     if not sp.issparse(x):
-        # TODO Remove reshaping logic when support for numpy==1.9 is dropped
-        original_shape = x.shape
-        x = x.flatten()
-        result = np.digitize(x, bins, right)
-        result = result.reshape(original_shape)
-        # In order to keep the return shape consistent, and sparse matrices
-        # don't support 1d matrices, make sure to convert 1d to 2d matrices
-        if result.ndim == 1:
-            result = result.reshape(((1,) + result.shape))
-        return result
+       return np.digitize(x, bins, right)
 
     # Find the bin where zeros belong, depending on the `right` parameter
     zero_bin = np.searchsorted(bins, 0, side=['right', 'left'][right])
 
     if zero_bin == 0:
-        r = sp.lil_matrix(x.shape, dtype=np.int64)
+        r = sp.lil_array(x.shape, dtype=np.int64)
+    elif x.ndim == 1:
+        return np.digitize(x.todense(), bins, right)
     else:
         r = zero_bin * np.ones(x.shape, dtype=np.int64)
 
-    for idx, row in enumerate(x.tocsr()):
-        # TODO Remove this check when support for numpy==1.9 is dropped
-        if row.nnz > 0:
+    if x.ndim == 1:
+        r.data = np.digitize(r.data, bins, right)
+    else:
+        for idx, row in enumerate(x.tocsr()):
             r[idx, row.indices] = np.digitize(row.data, bins, right)
 
-    # Orange mainly deals with `csr_matrix`, but `lil_matrix` is more efficient
+    # Orange mainly deals with `csr_array`, but `lil_array` is more efficient
     # for incremental building
     if sp.issparse(r):
         r = r.tocsr()

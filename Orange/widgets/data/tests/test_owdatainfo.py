@@ -53,9 +53,9 @@ class TestOWDataInfo(WidgetTest):
         x, y, z, u, w = (ContinuousVariable(n) for n in "xyzuw")
         data = Table.from_numpy(
             Domain([x, y], z, [u, w]),
-            sp.csc_matrix(np.random.randint(0, 1, (5, 2))),
-            sp.csc_matrix(np.random.randint(0, 1, (5, 1))),
-            sp.csc_matrix(np.random.randint(0, 1, (5, 2))))
+            sp.csc_array(np.random.randint(0, 1, (5, 2))),
+            sp.csc_array(np.random.randint(0, 1, (5, 1))),
+            sp.csc_array(np.random.randint(0, 1, (5, 2))))
         self.send_signal(self.widget.Inputs.data, data)
         self.widget.send_report()
 
