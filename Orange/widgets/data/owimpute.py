@@ -153,6 +153,9 @@ class OWImpute(OWWidget):
     class Warning(OWWidget.Warning):
         cant_handle_var = Msg("Default method can not handle '{}'")
 
+    SETTINGS_PICKLE_TYPES = [
+        f"{__name__}:Method",
+    ]
     settingsHandler = settings.DomainContextHandler()
 
     _default_method_index = settings.Setting(int(Method.Leave))  # type: int

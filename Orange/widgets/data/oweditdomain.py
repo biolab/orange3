@@ -2198,7 +2198,11 @@ class OWEditDomain(widget.OWWidget):
         )
 
     settings_version = 5
-
+    SETTINGS_PICKLE_TYPES = [
+        f"{__name__}:TimeUnit",
+        f"{__name__}:StrpTime",
+        f"{__name__}:Categorical",
+    ]
     _domain_change_hints: dict = Setting({}, schema_only=True)
     _merge_dialog_settings = Setting({}, schema_only=True)
     output_table_name = Setting("", schema_only=True)

@@ -747,6 +747,7 @@ class OWPivot(OWWidget):
         too_many_values = Msg("Selected variable has too many values.")
         no_variables = Msg("At least one variable is required.")
 
+    SETTINGS_PICKLE_TYPES = [f"{__name__}:AggregationFunctionsEnum"]
     settingsHandler = DomainContextHandler()
     settings_version = 2
     row_feature = ContextSetting(None)

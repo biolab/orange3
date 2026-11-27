@@ -23,6 +23,7 @@ from AnyQt.QtCore import Qt, QPoint, QRect, QSettings
 
 from orangecanvas import config as occonfig
 from orangecanvas.config import entry_points, EntryPoint
+from orangecanvas.scheme import readwrite
 from orangecanvas.utils.settings import config_slot
 from orangewidget.workflow import config
 from orangewidget.settings import set_widget_settings_dir_components
@@ -98,6 +99,12 @@ class Config(config.Config):
 
         for t in spec:
             occonfig.register_setting(*t)
+
+        # Forward declare ControlledList for restricted unpickling
+        import copyreg
+        import Orange.widgets.gui
+        readwrite.RestrictedUnpickler.register_pickle_safe(copyreg._reconstructor)
+        readwrite.RestrictedUnpickler.register_pickle_safe(Orange.widgets.gui.ControlledList)
 
     @staticmethod
     def application_icon():

@@ -503,6 +503,9 @@ class OWDiscretize(widget.OWWidget):
     class Outputs:
         data = Output("Data", Table, doc="Table with categorical features")
 
+    SETTINGS_PICKLE_TYPES = [
+        f"{__name__}:VarHint", f"{__name__}:Methods",
+    ]
     settings_version = 3
 
     #: Default setting (key DefaultKey) and specific settings for variables;
