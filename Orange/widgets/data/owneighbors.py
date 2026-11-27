@@ -3,6 +3,8 @@ import bottleneck as bn
 
 from AnyQt.QtCore import Qt
 
+from orangewidget.utils.signals import LazyValue
+
 from Orange.data import Table, Domain, ContinuousVariable
 from Orange.data.util import get_unique_names
 from Orange.preprocess import RemoveNaNColumns, Impute
@@ -31,6 +33,7 @@ class OWNeighbors(OWWidget):
 
     class Outputs:
         data = Output("Neighbors", Table)
+        data_w_distances = Output("Data with Distances", Table)
 
     class Info(OWWidget.Warning):
         removed_references = \
@@ -46,15 +49,19 @@ class OWNeighbors(OWWidget):
         diff_domains = Msg("Data and reference have different features")
 
     n_neighbors: int = Setting(10)
-    limit_neighbors = Setting(True)
     metric_id: int = Setting(EuclideanNormalized)
     include_reference = Setting(False)
     auto_apply = Setting(True)
 
+    # Backward compatibility for check box to limit the number of neighbours.
+    # The new GUI sets it to True and does not expose it
+    limit_neighbors = Setting(True)
+    backward_compatibility_limit = Setting(False, schema_only=True)
+
     want_main_area = False
     resizing_enabled = False
 
-    settings_version = 2
+    settings_version = 3
 
     def __init__(self):
         super().__init__()
@@ -67,19 +74,29 @@ class OWNeighbors(OWWidget):
         self._metric_index_to_id = {i: metric.id for i, metric in enumerate(MetricDefs.values())}
         self._distance_index = self._metric_id_to_index[self.metric_id]
 
-        box = gui.vBox(self.controlArea, box=True)
+        box = gui.vBox(self.controlArea, box="Distance metric")
         gui.comboBox(
             box, self, "_distance_index", orientation=Qt.Horizontal,
-            label="Distance metric: ",
             items=[metric.name for metric in MetricDefs.values()],
             tooltips=[metric.tooltip for metric in MetricDefs.values()],
             callback=self._metric_changed)
+
+        if self.backward_compatibility_limit:
+            kwargs = {
+                "checked": 'limit_neighbors',
+                "checkCallback": self.commit.deferred,
+                "label": "Limit number of neighbors to:"
+            }
+        else:
+            kwargs = {
+                "label": "Number of neighbors:",
+            }
+
+        box = gui.vBox(self.controlArea, box=True)
         gui.spin(
-            box, self, "n_neighbors", label="Limit number of neighbors to:",
-            step=1, spinType=int, minv=0, maxv=100, checked='limit_neighbors',
-            # call apply by gui.auto_commit, pylint: disable=unnecessary-lambda
-            checkCallback=self.commit.deferred,
-            callback=self.commit.deferred)
+            box, self, "n_neighbors", step=1, spinType=int, minv=0, maxv=100,
+            alignment=Qt.AlignRight,
+            callback=self.commit.deferred, **kwargs)
         gui.checkBox(
             box, self, "include_reference", label="Include reference example",
             callback=self.commit.deferred
@@ -146,7 +163,18 @@ class OWNeighbors(OWWidget):
         else:
             neighbors = self._data_with_similarity(indices)
             neighbors.name = self.data.name + " (neighbors)"
+
+        if self.distances is None:
+            distance_table = None
+        else:
+            _, domain = self._domain_with_distance()
+            length = len(self.data)
+            distance_table = LazyValue[Table](
+                lambda:  self._data_with_similarity(np.arange(length), False),
+                length=length, domain=domain)
+
         self.Outputs.data.send(neighbors)
+        self.Outputs.data_w_distances.send(distance_table)
 
     def _compute_indices(self):
         self.Warning.all_data_as_reference.clear()
@@ -165,6 +193,8 @@ class OWNeighbors(OWWidget):
         dist = np.copy(self.distances)
         dist[inrefs] = np.max(dist) + 1
         up_to = len(dist) - np.sum(inrefs)
+        # self.limit_neighbors is for backward compatibility;
+        # The new GUI sets it to True and does not expose it
         if self.limit_neighbors and self.n_neighbors < up_to:
             up_to = self.n_neighbors
         # get indexes of N neighbours in unsorted order - faster than argsort
@@ -174,14 +204,19 @@ class OWNeighbors(OWWidget):
         # map sorted indexes back to original index space
         return idx[sorted_subset_idx]
 
-    def _data_with_similarity(self, indices):
+    def _domain_with_distance(self):
         domain = self.data.domain
         dist_var = ContinuousVariable(get_unique_names(domain, "distance"))
         metas = domain.metas + (dist_var, )
-        domain = Domain(domain.attributes, domain.class_vars, metas)
+        return dist_var, Domain(domain.attributes, domain.class_vars, metas)
+
+    def _data_with_similarity(self, indices, include_reference=None):
+        dist_var, domain = self._domain_with_distance()
         neighbours = self.data.from_table(domain, self.data, row_indices=indices)
         distances = self.distances[indices]
-        if self.include_reference:
+        if include_reference is None:
+            include_reference = self.include_reference
+        if include_reference:
             neighbours = Table.concatenate(
                 [neighbours,
                  self.reference.transform(neighbours.domain)])
@@ -201,6 +236,9 @@ class OWNeighbors(OWWidget):
                            Spearman, SpearmanAbsolute, Pearson, PearsonAbsolute]
             metric_id = old_metrics[metric_idx]
             settings["metric_id"] = metric_id
+        if  version < 3:
+            if not settings.get("limit_neighbors", True):
+                settings["backward_compatibility_limit"] = True
 
 
 if __name__ == "__main__":  # pragma: no cover
