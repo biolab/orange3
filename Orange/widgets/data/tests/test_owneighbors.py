@@ -218,7 +218,7 @@ class TestOWNeighbors(WidgetTest):
         widget.data = data
 
         widget.distances = np.arange(1000, 1150).astype(float)
-        neighbours = widget._data_with_similarity(indices)
+        neighbours = widget._data_with_similarity(indices, False)
         self.assertEqual(neighbours.metas.shape, (4, 1))
         np.testing.assert_almost_equal(
             neighbours.metas.flatten(), indices + 1000)
@@ -230,7 +230,7 @@ class TestOWNeighbors(WidgetTest):
         widget.data = data2
 
         widget.distances = np.arange(1000, 1150).astype(float)
-        neighbours = widget._data_with_similarity(indices)
+        neighbours = widget._data_with_similarity(indices, False)
         self.assertEqual(len(neighbours.domain.metas), 3)
         self.assertEqual(neighbours.metas.shape, (4, 3))
         np.testing.assert_almost_equal(
@@ -855,7 +855,7 @@ class TestOWNeighbors(WidgetTest):
         out = self.get_output(w.Outputs.data)
         np.testing.assert_equal(
             out.X,
-            np.array([[5, 6, 4], [1, 2, 3]]).T)
+            np.array([[5, 6, 4, 1], [1, 2, 3, np.nan]]).T)
 
         self.send_signal(w.Inputs.data, self.zoo[:7])
         self.assertFalse(w.Warning.no_distance_matrix_data.is_shown())
@@ -887,11 +887,51 @@ class TestOWNeighbors(WidgetTest):
         out_dist2 = self.get_output(w.Outputs.data)
         out_dist_w2 = self.get_output(w.Outputs.data_w_distances)
 
-        np.testing.assert_equal(out_dist2.X[:, 1], np.max(out_dist.X[:, 1]) - out_dist.X[:, 1])
-        np.testing.assert_equal(out_dist_w2.X[:, 1], np.max(out_dist_w.X[:, 1]) - out_dist_w.X[:, 1])
+        np.testing.assert_equal(
+            out_dist2.X[:, 1],
+            np.nanmax(out_dist.X[:, 1]) - out_dist.X[:, 1])
+        np.testing.assert_equal(
+            out_dist_w2.X[:, 1],
+            np.nanmax(out_dist_w.X[:, 1]) - out_dist_w.X[:, 1])
 
         np.testing.assert_equal(out_dist2.X[:, 0], out_dist.X[:, 0])
         np.testing.assert_equal(out_dist_w2.X[:, 0], out_dist_w.X[:, 0])
+
+    def test_report_error_for_distances_over_columns(self):
+        w = self.widget
+        distances = distance.PearsonR(self.iris, axis=0)
+        self.send_signal(w.Inputs.distances, distances)
+        self.send_signal(w.Inputs.data, self.iris)
+
+        self.assertTrue(w.Error.distances_over_columns.is_shown())
+        self.assertIs(w.mapping, False)
+        self.assertIsNone(self.get_output(w.Outputs.data))
+
+        self.send_signal(w.Inputs.distances, None)
+        self.assertIsNone(w.mapping)
+        self.assertIsNotNone(self.get_output(w.Outputs.data))
+
+    def test_mapping_for_duplicated_instances(self):
+        w = self.widget
+
+        indices = [5, 0, 0, 0, 1, 2, 3, 4]
+        self.send_signal(w.Inputs.distances, self.distances)
+        self.send_signal(w.Inputs.data, self.iris[indices])
+        np.testing.assert_equal(w.mapping, indices)
+        self.assertIsNotNone(self.get_output(w.Outputs.data))
+
+    def test_duplicated_names(self):
+        w = self.widget
+
+        with self.zoo.unlocked():
+            self.zoo.metas[[2, 3, 5], 0] = "duplicated"
+        self.send_signal(w.Inputs.data, self.zoo)
+
+        names = self.zoo.get_column("name").copy()
+        names[3] = "duplicated (1)"
+        names[5] = "duplicated (2)"
+        names[w.label_model.indexOf("frog") + 1] = "frog (1)"
+        self.assertEqual(list(w.label_model), list(names))
 
     def test_invalid_setting(self):
         w = self.create_widget(

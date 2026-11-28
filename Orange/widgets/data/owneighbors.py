@@ -3,7 +3,7 @@ from typing import Literal
 import numpy as np
 import bottleneck as bn
 
-from AnyQt.QtCore import Qt
+from AnyQt.QtCore import Qt, QSignalBlocker
 from AnyQt.QtWidgets import QFormLayout, QLabel
 
 from orangewidget.utils.signals import LazyValue
@@ -63,6 +63,8 @@ class OWNeighbors(OWWidget):
             Msg("Distance matrix and data table have mismatching number of items.\n"
                 "If the matrix that does not include a related data table, it is\n"
                 "assumed that its rows correspond to the rows of the input table.")
+        distances_over_columns = \
+            Msg("Widget requires distance matrix over rows, not columns.")
         dist_data_id_mismatch = \
             Msg("Distance matrix and data table do not refer to the same data.")
         diff_domains_or_missing = \
@@ -233,6 +235,11 @@ class OWNeighbors(OWWidget):
             and len(self.distance_matrix) != len(self.data)
 
     @property
+    def distances_over_columns(self):
+        return self.distance_matrix is not None \
+            and self.distance_matrix.axis == 0
+
+    @property
     def act_data(self):
         if self.data is not None:
             return self.data
@@ -258,8 +265,10 @@ class OWNeighbors(OWWidget):
 
     def handleNewSignals(self):
         self.Error.diff_number(shown=self.mismatching_input_sizes)
+        self.Error.distances_over_columns(shown=self.distances_over_columns)
 
-        self.controls.n_neighbors.setMaximum(self.dimension or 100)
+        with QSignalBlocker(self.controls.n_neighbors):
+            self.controls.n_neighbors.setMaximum(self.dimension or 100)
 
         self.closeContext()
         self._update_variable_model()
@@ -291,9 +300,13 @@ class OWNeighbors(OWWidget):
             self.mapping = None
             return
 
+        if self.mismatching_input_sizes or self.distances_over_columns:
+            self.mapping = False
+            return
+
         data_ids = self.data.ids
         dist_ids = self.distance_matrix.row_items.ids
-        nincluded_ids = len(set(data_ids) & set(dist_ids))
+        nincluded_ids = np.count_nonzero(np.isin(data_ids, dist_ids))
         if nincluded_ids == 0:
             self.mapping = False
             self.Error.dist_data_id_mismatch()
@@ -340,7 +353,16 @@ class OWNeighbors(OWWidget):
 
     def _update_labels(self):
         if self.label is not None:
-            labels = self.act_data.get_column(self.label)
+            labels = []
+            used_labels = {}
+            for label in self.act_data.get_column(self.label):
+                label = label or "<empty>"
+                if label in used_labels:
+                    used_labels[label] += 1
+                    label += f" ({used_labels[label]})"
+                else:
+                    used_labels[label] = 0
+                labels.append(label)
         else:
             labels = range(1, 1 + self.dimension)
         self.label_model[:] = [str(x) for x in labels]
@@ -383,6 +405,7 @@ class OWNeighbors(OWWidget):
 
         if not self.data and self.distance_matrix is None \
                 or self.mismatching_input_sizes \
+                or self.distances_over_columns \
                 or self.mapping is False:
             self.distances = None
         elif self.distance_matrix is not None:
@@ -498,7 +521,8 @@ class OWNeighbors(OWWidget):
         if indices is None:
             neighbors = None
         else:
-            neighbors = self._data_with_similarity(indices)
+            neighbors = self._data_with_similarity(indices,
+                                                   self.include_reference)
             if self.act_data:
                 neighbors.name = self.act_data.name + " (neighbors)"
             else:
@@ -569,15 +593,21 @@ class OWNeighbors(OWWidget):
         metas = domain.metas + (dist_var, )
         return dist_var, Domain(domain.attributes, domain.class_vars, metas)
 
-    def _data_with_similarity(self, indices, include_reference=None):
+    def _data_with_similarity(self, indices, include_reference):
         dist_var, domain = self._domain_with_distance()
         data = self.act_data
         distances = self.distances[indices]
-        if self.transform_to_similarity:
+        if self.transform_to_similarity and distances.size:
             distances = np.max(distances) - distances
+
+        reference_index = include_reference and \
+            self.reference is None and \
+            self.label_model.indexOf(self.selected_item)
 
         if data is None:
             self.Warning.no_distance_matrix_data()
+            indices = np.hstack((indices, [reference_index]))
+            distances = np.hstack((distances, [np.nan]))
             return Table.from_numpy(
                 domain,
                 np.vstack((indices + 1, distances)).T)
@@ -589,13 +619,11 @@ class OWNeighbors(OWWidget):
             self.Warning.neighbor_by_indices()
 
         neighbours = data.from_table(domain, data, row_indices=indices)
-        if include_reference is None:
-            include_reference = self.include_reference
         if include_reference:
             if self.reference:
                 reference = self.reference
             else:
-                reference = data[[self.label_model.indexOf(self.selected_item)]]
+                reference = data[[reference_index]]
             neighbours = Table.concatenate([
                 neighbours,
                 reference.transform(neighbours.domain)])

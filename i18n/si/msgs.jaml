@@ -6835,6 +6835,7 @@ widgets/data/owneighbors.py:
             Distance matrix and data table have mismatching number of items.\n: Matrika razdalj in tabela podatkov imata različno število primerov.\n
             If the matrix that does not include a related data table, it is\n: Če matrika ne vključuje pripadajoče tabele podatkov, gradnik
             assumed that its rows correspond to the rows of the input table.: predpostavlja, da se njene vrstice ujemajo z vrsticami vhodne tabele.
+            Widget requires distance matrix over rows, not columns.: Gradnik zahteva matriko razdalj med vrsticami, ne stolpci.
             Distance matrix and data table do not refer to the same data.: Matrika razdalj in tabela podatkov se nanašata na različne podatke.
             'Reference has different features than data ': 'Referenčni podatki imajo drugačne spremenljivke kot podatki '
             or missing values that cannot be imputed.: ali pa vsebujejo neznane vrednosti, ki jih ni mogoče nadomestiti.
@@ -6875,8 +6876,11 @@ widgets/data/owneighbors.py:
                     <p style = "line-height: 130%;" >
                       Neighbours are selected from input data,<br/>
                       based on the distance matrix provided as input.
-                   </p>': '<p style = "line-height: 130%;" >Sosede izberemo iz vhodnih podatkov,<br/>na podlagi matrike razdalj, ki je podana na vhodu.</p>'
+                   </p>': <p style = "line-height: 130%;" >Sosede izberemo iz vhodnih podatkov,<br/>na podlagi matrike razdalj, ki je podana na vhodu.</p>
             Distances are provided on the input.: Razdalje so podane na vhodu.
+        def `_update_labels`:
+            <empty>: <prazno>
+            ' ({used_labels[label]})': false
         def `_compute_from_data_instance`:
             impute: false
             normalize: false
