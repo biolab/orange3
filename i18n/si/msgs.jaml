@@ -9813,6 +9813,7 @@ widgets/evaluate/owtestandscore.py:
         class `Outputs`:
             Predictions: Napovedi
             Evaluation Results: Rezultati vrednotenja
+            Learner: Algoritem učenja
         (None, show average over classes): (Brez, pokaži poprečje prek razredov)
         class `Error`:
             Test dataset is empty.: Tabela testnih podatkov je prazna

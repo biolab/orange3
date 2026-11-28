@@ -19,7 +19,7 @@ import numpy as np
 import baycomp
 
 from AnyQt import QtGui
-from AnyQt.QtCore import Qt, QSize, QThread
+from AnyQt.QtCore import Qt, QSize, QThread, QSignalBlocker
 from AnyQt.QtCore import pyqtSlot as Slot
 from AnyQt.QtGui import QStandardItem, QDoubleValidator
 from AnyQt.QtWidgets import \
@@ -149,6 +149,7 @@ class OWTestAndScore(OWWidget):
     class Outputs:
         predictions = Output("Predictions", Table)
         evaluations_results = Output("Evaluation Results", Results)
+        learner = Output("Learner", Learner)
 
     settings_version = 4
     buttons_area_orientation = None
@@ -185,6 +186,9 @@ class OWTestAndScore(OWWidget):
     use_rope = settings.Setting(False)
     rope = settings.Setting(0.1)
     comparison_criterion = settings.Setting(0, schema_only=True)
+    # selected row index in the original (not proxy) table model,
+    # None if no row is selected
+    selected_row: Optional[int] = settings.Setting(None, schema_only=True)
 
     TARGET_AVERAGE = "(None, show average over classes)"
     class_selection = settings.ContextSetting(TARGET_AVERAGE)
@@ -229,6 +233,8 @@ class OWTestAndScore(OWWidget):
         self.train_data_missing_vals = False
         self.test_data_missing_vals = False
         self.scorers = []
+        self.__pending_selected_row = self.selected_row
+        self.selected_row = None
         self.__pending_comparison_criterion = self.comparison_criterion
         self.__id_gen = count()
         self._learner_inputs = []  # type: List[Tuple[Any, Learner]]
@@ -292,6 +298,8 @@ class OWTestAndScore(OWWidget):
         self.score_table.shownScoresChanged.connect(self.update_stats_model)
         view = self.score_table.view
         view.setSizeAdjustPolicy(view.AdjustToContents)
+        view.setSelectionMode(view.SelectionMode.SingleSelection)
+        view.selectionModel().selectionChanged.connect(self._selection_changed)
 
         self.results_box = gui.vBox(self.mainArea, box=True)
         self.cbox = gui.hBox(self.results_box)
@@ -378,6 +386,10 @@ class OWTestAndScore(OWWidget):
         slot = self.learners[key]
         self.learners[key] = slot._replace(learner=learner, results=None)
         self._invalidate([key])
+        if self.selected_row is not None and \
+                key == self.score_table.model.index(self.selected_row, 0).data(Qt.UserRole):
+            # Update the output
+            self.Outputs.learner.send(learner)
 
     @Inputs.learner.insert
     def insert_learner(self, index: int, learner: Learner):
@@ -581,9 +593,17 @@ class OWTestAndScore(OWWidget):
         # Note: The target class specific scores (if requested) are
         # computed as needed in this method.
         model = self.score_table.model
+        selection_model = self.score_table.view.selectionModel()
         # clear the table model, but preserving the header labels
-        for r in reversed(range(model.rowCount())):
-            model.takeRow(r)
+        if self.selected_row is not None:
+            selected_index = self.score_table.model.index(self.selected_row, 0)
+            pending_selected_key = selected_index.data(Qt.UserRole)
+        else:
+            pending_selected_key = None
+
+        with QSignalBlocker(selection_model):
+            for r in reversed(range(model.rowCount())):
+                model.takeRow(r)
 
         target_index = None
         if self.data is not None:
@@ -656,18 +676,39 @@ class OWTestAndScore(OWWidget):
                             has_missing_scores = True
                     row.append(item)
 
-            model.appendRow(row)
+            with QSignalBlocker(selection_model):
+                model.appendRow(row)
 
-        # Resort rows based on current sorting
-        header = self.score_table.view.horizontalHeader()
-        model.sort(
-            header.sortIndicatorSection(),
-            header.sortIndicatorOrder()
-        )
+        self._restore_selection(pending_selected_key)
         self._set_comparison_headers(names)
 
         self.error("\n".join(errors), shown=bool(errors))
         self.Warning.scores_not_computed(shown=has_missing_scores)
+
+    def _restore_selection(self, pending_selected_key):
+        if pending_selected_key is None and self.selected_row is None:
+            return
+
+        model = self.score_table.model
+        selection_model = self.score_table.view.selectionModel()
+        if pending_selected_key is not None:
+            for row in range(model.rowCount()):
+                if model.index(row, 0).data(Qt.UserRole) == pending_selected_key:
+                    self.selected_row = row
+                    break
+            else:
+                self.selected_row = None
+
+        if self.selected_row is None:
+            selection_model.clearSelection()
+            self.Outputs.learner.send(None)
+        else:
+            source_index = model.index(self.selected_row, 0)
+            proxy_index = self.score_table.sorted_model.mapFromSource(
+                source_index)
+            if proxy_index.isValid():
+                with QSignalBlocker(selection_model):
+                    self.score_table.view.selectRow(proxy_index.row())
 
     def _on_use_rope_changed(self):
         self.controls.rope.setEnabled(self.use_rope)
@@ -801,6 +842,12 @@ class OWTestAndScore(OWWidget):
         else:
             self.cbox.setVisible(False)
 
+    def _selection_changed(self, selected, _):
+        sel_indices = selected.indexes()
+        self.selected_row = None if not sel_indices else \
+            self.score_table.sorted_model.mapToSource(sel_indices[0]).row()
+        self._output_selected_learner()
+
     def _on_target_class_changed(self):
         self.update_stats_model()
         self.update_comparison_table()
@@ -855,8 +902,29 @@ class OWTestAndScore(OWWidget):
             except MemoryError:
                 self.Error.memory_error()
 
+        if self.__pending_selected_row is not None:
+            model = self.score_table.model
+            if self.__pending_selected_row < model.rowCount():
+                self.selected_row = self.__pending_selected_row
+            self.__pending_selected_row = None
+
+            source_index = model.index(self.selected_row, 0)
+            proxy_index = self.score_table.sorted_model.mapFromSource(
+                source_index)
+            if proxy_index.isValid():
+                self.score_table.view.selectRow(proxy_index.row())
+
         self.Outputs.evaluations_results.send(combined)
         self.Outputs.predictions.send(predictions)
+
+    def _output_selected_learner(self):
+        if self.selected_row is None:
+            learner = None
+        else:
+            model = self.score_table.model
+            key = model.data(model.index(self.selected_row, 0), Qt.UserRole)
+            learner = self.learners[key].learner
+        self.Outputs.learner.send(learner)
 
     def send_report(self):
         """Report on the testing schema and results"""
