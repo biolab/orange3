@@ -36,7 +36,7 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
     preprocessors = SklLearner.preprocessors
     supports_weights = True
 
-    def __init__(self, penalty="l2", dual=False, tol=0.0001, C=1.0,
+    def __init__(self, l1_ratio=0, dual=False, tol=0.0001, C=1.0,
                  fit_intercept=True, intercept_scaling=1, class_weight=None,
                  random_state=None, solver="auto", max_iter=100,
                  verbose=0, n_jobs=1, preprocessors=None):
@@ -48,9 +48,9 @@ class LogisticRegressionLearner(SklLearner, _FeatureScorerMixin):
 
         # The default scikit-learn solver `lbfgs` (v0.22) does not support the
         # l1 penalty.
-        solver, penalty = params.pop("solver"), params.get("penalty")
+        solver, l1_ratio = params.pop("solver"), params.get("l1_ratio")
         if solver == "auto":
-            if penalty == "l1":
+            if l1_ratio == 1:
                 solver = "saga"
             else:
                 solver = "lbfgs"

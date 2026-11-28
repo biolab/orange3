@@ -3,7 +3,7 @@
 import warnings
 
 import numpy as np
-from scipy.sparse import csr_matrix, SparseEfficiencyWarning
+from scipy.sparse import csr_array, SparseEfficiencyWarning
 
 from Orange import data
 from Orange.data import Table
@@ -15,8 +15,8 @@ class InterfaceTest(tabletests.InterfaceTest):
         super().setUp()
         self.table = data.Table.from_numpy(
             self.domain,
-            csr_matrix(self.table.X),
-            csr_matrix(self.table.Y),
+            csr_array(self.table.X),
+            csr_array(self.table.Y),
         )
 
     def test_row_assignment(self):
@@ -34,14 +34,14 @@ class InterfaceTest(tabletests.InterfaceTest):
     def test_str(self):
         iris = Table('iris')
         with iris.unlocked():
-            iris.X, iris.Y = csr_matrix(iris.X), csr_matrix(iris.Y)
+            iris.X, iris.Y = csr_array(iris.X), csr_array(iris.Y)
         str(iris)
 
     def test_Y_setter_1d(self):
         iris = Table('iris')
         assert iris.Y.shape == (150,)
         with iris.unlocked():
-            iris.Y = csr_matrix(iris.Y)
+            iris.Y = csr_array(iris.Y)
         # We expect the Y shape to match the X shape, which is (150, 4) in iris
         self.assertEqual(iris.Y.shape, (150,))
 
@@ -52,7 +52,7 @@ class InterfaceTest(tabletests.InterfaceTest):
         new_y = iris.Y[:, np.newaxis]
         with iris.unlocked():
             iris.Y = np.hstack((new_y, new_y))
-            iris.Y = csr_matrix(iris.Y)
+            iris.Y = csr_array(iris.Y)
         # We expect the Y shape to match the X shape, which is (150, 4) in iris
         self.assertEqual(iris.Y.shape, (150, 2))
 
@@ -62,6 +62,6 @@ class InterfaceTest(tabletests.InterfaceTest):
         new_y = iris.Y[:, np.newaxis]
         with iris.unlocked_reference():
             iris.Y = np.hstack((new_y, new_y))
-            iris.Y = csr_matrix(iris.Y)
+            iris.Y = csr_array(iris.Y)
         # We expect the Y shape to match the X shape, which is (1, 4) in iris
         self.assertEqual(iris.Y.shape, (1, 2))

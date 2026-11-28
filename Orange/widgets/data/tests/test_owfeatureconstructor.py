@@ -168,7 +168,7 @@ class FeatureConstructorTest(unittest.TestCase):
         desc = [
             ContinuousDescriptor(name="X", expression="A", number_of_decimals=2)
         ]
-        X = sp.csc_matrix(np.arange(5).reshape(5, 1))
+        X = sp.csc_array(np.arange(5).reshape(5, 1))
         data = Table.from_numpy(domain, X)
         data_ = data.transform(Domain(data.domain.attributes,
                                       [],
