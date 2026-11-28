@@ -2995,6 +2995,7 @@ def apply_transform_continuous(var, trs):
     variable = Orange.data.ContinuousVariable(
         name=name, compute_value=Identity(var)
     )
+    variable.copy_format_from(var)
     variable.attributes.update(annotations)
     return variable
 

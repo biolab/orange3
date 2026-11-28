@@ -1336,7 +1336,18 @@ class TestTransforms(TestCase):
 
     def test_continous(self):
         X = ContinuousVariable("X")
+        X.attributes["old"] = "label"
         self._test_common(X)
+        self.assertEqual(X.attributes, {"old": "label"})
+
+    def test_continuous_edit_preserves_format(self):
+        var = ContinuousVariable("population")
+        value = var.val_from_str_add("1008436")
+        for transform in (Rename("new name"), Annotate((("unit", "people"),))):
+            with self.subTest(transform=transform):
+                edited = apply_transform_var(var, [transform])
+                self.assertEqual(edited.str_val(value), "1008436")
+                self.assertEqual(edited.adjust_decimals, var.adjust_decimals)
 
     def test_string(self):
         X = StringVariable("S")
