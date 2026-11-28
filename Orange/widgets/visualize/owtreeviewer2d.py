@@ -5,11 +5,11 @@ from AnyQt.QtGui import (
 )
 from AnyQt.QtWidgets import (
     QGraphicsItem, QGraphicsEllipseItem, QGraphicsTextItem,
-    QGraphicsLineItem, QGraphicsScene, QGraphicsView, QStyle, QSizePolicy,
+    QGraphicsPathItem, QGraphicsScene, QGraphicsView, QStyle, QSizePolicy,
     QFormLayout
 )
 from AnyQt.QtCore import (
-    Qt, QRectF, QSize, QPointF, QLineF, QTimer,
+    Qt, QRectF, QSize, QPointF, QTimer,
     pyqtSignal, pyqtProperty
 )
 
@@ -219,18 +219,30 @@ class GraphicsNode(TextTreeNode):
         return super().boundingRect().adjusted(-5, -5, 5, 5)
 
 
-class GraphicsEdge(QGraphicsLineItem, GraphEdge):
-    def __init__(self, *args, **kwargs):
-        QGraphicsLineItem.__init__(self, *args)
+class GraphicsEdge(QGraphicsPathItem, GraphEdge):
+    def __init__(self, **kwargs):
+        QGraphicsPathItem.__init__(self)
         GraphEdge.__init__(self, **kwargs)
         self.setZValue(-30)
 
     def update_ends(self):
         try:
-            self.prepareGeometryChange()
-            self.setLine(QLineF(self.node1.edge_out_point(self),
-                                self.node2.edge_in_point(self)))
-        except RuntimeError:  # this gets called through QTimer.singleShot
+            p1 = self.node1.edge_out_point(self)
+            p2 = self.node2.edge_in_point(self)
+            mid_y = (p1.y() + p2.y()) / 2
+            radius = 8 if p1.x() < p2.x() else -8
+
+            path = QPainterPath(p1)
+            path.lineTo(p1.x(), mid_y - abs(radius))
+            path.quadTo(QPointF(p1.x(), mid_y),
+                        QPointF(p1.x() + radius, mid_y))
+            path.lineTo(p2.x() - radius, mid_y)
+            path.quadTo(QPointF(p2.x(), mid_y),
+                        QPointF(p2.x(), mid_y + abs(radius)))
+            path.lineTo(p2)
+            self.setPath(path)
+        except RuntimeError:
+            # this gets called through QTimer.singleShot
             # and might already be deleted by Qt
             pass
 
@@ -252,7 +264,7 @@ class TreeGraphicsView(QGraphicsView):
 
 class TreeGraphicsScene(QGraphicsScene):
     _HSPACING = 10
-    _VSPACING = 10
+    _VSPACING = 20
 
     def __init__(self, master, *args):
         super().__init__(*args)
